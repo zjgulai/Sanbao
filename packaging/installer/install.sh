@@ -98,15 +98,38 @@ export PATH="$(dirname "$NODE_SHIM"):$PATH"
 
 # ── 0b/6 退出运行中的 DSH 实例（运行中替换 app bundle 会触发宿主 HMR 热更 →
 # 生产 renderer 无完整热替换 runtime → 白屏；2026-09-13 实测）。──────────────────
+# 判据**不在本文件里**：「在不在跑」只有一个家
+# （packaging/scripts/dsh-running.sh，随包分发到 tools/；取证与决策见 ADR-0080）。
+# 这里曾就地写过 `pgrep -f "$APP_TARGET/Contents/MacOS/"`，而它在主进程明明在跑时
+# 返回 0 条 → 这一格静默走到 else、打印「无运行中的 DSH 实例」，然后在运行中替换
+# app bundle：它守的白屏红线等于没有守（P-02 仪器假绿）。
+# 退出码契约：0=在跑 / 1=没在跑 / 2=用法错误 / 4=**判不了**。4 与任何未知码都必须
+# 当失败中止——「读不到」不是「没有在跑」，把两者合并正是上面那个缺陷的死法。
+DSH_RUNNING_TOOL="$HERE/tools/dsh-running.sh"
+if [ ! -f "$DSH_RUNNING_TOOL" ]; then
+  echo "[install] ✗ 载荷缺少 tools/dsh-running.sh——0b 闸无法判定，中止（缺判据 ≠ 没有实例在跑）" >&2
+  exit 1
+fi
+dsh_running_quiet() { bash "$DSH_RUNNING_TOOL" --app "$APP_TARGET" --quiet; }
 QUIT_APP="${QUIT_APP:-DSH Desktop}"
-if pgrep -f "$APP_TARGET/Contents/MacOS/" >/dev/null 2>&1; then
+DSH_ST=0
+bash "$DSH_RUNNING_TOOL" --app "$APP_TARGET" || DSH_ST=$?
+case "$DSH_ST" in
+  0|1) : ;;
+  *)
+    echo "[install] ✗ 「是否有 DSH 实例在跑」判不了（tools/dsh-running.sh 退出码 ${DSH_ST}），中止安装" >&2
+    echo "[install]   运行中替换 app bundle 会白屏，故宁可不装也不瞎装。" >&2
+    exit 1
+    ;;
+esac
+if [ "$DSH_ST" = "0" ]; then
   say "0b/6 检测到运行中的 DSH 实例，先退出（运行中替换 app bundle 会导致白屏）…"
   osascript -e "tell application \"$QUIT_APP\" to quit" >/dev/null 2>&1 || true
   for _ in $(seq 1 15); do
-    pgrep -f "$APP_TARGET/Contents/MacOS/" >/dev/null 2>&1 || break
+    dsh_running_quiet || break
     sleep 1
   done
-  if pgrep -f "$APP_TARGET/Contents/MacOS/" >/dev/null 2>&1; then
+  if dsh_running_quiet; then
     echo "[install] ✗ DSH 实例未能在 15 秒内退出，中止安装（避免运行中替换 app bundle 导致白屏）" >&2
     exit 1
   fi

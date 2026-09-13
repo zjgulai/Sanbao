@@ -45,6 +45,7 @@ import {
   PLAYBOOK_REL_PATH,
 } from './gates/pitfalls-playbook.mjs'
 import { checkDocsLinkIntegrity } from './gates/docs-links.mjs'
+import { checkDeadInstrument, REGISTRY_REL_PATH as DEAD_INSTRUMENTS_PATH } from './gates/dead-instrument.mjs'
 import {
   checkDmgLayout,
   GUIDE_REL_PATH as DMG_LAYOUT_GUIDE_PATH,
@@ -654,6 +655,67 @@ const CHECKS = [
     },
   },
   {
+    name: 'dead-instrument',
+    remediation:
+      '按报错把那处判据换掉：登记簿（scripts/gates/dead-instruments.json）里每一条都是**实测过会给出空读数**的仪器——空读数被当成结论，是 2026-09-13 白屏那类事故的成因。替代物写在登记项的 useInstead 里（例如「在不在跑」用 script:packaging/scripts/dsh-running.sh，退出码 0/1/2/4，4 = 判不了必须中止）。若该处是**引用**它作反例，把仪器片段写成「…」引用形式即可（仓库约定）。新增一条登记项门槛同 pitfalls-playbook：可复现的命令 + 原始读数 + 替代物，缺一判红（ADR-0080）',
+    run() {
+      const files = collectPrescriptionSurfaces()
+      if (files === null) {
+        // 取不到射程必须判红：静默变成「没扫」就等于这条判据不存在（P-02）。
+        return {
+          passed: false,
+          violations: ['git ls-files 取不到射程——本项本次未核对任何文件（不是「都干净」）'],
+        }
+      }
+      return checkDeadInstrument({
+        registryText: readIfExists(join(repoRoot, DEAD_INSTRUMENTS_PATH)) ?? '',
+        files,
+      })
+    },
+  },
+  {
+    name: 'dead-instrument-selftest',
+    remediation:
+      '跑 node --test scripts/gates/dead-instrument.test.mjs 看红在哪条：本项必须能说「不」——**用 2026-09-13 的缺陷原文**（SOP §0 那条 `pgrep -f` 检查项）配**真登记簿**当输入必须判红、围栏代码块里的同一句也必须判红、脚本代码行里的使用必须判红，而「…」引用形式与散文提及必须放行（那是决定，不是遗漏）；空登记簿、登记项缺证据字段、射程为空、判据面抽出 0 行都必须判红。M3 是恒真桩突变：把模式换成永不匹配的串，缺陷原文就必须漏过——否则拦住它的不是登记簿内容（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/dead-instrument.test.mjs', '死仪器判据的反向自测失败')
+    },
+  },
+  {
+    name: 'dsh-running-selftest',
+    remediation:
+      '跑 bash packaging/scripts/dsh-running-test.sh 看红在哪条：判据必须能说「不」——R1 造出的真进程在跑时→0，R3 **同一条路径、同一份字节**、进程退出后→1（读数跟着进程在不在变），R2 同目录未运行的邻居必须判 1（防「见谁都算命中」），R4 `ps` 读不出→4 而**不是** 1（读不到 ≠ 没有在跑），R5 用法错误→2，R6a~R6c 用受控进程表钉住 `--any` 的尾锚定，R7 在真实靶子上对照；M1/M2 恒真桩突变证明 R1/R3 有牙（ADR-0080）',
+    run() {
+      const script = join(repoRoot, 'packaging', 'scripts', 'dsh-running-test.sh')
+      const result = runScript(repoRoot, `bash "${script}"`, 120000)
+      if (result.code === 0) return { passed: true, violations: [] }
+      const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+      const lines = text
+        .split('\n')
+        .filter((line) => /\[FAIL\]/.test(line))
+        .map((line) => line.trim())
+      const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+      return { passed: false, violations: lines.length > 0 ? lines : [`运行中判据自测失败（${verdict}）`] }
+    },
+  },
+  {
+    name: 'installer-running-guard-selftest',
+    remediation:
+      '跑 bash packaging/scripts/installer-running-guard-test.sh 看红在哪条：安装器 0b 闸守白屏红线，必须**正确消费**那条共享判据——T1 没有实例在跑→放行，T2 实例在跑且退不出去→中止（不得继续替换 app bundle），T3 载荷缺 tools/dsh-running.sh→中止（缺判据 ≠ 没有实例在跑），T4 退出码 4（判不了）→中止且不得打印「无运行中的 DSH 实例」，M1 恒真桩突变证明 T4 有牙。抽不出完整的 0b 块同样判红，不静默变成空转（ADR-0080）',
+    run() {
+      const script = join(repoRoot, 'packaging', 'scripts', 'installer-running-guard-test.sh')
+      const result = runScript(repoRoot, `bash "${script}"`, 120000)
+      if (result.code === 0) return { passed: true, violations: [] }
+      const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+      const lines = text
+        .split('\n')
+        .filter((line) => /\[FAIL\]|\[自测\]/.test(line))
+        .map((line) => line.trim())
+      const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+      return { passed: false, violations: lines.length > 0 ? lines : [`安装器 0b 闸自测失败（${verdict}）`] }
+    },
+  },
+  {
     name: 'changed-packages',
     remediation: '为本次改动的包补 typecheck 与 test 脚本，或按 ADR-0014 登记豁免（只减不增）',
     run() {
@@ -835,6 +897,7 @@ const CHECKS = [
         ['payload/tools/verify-patches-v2.sh', 'packaging/verify-patches-v2.sh'],
         ['payload/tools/rewrite-file-deps.mjs', 'packaging/scripts/rewrite-file-deps.mjs'],
         ['payload/tools/reloc-aeis.sh', 'packaging/scripts/reloc-aeis.sh'],
+        ['payload/tools/dsh-running.sh', 'packaging/scripts/dsh-running.sh'],
         ['payload/install.sh', 'packaging/installer/install.sh'],
       ]
       const violations = []
@@ -938,6 +1001,44 @@ function collectShellScripts() {
   }
   walk(repoRoot)
   return out
+}
+
+/**
+ * 列出 git 索引里的文件（仓库根相对路径）；git 不可用时返回 `null`。
+ *
+ * 为什么跟着 git 走而不是走磁盘：`packaging/staging/`、`release/`、`.dsh-types/` 这些
+ * 产物/生成目录里有几千个同名文件（实测磁盘 4664 个 `*.md`，索引里只有 423 个），
+ * 走磁盘会让射程被产物淹没；而「射程跟着 git 走，不跟着磁盘走」是本仓库既有的规矩
+ * （ADR-0075 / P-11）。返回 `null` 而不是空数组：调用方必须能把「取不到射程」与
+ * 「射程真的是空的」分开（P-02）。
+ * @returns {string[]|null}
+ */
+function gitLsFiles() {
+  try {
+    const out = execFileSync('git', ['-C', repoRoot, 'ls-files', '-z'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 64 * 1024 * 1024,
+    })
+    return out.split('\0').filter(Boolean)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 收集「判据面」文件供 `dead-instrument` 校验（ADR-0080）。
+ *
+ * 判据面 = 会被人**照着跑**的地方 = `*.md`（清单行 + 围栏代码块）与 `*.sh` / `*.bash`
+ * （去掉注释后仍有内容的行）。射程取 git 索引（含已 `git add` 的），故草稿不扫。
+ * @returns {Array<{relPath: string, text: string}>|null} git 不可用时返回 `null`
+ */
+function collectPrescriptionSurfaces() {
+  const tracked = gitLsFiles()
+  if (tracked === null) return null
+  return tracked
+    .filter((rel) => rel.endsWith('.md') || rel.endsWith('.sh') || rel.endsWith('.bash'))
+    .map((rel) => ({ relPath: rel, text: readIfExists(join(repoRoot, rel)) ?? '' }))
 }
 
 /**

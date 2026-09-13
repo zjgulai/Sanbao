@@ -42,13 +42,27 @@ FL_ALIVE="${FL_ALIVE:-25}"
 #     无子进程、无网络连接、无 modal 会话（sample 显示主线程静在 AppKit 默认 runloop）；
 #   · 把**已知可用的旧 app**放进同一隔离环境，**同样卡在同一阶段**。
 # 结论：卡住的原因是「同一台机器上并存两个实例」，**不是产物的缺陷**。所以这里拒绝运行，
-# 而不是打一条会被误读成产品缺陷的红。真验收路径只有一条：
+# 而不是打一条误读成产品缺陷的红。真验收路径只有一条：
 #   装到 /Applications → **退出 DSH** → 重新启动（此时才是单实例）。
-# 注：用 ps 而不是 pgrep —— macOS 的 `pgrep -f` 对本机 GUI 实例匹配不到
-# （实测：同一条命令行，`ps -ax -o command=` 命中，`pgrep -f` 返回 1，原因不明）。
-RUNNING="$(ps -ax -o command= 2>/dev/null | grep -F 'DSH Desktop.app/Contents/MacOS/DSH Desktop' \
-  | grep -vE '(^| )grep |ps -ax -o command' | head -1)"
-if [ -n "$RUNNING" ]; then
+# 判据不在本文件里：「在不在跑」只有一个家（`dsh-running.sh`，同目录）。
+# 这里问的是 `--any`——**任何**一份 DSH 都算，因为干扰源可能是隔离目录里的那一份；
+# 曾就地写过 `pgrep -f`，它看不见 GUI 主进程（读数见 ADR-0080）。
+HERE="$(cd "$(dirname "$0")" && pwd)"
+DSH_RUN_TOOL="$HERE/dsh-running.sh"
+if [ ! -f "$DSH_RUN_TOOL" ]; then
+  echo "[firstlaunch] 中止：找不到判据 ${DSH_RUN_TOOL}（缺判据 ≠ 没有实例在跑）" >&2
+  exit 1
+fi
+DSH_ANY=0
+bash "$DSH_RUN_TOOL" --any --quiet || DSH_ANY=$?
+case "$DSH_ANY" in
+  0|1) : ;;
+  *)
+    echo "[firstlaunch] 中止：「有没有 DSH 在跑」判不了（dsh-running.sh 退出码 ${DSH_ANY}）" >&2
+    exit 1
+    ;;
+esac
+if [ "$DSH_ANY" = "0" ]; then
   echo "[firstlaunch] 跳过：本机已有 DSH 实例在运行。"
   echo "              双实例并存时新实例会卡在 profile-composition——新产物与已知可用的旧 app 现象完全相同，"
   echo "              这条红不代表产物有问题。真验收：装到 /Applications → 退出 DSH → 重新启动。"

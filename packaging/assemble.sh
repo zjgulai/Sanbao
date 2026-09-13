@@ -452,6 +452,11 @@ grep -q '{{VERSION}}' "$PAYLOAD/INSTALL-GUIDE.md" \
   && { echo "[assemble] ✗ 安装手册里仍有未替换的 {{VERSION}}（版本注入失败）" >&2; exit 1; }
 cp "$PKG_ROOT/scripts/rewrite-file-deps.mjs" "$PAYLOAD/tools/"
 cp "$PKG_ROOT/scripts/reloc-aeis.sh" "$PAYLOAD/tools/"
+# 「在不在跑」的唯一判据随包分发：安装器 0b 闸消费它（白屏红线）。**必须随包**——
+# 安装器在缺这件工具时拒绝安装而不是跳过（缺判据 ≠ 没有实例在跑），所以漏拷不是
+# 「少个便利脚本」，而是安装器全线拒绝。前身是就地写的 `pgrep -f`，它看不见这个
+# Electron 主进程（读数与决策见 docs/adr/ADR-0080.md）。
+cp "$PKG_ROOT/scripts/dsh-running.sh" "$PAYLOAD/tools/"
 # 「死授权」体检器随包分发：换签名身份后，系统 TCC 库里会留下「开关写着允许、绑的却是旧代码」
 # 的行——隐私界面把它显示成「已开启」，而能力其实是死的（2026-09-13 本机实测 2.5 小时无人察觉）。
 # 安装收尾、以及用户日后自查，都靠它（判据见 docs/adr/ADR-0068.md）。

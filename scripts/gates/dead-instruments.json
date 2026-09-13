@@ -1,0 +1,23 @@
+{
+  "$comment": "已证伪的仪器登记簿（ADR-0080）。每一条都是「**实测过**会给出空读数、而空读数被当成结论」的仪器——不是风格偏好，不是猜测。加一条的门槛与 pitfalls-playbook 相同：必须有可复现的命令 + 原始读数，且要写清替代物。判据见 scripts/gates/dead-instrument.mjs。",
+  "instruments": [
+    {
+      "id": "pgrep-electron-main-process",
+      "pattern": "pgrep\\s+(-[A-Za-z]+\\s+)*-f[^\\n]*Contents/MacOS",
+      "provenOn": "2026-09-13",
+      "matchScope": "任何把 `pgrep -f … Contents/MacOS…` 当作「app 在不在跑」的开出去的判据",
+      "reading": "DSH 主进程确实在跑（`ps -Ao pid=,comm=` 给出 `87357 /Applications/DSH Desktop.app/Contents/MacOS/DSH Desktop`）时，`pgrep -f '/Applications/DSH Desktop.app/Contents/MacOS/'` 返回 **0 条**、exit=1；而 `pgrep -f 'Contents/MacOS/'` 同一时刻命中 **222 条**——即它对**这个** Electron 主进程盲，不是 pgrep 坏了。阳性对照：把一个 `/bin/sleep` 拷贝成 `<...>/Contents/MacOS/DSH Desktop` 并启动，同一条模式当场命中其 pid。",
+      "why": "失效是**静默**的：读数返回空 → 调用方走到「没有实例在跑」那条路 → 在运行中替换 app bundle → 整屏白屏。它守的正是白屏红线，而红线等于没有守（P-02 仪器假绿）。",
+      "useInstead": "script:packaging/scripts/dsh-running.sh（退出码 0/1/2/4；4 = 判不了，调用方必须中止而不是当成「没有在跑」）"
+    },
+    {
+      "id": "mdfind-as-absence-proof",
+      "pattern": "mdfind",
+      "provenOn": "2026-09-13",
+      "matchScope": "任何把文件搜索工具的**空结果**当作「本机不存在」的判据",
+      "reading": "2.3.1 的 dmg 曾以「`mdfind -name DSH-Desktop-LUTE` 全盘查不到」宣告丢失，而副本当时就在 `~/Downloads`（`hdiutil verify` VALID、与清单逐位相同）。**搜索工具的沉默不是缺席的证据**——它的射程由索引状态决定，不由文件系统决定。",
+      "why": "错宣告的代价不只是少一份文件：它把一个本可核验收回的版本钉成「不可重建」，并让 `release-verify.sh` 从此对该版本**短路跳过字节核对**（ADR-0067 的 `.lost` 语义）。",
+      "useInstead": "文件系统遍历：`find <目录…> -name <文件名>`（docs/sop/dmg-release.md §7 给了要遍历的目录清单与取证要求）"
+    }
+  ]
+}

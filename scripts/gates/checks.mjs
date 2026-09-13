@@ -343,10 +343,13 @@ export function checkScriptsRunnable({ packages }) {
  * 剔除 shell 行里的注释部分（`#` 在未加引号且**位于词首**时才开始注释）。
  * 为什么需要：`sign-and-dmg.sh:204` 形如 `STAGING=""   # 已属于 $REL，不再…`，
  * 变量在注释里、不参与展开，若整行匹配就会误报——硬门槛不接受假红。
+ *
+ * 导出给 `dead-instrument`（ADR-0080）复用：那条判据也要「只看会跑的那些行」，
+ * 注释里的句子是**说明**、不是**判据**——两份实现迟早分叉。
  * @param {string} line 原始行
  * @returns {string} 去掉注释后的代码部分
  */
-function stripShellComment(line) {
+export function stripShellComment(line) {
   let inSingle = false
   let inDouble = false
   for (let i = 0; i < line.length; i += 1) {

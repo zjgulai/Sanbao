@@ -6,6 +6,10 @@
 > 开工前先读**复发故障总账** [../pitfalls-playbook.md](../pitfalls-playbook.md)：其中 P-02（仪器假绿）、
 > P-06（把平台行为当常量）、P-08（用纪律守只有机制能守住的东西）、**P-14（交付形态是产物的属性，
 > 却按文档的属性维护——本 SOP §5 曾在同一版里同时写错三处）** 与本 SOP 直接相关。
+> **§0 的检查项里不许出现「读数为空的仪器」**——那条红线由门禁 `dead-instrument` 逐行核对，
+> 登记簿在 [`scripts/gates/dead-instruments.json`](../../scripts/gates/dead-instruments.json)
+> （[ADR-0080](../adr/ADR-0080.md)）。清单本身也是判据（ADR-0069）：写在清单里的命令，
+> 会有人照着敲，所以它必须真的读得出东西。
 
 ## 0. 发布前检查清单
 
@@ -14,7 +18,12 @@
 - [ ] 项目级 `pnpm run gate` 通过（退出码 0）。
 - [ ] `vendor/dsh-desktop.pin` 的 `lute-sha` 与 `vendor/dsh-desktop` 当前 HEAD 一致。
 - [ ] 磁盘剩余空间 ≥ 6 GB。
-- [ ] **本机无运行中的 DSH 实例**（`pgrep -f "/Applications/DSH Desktop.app/Contents/MacOS/"` 为空；运行中替换 app bundle 会触发宿主 HMR 热更 → 生产 renderer 无完整热替换 runtime → 白屏，2026-09-13 实测）。
+- [ ] **本机无运行中的 DSH 实例**：`bash packaging/scripts/dsh-running.sh`（随包部署在
+  `tools/` 下）——**退出码 1 = 没有在跑**，可以继续；**0 = 有实例在跑**，先退出它再回来；
+  **4 = 判不了**，必须当失败处理（`ps` 读不出进程表时不能断定「没有在跑」）。
+  运行中替换 app bundle 会触发宿主 HMR 热更 → 生产 renderer 无完整热替换 runtime → 白屏（2026-09-13 实测）。
+  本条曾写成一条 `pgrep -f` 判据，而**它在主进程在跑时返回空**——读数与决策见 [ADR-0080](../adr/ADR-0080.md)；
+  「在不在跑」只有这一个家，不要在此另写一条命令。
 - [ ] 目标版本目录 `packaging/release/<VERSION>/` 不存在；若存在且必须重制，使用 `--force`。
 
 ## 1. 环境准备
@@ -43,7 +52,7 @@ VERSION="$VERSION" ./assemble.sh
 - `staging/$VERSION/payload/DSH Desktop.app.tar.gz`
 - `staging/$VERSION/payload/profile.tar.gz`
 - `staging/$VERSION/payload/install.sh`
-- `staging/$VERSION/payload/tools/`（`verify-patches-v2.sh` 38 锚点、`brand-replay.sh`、`runtime-guards/`、`rewrite-file-deps.mjs`、`reloc-aeis.sh`）
+- `staging/$VERSION/payload/tools/`（`verify-patches-v2.sh` 38 锚点、`brand-replay.sh`、`runtime-guards/`、`rewrite-file-deps.mjs`、`reloc-aeis.sh`、`tcc-grant-status.sh`、`dsh-running.sh`）
 - 装配日志：`/tmp/lute-package-dir.log`
 
 **若失败**：根据脚本输出定位；常见失败点：
@@ -321,7 +330,7 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
 ## 7. 红线与回滚
 
 - **禁止直接修改已发布目录**：`packaging/release/$VERSION/` 只能是「不存在」或「完整通过终验」。任何中间态必须发生在 `release/.staging.XXXXXX`。
-- **禁止运行中替换 app bundle**：本机（或任何目标机）替换 `/Applications/DSH Desktop.app` 前必须先退出运行实例（安装器 `install.sh` 已内置 0b 步骤；手工替换同样适用）。运行中替换会触发宿主 HMR 热更，生产 renderer 无完整热替换 runtime，表现为整屏白屏（2026-09-13 实测；应急恢复 = `Cmd+R`）。
+- **禁止运行中替换 app bundle**：本机（或任何目标机）替换 `/Applications/DSH Desktop.app` 前必须先退出运行实例（安装器 `install.sh` 已内置 0b 步骤；手工替换同样适用）。运行中替换会触发宿主 HMR 热更，生产 renderer 无完整热替换 runtime，表现为整屏白屏（2026-09-13 实测；应急恢复 = `Cmd+R`）。**手工替换前先跑 `bash packaging/scripts/dsh-running.sh` 并确认退出码为 1**（0 = 还在跑，4 = 判不了）——不要就地另写一条命令，本仓库曾用一条读数为空的 `pgrep -f` 守这条红线（[ADR-0080](../adr/ADR-0080.md)）。
 - **禁止把机器绝对路径带出仓库**：出货树出现新的构建机路径（如 `/Users/lute/...`）时 `scan-machine-paths.mjs` 会中止；若必须新增，先更新 `machine-path-baseline.json` 并说明理由。
 - **禁止删除已发布/历史发布的产物**（ADR-0067）：发布成功的产物会被**仓库外归档**
   （`$HOME/Library/Application Support/LUTE/releases/<版本>/`）并在两处加 `uchg` 锁定——
