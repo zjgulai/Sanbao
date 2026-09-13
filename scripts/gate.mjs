@@ -45,6 +45,7 @@ import {
 } from './gates/pitfalls-playbook.mjs'
 import { checkDocsLinkIntegrity } from './gates/docs-links.mjs'
 import { selectAnchorTargets } from './gates/patch-anchor-scope.mjs'
+import { selectPublishTargets } from './gates/release-publish-scope.mjs'
 import { runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectPackages } from './gates/package-collect.mjs'
@@ -425,6 +426,60 @@ const CHECKS = [
         passed: false,
         violations: lines.length > 0 ? lines : [`发布产物核对失败（${verdict}）`],
       }
+    },
+  },
+  {
+    name: 'release-published',
+    modes: ['full'],
+    remediation:
+      '入库版本没有分发面，客户拿不到：按 docs/sop/dmg-release.md §6 发布——gh release create "v<版本>" --title … --notes-file … --verify-tag "packaging/release/<版本>/DSH-Desktop-LUTE-<版本>-mac-arm64.dmg" "packaging/release/<版本>/SHA256SUMS"（历史版本另加 --latest=false，免得被创建时间顶成 Latest）。射程 = **既有** release/<版本>.sha256、**又有** v<版本> tag 的版本（ADR-0076）：只有清单没有 tag（如 2.3.2，通过发布判据之前就被取代）与只有 tag 没有清单（如 2.0.1，早于清单机制）都在射程外，不构成红。gh 不可用或未认证时报**跳过**——跳过不算通过',
+    run() {
+      let releases
+      try {
+        const raw = execFileSync('gh', ['release', 'list', '--limit', '200', '--json', 'tagName,isDraft'], {
+          encoding: 'utf8',
+          timeout: 60000,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        releases = JSON.parse(raw).map((row) => ({ tag: row.tagName, isDraft: row.isDraft }))
+      } catch (error) {
+        // 读不到 ≠ 都发了。三态里这是 skip（ADR-0075 / P-02）。
+        const reason = String(error?.stderr ?? error?.message ?? error)
+          .split('\n')
+          .filter(Boolean)[0]
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `gh release list 读不到（${reason}）——本项**未核对任何版本**（不是「都发了」）`,
+        }
+      }
+      const scope = selectPublishTargets({
+        manifestVersions: publishedManifests(),
+        taggedVersions: releasedVersions(),
+        releases,
+      })
+      if (scope.vacuous) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `${scope.note}——本项**未核对任何版本**（不是「都发了」）`,
+        }
+      }
+      const violations = [
+        ...scope.missing.map((version) => `v${version} 有入库清单且有 tag，但 GitHub Releases 上没有它`),
+        ...scope.drafts.map((version) => `v${version} 的 Release 仍是 draft——对客户不存在`),
+      ]
+      return { passed: violations.length === 0, violations, note: scope.note }
+    },
+  },
+  {
+    name: 'release-published-scope-selftest',
+    remediation:
+      '跑 node --test scripts/gates/release-publish-scope.test.mjs 看红在哪条：射程判据必须能说「不」——只有清单没有 tag（v2.3.2 的形状）与只有 tag 没有清单（v2.0.1 的形状）都必须出局且不得变成永久红，draft 必须算未发布，射程为空必须报空而不是报通过。重点是恒真桩突变：把 missing 恒置空、把 draft 读成已发布、或把射程换成「所有 release/*.sha256」，用例必须失效（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/release-publish-scope.test.mjs', '发布面核对判据的反向自测失败')
     },
   },
   {
@@ -1019,6 +1074,26 @@ function releasedVersions() {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((tag) => tag.replace(/^v/, ''))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 读取 live profile 的已安装依赖表（package.json 的 dependencies）。
+ * 返回空对象表示该 profile 未安装或不可读——调用方据此跳过校验。
+ */
+/**
+ * 已入库的发布清单里的版本号（`release/<版本>.sha256`，进 git，ADR-0058）。
+ * 缺失或不可读时返回空数组——调用方据此判「射程为空」（ADR-0076）。
+ */
+function publishedManifests() {
+  try {
+    const dir = join(repoRoot, 'release')
+    if (!existsSync(dir)) return []
+    return readdirSync(dir)
+      .filter((name) => /^[0-9]+\.[0-9]+\.[0-9]+\.sha256$/.test(name))
+      .map((name) => name.replace(/\.sha256$/, ''))
   } catch {
     return []
   }

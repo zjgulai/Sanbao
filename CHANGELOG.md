@@ -13,6 +13,17 @@
 - **打包基线**：新幂等脚本 `dsh-patches/runtime-guards/apply-fixes.sh` 接入 `assemble.sh` 强制重放、随包分发 `tools/runtime-guards/`；`verify-patches-v2.sh` 锚点 36→**38**（G1/G2）。
 - 配套：`docs/dsh-desktop-white-screen-playbook.md` 增补案例 3（HMR 白屏）与速查卡 B1/B2 二分；`packaging/README.md`/`INSTALL-CARD.md` 同步至 2.3.x 现状；修复 `~/.dsh/skills/dsh-desktop-diagnostics/SKILL.md` 的 YAML frontmatter。
 
+## [2.3.2] - 2026-09-13（**未发布**）
+
+- 切出后即被取代：载荷内「用户需授权第三项：输入监控」的说法是错的——实际只需**辅助功能**与
+  **屏幕录制**两项（依据：本机 TCC 库里 `kTCCServiceListenEvent` 一行记录都没有，而 `post_events`
+  的判定是 `CGPreflightPostEventAccess()`）。17:45 重切为 2.3.3。
+- 产物与入库清单都在（[`release/2.3.2.sha256`](release/2.3.2.sha256)，build `20260913-151032`，
+  SHA256 `7756564e…`，2026-09-13 复核与产物一致），但**没有 tag**。按 [ADR-0058](docs/adr/ADR-0058.md)
+  「清单入库 → 打 tag，tag 才担保得住字节」，**没有 tag 就不是发布版**：它不补 tag、不发 Release，
+  也不进门禁 `release-published` 的射程。决策与理由见 [ADR-0076](docs/adr/ADR-0076.md)。
+  这条记录的存在本身是刻意的——发布历史要的是**可核对的记录**，不是**连续的数字**。
+
 ## [2.3.1] - 2026-09-13
 
 - 2.3.0 的补订版：build `20260913-125353`，清单 `release/2.3.1.sha256`（`source_commit=2534451`，`source_dirty=0`）。

@@ -261,8 +261,45 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
    git tag -a "v$VERSION" -m "DSH Desktop LUTE $VERSION"
    ```
 
-3. **分发 DMG**：上传 `packaging/release/$VERSION/DSH-Desktop-LUTE-$VERSION-mac-arm64.dmg`。
-4. **飞书/内部文档登记**：记录 SHA256、 tag、 source_commit（从 `manifest.json` 读取）。
+3. **推送代码与 tag**：两条远端都要推（ADR-0001：国内 codeup + 公开 GitHub）。
+
+   ```bash
+   git push origin main && git push origin "v$VERSION"
+   git push codeup HEAD:main HEAD:master && git push codeup "v$VERSION"
+   ```
+
+4. **发布到 GitHub Releases**——这是**分发面**，不是可选项：`README.md` 告诉客户「从 Releases 下载」，
+   而此前五道环节里只有这一道从来没有人做过（实测 2026-09-13：Releases 最新是 v2.0.0，而 2.0.1 /
+   2.2.0 / 2.3.0 / 2.3.1 四个版本从未在任何公开分发面出现过，实际渠道是 IM；见 ADR-0076）。
+   notes 必须先落盘（构建号、源提交、profile 快照、SHA256、**该版的已知缺口**），再创建：
+
+   ```bash
+   gh release create "v$VERSION" \
+     --title "LUTE $VERSION — <一句话>" \
+     --notes-file /tmp/lute-release-$VERSION.md \
+     --verify-tag \
+     --latest \
+     "packaging/release/$VERSION/DSH-Desktop-LUTE-$VERSION-mac-arm64.dmg" \
+     "packaging/release/$VERSION/SHA256SUMS"
+   ```
+
+   - **`--latest` 只给最新的入库版本**；补发历史版本时用 `--latest=false`，否则历史版本会因
+     **创建时间较晚**被顶成 Latest，客户从 Releases 首页拿到的是旧包。
+   - `gh` 会先把 Release 建成 **draft** 直到附件传完——draft 对客户不存在，**不算已发布**
+     （门禁 `release-published` 按这条判）。
+
+5. **发布前必答的两问**（缺一不可，见 ADR-0076 决策 4）：
+
+   ```bash
+   cd "packaging/release/$VERSION" && shasum -a 256 -c SHA256SUMS   # ① 字节 vs 清单
+   ```
+
+   ② **载荷敏感内容扫描**：DMG 内含 profile 快照，而 GitHub 仓库是**公开**的。至少扫凭证形态
+   （`sk-` / `ghp_` / `AKIA` / `-----BEGIN … PRIVATE KEY-----` / `Bearer …`）；命中必须**定位到文件**
+   再判——2026-09-13 的两处命中分别是渗透测试技能包里的**文档样例**（`alg:none` 的 JWT）
+   与 **base64 编码的 WASM 字节码**里的巧合序列，都不是凭证。
+
+6. **飞书/内部文档登记**：记录 SHA256、 tag、 source_commit（从 `manifest.json` 读取）。
 
 ## 7. 红线与回滚
 
