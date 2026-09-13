@@ -128,13 +128,14 @@ if ps -Ao comm= 2>/dev/null | grep -Fxq -- "$REAL_EXEC"; then
   rc="$(rc_of bash "$SUT" --app "$REAL")"
   if [ "$rc" = "0" ]; then ok "R7 已装 app 正在跑（ps 独立读得）→ 本判据也判 0"
   else no "R7 已装 app 在跑而本判据给 rc=$rc —— 真实靶子上失效"; fi
-  # 对照**记录**（不 assert）：死仪器此刻的读数。它若哪天开始能看见这个进程，
-  # 说明 macOS 变了——那时本文件与 ADR-0080 的读数需要重新取一次。
-  pg="$(pgrep -f "$REAL/Contents/MacOS/" 2>/dev/null | wc -l | tr -d ' ')"
-  printf '  [info] 对照：同一条路径上 `pgrep -f` 命中 %s 条（ADR-0080 记录的读数是 0）\n' "$pg"
 else
   printf '  [info] R7 跳过：已装 app 当前不在跑（%s 无对应进程）——本次未判定\n' "$REAL_EXEC"
 fi
+
+# 这一支**故意不**重取那条死仪器的对照读数：写它会被门禁 `dead-instrument` 判红
+# （判据面里容不下「跑一下试试」的写法——它分不出「使用」与「测量」）。对照读数是一次性取证，
+# 记在 scripts/gates/dead-instruments.json 的 reading 与 ADR-0080 里；要复核就读那条登记项，
+# 不要在本文件里再写一遍那条命令。
 
 echo
 echo "== 结果: ${PASS} 通过 / ${FAIL} 失败 =="
