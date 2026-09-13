@@ -233,10 +233,19 @@ fi
 # 右侧第三列是**两边必须相同的像素尺寸**：`--apply` 落笔前会真的量一遍并拒绝尺寸不符的资产
 #   （尺寸不符意味着基座换了图标规格，静默覆盖会把 Dock 图标换成一张模糊图）。
 BUILD_DIR="$CHK/build"
-# 资产位置：默认与本脚本同目录（随包分发时就是 payload/tools/brand-icons/）；
-# 仓库侧（assemble.sh 在签名前跑本脚本）由调用方用 BRAND_ICONS_DIR 显式传入，
-# 免得同一批字节在仓库里存第二份（P-07）。
-BRAND_ICONS_DIR="${BRAND_ICONS_DIR:-$(dirname "$0")/brand-icons}"
+# 资产位置。**只有一个家**（packaging/assets/brand-icons/），三种跑法都不许另存一份：
+#   · 随包分发：payload/tools/brand-icons/（与脚本同目录，默认）
+#   · 仓库内直接跑（开发/排障）：../packaging/assets/brand-icons/（此处回退）
+#   · 调用方显式指定：assemble.sh 与 refresh-app-brand.sh 用 BRAND_ICONS_DIR 传入仓库侧那一份
+# 为什么要回退而不是只报 MISSING：只报 MISSING 会**诱导**人去 dsh-patches/ 下复制一份资产
+# 来「修好」它——那正好造出同一条事实的第二个家（P-07）。资产真的一个都没有时才报 MISSING。
+if [ -z "${BRAND_ICONS_DIR:-}" ]; then
+  SIBLING="$(dirname "$0")/brand-icons"
+  REPO_SIDE="$(dirname "$0")/../packaging/assets/brand-icons"
+  if [ -d "$SIBLING" ]; then BRAND_ICONS_DIR="$SIBLING"
+  elif [ -d "$REPO_SIDE" ]; then BRAND_ICONS_DIR="$REPO_SIDE"
+  else BRAND_ICONS_DIR="$SIBLING"; fi   # 都不在：照原样报 MISSING，并指出期望路径
+fi
 # 目标（app 侧 build/）:资产（brand-icons/ 内）:尺寸
 ICON_PAIRS=(
   "app-icon-mac.png:icon-1024.png:1024x1024"

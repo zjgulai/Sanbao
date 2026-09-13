@@ -763,6 +763,23 @@ const CHECKS = [
     },
   },
   {
+    name: 'brand-replay-selftest',
+    remediation:
+      '跑 bash packaging/scripts/brand-replay-test.sh 看红在哪条：第 5 块是**写**路径（把 Dock / 托盘图标从官方原样换成品牌态），静态判据只能守表与资产一致，「落笔写了什么字节」只有真跑一次才知道——R1 报出 8 处 DRIFT、R2 落笔 8 处、**R3 逐字节等于资产（sha256）**、R4 重跑幂等全 OK、R5 目标尺寸与声明不符时**拒绝落笔**（那意味着基座换了图标规格）、R6 资产目录为空时判 MISSING（读不到 ≠ 合格），M1 恒真桩突变证明 R3 比的是真资产。夹具是**不完整**的假 app，故只断言 build/ 那几行、不断言收尾判决行与退出码（原因见脚本头部，ADR-0081）',
+    run() {
+      const script = join(repoRoot, 'packaging', 'scripts', 'brand-replay-test.sh')
+      const result = runScript(repoRoot, `bash "${script}"`, 120000)
+      if (result.code === 0) return { passed: true, violations: [] }
+      const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+      const lines = text
+        .split('\n')
+        .filter((line) => /\[FAIL\]|\[自测\]/.test(line))
+        .map((line) => line.trim())
+      const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+      return { passed: false, violations: lines.length > 0 ? lines : [`品牌重放自测失败（${verdict}）`] }
+    },
+  },
+  {
     name: 'changed-packages',
     remediation: '为本次改动的包补 typecheck 与 test 脚本，或按 ADR-0014 登记豁免（只减不增）',
     run() {
