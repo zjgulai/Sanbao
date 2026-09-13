@@ -4,7 +4,8 @@
 > 决策来源：[ADR-0056](../adr/ADR-0056.md)、[ADR-0057](../adr/ADR-0057.md)、[ADR-0058](../adr/ADR-0058.md)。
 > 相关脚本：`packaging/assemble.sh`、`packaging/sign-and-dmg.sh`。
 > 开工前先读**复发故障总账** [../pitfalls-playbook.md](../pitfalls-playbook.md)：其中 P-02（仪器假绿）、
-> P-06（把平台行为当常量）、P-08（用纪律守只有机制能守住的东西）三条与本 SOP 直接相关。
+> P-06（把平台行为当常量）、P-08（用纪律守只有机制能守住的东西）、**P-14（交付形态是产物的属性，
+> 却按文档的属性维护——本 SOP §5 曾在同一版里同时写错三处）** 与本 SOP 直接相关。
 
 ## 0. 发布前检查清单
 
@@ -124,10 +125,15 @@ codesign -d -r- "packaging/staging/$VERSION/app/DSH Desktop.app" | grep -o 'cert
 
 ```bash
 codesign --verify --deep --strict \
-  "packaging/release/$VERSION/DSH Desktop.app"
+  "packaging/staging/$VERSION/app/DSH Desktop.app"
 ```
 
 应返回无错误。
+
+**复核的是 `staging/$VERSION/app/` 那棵树，不是 `packaging/release/$VERSION/`。**
+后者只有 DMG 与清单三件（`SHA256SUMS` / `VERSION` / `manifest.json`），**没有解开的 app**——
+本 SOP 曾在此处写 `packaging/release/$VERSION/DSH Desktop.app`，那条命令在本机当场失败
+（同一版里同一根因的第三处，见 §5.2 与 [P-14](../pitfalls-playbook.md)）。
 
 **跨版本身份延续（每一版都要跑）**：换签的全部目的是「用户升级后不必重新授权」。这条不是
 只能靠人工复测的经验问题——TCC 存的授权要求取自 app 的指定要求，故它等价于：
@@ -144,12 +150,20 @@ bash packaging/scripts/verify-tcc-persistence.sh \
 
 ### 5.2 挂载与内容验证
 
+交付形态是**离线安装器载荷**——不是可拖拽的安装盘。卷里有哪些文件、哪几个是安装入口，
+**只有一个家**：[安装手册第 2 节](../../packaging/INSTALL-GUIDE.md) 的入口表。
+本节**不复述那份清单**：复述出来的那是一份快照，产物形态换了它不会自己报错，而复核者读的
+正好是这一节（[P-14](../pitfalls-playbook.md)）。逐名比对交给判据，不靠眼看：
+
 ```bash
 hdiutil attach "packaging/release/$VERSION/DSH-Desktop-LUTE-$VERSION-mac-arm64.dmg" -nobrowse
-ls /Volumes/"DSH Desktop LUTE $VERSION"/
-# 应看到 DSH Desktop.app 与 Applications 快捷方式
-hdiutil detach /Volumes/"DSH Desktop LUTE $VERSION"
+ls -A "/Volumes/DSH Desktop LUTE $VERSION"/
+# 逐名比对：门禁 dmg-layout-doc 会把卷内清单与安装手册入口表两向对照（多一个少一个都判红）
+pnpm run gate:full
+hdiutil detach "/Volumes/DSH Desktop LUTE $VERSION"
 ```
+
+**本节不写「应看到 X 与 Y」**：那种句子的真假由产物决定，而它住在文档里，没人会去比。
 
 ### 5.3 哈希核对
 
@@ -162,7 +176,10 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
 
 ### 5.4 首次启动（真机或干净虚拟机）
 
-1. 把 DMG 里的 app 拖到 `/Applications`。
+1. 按[安装手册第 2 节](../../packaging/INSTALL-GUIDE.md)的入口表选一个安装入口：**双击 `LUTE Setup.app`**，
+   或在终端里跑 `bash install.sh`。**不要**试图把某个 `.app` 拖进 `/Applications`——
+   卷上根本没有解开的 app，`DSH Desktop.app.tar.gz` 是压缩载荷，拖过去装不成
+   （本 SOP 曾把这一步写成「把 DMG 里的 app 拖到 `/Applications`」，见 [P-14](../pitfalls-playbook.md)）。
 2. 退出所有已运行的 DSH 实例。
 3. 临时移走或重命名现有 `~/.dsh`，模拟新用户首启。
 4. 打开 app，10 秒内应完成 profile 物化并进入主界面。

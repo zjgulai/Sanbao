@@ -44,6 +44,12 @@ import {
   PLAYBOOK_REL_PATH,
 } from './gates/pitfalls-playbook.mjs'
 import { checkDocsLinkIntegrity } from './gates/docs-links.mjs'
+import {
+  checkDmgLayout,
+  GUIDE_REL_PATH as DMG_LAYOUT_GUIDE_PATH,
+  selectLayoutTargets,
+  SOP_REL_PATH as DMG_LAYOUT_SOP_PATH,
+} from './gates/dmg-layout.mjs'
 import { selectAnchorTargets } from './gates/patch-anchor-scope.mjs'
 import { selectPublishTargets } from './gates/release-publish-scope.mjs'
 import { runScript } from './lib/run-script.mjs'
@@ -726,6 +732,71 @@ const CHECKS = [
       '跑 node --test scripts/gates/patch-anchor-scope.test.mjs 看红在哪条：扫描集判据必须能说「不」——已打 tag 的树必须退出扫描、未打 tag 的（含同号重制的新树）必须纳入、射程为空必须报空而不是报通过。重点是恒真桩突变：把过滤换成「无条件纳入」或把空射程恒置 false，用例必须失效；测不出来的判据等于没有判据（P-02 / P-11）',
     run() {
       return runNodeTestFile('scripts/gates/patch-anchor-scope.test.mjs', '补丁锚点扫描集判据的反向自测失败')
+    },
+  },
+  {
+    name: 'dmg-layout-doc',
+    remediation:
+      '按报错改正二选一：①SOP 里又在复述卷内清单（或断言了拖拽式交付形态）→ 把那份清单换掉，改成指向 packaging/INSTALL-GUIDE.md 第 2 节的名字，让本条去做两向对照；②卷与入口表逐名对不上 → 判断哪边是对的那个，然后改另一边（新增载荷文件要登记进手册，手册里写的文件必须真的在卷上）。⚠️ 已打 tag 的版本不在射程内（它由产物自己冻结，ADR-0067）——读数里的「不参与」点名了它们是哪些',
+    run() {
+      // 交付形态是**产物**的属性，不是**文档**的属性（ADR-0077 / P-14）。
+      // 2026-09-13 实测：SOP §5 三处描述的是上一版的形态（可拖拽安装盘），而 2.3.3 是离线安装器
+      // 载荷——§5.1 的 codesign 路径在那个目录下根本不存在、§5.2 断言卷根有 .app 与 Applications
+      // 快捷方式、§5.4 教用户把 app 拖进 /Applications。三处都判不出，因为没有任何判据把
+      // 「文档断言的清单」与「产物真实的清单」比过一次。
+      const sopText = readIfExists(join(repoRoot, DMG_LAYOUT_SOP_PATH))
+      const guideText = readIfExists(join(repoRoot, DMG_LAYOUT_GUIDE_PATH))
+
+      // 射程两处：① 已挂载的交付卷；② packaging/staging/ 下**未打 tag** 的 payload。
+      // 与 patch-anchors 同一条规矩：射程跟着 git 走，不跟着磁盘走（ADR-0075 / P-11）。
+      const volumes = []
+      try {
+        for (const name of readdirSync('/Volumes')) {
+          if (!name.startsWith('DSH Desktop LUTE ')) continue
+          const label = join('/Volumes', name)
+          const version = name.slice('DSH Desktop LUTE '.length).trim() || undefined
+          volumes.push({ label, version, entries: readdirSync(label) })
+        }
+      } catch {
+        // /Volumes 读不到：不猜，直接当没有卷——射程为空会如实报 skip。
+      }
+      const stagingRoot = join(repoRoot, 'packaging', 'staging')
+      const payloads = existsSync(stagingRoot)
+        ? readdirSync(stagingRoot)
+            .sort()
+            .map((version) => ({ version, dir: join(stagingRoot, version, 'payload') }))
+            .filter(({ dir }) => existsSync(dir))
+        : []
+      // 交付卷的版本号取卷名；payload 的版本号取目录名——两者由同一个 tag 家判「是否已发布」。
+      const scope = selectLayoutTargets({
+        volumes: volumes.map(({ label, version }) => ({ label, version })),
+        payloadVersions: payloads.map(({ version }) => version),
+        taggedVersions: releasedVersions(),
+      })
+      const inScope = [
+        ...scope.scanVolumes.map(({ label }) => ({
+          label,
+          entries: volumes.find((volume) => volume.label === label)?.entries ?? [],
+        })),
+        ...scope.scanPayloads.map((version) => ({
+          label: `packaging/staging/${version}/payload`,
+          entries: readdirSync(join(stagingRoot, version, 'payload')),
+        })),
+      ]
+      const result = checkDmgLayout({ sopText, guideText, artifacts: inScope })
+      if (result.skipped) {
+        // 「没量到任何东西」与「量了都合格」必须分开报（ADR-0075 / P-02）。
+        return { ...result, note: `${result.note}（${scope.note}）` }
+      }
+      return { ...result, note: result.note ? `${result.note}（${scope.note}）` : scope.note }
+    },
+  },
+  {
+    name: 'dmg-layout-doc-selftest',
+    remediation:
+      '跑 node --test scripts/gates/dmg-layout.test.mjs 看红在哪条：交付卷形态判据必须能说「不」——SOP 没指向安装手册要判红、**用 2026-09-13 缺陷原文**（「应看到 DSH Desktop.app 与 Applications 快捷方式」）当输入必须判红、卷上有手册没登记的文件与手册登记了卷上没有的文件都必须判红、标为「✅ 可点入口」的项不存在必须判红、入口表解析不出条目时必须判红而不是当作「没什么可比的」放行、射程为空必须报 skip 而不是 ok（且静态半仍然说话）。重点是恒真桩突变：一个只检查「SOP 有没有链接安装手册」的实现会放过缺陷原文——测不出来的判据等于没有判据（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/dmg-layout.test.mjs', '交付卷形态判据的反向自测失败')
     },
   },
   {
