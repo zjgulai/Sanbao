@@ -103,3 +103,38 @@ untaggedManifests: 2.3.2                        ← 只进读数，不进违规
   3. 未动的两条口径：`v2.0.1` 早于清单机制、没有 `release/2.0.1.sha256`（`release-verify.sh`
      已如实报为「未登记（早于清单机制）」）；`verify-patches-v2.sh` 的默认 `STAGE_VERSION`
      仍陈旧（在出货载荷里，改了就会与已装配的 2.3.3 不同源，随下一版改）。
+
+## 实际执行读数（2026-09-13 23:22 收尾，外部核对）
+
+五个 Release 全部就位，DMG 尺寸与 `packaging/release/<版本>/` 的本地产物**逐字节相同**，
+`Latest` = **v2.3.3**：
+
+| 版本 | draft | DMG 字节 | 附件 |
+| --- | --- | --- | --- |
+| v2.0.1 | false | 686,153,172 | DMG + SHA256SUMS |
+| v2.2.0 | false | 639,234,068 | DMG + SHA256SUMS |
+| v2.3.0 | false | 640,073,891 | DMG + SHA256SUMS |
+| v2.3.1 | false | 640,085,753 | DMG + SHA256SUMS |
+| v2.3.3 | false | 640,902,391 | DMG + SHA256SUMS |
+
+代码与 tag 已推两条远端（`origin` 与 `codeup` 的 `main`/`master` 同在 `be72b27`；
+tag v2.3.0 / v2.3.1 / v2.3.3 两条远端都有）。门禁 `release-published` 随后的读数是：
+
+```
+ok contract release-published（核对发布面 4 个版本：2.2.0 2.3.0 2.3.1 2.3.3；
+   有清单但无 tag，按 ADR-0058 不算发布版、不参与：2.3.2）
+```
+
+——2.3.2 的排除被如实念了出来，这正是射程取交集的用意。
+
+### 过程中踩到的两个坑（都已写进 SOP §6）
+
+1. **640 MB 的上传会被打断，而中断会回滚整个 Release**。第一次跑（19:04–23:16）里
+   v2.3.1 的上传被 `read tcp …: connection reset by peer` 打断，`gh` 把整个 Release 撤掉了
+   （`release not found`，连已传完的 `SHA256SUMS` 一起没）——不是「留个 draft」，是**什么都不留**。
+   处置：重跑同一命令 + 重试，无需清理。中途还遇上一次**整机重启**把后台作业全部打掉，
+   同样是「重跑即续」（脚本因此改成可重入：已发布的跳过、draft 的补附件并转正）。
+2. **`gh release create` 的退出码不能当判据**：第一版脚本把它读在一条 `echo "exit=$?"` 之后，
+   于是**失败被报成了 `exit=0`**——一次教科书式的假绿（P-02），而且是我自己刚为别人写好
+   判据的那一页。它是被**外部队对状态**（`gh release view` 说 `release not found`）抓住的，
+   不是被退出码抓住的：收尾判据必须量**结果**，不量**动作自称成功了**。

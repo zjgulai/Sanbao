@@ -313,6 +313,20 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
      **创建时间较晚**被顶成 Latest，客户从 Releases 首页拿到的是旧包。
    - `gh` 会先把 Release 建成 **draft** 直到附件传完——draft 对客户不存在，**不算已发布**
      （门禁 `release-published` 按这条判）。
+   - **640 MB 的上传是可被打断的，而失败会回滚整个 Release**（连已传完的 `SHA256SUMS` 一起没，
+     不留半截）。2026-09-13 实测两次：`read tcp …: read: connection reset by peer` 打断后
+     `gh release view v2.3.1` 返回 `release not found`。处置就是**重跑同一命令**（无需清理），
+     但要带重试；并且——
+
+   > ⚠️ **不要用 `gh release create` 的退出码当判据。** 2026-09-13 实测：把它读在一条
+   > `echo "exit=$?"` 之后，失败被报成了 `exit=0`（`$?` 读的是 `echo` 自己的结果）——
+   > 一次教科书式的假绿（P-02）。收尾必须**以外部队对状态为准**，这条也就是门禁
+   > `release-published` 在做的事：
+
+   ```bash
+   for v in <版本…>; do gh release view "v$v" --json isDraft,assets \
+     | python3 -c "import sys,json;d=json.load(sys.stdin);a={x['name']:x for x in d['assets']};print('v$v draft=%s %s'%(d['isDraft'],'✓' if not d['isDraft'] and 'DSH-Desktop-LUTE-$v-mac-arm64.dmg' in a else '✗'))"; done
+   ```
 
 5. **发布前必答的两问**（缺一不可，见 ADR-0076 决策 4）：
 
