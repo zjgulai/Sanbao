@@ -29,6 +29,7 @@
     "eval:static": "node eval/static-routing.mjs",
     "extract:cards": "node scripts/extract-cards.mjs",
     "install:skills": "node scripts/import-paper2skills.mjs",
+    "sync:card-facets": "node scripts/sync-card-facets.mjs",
     "selftest:code-recovery": "python3 scripts/build-source-code.py --selftest",
     "test": "node --test test/*.spec.mjs",
     "typecheck": "tsc -p tsconfig.json --pretty false",

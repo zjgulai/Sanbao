@@ -36,13 +36,12 @@ node scripts/verify_static.mjs
 if [ "$DRY" = "1" ]; then echo "== dry：不写 profile / 不 lint =="; exit 0; fi
 
 echo "== [8/8] 同步 profile + 预设 lint =="
+# 阶段 8 的同步逻辑抽到 scripts/sync-profile-files.sh：**内联的守卫没法被测**。
+# 那段 `-ef` 判据防的是真实事故（`cat >` 遇硬链接会同时把源与副本截成 0 字节，
+# lib/catalog.js 被这样归零过），但留在 pipeline.sh 里就只能靠人读。
+# 现在 test/profile-sync.spec.mjs 用夹具真跑那个入口，并把它改坏验证用例有劲。
+# 新增受管文件 = 往下面这行加一个文件名，写盘路径只有 tmp+mv 一条。
 PROFILE_LIB="$HOME/.dsh/profiles/desktop/node_modules/dsh-overseas-skills/lib"
-for f in index.js catalog.js client.js; do
-  s="lib/$f"; d="$PROFILE_LIB/$f"
-  # tmp+mv 原子替换：即使 d 与 s 是硬链接也不会把源文件截断（cat > 会先 truncate 再读，双杀）
-  if [ -f "$d" ] && [ "$s" -ef "$d" ]; then rm -f "$d"; fi
-  cp "$s" "$d.tmp" && mv -f "$d.tmp" "$d"
-  echo "  $f: 同步"
-done
+bash scripts/sync-profile-files.sh "$PROFILE_LIB" index.js catalog.js client.js
 node "$HOME/project/Magpie-Horch/dsh-patches/lint-preset.mjs" "$HOME/.dsh/.agent-presets/brand-marketing-growth" 2>&1 | tail -1 || true
 echo "✓ 管线完成。catalog/client 变更需重启 DSH Desktop 生效。"

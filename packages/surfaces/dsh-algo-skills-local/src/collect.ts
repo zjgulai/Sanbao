@@ -163,6 +163,19 @@ export function parseRoleManifest(id: string, raw: string): RoleManifest | undef
  *
  * A card whose frontmatter is unreadable still yields a row (identified by its
  * directory name) so it appears in the unplaced group instead of vanishing.
+ *
+ * The five provenance fields (`p2s_venue` / `p2s_venue_tier` /
+ * `p2s_evidence_grade` / `p2s_paper_id` / `p2s_code_level`) are transmitted
+ * **verbatim** — this surface classifies nothing, so an absent key becomes an
+ * empty string here and the page decides how to say "no value" (it says
+ * 「未标注」; see `client/facets.ts`). Defaulting them to a plausible tier
+ * instead would be this package inventing a classification fact, which is the
+ * one thing its design forbids.
+ *
+ * This is the **only** skill-card parse point in the plugin:
+ * `frontmatter.ts::parseFields` is the shared field reader (also used by the
+ * write path and its tests), and `collectTree` below is the only production
+ * caller of `parseSkill`.
  * @param name - skill directory name.
  * @param text - SKILL.md contents.
  * @returns the parsed row plus the classification keys used for placement.
@@ -183,6 +196,11 @@ export function parseSkill(name: string, text: string): { row: SkillRow; plane: 
       modelEnabled: (fields.get('disable-model-invocation') ?? 'false') !== 'true',
       srcDomain: fields.get('p2s_src_domain') ?? '',
       cardId: fields.get('p2s_card_id') ?? '',
+      venue: fields.get('p2s_venue') ?? '',
+      venueTier: fields.get('p2s_venue_tier') ?? '',
+      evidenceGrade: fields.get('p2s_evidence_grade') ?? '',
+      paperId: fields.get('p2s_paper_id') ?? '',
+      codeLevel: fields.get('p2s_code_level') ?? '',
       alsoServes,
       wired: false,
       wiredElsewhere: [],

@@ -16,6 +16,12 @@
  *    own role, 23 are classified into one role but wired into another, and 978
  *    are wired nowhere. Showing placement alone would imply a route to the model
  *    that 978 of these cards do not have.
+ *  - The per-card **provenance row** (venue / 档位 / 证据等级 / 论文 / 代码), read
+ *    verbatim from the card's own frontmatter. This is the one place the
+ *    paper→skills pipeline's selection facts reach a screen at all: which venue
+ *    a card's paper ran in, how strong its evidence is, whether its code runs.
+ *    A card that carries no value for a field says 「未标注」 rather than leaving
+ *    the cell empty, because blank and "nobody measured it" render identically.
  *
  * Failure policy: a failed fetch renders an error line and nothing else. `apply`
  * never throws (an external plugin must not be able to take the shell's boot
@@ -26,6 +32,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { RoleNode, SkillRow, TreePayload } from '../wire.ts'
+import { provenanceCells, type ProvenanceKey } from './facets.ts'
 import { expansionFor, narrowTree } from './filter.ts'
 import { fill, tt } from './i18n.ts'
 import { ROUTES } from './routes.ts'
@@ -44,6 +51,32 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 /** Total cards under a role list. */
 function roleCards(roles: RoleNode[]): number {
   return roles.reduce((sum, role) => sum + role.skills.length, 0)
+}
+
+/**
+ * Where a card came from, as five labelled cells.
+ *
+ * The labels are resolved here (not at module scope) so they follow the live
+ * locale, and each is written as a literal `tt('…')` call because
+ * `copy-wiring.spec.ts` scans this file for exactly that shape — a computed key
+ * would read as copy that was written but never wired.
+ *
+ * Every cell comes back with a non-empty value: a field the card does not carry
+ * renders 「未标注」. That decision lives in `facets.ts` and is tested on its own;
+ * this component must not re-decide it, or the two would drift apart and the
+ * blank-cell failure would come back through the other door.
+ * @param card - the row being rendered.
+ * @returns the five cells, in `PROVENANCE_FACETS` order.
+ */
+function provenance(card: SkillRow): ReturnType<typeof provenanceCells> {
+  const labels: Record<ProvenanceKey, string> = {
+    venue: tt('prov.venue'),
+    venueTier: tt('prov.tier'),
+    evidenceGrade: tt('prov.grade'),
+    paperId: tt('prov.paper'),
+    codeLevel: tt('prov.code'),
+  }
+  return provenanceCells(card, { labels, unlabeled: tt('prov.unlabeled') })
 }
 
 /** One card. */
@@ -76,6 +109,22 @@ function SkillCard({
         </button>
       </div>
       {card.summary !== '' ? <p className={css['cardSummary'] ?? ''}>{card.summary}</p> : null}
+      {/* 出处行：venue / 档位 / 证据等级 / 论文 / 代码。字段由卡自己带（p2s_*），
+          本页只负责显示；缺失一律印「未标注」——空白与「没测过」在屏幕上是同一个
+          样子，而这一页存在的理由恰恰是让语料自己的事实可见。 */}
+      <div className={css['prov'] ?? ''} data-dsh-part="algo-card-prov" title={tt('prov.title')}>
+        {provenance(card).map((cell) => (
+          <span
+            key={cell.key}
+            className={`${css['provCell'] ?? ''}${cell.missing ? ` ${css['provMissing'] ?? ''}` : ''}`}
+            data-prov={cell.key}
+            data-prov-missing={cell.missing ? 'true' : 'false'}
+          >
+            <span className={css['provLabel'] ?? ''}>{cell.label}</span>
+            <span className={css['provValue'] ?? ''}>{cell.value}</span>
+          </span>
+        ))}
+      </div>
       <div className={css['cardFoot'] ?? ''}>
         {card.srcDomain !== '' ? <span className={css['chip'] ?? ''}>{card.srcDomain}</span> : null}
         {card.wired ? <span className={`${css['chip'] ?? ''} ${css['chipWired'] ?? ''}`}>{tt('chip.wired')}</span> : null}

@@ -474,6 +474,52 @@
   gap: 4px;
 }
 
+/* 出处行（venue / 档位 / 证据 / 论文 / 代码）。
+   与徽标行在视觉上分开：徽标行的每一枚都在说「这张卡在我们这里是什么状态」，
+   出处行说的是「这张卡从哪儿来」。 */
+.prov {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 2px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.provCell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.provLabel {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  opacity: 0.75;
+}
+
+.provValue {
+  min-width: 0;
+  color: var(--dsw-alias-label-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 132px;
+}
+
+/* 「未标注」既不是缺省值也不是错误：它是一条事实——卡没带这一项。
+   但它必须与「有值」区分开，否则读者会把它读成空白（那正是这一页要防的失效）。
+   故用斜体 + 虚线底，仍取中性色，不报警。 */
+.provMissing .provValue {
+  font-style: italic;
+  color: var(--dsw-alias-label-tertiary);
+  border-bottom: 1px dashed var(--dsw-alias-border-l2);
+}
+
 .chip {
   font-size: 10px;
   line-height: 14px;

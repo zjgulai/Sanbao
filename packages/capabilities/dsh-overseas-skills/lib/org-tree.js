@@ -198,9 +198,33 @@ export function buildOrgTree(input) {
 
   const rowsPerRole = roles.reduce((n, r) => n + (cardsPerRole.get(r.id)?.size ?? 0), 0);
 
+  // 行级接线分布（每张卡在每个岗位下各算一次）。
+  //
+  // 判据**与页面徽标同源** —— 直接用 `wiringStatus`，不再各写一份。三项必须构成
+  // `rows` 的一个划分，否则任何外部消费者把三项相加都会得到一个大于 `rows` 的数。
+  //
+  // 这两个数曾经是硬编码 0（`toOtherRole` / `none`），而真实分布是 52 / 143：
+  // 页面自己走 `wiringStatus` 所以看不出来，但「接线到别岗」与「谁也没挂」这两类
+  // 恰恰是这一页存在的理由，外部读到的却是「一张都没有」。
+  let rowsToThisRole = 0;
+  let rowsToOtherRole = 0;
+  let rowsUnwired = 0;
+  // ⚠️ `wiringStatus` 收的是**平面对象**（就是返回给页面的 `wiredIndex`），不是上面那个
+  //    Map。第一版把 Map 递进去，`wiredIndex?.[skill]` 恒为 undefined ⇒ 319 行全判 `none`
+  //    （`toThisRole` 反而变成 0）。所以这里先构造那个对象，再两处共用同一份。
+  const wiredIndexObject = Object.fromEntries([...wiredIndex.entries()].map(([k, v]) => [k, v.slice().sort()]));
+  for (const role of roles) {
+    for (const name of cardsPerRole.get(role.id) ?? []) {
+      const kind = wiringStatus(name, role.id, wiredIndexObject).kind;
+      if (kind === "self") rowsToThisRole += 1;
+      else if (kind === "other") rowsToOtherRole += 1;
+      else rowsUnwired += 1;
+    }
+  }
+
   return {
     scenarios: scenarioNodes,
-    wiredIndex: Object.fromEntries([...wiredIndex.entries()].map(([k, v]) => [k, v.slice().sort()])),
+    wiredIndex: wiredIndexObject,
     wiredOnlyByRole,
     /**
      * S12 契约闸门（Q5）。`mode` 取值：
@@ -226,11 +250,19 @@ export function buildOrgTree(input) {
       rolesWithCards: roles.length - zeroCardRoles.length,
       /** 行数：同一张卡在 N 个岗位下出现即 N 行——与「卡片数」必须在页面上分开写 */
       rows: rowsPerRole,
+      /**
+       * 行级接线三态，与页面徽标同源（`wiringStatus` 的 `self` / `other` / `none`）。
+       * **`toThisRole + toOtherRole + none === rows`**，恒等式在单测里锁定。
+       * ⚠️ `toThisRole` 曾写成 `rowsPerRole`（**全部**行）⇒ 三项不同尺、相加超过 `rows`；
+       *    已改为与另两项同尺的 `self` 行数。
+       * ⚠️ `wired` **不属于这个划分**：它是 preset 白名单里的槽位数（Σ|role.wired|），
+       *    包含「挂了但不归本岗」的卡，与前三项**不许相加**。
+       */
       wiring: {
-        toThisRole: rowsPerRole,
+        toThisRole: rowsToThisRole,
+        toOtherRole: rowsToOtherRole,
+        none: rowsUnwired,
         wired: roles.reduce((n, r) => n + (r.wired ?? []).length, 0),
-        toOtherRole: 0,
-        none: 0,
       },
     },
     zeroCardRoles,

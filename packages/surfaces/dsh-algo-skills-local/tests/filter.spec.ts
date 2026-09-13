@@ -14,6 +14,8 @@ function card(name: string, title: string, summary = '', srcDomain = '18-物流�
   return {
     name, title, summary, srcDomain, alsoServes,
     modelEnabled: false, cardId: `Skill-${name}`, wired: false, wiredElsewhere: [],
+    // 出处的五个字段与过滤无关，一律留空——页面会印「未标注」。
+    venue: '', venueTier: '', evidenceGrade: '', paperId: '', codeLevel: '',
   }
 }
 

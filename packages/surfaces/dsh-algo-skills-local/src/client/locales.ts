@@ -65,6 +65,19 @@ export const zh = {
     '本岗会带上它、在本岗会话里照常自动调用；卡右上角的开关管的是本岗之外的会话——'
     + '关着时模型在别处不会自己挑它。点开关可以打开。',
 
+  // 出处行：五个字段由卡自己带（frontmatter 的 p2s_*），本页只显示。
+  // 「未标注」是判据不是文案——字段缺失必须显式说出来，否则空白与「没测过」
+  // 在屏幕上是同一个样子。
+  'prov.venue': 'venue',
+  'prov.tier': '档位',
+  'prov.grade': '证据',
+  'prov.paper': '论文',
+  'prov.code': '代码',
+  'prov.unlabeled': '未标注',
+  'prov.title':
+    '出处：venue / 档位 / 证据等级 / 论文 / 代码——由卡自己带（frontmatter 的 p2s_* 字段），'
+    + '本页只显示、不改写；卡没带这一项时印「未标注」。',
+
   'unplaced.title': '没分到岗位的卡（矩阵空白）',
   'unplaced.note':
     '这些卡在语料里没有任何一条责任能装下（多为人文、伦理、可持续等跨域主题），因此不进任何岗位；'
@@ -129,6 +142,16 @@ export const en: Record<AlgoSkillKey, string> = {
   'chip.off.fix':
     'This role carries it and the model will pick it up inside this role\'s session; the switch governs '
     + 'sessions outside this role — switched off, the model will not reach for it elsewhere. Click the switch to turn it on.',
+
+  'prov.venue': 'venue',
+  'prov.tier': 'tier',
+  'prov.grade': 'evidence',
+  'prov.paper': 'paper',
+  'prov.code': 'code',
+  'prov.unlabeled': 'unlabeled',
+  'prov.title':
+    'Provenance: venue / tier / evidence grade / paper / code — carried by the card itself '
+    + '(the p2s_* frontmatter fields). This page only displays them; a field the card does not carry reads "unlabeled".',
 
   'unplaced.title': 'Cards with no role (matrix blank)',
   'unplaced.note':

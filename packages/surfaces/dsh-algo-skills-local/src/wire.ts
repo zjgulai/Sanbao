@@ -24,6 +24,21 @@ export interface SkillRow {
   srcDomain: string
   /** Source card id, e.g. `Skill-3D-Bin-Packing-Optimization`. */
   cardId: string
+  /**
+   * Publication venue, exactly as the card's frontmatter records it
+   * (`p2s_venue`), e.g. `SIGIR 2025`. **Empty string means the card carries no
+   * value** — the page must say 「未标注」 rather than render nothing, because a
+   * blank cell is indistinguishable from a fact nobody measured.
+   */
+  venue: string
+  /** Venue tier from the whitelist's levels (`p2s_venue_tier`), e.g. `CCF-A`. Empty when absent. */
+  venueTier: string
+  /** Evidence grade (`p2s_evidence_grade`), e.g. `A`. Empty when absent. */
+  evidenceGrade: string
+  /** Source paper id (`p2s_paper_id`), e.g. `2406.12089`. Empty when absent. */
+  paperId: string
+  /** How executable the card's code section is (`p2s_code_level`). Empty when absent. */
+  codeLevel: string
   /** Secondary responsibilities this card also serves, when it declares more than one. */
   alsoServes: string[]
   /** Whether this role's preset actually wires the card into its skill-subset. */

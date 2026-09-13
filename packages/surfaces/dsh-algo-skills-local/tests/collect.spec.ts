@@ -149,6 +149,34 @@ describe('parseSkill', () => {
     expect(parsed.row.modelEnabled).toBe(true)
     expect(parsed.row.title).toBe('p2s-y')
   })
+
+  it('transmits the five provenance fields verbatim', () => {
+    const text = [
+      '---',
+      'name: "p2s-prov"',
+      'p2s_venue: "SIGIR 2025"',
+      'p2s_venue_tier: "CCF-A"',
+      'p2s_evidence_grade: "A"',
+      'p2s_paper_id: "2406.12089"',
+      'p2s_code_level: "完整实现·可解析"',
+      '---',
+      '',
+    ].join('\n')
+    const row = parseSkill('p2s-prov', text).row
+    expect(row.venue).toBe('SIGIR 2025')
+    expect(row.venueTier).toBe('CCF-A')
+    expect(row.evidenceGrade).toBe('A')
+    expect(row.paperId).toBe('2406.12089')
+    expect(row.codeLevel).toBe('完整实现·可解析')
+  })
+
+  it('reports an absent provenance field as empty, never as a plausible default', () => {
+    // 这里的判据是「不许替卡编事实」：卡没带 venue，插件就不能填一个看起来合理的
+    // 档位。空串是「卡没带」这一个事实的如实表达，页面负责把它印成「未标注」。
+    const row = parseSkill('p2s-bare', '---\nname: "p2s-bare"\n---\n').row
+    expect([row.venue, row.venueTier, row.evidenceGrade, row.paperId, row.codeLevel])
+      .toEqual(['', '', '', '', ''])
+  })
 })
 
 describe('collectTree', () => {

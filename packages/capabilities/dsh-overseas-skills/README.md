@@ -27,6 +27,7 @@ DSH Desktop 设置页「出海技能」插件：从 Accio 导入的跨境电商�
 | `scripts/build_role_map.py` | 编译归位表（`--check` 断言 lib 与 manifest 一致） |
 | `scripts/gen-layer-icons.mjs` | 烘焙 12 枚层头像 |
 | `scripts/build_preset_catalog.py` | 重建 `lib/catalog.js` |
+| `scripts/sync-profile-files.sh` | **唯一的 profile 同步入口**：tmp+mv 原子替换 + 同 inode 守卫 + 包名对账；`test/profile-sync.spec.mjs` 用夹具真跑（含两条变异） |
 | `scripts/import-accio.mjs` | 一次性幂等导入器：`/Users/lute/.accio/accounts/1786471462/skills` → `~/.dsh/skills`（工具型跳过，frontmatter 归一化 + 中文 title） |
 
 ## 页面报什么数（三个数必须分开读）
@@ -55,7 +56,7 @@ python3 scripts/build_role_map.py           # 重新编译（改了 manifest 之
 python3 scripts/validate_assignments.py     # 断言判定本身对不对（**正确性**，见下）
 python3 scripts/validate_assignments.py --check-roles-live   # 岗位快照 vs 运行时 preset 漂移
 node scripts/gen-layer-icons.mjs            # 重新烘焙 12 枚层头像（改了品牌技能之后）
-npm run typecheck && npm test               # tsc + node --test（49 项）
+npm run typecheck && npm test               # tsc + node --test（65 项）
 ```
 
 ### `--check` 与 `validate_assignments.py` 不是一回事（R4，2026-09-13）
@@ -90,21 +91,25 @@ npm run typecheck && npm test               # tsc + node --test（49 项）
 pnpm 的 `file:` 安装是**硬链接**；但 AI 编辑工具（edit/write）是原子替换（新 inode），会**断开硬链接**，
 profile 里的副本将停留在旧内容，宿主热更检测不到。
 
-每次改完 `lib/*.js`，必须**原地覆写** profile 副本（保留 inode）；**先判断是否同一 inode**（硬链接同 inode 时 `cat >` 会自截断为 0 字节）：
+**唯一准入的同步方式**是 `scripts/sync-profile-files.sh`（tmp+mv，且带同 inode 守卫）：
 
 ```bash
-SRC=/Users/lute/project/Magpie-Horch/dsh-overseas-skills
-DST=~/.dsh/profiles/desktop/node_modules/dsh-overseas-skills
-for f in lib/index.js lib/catalog.js lib/client.js lib/org-tree.js lib/preset-roles.js lib/role-map.js lib/layer-icons.js; do
-  if [ "$SRC/$f" -ef "$DST/$f" ]; then
-    echo "skip (same inode): $f";
-  else
-    ln -f "$SRC/$f" "$DST/$f";   # 新文件用硬链接接进来；已存在的用 cat > 亦可
-  fi
-done
+# 本包：把 lib/ 下这些文件同步进装载点（新增受管文件就在后面加一个名字）
+bash scripts/sync-profile-files.sh \
+  "$HOME/.dsh/profiles/desktop/node_modules/dsh-overseas-skills/lib" \
+  index.js catalog.js client.js org-tree.js preset-roles.js role-map.js layer-icons.js
+
+# 给**别的包**同步时必须给绝对路径（相对路径 = 本包的 lib，包名对账会拦下，退出码 3）
+PROFILE_SRC_LIB=/abs/path/to/other-pkg/lib \
+  bash scripts/sync-profile-files.sh /abs/path/to/other-pkg-loadpoint/lib index.js
 # package.json 的 files 清单变了要单独同步（门禁会拦）：
 node scripts/sync-profile.mjs --apply --only-metadata
 ```
+
+⚠️ **绝不用 `cat >` 同步**。同 inode（硬链接）时它会先把目标截断为 0 字节，而目标与源
+是同一个 inode ⇒ **两个文件一起归零**（本包 `lib/catalog.js` 真被这样归零过）。
+`sync-profile-files.sh` 的两条出口都在 `test/profile-sync.spec.mjs` 里被夹具真跑锁定：
+同 inode 直写 ⇒ 退出码 1 且一个字节都不写；tmp+mv ⇒ 成功且两份都非空。
 
 `node scripts/gen-layer-icons.mjs` 与 `build_role_map.py` 用的是 `writeFileSync`（**原地写、不换 inode**），
 因此重新生成不会断链；`edit`/`write` 工具会。

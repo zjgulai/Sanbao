@@ -20,7 +20,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TreePayload } from '../src/wire.ts'
+import type { SkillRow, TreePayload } from '../src/wire.ts'
 import { AlgoSkillsPage } from '../src/client/AlgoSkillsPage.tsx'
 
 /** One card of each wiring shape, so every chip branch is exercised. */
@@ -73,6 +73,11 @@ const payload: TreePayload = {
                   modelEnabled: true,
                   srcDomain: '04-供应链',
                   cardId: 'Skill-Wired',
+                  venue: '',
+                  venueTier: '',
+                  evidenceGrade: '',
+                  paperId: '',
+                  codeLevel: '',
                   alsoServes: ['经营目标拆解与优先级排序'],
                   wired: true,
                   wiredElsewhere: [],
@@ -84,6 +89,11 @@ const payload: TreePayload = {
                   modelEnabled: false,
                   srcDomain: '18-物流履约',
                   cardId: 'Skill-Drift',
+                  venue: '',
+                  venueTier: '',
+                  evidenceGrade: '',
+                  paperId: '',
+                  codeLevel: '',
                   alsoServes: [],
                   wired: false,
                   wiredElsewhere: ['AGT-019'],
@@ -95,6 +105,11 @@ const payload: TreePayload = {
                   modelEnabled: false,
                   srcDomain: '',
                   cardId: 'Skill-Nowhere',
+                  venue: '',
+                  venueTier: '',
+                  evidenceGrade: '',
+                  paperId: '',
+                  codeLevel: '',
                   alsoServes: [],
                   wired: false,
                   wiredElsewhere: [],
@@ -152,6 +167,11 @@ const payload: TreePayload = {
                   modelEnabled: false,
                   srcDomain: '',
                   cardId: 'Skill-DriftsIn',
+                  venue: '',
+                  venueTier: '',
+                  evidenceGrade: '',
+                  paperId: '',
+                  codeLevel: '',
                   alsoServes: [],
                   wired: true,
                   wiredElsewhere: [],
@@ -171,6 +191,11 @@ const payload: TreePayload = {
       modelEnabled: false,
       srcDomain: '22-人文',
       cardId: 'Skill-Ethics',
+      venue: '',
+      venueTier: '',
+      evidenceGrade: '',
+      paperId: '',
+      codeLevel: '',
       alsoServes: [],
       wired: false,
       wiredElsewhere: [],
@@ -222,6 +247,11 @@ function makePayload(shape: PayloadShape): TreePayload {
             modelEnabled: false,
             srcDomain: '04-供应链',
             cardId: `Skill-${name}`,
+            venue: '',
+            venueTier: '',
+            evidenceGrade: '',
+            paperId: '',
+            codeLevel: '',
             alsoServes: [],
             wired: false,
             wiredElsewhere: [],
@@ -519,5 +549,99 @@ describe('AlgoSkillsPage', () => {
 
     expect(container.textContent).toContain('HTTP 500')
     expect(parts(container, 'algo-plane')).toHaveLength(0)
+  })
+})
+
+/** A copy of the fixture tree with one card's provenance fields replaced. */
+function withProvenance(index: number, over: Partial<SkillRow>): TreePayload {
+  const clone = structuredClone(payload)
+  const cards = clone.planes.flatMap((p) => p.domains).flatMap((d) => d.roles).flatMap((r) => r.skills)
+  Object.assign(cards[index] as SkillRow, over)
+  return clone
+}
+
+/** The provenance cells of the card carrying `name`, keyed by field. */
+function provCells(container: HTMLElement, name: string): Map<string, { text: string; missing: string | null }> {
+  const card = container.querySelector(`[data-dsh-part="algo-skill-card"][data-skill="${name}"]`)
+  if (card === null) throw new Error(`card ${name} is not rendered`)
+  const row = card.querySelector('[data-dsh-part="algo-card-prov"]')
+  if (row === null) throw new Error(`card ${name} has no provenance row`)
+  const out = new Map<string, { text: string; missing: string | null }>()
+  for (const cell of row.querySelectorAll('[data-prov]')) {
+    out.set(cell.getAttribute('data-prov') as string, {
+      text: cell.textContent ?? '',
+      missing: cell.getAttribute('data-prov-missing'),
+    })
+  }
+  return out
+}
+
+/** Expand every level so the cards themselves are in the DOM. */
+function expandAll(container: HTMLElement): void {
+  const expand = [...container.querySelectorAll('button')].find((b) => b.textContent === '全部展开')
+  if (expand === undefined) throw new Error('全部展开 button is missing')
+  click(expand)
+}
+
+describe('card provenance row', () => {
+  it('shows venue, tier, evidence grade, paper and code for a card that carries them', async () => {
+    const tree = withProvenance(0, {
+      venue: 'SIGIR 2025',
+      venueTier: 'CCF-A',
+      evidenceGrade: 'A',
+      paperId: '2406.12089',
+      codeLevel: '完整实现·可解析',
+    })
+    const container = await mount(tree)
+    expandAll(container)
+
+    const cells = provCells(container, 'p2s-wired-here')
+    expect([...cells.keys()]).toEqual(['venue', 'venueTier', 'evidenceGrade', 'paperId', 'codeLevel'])
+    // Label and value are both on screen — a value with no label would leave the
+    // reader guessing which fact 「CCF-A」 is.
+    expect(cells.get('venue')?.text).toBe('venueSIGIR 2025')
+    expect(cells.get('venueTier')?.text).toBe('档位CCF-A')
+    expect(cells.get('evidenceGrade')?.text).toBe('证据A')
+    expect(cells.get('paperId')?.text).toBe('论文2406.12089')
+    expect(cells.get('codeLevel')?.text).toBe('代码完整实现·可解析')
+    for (const cell of cells.values()) expect(cell.missing).toBe('false')
+  })
+
+  it('prints 未标注 for every field the card does not carry — never a blank cell', async () => {
+    // 这一条是判据不是文案：卡片没带的字段必须**显式说出来**。留空与「没测过」
+    // 在屏幕上是同一个样子，而这一页存在的理由恰恰是让语料的事实可见。
+    const container = await mount(payload)
+    expandAll(container)
+
+    const cells = provCells(container, 'p2s-nowhere')
+    expect([...cells.keys()]).toEqual(['venue', 'venueTier', 'evidenceGrade', 'paperId', 'codeLevel'])
+    expect([...cells.values()].map((c) => c.text)).toEqual([
+      'venue未标注',
+      '档位未标注',
+      '证据未标注',
+      '论文未标注',
+      '代码未标注',
+    ])
+    for (const [key, cell] of cells) {
+      expect(cell.missing, `${key} must be marked missing`).toBe('true')
+      // 反面：一个字都不许空着。空串在这里必须是失败，而不是「刚好看起来对」。
+      expect(cell.text.trim().length, `${key} must not render blank`).toBeGreaterThan(0)
+    }
+  })
+
+  it('keeps the five cells on a card whose fields are only partly present', async () => {
+    // 真实语料的常态：146 张精选卡里 venue 只有 33 张有值、evidence_grade 只有 21 张。
+    // 所以「一半有值一半没有」必须同时成立，而不是整行一起退化。
+    const tree = withProvenance(1, { venueTier: 'preprint', paperId: '2406.12089' })
+    const container = await mount(tree)
+    expandAll(container)
+
+    const cells = provCells(container, 'p2s-drift')
+    expect(cells.get('venue')?.text).toBe('venue未标注')
+    expect(cells.get('venueTier')?.text).toBe('档位preprint')
+    expect(cells.get('evidenceGrade')?.text).toBe('证据未标注')
+    expect(cells.get('paperId')?.text).toBe('论文2406.12089')
+    expect(cells.get('codeLevel')?.text).toBe('代码未标注')
+    expect([...cells.values()].filter((c) => c.missing === 'true')).toHaveLength(3)
   })
 })
