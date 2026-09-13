@@ -52,7 +52,7 @@ VERSION="$VERSION" ./assemble.sh
 - `staging/$VERSION/payload/DSH Desktop.app.tar.gz`
 - `staging/$VERSION/payload/profile.tar.gz`
 - `staging/$VERSION/payload/install.sh`
-- `staging/$VERSION/payload/tools/`（`verify-patches-v2.sh` 38 锚点、`brand-replay.sh`、`runtime-guards/`、`rewrite-file-deps.mjs`、`reloc-aeis.sh`、`tcc-grant-status.sh`、`dsh-running.sh`）
+- `staging/$VERSION/payload/tools/`（`verify-patches-v2.sh` 38 锚点、`brand-replay.sh`、`brand-icons/`、`runtime-guards/`、`rewrite-file-deps.mjs`、`reloc-aeis.sh`、`tcc-grant-status.sh`、`dsh-running.sh`）
 - 装配日志：`/tmp/lute-package-dir.log`
 
 **若失败**：根据脚本输出定位；常见失败点：

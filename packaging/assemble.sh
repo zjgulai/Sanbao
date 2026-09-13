@@ -182,7 +182,9 @@ fi
 #   ② Info.plist 显示名与 Electron Helper 应用重命名（打包面）
 # 幂等：已是 LUTE 品牌时报告 OK，不重复替换。
 if [ -f "$DSH_VENDOR/dsh-patches/brand-replay.sh" ]; then
-  DSH_APP="$APP_STAGE/DSH Desktop.app" bash "$DSH_VENDOR/dsh-patches/brand-replay.sh" --apply 2>&1 | tail -6
+  # BRAND_ICONS_DIR：运行时图标资产（Dock/托盘）在仓库里的家；随包分发时脚本同目录自带一份。
+  BRAND_ICONS_DIR="$PKG_ROOT/assets/brand-icons" \
+    DSH_APP="$APP_STAGE/DSH Desktop.app" bash "$DSH_VENDOR/dsh-patches/brand-replay.sh" --apply 2>&1 | tail -10
 else
   echo "[assemble] 警告：缺少 brand-replay.sh（Info.plist/web 标题品牌跳过）"
 fi
@@ -401,7 +403,7 @@ say "技能+预设完成 ($(du -sh "$PAYLOAD/skills-presets.tar.gz" | cut -f1))"
 # 看不见 payload 里的 tarball——而 tarball 是二进制，grep 一律跳过。实测这一盲点里
 # 藏着 103 个含构建机路径的文件（100 个 agt-* 的材料出处 + bobo-cto + lute-cordis）。
 # 为什么只补这一个 tarball：
-#   · profile.tar.gz ≡ 已扫过的 $BUNDLED（同一份 §0 快照 + 同一份离线 node_modules，构造保证）；
+#   · profile.tar.gz ≡ 已扫过的 ${BUNDLED}（同一份 §0 快照 + 同一份离线 node_modules，构造保证）；
 #   · DSH Desktop.app.tar.gz 除内嵌 profile 外实测 0 命中（`tar -xzO --exclude 'Contents/Resources/dsh-profile/*'`）；
 #   · aeis-portable.tar.gz 是第三方 python 运行时，路径由 reloc-aeis.sh 在安装时重定位。
 node "$PKG_ROOT/scripts/scan-machine-paths.mjs" \
@@ -472,6 +474,11 @@ cp "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" "$PAYLOAD/tools/runti
 # patches-manifest*.md 不随包（内部登记簿；决策 K10 = 剔除内部取证文档）
 # ROOT 品牌图标随包分发（brand-replay --apply 自愈用；真相源 packaging/assets/app-icon.icns）
 cp "$PKG_ROOT/assets/app-icon.icns" "$PAYLOAD/tools/app-icon.icns" 2>/dev/null || true
+# ROOT 运行时图标随包分发（Dock / 托盘）：dsh-plugin-desktop 启动时用 app.dock.setIcon()
+# 覆盖 Finder 图标，取的是 app.asar.unpacked/build/app-icon-mac.png——那一套必须一起品牌化，
+# 否则「Finder 里是 ROOT、Dock 里是 DSH 原生」（2026-09-13 实测，见 brand-replay.sh 第 5 块）。
+mkdir -p "$PAYLOAD/tools/brand-icons"
+cp "$PKG_ROOT/assets/brand-icons/"*.png "$PAYLOAD/tools/brand-icons/" 2>/dev/null || true
 chmod 755 "$PAYLOAD/tools/"*.sh "$PAYLOAD/tools/"*.mjs 2>/dev/null || true
 
 # LUTE Setup.app（GUI 安装器，swiftc 编译；随 payload 根分发）

@@ -47,6 +47,11 @@ import {
 import { checkDocsLinkIntegrity } from './gates/docs-links.mjs'
 import { checkDeadInstrument, REGISTRY_REL_PATH as DEAD_INSTRUMENTS_PATH } from './gates/dead-instrument.mjs'
 import {
+  ASSETS_DIR_REL as BRAND_ICONS_ASSETS_DIR,
+  checkBrandIcons,
+  REPLAY_REL as BRAND_REPLAY_REL,
+} from './gates/brand-icons.mjs'
+import {
   checkDmgLayout,
   GUIDE_REL_PATH as DMG_LAYOUT_GUIDE_PATH,
   selectLayoutTargets,
@@ -713,6 +718,48 @@ const CHECKS = [
         .map((line) => line.trim())
       const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
       return { passed: false, violations: lines.length > 0 ? lines : [`安装器 0b 闸自测失败（${verdict}）`] }
+    },
+  },
+  {
+    name: 'brand-icons',
+    remediation:
+      '按报错对齐三处的**同一张表**（它在 dsh-patches/brand-replay.sh 的 ICON_PAIRS 里）：表 ↔ 资产目录 `packaging/assets/brand-icons/` ↔ 已装 app 的 `app.asar.unpacked/build/`。少一个资产、多一个没被引用的资产、资产的实际像素与声明不符、目标名重复、已装 app 里没有那个目标名——都判红。重点在**资产那一侧**：`brand-replay.sh --apply` 量的是目标尺寸，资产自己错了没人管，`cp` 照落（Dock 图标成一张放大的模糊图而读数全绿，ADR-0081）',
+    run() {
+      const dir = join(repoRoot, BRAND_ICONS_ASSETS_DIR)
+      const assets = existsSync(dir)
+        ? readdirSync(dir)
+            .sort()
+            .map((name) => ({ name, bytes: readFileSync(join(dir, name)) }))
+        : []
+      // 目标侧（已装 app）：读不到就传 null —— 那是「未核查」，本项会报 skip 而不是通过。
+      const buildDir = join(
+        '/',
+        'Applications',
+        'DSH Desktop.app',
+        'Contents',
+        'Resources',
+        'app.asar.unpacked',
+        'build',
+      )
+      let installedBuildDirEntries = null
+      try {
+        installedBuildDirEntries = readdirSync(buildDir)
+      } catch {
+        installedBuildDirEntries = null
+      }
+      return checkBrandIcons({
+        replayText: readIfExists(join(repoRoot, BRAND_REPLAY_REL)) ?? '',
+        assets,
+        installedBuildDirEntries,
+      })
+    },
+  },
+  {
+    name: 'brand-icons-selftest',
+    remediation:
+      '跑 node --test scripts/gates/brand-icons.test.mjs 看红在哪条：本项必须能说「不」——资产实际像素与声明不符必须判红（M1 恒真桩突变钉住这一条：只比「声明 vs 声明」的实现会放过它，因为那不是从磁盘字节读出来的）、少一个/多一个资产都判红、目标名重复判红、表解析不出任何一行判红、已装 app 缺目标名判红、非 PNG 读不出尺寸判红，而目标侧不在射程时必须报 skip 且静态半照常说话（ADR-0081 / P-02 / P-07）',
+    run() {
+      return runNodeTestFile('scripts/gates/brand-icons.test.mjs', '运行时图标资产判据的反向自测失败')
     },
   },
   {

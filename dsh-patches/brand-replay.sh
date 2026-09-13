@@ -216,6 +216,74 @@ if [ -f "$ICON" ]; then
   fi
 fi
 
+# ── 5. 运行时图标（build/app-icon*.png + build/tray-icon*.png）───────────────
+# 为什么必须有这一块（2026-09-13 实测）：
+#   第 4 块管的是 Contents/Resources/icon.icns——那是 **Finder** 里的图标，它一直是对的。
+#   但 **Dock 图标不是**：dsh-plugin-desktop 在启动时显式覆盖它——
+#     const iconFilename = runtime.platform === "darwin" ? "app-icon-mac.png" : "app-icon.png"
+#     const iconPath = fileURLToPath(new URL(`../build/${iconFilename}`, …))
+#     app.dock?.setIcon(icon)          // electron-runtime 的 MacPlatformStrategy.configureApplication
+#   而 app.asar.unpacked/build/ 那一套**从未被品牌化**：实测 app-icon-mac.png 是 2.2 MB 的
+#   DSH 原生图标，而 ROOT 图标只有 47 KB；tray-icon*.png 同理。
+#   症状极具欺骗性：**Finder 里是 ROOT、Dock 里是 DSH 原生**，而本脚本报 ALL VERIFIED
+#   —— 因为「品牌检查」只看了一个家，而图标有两个家（P-07）。
+# 资产：$(dirname "$0")/brand-icons/（随包分发）。入库副本 packaging/assets/brand-icons/，
+#   与第 4 块的 app-icon.icns 同一模式：真相源在 .dsh-root-brand-preview/root-icon/（不进仓库），
+#   仓库里放的是它的可分发副本。
+# 右侧第三列是**两边必须相同的像素尺寸**：`--apply` 落笔前会真的量一遍并拒绝尺寸不符的资产
+#   （尺寸不符意味着基座换了图标规格，静默覆盖会把 Dock 图标换成一张模糊图）。
+BUILD_DIR="$CHK/build"
+# 资产位置：默认与本脚本同目录（随包分发时就是 payload/tools/brand-icons/）；
+# 仓库侧（assemble.sh 在签名前跑本脚本）由调用方用 BRAND_ICONS_DIR 显式传入，
+# 免得同一批字节在仓库里存第二份（P-07）。
+BRAND_ICONS_DIR="${BRAND_ICONS_DIR:-$(dirname "$0")/brand-icons}"
+# 目标（app 侧 build/）:资产（brand-icons/ 内）:尺寸
+ICON_PAIRS=(
+  "app-icon-mac.png:icon-1024.png:1024x1024"
+  "app-icon.png:icon-1024.png:1024x1024"
+  "tray-icon-blue.png:tray-colored-16.png:16x16"
+  "tray-icon-blue@1.25x.png:tray-colored-20.png:20x20"
+  "tray-icon-blue@1.5x.png:tray-colored-24.png:24x24"
+  "tray-icon-blue@2x.png:tray-colored-32.png:32x32"
+  "tray-iconTemplate.png:tray-template-16.png:16x16"
+  "tray-iconTemplate@2x.png:tray-template-32.png:32x32"
+)
+if [ -d "$BUILD_DIR" ]; then
+  if [ ! -d "$BRAND_ICONS_DIR" ]; then
+    # 没有资产就**说不出「图标是品牌态」**——不许静默跳过（P-02：读不到不等于合格）。
+    say "MISSING brand-icons/（运行时图标资产）——本脚本无法核对 Dock / 托盘图标"
+    fail=1
+  else
+    for pair in "${ICON_PAIRS[@]}"; do
+      tgt="${pair%%:*}"; rest="${pair#*:}"; asset="${rest%%:*}"; dim="${rest#*:}"
+      tf="$BUILD_DIR/$tgt"; af="$BRAND_ICONS_DIR/$asset"
+      if [ ! -f "$af" ]; then say "MISSING brand-icons/$asset"; fail=1; continue; fi
+      if [ ! -f "$tf" ]; then
+        say "MISSING build/${tgt}（基座改了图标文件名？核对 ICON_PAIRS）"
+        fail=1
+        continue
+      fi
+      cur=$(shasum "$tf" | awk '{print $1}')
+      want=$(shasum "$af" | awk '{print $1}')
+      if [ "$cur" = "$want" ]; then
+        say "OK   build/${tgt} ROOT 品牌图标（${dim}）"
+      elif [ "$MODE" = "--apply" ]; then
+        tdim="$(sips -g pixelWidth -g pixelHeight "$tf" 2>/dev/null | awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{print w"x"h}')"
+        if [ "$tdim" != "$dim" ]; then
+          say "APPLY build/${tgt} 拒绝：目标实为 ${tdim}，资产表声明 ${dim}——先核对 ICON_PAIRS"
+          fail=1
+          continue
+        fi
+        cp "$af" "$tf"
+        say "APPLY build/${tgt} ← ${asset}（${dim}）"
+      else
+        say "DRIFT build/${tgt}（${cur}）— Dock / 托盘图标仍是官方原样"
+        fail=1
+      fi
+    done
+  fi
+fi
+
 echo
 if [ "$fail" = "0" ]; then echo "BRAND ALL VERIFIED"; else echo "BRAND DRIFT — 升级后跑 --apply"; fi
 exit $fail
