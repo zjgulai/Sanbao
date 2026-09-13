@@ -86,13 +86,19 @@ function vendorPairs(vendorDir) {
 function loadPointPairs(profile) {
   const modulesDir = join(profile, 'node_modules')
   if (!existsSync(modulesDir)) return []
-  const managed = new Set(managedPackages().map((entry) => entry.dirName))
+  // 包名 → 仓库相对目录。`file:` 里的路径**不能**用来推导仓库源目录：
+  // 它的基准是 profile，而本脚本从任何 cwd 跑都可能，2026-09-13 实测从仓库根跑时
+  // `existsSync('./vendor/packages/...')` 恒为假，于是**每个包**都在下一行被跳过、
+  // pairs 恒为空、`ok 装载点与仓库源一致` 恒输出——一次都没跟仓库比过（P-02 仪器假绿）。
+  // 从 profile 目录跑更隐蔽：那时路径能解析，但 sourceDir 指向的是 **profile 自己的
+  // vendor 副本**，比的是「副本 ↔ 副本」，两份都旧也互相相等。
+  const managed = new Map(managedPackages().map((entry) => [entry.dirName, entry.relPath]))
   const pairs = []
   for (const [name, spec] of Object.entries(installedDependencies(profile))) {
     if (!spec.startsWith('file:')) continue
-    const sourceDir = spec.slice('file:'.length)
-    if (!managed.has(sourceDir.split('/').pop())) continue
-    if (!existsSync(join(sourceDir, 'package.json'))) continue
+    const relPath = managed.get(spec.slice('file:'.length).split('/').pop())
+    if (relPath === undefined) continue
+    const sourceDir = join(repoRoot, relPath)
     const manifest = JSON.parse(readFileSync(join(sourceDir, 'package.json'), 'utf8'))
     pairs.push({
       name,
@@ -174,8 +180,23 @@ function main() {
     }
   }
 
+  // 「一个包都没比」必须与「逐字节都一致」在读数上长得不一样——旧实现里两者同形，
+  // 于是本工具在 2026-09-13 那天报的 `ok` 是空射程的 `ok`（P-02）。
+  if (loadpoint) {
+    const fileDeps = Object.values(installedDependencies(profile))
+      .filter((spec) => typeof spec === 'string' && spec.startsWith('file:')).length
+    if (fileDeps > 0 && pairs.length === 0) {
+      process.stdout.write(
+        `warn profile 声明了 ${fileDeps} 个 file: 依赖，但没一个对上本仓库受管的包——`
+          + '本次**未与仓库比较任何字节**，不是「都一致」\n',
+      )
+      process.exitCode = 1
+      return
+    }
+  }
+
   if (driftCount === 0) {
-    process.stdout.write(`ok ${scope}与仓库源一致\n`)
+    process.stdout.write(`ok ${scope}与仓库源一致（对比 ${pairs.length} 个包）\n`)
     process.exitCode = 0
     return
   }

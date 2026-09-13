@@ -244,25 +244,46 @@ const CHECKS = [
     run() {
       const profile = join(process.env.HOME ?? '', '.dsh', 'profiles', 'desktop')
       const target = join(profile, 'node_modules')
-      if (!existsSync(target)) return { passed: true, violations: [] }
+      if (!existsSync(target)) return { passed: true, violations: [], note: '装载点不存在，本项未校验任何包' }
       const packages = new Map(collectManifests().filter((entry) => entry.dir !== '.').map((entry) => [entry.dir.split('/').pop(), entry]))
       const pairs = []
+      let fileDeps = 0
       for (const [name, spec] of Object.entries(installedProfileDependencies(profile))) {
         if (!spec.startsWith('file:')) continue
-        const sourceDir = spec.slice('file:'.length)
-        if (!existsSync(join(sourceDir, 'package.json'))) continue
-        const entry = packages.get(sourceDir.split('/').pop())
+        fileDeps += 1
+        // `file:` 的基准是**声明它的那份 package.json 所在的目录**（即 profile），
+        // 不是本进程的 cwd。2026-09-13 实测：旧实现直接拿 spec 里的相对路径
+        // （`./vendor/packages/surfaces/dsh-skill-center-local`）去 `existsSync`，
+        // 而门禁是从仓库根跑的，仓库根下没有 `vendor/packages/`——于是 23 个
+        // `file:` 依赖**全部**在此被 `continue` 掉，pairs 恒为空、本项恒绿。
+        // 这正是 P-02（仪器假绿）：修的是「应用重启后仍跑旧字节」，而它自己
+        // 一个包都没对着看过。仓库路径的唯一来源是 collectManifests() 的 dir。
+        const entry = packages.get(spec.slice('file:'.length).split('/').pop())
         // 只判本仓库受管的包：别的项目的 file: 依赖漂移是那个项目的事，
         // 挂到这里只会让本仓库门禁为别人的状态变红，然后被加豁免。
         if (entry === undefined) continue
         pairs.push({
           name,
-          sourceDir,
+          sourceDir: entry.dir,
           targetDir: join(target, name),
           files: entry.manifest.files ?? [],
         })
       }
-      return checkProfileBundleSync(pairs)
+      // 空射程必须**自己**报出来，而不是长得和「都一致」一样（P-02 / P-03）。
+      // 旧实现里「一个都没对上」与「逐字节全一致」在读数上完全同形，本项就是那次
+      // 假绿发生的**位置**；这里让「声明了 file: 依赖却一个都没对上」直接判红。
+      const note = `对比 ${pairs.length}/${fileDeps} 个 file: 依赖`
+      if (fileDeps > 0 && pairs.length === 0) {
+        return {
+          passed: false,
+          violations: [
+            `profile 声明了 ${fileDeps} 个 file: 依赖，但没有任何一个对上本仓库受管的包——`
+              + '本项**未校验任何包**，不是「都一致」（P-02：仪器假绿）',
+          ],
+          note,
+        }
+      }
+      return { ...checkProfileBundleSync(pairs), note }
     },
   },
   {
@@ -1150,10 +1171,6 @@ function releasedVersions() {
   }
 }
 
-/**
- * 读取 live profile 的已安装依赖表（package.json 的 dependencies）。
- * 返回空对象表示该 profile 未安装或不可读——调用方据此跳过校验。
- */
 /**
  * 已入库的发布清单里的版本号（`release/<版本>.sha256`，进 git，ADR-0058）。
  * 缺失或不可读时返回空数组——调用方据此判「射程为空」（ADR-0076）。
