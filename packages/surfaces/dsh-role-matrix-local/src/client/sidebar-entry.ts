@@ -49,10 +49,15 @@ export function mountSidebarEntry(onClick: () => void, signals: SidebarEntrySign
     tooltip: () => tt('entry.tooltip'),
     onToggle: onClick,
     position: 'after',
+    // 本清单**有意不含技能中心**（与技能中心那份不对称，这一对不对称就是顺序的声明处）。
+    // 共享核心 `'after'` 的锚点是「家族里最后一个成员之后」，所以：
+    //   · 本行把技能中心当家族成员 → 技能中心一旦在位，岗位矩阵就锚到它后面 → 被挤到下面；
+    //   · 技能中心把本行当家族成员 → 它锚到本行后面 → 本行保持在上。
+    // 2026-09-13 实测（AX 几何 y）：改前技能中心 233 / 岗位矩阵 271（顺序反了），
+    // 改后应为岗位矩阵在上。两个挂载顺序都收敛到同一结果，不再由落位竞态决定。
     familySelectors: [
       '[data-dsh-taskboard-entry]',
       '[data-dsh-ssh-entry]',
-      '[data-dsh-skill-center-entry]',
       '[data-dsh-role-matrix-entry]',
     ],
     active: {

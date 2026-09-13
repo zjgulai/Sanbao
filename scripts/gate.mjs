@@ -38,6 +38,7 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkThemeTokens } from './gates/theme-tokens.mjs'
 import { checkWorktableFence } from './gates/worktable-fence.mjs'
 import { checkNodeInterpreter } from './gates/node-interpreter.mjs'
+import { checkSidebarRowAxis } from './gates/sidebar-row-axis.mjs'
 import {
   checkPitfallsPlaybook,
   PLAYBOOK_BACKLINK_PATHS,
@@ -871,6 +872,21 @@ const CHECKS = [
     remediation: '开发脚本起子进程一律走 scripts/lib/real-node.mjs 的 nodeCommand()——process.execPath 在 pnpm 下是宿主 Electron，子进程会「退出码 0 且没有输出」（ADR-0040）',
     run() {
       return checkNodeInterpreter({ repoRoot })
+    },
+  },
+  {
+    name: 'sidebar-row-axis',
+    remediation: '把该行的 `box-sizing` / `width` / 水平 `margin` / 水平 `padding` 改成与同列一致（导航列 = 原生侧边栏行轴 `box-sizing: border-box; width: 100%; margin: 2px 0; padding: 0 10px`，实测行框 64…320、标签 x=106）；新增注入行则在 scripts/gates/sidebar-row-axis.mjs 的 REGISTRY 加一行。两行并排却各带一套宽度约定，就是 2026-09-13 那次的形态（P-07）',
+    run() {
+      return checkSidebarRowAxis({ repoRoot })
+    },
+  },
+  {
+    name: 'sidebar-row-axis-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sidebar-row-axis.test.mjs 看红在哪条：行轴判据必须能说「不」——岗位矩阵退回 `width: calc(100% - 8px)` + `margin: 2px 4px` 必须判红、技能中心丢掉 `box-sizing` 必须判红、两行 `padding-inline` 不同必须判红、新增未登记的注入行必须判红、登记项指向不存在入口必须判红、`position` 从 after 改成 split 必须判红、选择器改名后必须判红而不是静默失去射程、射程为空必须判红而不是报通过。重点是恒真桩突变：一个只核对「登记了没有」的实现会放过行轴漂移——测不出来的判据等于没有判据（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/sidebar-row-axis.test.mjs', '注入式侧边栏行轴判据的反向自测失败')
     },
   },
   {

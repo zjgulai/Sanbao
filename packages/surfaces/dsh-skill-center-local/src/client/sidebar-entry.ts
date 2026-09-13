@@ -39,7 +39,19 @@ export function mountSidebarEntry(onClick: () => void, totalProvider?: () => num
     tooltip: () => tt('entry.tooltip'),
     onToggle: onClick,
     position: 'after',
-    familySelectors: ['[data-dsh-taskboard-entry]', '[data-dsh-ssh-entry]', '[data-dsh-skill-center-entry]'],
+    // 家族清单**必须与同族的其他注入行对称**，否则注入顺序由落位竞态决定。
+    // 2026-09-13 实测：本清单此前缺少岗位矩阵，而共享核心 `'after'` 的锚点是
+    // 「家族里最后一个成员之后」——家族为空时退化为 `base.nextElementSibling`，
+    // 于是技能中心无论谁先挂载都插到家族块**最上面**，把岗位矩阵挤到下面。
+    // 补上岗位矩阵后两个挂载顺序收敛到同一结果（岗位矩阵在上）。
+    // 同族的岗位矩阵清单里也**不再**包含技能中心：它据此锚定在自己该在的位置，
+    // 而不是反过来把技能中心当参照。两份清单有意做成不对称，这就是顺序的声明处。
+    familySelectors: [
+      '[data-dsh-taskboard-entry]',
+      '[data-dsh-ssh-entry]',
+      '[data-dsh-role-matrix-entry]',
+      '[data-dsh-skill-center-entry]',
+    ],
   })
 
   // Live total-count badge: rendered inside the injected row, updated when

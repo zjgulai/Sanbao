@@ -718,13 +718,25 @@
 
 /* ── Injected sidebar row (plain DOM, mirrors the shell's nav entry look) ─── */
 
+/* 行轴与同族的技能中心**逐属性一致**，因为两者是同一个父节点（注入核心的 `root`）下
+   的同一个 <button>，css 都只经共享核心取 `.entry` / `.entryIcon` / `.entryLabel`——
+   所以只要这几条规则相同，几何就必然相同。这是构造证明，不是靠算出来的。
+   改前本行自带一套宽度约定：`width: calc(100% - 8px)` + `margin: 2px 4px` +
+   `padding: 6px 8px` + 默认 content-box，而技能中心是 `box-sizing: border-box` +
+   `width: 100%` + `padding: 0 10px`。2026-09-13 AX 实测（重启后）：
+     岗位矩阵 x=68 w=248、标签 x=108   ← 本行
+     技能中心 x=64 w=256、标签 x=106   ← 原生侧边栏行轴
+   两条并排的行、同一形态、两套家，属 P-07。横向 margin 归零让 `width: 100%`
+   占满父级内容盒（64…320）；纵向保留 2px 以维持现有行距。 */
 .entry {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: calc(100% - 8px);
-  margin: 2px 4px;
-  padding: 6px 8px;
+  width: 100%;
+  height: 36px;
+  margin: 2px 0;
+  padding: 0 10px;
   border: none;
   border-radius: 8px;
   background: transparent;

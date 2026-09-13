@@ -2,6 +2,13 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  /* 必须显式写 text-align：本行是 <button>，UA 样式表给按钮的默认值是
+     text-align: center，而 text-align 是**继承属性** —— 它会一路继承到
+     .entryLabel（那个 span 是 flex:1，占满余宽），于是文字在整行里居中。
+     2026-09-13 实测（AX 几何）：技能中心标签中心 189.5 vs 行中心 192（居中），
+     同族的岗位矩阵因声明了 text-align: left，标签距行左边 40px（= padding 8 +
+     icon 24 + gap 8，靠左）。同一形态两处不一致，属 P-07。 */
+  text-align: left;
   gap: 8px;
   width: 100%;
   height: 36px;
