@@ -308,3 +308,102 @@ test('射程：全部退出时 vacuous 为真——「没量到任何东西」�
   assert.equal(scope.vacuous, true)
   assert.match(scope.note, /扫描面为空/)
 })
+
+// ── R6 正文链接可达 ──────────────────────────────────────────────────────────
+//
+// 这一半守的是：手册**正文里**指向随包文件的链接必须在**卷上**存在。
+// R3/R4 已经量了第 2 节那张表，但表对了不等于正文里的每句话都落地了——
+// 2026-09-14 实测：表的每一行都在卷上，而正文里的 `[安装卡](INSTALL-CARD.md)` 是死路，
+// 且所有门禁都绿（那个链接在**仓库里**是可达的，两个文件都在 `packaging/`）。
+
+/** 卷内**递归**文件清单：R6 判嵌套链接要用它，只给顶层条目不够。 */
+const REAL_FILES = [
+  ...REAL_VOLUME.filter((name) => name !== 'tools'),
+  'tools/verify-patches-v2.sh',
+  'tools/brand-replay.sh',
+]
+
+const artifactsWithFiles = (files = REAL_FILES) => [
+  { label: '/Volumes/DSH Desktop LUTE 2.3.3', entries: REAL_VOLUME, files },
+]
+
+/** 在手册第 2 节开头插进一行链接（模拟 `[安装卡](INSTALL-CARD.md)` 所在的位置）。 */
+const guideWithLink = (markdown) =>
+  GUIDE.replace(
+    '打开 `.dmg` 后会看到一个窗口。',
+    `一页速查见 ${markdown}。\n\n打开 \`.dmg\` 后会看到一个窗口。`,
+  )
+
+test('R6 恒真桩突变：手册正文链接的随包文件不在卷上必须判红（2026-09-14 缺陷原文）', () => {
+  // 输入用的是实测撞上的**缺陷原文**。一个只比对第 2 节入口表的实现会放过它——
+  // 表里每一行都在卷上，出错的是正文里那句话。
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink('[安装卡](INSTALL-CARD.md)'),
+    artifacts: artifactsWithFiles(),
+  })
+  assertRed(result, 'INSTALL-CARD.md')
+  assertRed(result, '在卷上不存在')
+})
+
+test('R6：链接指向卷内真实存在的文件时判绿，且读数说出核了几条', () => {
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink('[校验器](tools/verify-patches-v2.sh)'),
+    artifacts: artifactsWithFiles(),
+  })
+  assert.equal(result.passed, true, result.violations.join('\n'))
+  assert.match(result.note, /手册正文链接 1 条，核了 1 条/)
+})
+
+test('R6：外链、锚点与绝对路径必须被忽略（会误报的校验很快会被关掉）', () => {
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink(
+      '[发布页](https://github.com/zjgulai/lute-dsh-platform/releases) 与 [第 9 节](#9-出问题了对照表) 与 [系统设置](/Applications)',
+    ),
+    artifacts: artifactsWithFiles(),
+  })
+  assert.equal(result.passed, true, result.violations.join('\n'))
+  // 量了 0 条这件事必须说出来：空读数不能长得像「都合格」（P-02）。
+  assert.match(result.note, /没量到东西/)
+})
+
+test('R6：嵌套链接按递归清单判——顶层目录在、里面的文件不在时判红', () => {
+  // 挡的退化：只用顶层条目（`entries`）实现。那样 `tools/x.sh` 会因 `tools` 存在而判绿，
+  // 而客户点开是死路——「目录在」不是「文件在」。
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink('[校验器](tools/verify-patches-v2.sh)'),
+    artifacts: artifactsWithFiles(REAL_FILES.filter((name) => name !== 'tools/verify-patches-v2.sh')),
+  })
+  assertRed(result, 'tools/verify-patches-v2.sh')
+})
+
+test('R6：未给递归清单时嵌套链接计入「未核」，不得当作可达', () => {
+  // 挡的退化：调用方没给 `files` 时拿顶层条目凑合，等于用「tools/ 这个目录在」
+  // 冒充「那个文件在」。判据要如实说自己没量到，而不是判绿。
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink('[校验器](tools/verify-patches-v2.sh)'),
+    artifacts: realArtifacts(),
+  })
+  assert.equal(result.passed, true, result.violations.join('\n'))
+  assert.match(result.note, /1 条因未给递归文件清单而未核/)
+})
+
+test('R6：逐份产物各算——同一份手册要在每一版卷上都可达', () => {
+  const result = checkDmgLayout({
+    sopText: SOP_OK,
+    guideText: guideWithLink('[安装指南](INSTALL-GUIDE.md)'),
+    artifacts: [
+      { label: '/Volumes/A', entries: REAL_VOLUME, files: REAL_FILES },
+      {
+        label: '/Volumes/B',
+        entries: REAL_VOLUME.filter((name) => name !== 'INSTALL-GUIDE.md'),
+        files: REAL_FILES.filter((name) => name !== 'INSTALL-GUIDE.md'),
+      },
+    ],
+  })
+  assertRed(result, '/Volumes/B')
+})

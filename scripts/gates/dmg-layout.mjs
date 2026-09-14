@@ -40,6 +40,14 @@
  * - `R4 幽灵条目`：入口表里每个条目都必须真实存在于卷上（表里写了、实物没有 = 骗人）。
  * - `R5 入口可点`：入口表里标为「✅ 可点」的每一行必须真实存在——一行都不在时，
  *   用户拿到的是一个**打不开的安装包**，而手册还在教他双击。
+ * - `R6 正文链接可达`：手册**正文里**指向随包文件的相对链接，必须在卷上真的存在。
+ *   R3/R4 只量第 2 节那张**表**，正文里的链接此前没人守——2026-09-14 实测：手册开头写着
+ *   「一页速查见 [安装卡](INSTALL-CARD.md)」，而 `INSTALL-CARD.md` **自 2.2.0 起从未进过
+ *   任何一版载荷**（六版全无），v2.x 的 Release 也没附它。客户在卷上点那个链接是死路，
+ *   而所有门禁都绿：链接在**仓库里**是可达的（两个文件都在 `packaging/`），
+ *   只有把它当成**卷内**的相对路径量才会红。**残留缺口（不假装守住）**：嵌套路径
+ *   （如 `tools/x.sh`）要求调用方给出递归文件清单；只给顶层条目时本项把它计入「未核」，
+ *   不以「顶层目录存在」冒充可达。
  *
  * 射程为空（既没挂载交付卷、也没有未打 tag 的 payload）时返回 `skipped: true`：
  * 「没量到任何东西」与「量了都合格」必须分开报（ADR-0075 / P-02）。
@@ -177,6 +185,28 @@ function splitGuideCell(cell) {
 }
 
 /**
+ * 从安装手册正文里解析指向**随包文件**的相对链接（R6 的输入）。
+ *
+ * 跳过三类：外链（含协议，如 `https://…`）、纯锚点（`#9-对照表`）、绝对路径（`/…`）
+ * ——它们不由交付卷负责，对它们报错就是误报，而**会误报的校验很快会被关掉**（P-02）。
+ *
+ * `#锚点` 与 `?query` 会被剥掉：卷内是文件系统，锚点由 Markdown 阅读器处理。
+ * @param {string} guideText 安装手册正文
+ * @returns {Array<{raw: string, target: string}>} 原文与归一化后的卷内相对路径
+ */
+export function parseGuideLinks(guideText) {
+  const links = []
+  for (const match of guideText.matchAll(/\]\(([^)\s]+)\)/g)) {
+    const raw = match[1]
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith('#') || raw.startsWith('/')) continue
+    const target = raw.split('#')[0].split('?')[0]
+    if (!target) continue
+    links.push({ raw, target })
+  }
+  return links
+}
+
+/**
  * 从安装手册里解析「DMG 里哪个文件才是安装入口」那张表。
  * @param {string} guideText 安装手册正文
  * @returns {Array<{name: string, clickable: boolean}>} 表格登记的条目；表读不到时为空数组
@@ -214,7 +244,9 @@ export function parseGuideEntries(guideText) {
  * }} input
  *   `sopText` / `guideText` 读不到时传空串（判红，不静默跳过）；
  *   `artifacts` 是本次量到的产物清单（挂载的交付卷 ∪ 未打 tag 的 staging payload），
- *   每一项形如 `{label: '/Volumes/DSH Desktop LUTE 2.3.3', entries: [...]}`。
+ *   每一项形如 `{label: '/Volumes/DSH Desktop LUTE 2.3.3', entries: [...], files?: [...]}`；
+ *   `entries` 是顶层条目（R3/R4/R5 量的是它——用户看到的就这一层），
+ *   `files` 是可选的**递归**文件清单（R6 用来判嵌套链接；不给时嵌套链接计入「未核」）。
  * @returns {{passed: boolean, skipped?: boolean, violations: string[], note?: string}}
  */
 export function checkDmgLayout({ sopText, guideText, artifacts = [] }) {
@@ -277,8 +309,12 @@ export function checkDmgLayout({ sopText, guideText, artifacts = [] }) {
     return { passed: false, violations }
   }
   const guideNames = new Set(guideEntries.map((entry) => entry.name))
+  // R6 的输入：手册正文里的相对链接。它是**文档**的属性，所以只解析一次；
+  // 是否可达要逐份产物量（同一个手册要放进每一版的卷里）。
+  const guideLinks = parseGuideLinks(guideText)
+  let unmeasuredLinks = 0
 
-  for (const { label, entries } of inScope) {
+  for (const { label, entries, files } of inScope) {
     const real = new Set(entries.filter((name) => !LISTING_NOISE.has(name)))
 
     // R3 未登记条目：用户会在卷里看到一个手册从未解释的文件
@@ -311,11 +347,36 @@ export function checkDmgLayout({ sopText, guideText, artifacts = [] }) {
         violations.push(`${label}: 标为「✅ 可点入口」的 ${JSON.stringify(entry.name)} 在卷上不存在`)
       }
     }
+
+    // R6 正文链接可达：手册里指向随包文件的链接必须在**卷上**存在。
+    // 这一条与 R3/R4 量的是同一个事实的两半：那张表对了，不等于正文里的话都落地了
+    // （2026-09-14：表的每一行都在卷上，而正文里的 [安装卡](INSTALL-CARD.md) 是死路）。
+    const knownFiles = new Set(files ?? entries)
+    for (const link of guideLinks) {
+      // 嵌套路径需要调用方的递归清单：只给顶层条目时如实计入「未核」，
+      // 不用「顶层目录存在」冒充可达（那正是 P-02 的假绿形态）。
+      if (files === undefined && link.target.includes('/')) {
+        unmeasuredLinks += 1
+        continue
+      }
+      if (!knownFiles.has(link.target)) {
+        violations.push(
+          `${label}: 手册正文链接的 ${JSON.stringify(link.target)} 在卷上不存在——`
+            + '客户点开是死路；链接在仓库里可达不等于随包可达（P-10：守卫看不见打包后的载荷）',
+        )
+      }
+    }
   }
+
+  const linkNote =
+    guideLinks.length === 0
+      ? '手册正文里没有任何指向随包文件的相对链接（本项这一半**没量到东西**）'
+      : `手册正文链接 ${guideLinks.length} 条，核了 ${guideLinks.length - unmeasuredLinks} 条`
+        + (unmeasuredLinks > 0 ? `（${unmeasuredLinks} 条因未给递归文件清单而未核）` : '')
 
   return {
     passed: violations.length === 0,
     violations,
-    note: `已比对 ${inScope.length} 份卷内清单（${inScope.map((a) => a.label).join('；')}）`,
+    note: `已比对 ${inScope.length} 份卷内清单（${inScope.map((a) => a.label).join('；')}）；${linkNote}`,
   }
 }

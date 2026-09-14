@@ -939,7 +939,7 @@ const CHECKS = [
   {
     name: 'dmg-layout-doc',
     remediation:
-      '按报错改正二选一：①SOP 里又在复述卷内清单（或断言了拖拽式交付形态）→ 把那份清单换掉，改成指向 packaging/INSTALL-GUIDE.md 第 2 节的名字，让本条去做两向对照；②卷与入口表逐名对不上 → 判断哪边是对的那个，然后改另一边（新增载荷文件要登记进手册，手册里写的文件必须真的在卷上）。⚠️ 已打 tag 的版本不在射程内（它由产物自己冻结，ADR-0067）——读数里的「不参与」点名了它们是哪些',
+      '按报错改正三选一：①SOP 里又在复述卷内清单（或断言了拖拽式交付形态）→ 把那份清单换掉，改成指向 packaging/INSTALL-GUIDE.md 第 2 节的名字，让本条去做两向对照；②卷与入口表逐名对不上 → 判断哪边是对的那个，然后改另一边（新增载荷文件要登记进手册，手册里写的文件必须真的在卷上）；③手册**正文里**的链接指向未随包的文件（R6）→ 要么把它加进载荷，要么把链接改成指向手册自己的章节——链接在**仓库里**可达不等于**随包**可达（2026-09-14 实测：手册开头的 `[安装卡](INSTALL-CARD.md)` 自 2.2.0 起从未进过任何一版载荷，而所有门禁都绿）。⚠️ 已打 tag 的版本不在射程内（它由产物自己冻结，ADR-0067）——读数里的「不参与」点名了它们是哪些',
     run() {
       // 交付形态是**产物**的属性，不是**文档**的属性（ADR-0077 / P-14）。
       // 2026-09-13 实测：SOP §5 三处描述的是上一版的形态（可拖拽安装盘），而 2.3.3 是离线安装器
@@ -979,11 +979,18 @@ const CHECKS = [
         ...scope.scanVolumes.map(({ label }) => ({
           label,
           entries: volumes.find((volume) => volume.label === label)?.entries ?? [],
+          // R6 要判**嵌套**链接（如 `tools/verify-patches-v2.sh`）是否随包，
+          // 顶层条目不够——只给顶层就等于用「tools/ 这个目录在」冒充「那个文件在」。
+          files: listFilesRecursive(label),
         })),
-        ...scope.scanPayloads.map((version) => ({
-          label: `packaging/staging/${version}/payload`,
-          entries: readdirSync(join(stagingRoot, version, 'payload')),
-        })),
+        ...scope.scanPayloads.map((version) => {
+          const dir = join(stagingRoot, version, 'payload')
+          return {
+            label: `packaging/staging/${version}/payload`,
+            entries: readdirSync(dir),
+            files: listFilesRecursive(dir),
+          }
+        }),
       ]
       const result = checkDmgLayout({ sopText, guideText, artifacts: inScope })
       if (result.skipped) {
@@ -996,7 +1003,7 @@ const CHECKS = [
   {
     name: 'dmg-layout-doc-selftest',
     remediation:
-      '跑 node --test scripts/gates/dmg-layout.test.mjs 看红在哪条：交付卷形态判据必须能说「不」——SOP 没指向安装手册要判红、**用 2026-09-13 缺陷原文**（「应看到 DSH Desktop.app 与 Applications 快捷方式」）当输入必须判红、卷上有手册没登记的文件与手册登记了卷上没有的文件都必须判红、标为「✅ 可点入口」的项不存在必须判红、入口表解析不出条目时必须判红而不是当作「没什么可比的」放行、射程为空必须报 skip 而不是 ok（且静态半仍然说话）。重点是恒真桩突变：一个只检查「SOP 有没有链接安装手册」的实现会放过缺陷原文——测不出来的判据等于没有判据（P-02 / P-03）',
+      '跑 node --test scripts/gates/dmg-layout.test.mjs 看红在哪条：交付卷形态判据必须能说「不」——SOP 没指向安装手册要判红、**用 2026-09-13 缺陷原文**（「应看到 DSH Desktop.app 与 Applications 快捷方式」）当输入必须判红、卷上有手册没登记的文件与手册登记了卷上没有的文件都必须判红、标为「✅ 可点入口」的项不存在必须判红、入口表解析不出条目时必须判红而不是当作「没什么可比的」放行、射程为空必须报 skip 而不是 ok（且静态半仍然说话）。R6 另有四例：手册正文链接的随包文件不在卷上必须判红（**用 2026-09-14 的缺陷原文** `](INSTALL-CARD.md)` 当输入）、外链/锚点/绝对路径必须被忽略而不得误报、嵌套链接必须按递归清单判（给 `tools/` 目录存在而里面的文件不在时必须红）、未给递归清单时嵌套链接必须计入「未核」而不得当作可达。重点是恒真桩突变：一个只检查「SOP 有没有链接安装手册」的实现会放过缺陷原文，一个只看顶层条目的实现会放过嵌套死链——测不出来的判据等于没有判据（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/dmg-layout.test.mjs', '交付卷形态判据的反向自测失败')
     },
@@ -1420,6 +1427,35 @@ function publishedManifests() {
   } catch {
     return []
   }
+}
+
+/**
+ * 递归列出目录下的文件（相对路径），供 `dmg-layout-doc` 的 R6 判嵌套链接是否随包。
+ *
+ * 深度上限 6 层：交付载荷最多两层（`tools/`、`LUTE Setup.app/Contents/…`），
+ * 而挂载卷上不该有更深的树。读不到的那一支返回空数组——**不猜**，
+ * 由判据那边如实计入「未核」，而不是拿「顶层目录在」冒充「里面的文件在」。
+ * @param {string} root 目录（挂载卷或 payload 根）
+ * @param {string} [relPrefix] 当前相对前缀
+ * @param {number} [depth] 当前深度
+ * @returns {string[]} 相对路径列表（文件，不含目录本身）
+ */
+function listFilesRecursive(root, relPrefix = '', depth = 0) {
+  if (depth > 6) return []
+  let entries
+  try {
+    entries = readdirSync(join(root, relPrefix), { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out = []
+  for (const entry of entries) {
+    const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name
+    // 符号链接按文件算（`isDirectory()` 对链接返回 false）——交付载荷里没有链接目录。
+    if (entry.isDirectory()) out.push(...listFilesRecursive(root, rel, depth + 1))
+    else out.push(rel)
+  }
+  return out
 }
 
 /**
