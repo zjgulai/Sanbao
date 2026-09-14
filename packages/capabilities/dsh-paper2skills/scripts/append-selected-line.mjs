@@ -235,6 +235,15 @@ if (has('apply')) {
   console.log(`\n✅ 已写入 ${CLS}（total=${cls.total}）`)
 } else if (!has('check')) {
   console.log('\n（未指定 --apply/--check：只出计划，未写盘）')
+} else if (toAdd.length > 0) {
+  // `--check` 原先无条件打印「✅ 计划与现场一致（--check：无待接入或已幂等）」并 exit 0——
+  // **有待接入时也照样这么打印**。实测：把底本回退到接入前（52 条待接入）跑
+  // `--check --allow-blocked`，它仍然 ✅ + exit 0。那是本文件里第二条恒真断言（P-02 同型，
+  // 与上面那段空循环是同一个病），故改成真会判红的形式。
+  console.log(`\n🔴 --check 判红：仍有 **${toAdd.length}** 条待接入（底本与精选线不一致）。`
+    + '\n   「计划与现场一致」只有在待接入为 0 时成立。要写入请用 --apply。')
+  process.exit(1)
 } else {
-  console.log('\n✅ 计划与现场一致（--check：无待接入或已幂等）')
+  console.log(`\n✅ --check 通过：待接入 0 条，且「只增不改」判据已比对 `
+    + `${comparedExisting} 条 × ${[...comparedFields].sort().join('/')}，无分歧。`)
 }
