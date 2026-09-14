@@ -34,6 +34,7 @@
 import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { filterRowBlocks, splitRowBlocks } from './lib/yaml-rows.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..')
@@ -138,63 +139,23 @@ const stripYaml = (file) => {
   if (!existsSync(file)) return
   const lines = readFileSync(file, 'utf8').split('\n')
   const hit = (text) => [...extNames].some((n) => text.includes(n))
+  const label = file.split('/').slice(-2).join('/')
 
-  /** 按缩进把行切成条目块；返回 [{indent, lines}]，前导非条目行以 indent=-1 归入首块。 */
-  const splitBlocks = (blockLines) => {
-    const blocks = []
-    let lead = []
-    let cur = null
-    for (const line of blockLines) {
-      const m = /^(\s*)- /.exec(line)
-      if (m !== null) {
-        if (cur !== null) blocks.push(cur)
-        cur = { indent: m[1].length, lines: [line] }
-      } else if (cur === null) {
-        lead.push(line)
+  // 块切分与手术住在 `lib/yaml-rows.mjs`：2026-09-14 `check-preset-rows.mjs` 需要同一套
+  // 切分，抄一份就是 P-07 记下的「一条事实两个家」——两份实现迟早分叉，而分叉时没有东西会说话。
+  // **判定**留在这里：那才是本条判据（哪些行算「引用了外部产品」）。
+  const kept = filterRowBlocks(
+    splitRowBlocks(lines),
+    (own) => (hit(own.join('\n')) ? 'drop' : 'keep'),
+    ({ kind, own }) => {
+      if (kind === 'row') {
+        note('补丁行', `${label}: ${own[0].trim()}`, '条目自身引用了外部产品')
       } else {
-        cur.lines.push(line)
+        // 子条目全被删 → 容器成了空壳，一并删（空 insert 行会让 loader 报错）
+        note('补丁行', `${label}: ${own[0].trim()}（子条目已全部移除）`, '空壳容器')
       }
-    }
-    if (cur !== null) blocks.push(cur)
-    if (lead.length > 0) blocks.unshift({ indent: -1, lead: true, lines: lead })
-    return blocks
-  }
-
-  /** 把一个块拆成「自身行」与「子条目块」：子条目 = 缩进比本块深的条目行及其续行。 */
-  const splitOwn = (block) => {
-    const own = []
-    const childLines = []
-    let inChild = false
-    for (const line of block.lines) {
-      const m = /^(\s*)- /.exec(line)
-      if (m !== null && m[1].length > block.indent) inChild = true
-      if (inChild) childLines.push(line)
-      else own.push(line)
-    }
-    return { own, children: childLines.length > 0 ? splitBlocks(childLines) : [] }
-  }
-
-  const keep = (block) => {
-    if (block.lead === true) return block.lines
-    const { own, children } = splitOwn(block)
-    if (hit(own.join('\n'))) {
-      note('补丁行', `${file.split('/').slice(-2).join('/')}: ${own[0].trim()}`, '条目自身引用了外部产品')
-      return null
-    }
-    if (children.length === 0) return own
-    const keptChildren = children.map(keep).filter((x) => x !== null)
-    if (keptChildren.length === 0) {
-      // 子条目全被删 → 容器成了空壳，一并删（空 insert 行会让 loader 报错）
-      note('补丁行', `${file.split('/').slice(-2).join('/')}: ${own[0].trim()}（子条目已全部移除）`, '空壳容器')
-      return null
-    }
-    return [...own, ...keptChildren.flat()]
-  }
-
-  const kept = splitBlocks(lines)
-    .map(keep)
-    .filter((x) => x !== null)
-    .flat()
+    },
+  )
   // 收尾：去掉删除后可能出现的连续空行（保持可读；与 install/assemble 的占位替换互不影响）
   const text = kept.join('\n').replace(/\n{3,}/g, '\n\n')
   if (text !== lines.join('\n') && !DRY) writeFileSync(file, text)

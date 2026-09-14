@@ -395,6 +395,23 @@ find "$SP" \( -name '.DS_Store' -o -name '*.bak-*' -o -name '*.pre-*' -o -name '
 # 表里没覆盖到的形态会让这一步响亮失败（新形态该由人决定，不由脚本猜）。
 node "$PKG_ROOT/scripts/rewrite-build-paths.mjs" --root "$SP" \
   || { echo "[assemble] ✗ 出货副本仍含未登记的构建机路径形态，中止（见上）"; exit 1; }
+# 预设行的**闭合**判据（2026-09-14 实测缺陷的修法）：出货副本里每一条插件行的 name，必须在
+# 出货面里解析得到。放在 tar 之前是刻意的——它判的就是「即将打包的那份字节」。
+#
+# 为什么前面那些判据拦不住它：§2a 的 strip-local-products 与 §0 的白名单都是**反向特征**
+# （先在暂存 profile 的 file: 依赖里算出「外部产品名」，再拿这个名字去删行）。而 2.4.0 装配
+# 那一刻，本机 profile 里那条依赖与 bundle 早已被上一次安装抹掉，只剩 preset 里那一行 ——
+# 于是 extNames 为空，脚本如实报出「✓ 出货面没有本机装配的外部产品」，那一行大摇大摆出了门，
+# 客户机打开 DSH 时「结伴 · 达人与联盟合作」preset 加载失败。判据的真值不该由开发机此刻的
+# 状态决定：问题不是「本机挂没挂外部产品」，而是「出货那个东西里有没有这个包」。
+#
+# 已登记为本机装配的行（packaging/local-only-preset-rows.json）剥掉并打印读数；未登记又解析
+# 不到的 → 中止并点名到「文件 + 行 + 包名」。--strip 只写 $SP（出货副本），本机
+# ~/.dsh/.agent-presets 下的原件不动 —— 那一行在本机是有用的。
+node "$PKG_ROOT/scripts/check-preset-rows.mjs" --presets "$SP/presets" --strip \
+  --node-modules "$PROFILE/node_modules" --node-modules "$NM_DIR" \
+  --config "$PKG_ROOT/local-only-preset-rows.json" \
+  || { echo "[assemble] ✗ 出货预设里有解析不到的行，中止（见上）；登记处见 packaging/local-only-preset-rows.json"; exit 1; }
 tar -czf "$PAYLOAD/skills-presets.tar.gz" --exclude '.DS_Store' -C "$SP" skills presets
 rm -rf "$SP"
 say "技能+预设完成 ($(du -sh "$PAYLOAD/skills-presets.tar.gz" | cut -f1))"

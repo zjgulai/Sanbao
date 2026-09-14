@@ -611,6 +611,26 @@ const CHECKS = [
     },
   },
   {
+    name: 'preset-rows-resolvable-selftest',
+    remediation:
+      '跑 bash packaging/scripts/check-preset-rows-test.sh 看红在哪条：「出货 preset 的每一行必须在出货面里解析得到」这条判据必须能说「不」。S2 是本次缺陷的回归钉——2026-09-14 实测 2.4.0 的 payload 里 presets/agt-033/agent.cordis.yml 带着本机装配行 dsh-kol-hunter-local，客户机的出货 profile 里没有该包（ADR-0056 要求剥掉）→ 客户打开 DSH 时「结伴 · 达人与联盟合作」preset 加载失败；当时的守卫看不见它，因为那条判据是**反向特征**：先在本机 profile 的 file: 依赖里算「外部产品名」再拿去删行，而装配那一刻本机的那半事实已被上一次安装抹掉，脚本如实报告「✓ 出货面没有本机装配的外部产品」。S4/S5 是同一份字节、只换解析面的一对（结论必须相反）——钉住判据看的是出货面而不是本机状态；S3 钉住已登记的行会被剥掉（含紧贴其上的注释，不留下描述「不存在的行」的话）；S6 钉住路径形态的 name 判红并说清是 ADR-0056 的那种坏法；S7/S8/S9 钉住「解析面读不到」「登记处读不到」「登记不写 why」三种都响亮失败而不是退化成「无发现」；S10 钉住过期登记只告警不判红；P1 钉住入口判定在符号链接路径下不许静默不干活；M1 在恒真桩突变下必须失效（ADR-0084）',
+    run() {
+      const script = join(repoRoot, 'packaging', 'scripts', 'check-preset-rows-test.sh')
+      const result = runScript(repoRoot, `bash "${script}"`, 120000)
+      if (result.code === 0) return { passed: true, violations: [] }
+      const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+      const lines = text
+        .split('\n')
+        .filter((line) => /\[FAIL\]/.test(line))
+        .map((line) => line.trim())
+      const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+      return {
+        passed: false,
+        violations: lines.length > 0 ? lines : [`出货预设行解析判据自测失败（${verdict}）`],
+      }
+    },
+  },
+  {
     name: 'build-path-rewrite-selftest',
     remediation:
       '跑 bash packaging/scripts/rewrite-build-paths-test.sh 看红在哪条：「出货副本里的构建机路径必须换成占位符」这条判据必须改得动、也必须在改不完时喊。R1 钉住五类已知前缀（含带空格的 Application Support 路径）；R2 钉住未登记形态响亮失败；R3 幂等；R4 二进制不误伤；P1 钉住符号链接路径下的入口判定；M1 抹掉一条映射后 R1 必须失效（ADR-0073）',

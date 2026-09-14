@@ -1,0 +1,17 @@
+{
+  "note": "出货预设的**行级**登记处（ADR-0066 的三层语法之一：ADR-0073 管目录、ADR-0074 管技能、本文件管行）。判据在 packaging/scripts/check-preset-rows.mjs：出货副本里每一条顶层插件行的 name，必须在**出货面**（出货 profile 的 node_modules ∪ app 内嵌 node_modules ∪ 本文件的 builtins）里解析得到。\n为什么需要这一层：2026-09-14 实测，2.4.0 的 payload 里 presets/agt-033/agent.cordis.yml 带着「本机装配」的产品行 dsh-kol-hunter-local，而客户机的出货 profile 里没有该包（ADR-0056 要求剥掉）→ 客户机打开 DSH 时「结伴 · 达人与联盟合作」这个 preset 加载失败。原有的 strip-local-products.mjs 看不见它：那条判据是**反向特征**——先在暂存 profile 的 file: 依赖里算出「外部产品名」，再拿名字去删补丁行；而 2.4.0 装配时本机 profile 的该依赖与 bundle 早已在 09-13 的安装里没了，只剩 preset 里这一行，于是 extNames 为空、脚本如实报告「✓ 出货面没有本机装配的外部产品」，唯一残留的痕迹就此出门。**同一份 preset、同一台机器、两种状态，判据给出相反结论**——判据的真值不该由开发机此刻的状态决定。\n本文件的两个字段都是「一次可评审的表态」，都必须写 why（缺 why 即配置判坏）：\n  · builtins —— 不是 npm 包、由运行时提供的内置名（Cordis 的命名空间等）；\n  · localOnly —— 确实只在本机装配、绝不出货的行。**登记即权威**：哪怕本机此刻真的装了这个包，它也从出货副本里剥掉并逐个打印；反过来，未登记又解析不到的行 → 装配中止并点名到「文件 + 行 + 包名」。",
+  "builtins": [
+    {
+      "name": "cordis:group",
+      "why": "Cordis 运行时的分组命名空间，不是 npm 包：50 个岗位预设里的分组行都用它（它们不出现在任何 node_modules 里，属运行时可解析）。若将来出现别的内置名，在这里登记并写明出处——不登记就是「没人表过态」，装配会停下来问。"
+    }
+  ],
+  "localOnly": [
+    {
+      "preset": "agt-033",
+      "id": "product-kol-hunter",
+      "name": "dsh-kol-hunter-local",
+      "why": "ADR-0061：深链星探 KOL Hunter（/Users/lute/project/KOL-Hunter）在**本机**的装配行，客户机上既没有这个包、也没有它的源码路径。2026-09-13 起这一行按当时的做法直接插在 ~/.dsh/.agent-presets/agt-033/agent.cordis.yml 里（本机装配只改运行时），而该目录同时是出货源——于是它随 2.3.x/2.4.0 出了门。登记在这里之后：出货副本剥掉它并打印一行读数；本机 preset 保持原样可用。"
+    }
+  ]
+}
