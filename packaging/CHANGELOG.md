@@ -1,6 +1,19 @@
 # CHANGELOG
 
-## [Unreleased]（2026-09-13 · 发布前门禁的射程与三态读数）
+## [2.4.0]（2026-09-14）
+
+- **打包面零变化**：本版装配配方与 2.3.3 相同，出货技能 349 条**逐名相同**、预设 51 条；
+  本版没有改动 `assemble.sh` / 白名单 / 路径改写 / 锚点。
+- **发布链的最后一环接上**：v2.4.0 随版本同步上 Releases（ADR-0076）。门禁 `release-published`
+  在**带代理**的环境下真核对 5 个已发布版本；离线或代理未导出时该项报 `skip` 而退出码仍为 0
+  ——这个缺口已登记为复发故障总账 **P-17**（尚未机械化拦住）。
+- `pnpm run gate` 49/49、`pnpm run gate:full` 55/55。
+
+## [2.3.3]（2026-09-13）
+
+本版载荷含下面三批打包面改动，原文按批保留。**G1/G2 首见于 2.3.2**，2.3.3 沿用（见末节「出货归属」）。
+
+### 发布前门禁的射程与三态读数
 
 - **`patch-anchors` 的射程从「环境」改成「待发布」**（ADR-0075）：本项原先把
   `packaging/staging/` 下**所有** app 树都算进扫描集，而锚点清单**单调增长**、历史产物**累积**，
@@ -22,7 +35,7 @@
 - 新增门禁 `patch-anchors-scope-selftest`（含「无条件纳入」与「空射程恒置 false」两种恒真桩突变）；
   复发故障总账加 P-11「判据的射程没有定义」，P-02 的机制清单同步补上。
 
-## [Unreleased]（2026-09-13 · 出货面边界：预设白名单 + 载荷路径改写 + 产品级技能白名单）
+### 出货面边界：预设白名单 + 载荷路径改写 + 产品级技能白名单
 
 - **预设出货面改白名单**（ADR-0073）：`assemble.sh` §0 原先是整目录 `cp -R ~/.dsh/.agent-presets/.`，
   于是「谁在打包机上新建一个预设，它就随下一版出给客户」是一条静默路径——实测本机自有的机器人
@@ -43,7 +56,7 @@
 - 新增反向自测并进门禁：`shipped-presets-scope-selftest`、`build-path-rewrite-selftest`、
   `machine-path-tarball-selftest`、`shipped-skills-scope-selftest`（各含恒真桩突变与符号链接沙箱用例）。
 
-## [Unreleased]（2026-09-13 · HMR 生产守卫）
+### HMR 生产守卫
 
 - **G1 HMR 生产守卫**：`dsh-client-hmr/lib/index.js` 非 dev 模式不 re-hash、不推 rebuilt 帧（运行中替换 app bundle 白屏的机制修复）；幂等脚本 `dsh-patches/runtime-guards/apply-fixes.sh`，接入 `assemble.sh` 强制重放、随包 `tools/runtime-guards/`。
 - **G2 console 转发**：`electron-runtime-*.js` 订阅 `console-message`（兼容新旧 Electron 事件签名）。
