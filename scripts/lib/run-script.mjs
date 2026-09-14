@@ -8,6 +8,7 @@
  * 同处一层。
  */
 import { execFileSync } from 'node:child_process'
+import { cpus, loadavg } from 'node:os'
 import { join } from 'node:path'
 
 /**
@@ -24,6 +25,48 @@ export const SCRIPT_OUTPUT_TAIL = 4000
  * 「输出超限」从此被读成「测试失败」（ADR-0043）。
  */
 export const SCRIPT_MAX_BUFFER = 16 * 1024 * 1024
+
+/**
+ * 超时时附带一台**机器读数**（2026-09-14 加，总账 P-18 的同族处置：读数而不是放宽）。
+ *
+ * 为什么要它：`scripts-runnable` 的超时上限（180s）对机器负载敏感。实测过一次形态——
+ * 平时 3 秒跑完的包测试在杀毒扫盘时顶到 180s 并报「退出码 124」，而这条红与「代码真的坏了」
+ * 在输出上**完全同形**；本会话还有一次更糟：第一次 `gate:full` 有一项红，但输出没留档、
+ * `tail` 把它截掉了，于是「红的是哪一项」不可知——那次读数丢失本身就是这条缺陷的形状。
+ *
+ * 所以超时时把**当时的机器状态**一起报出来（load 均值 + 占 CPU 最高的几个进程），
+ * 让读的人一眼分得清「环境假红」与「代码红」。**放宽超时是错的方向**：那会把真缺陷也一起放过去。
+ *
+ * 诚实边界：`readMachineLoad()` 读不到时**必须说出来**——「读不到」不等于「机器空闲」，
+ * 更不等于「代码没问题」（P-02 / P-10 的读数纪律）。
+ * @returns {string} 例如 `load 5.90/4.10/3.20（10 核）；占 CPU 前 5：kavd 246%、node 88%`
+ */
+export function readMachineLoad() {
+  const cores = cpus().length
+  const [one, five, fifteen] = loadavg().map((v) => v.toFixed(2))
+  const head = `load ${one}/${five}/${fifteen}（${cores} 核）`
+  try {
+    const out = execFileSync('ps', ['-Ao', 'pcpu=,pid=,comm='], {
+      encoding: 'utf8',
+      timeout: 5000,
+      maxBuffer: 4 * 1024 * 1024,
+    })
+    const top = out
+      .split('\n')
+      .map((line) => /^\s*([\d.]+)\s+(\d+)\s+(.+?)\s*$/.exec(line))
+      .filter((m) => m !== null)
+      .map((m) => ({ cpu: Number(m[1]), pid: m[2], comm: m[3] }))
+      .filter((p) => Number.isFinite(p.cpu))
+      .sort((a, b) => b.cpu - a.cpu)
+      .slice(0, 5)
+      .map((p) => `${p.comm.split('/').slice(-1)[0]} ${p.cpu.toFixed(0)}%`)
+    if (top.length === 0) return `${head}；进程读数取不到（ps 没有给出任何一行）——「读不到」不等于机器空闲`
+    return `${head}；占 CPU 前 ${top.length}：${top.join('、')}`
+  } catch (error) {
+    const why = error.code === 'ETIMEDOUT' ? 'ps 超时 5000ms' : (error.message ?? String(error))
+    return `${head}；进程读数取不到（${why}）——「读不到」不等于机器空闲`
+  }
+}
 
 /**
  * 运行一个包脚本并返回退出码与**分流**输出尾部。
@@ -65,7 +108,8 @@ export function runScript(cwd, script, timeoutMs, extraEnv = {}) {
     // `error.killed`，超时于是掉进下面的 `?? 1` 被报成「退出码 1」——文档声明的 124
     // 从未生效，超时与测试失败在报告里长得一模一样（ADR-0043）。
     if (error.killed === true || error.code === 'ETIMEDOUT') {
-      return { code: 124, stdout, stderr, note: `超时 ${timeoutMs}ms` }
+      // 超时带上当时的机器读数：那是唯一能让人分清「环境假红」与「代码红」的东西。
+      return { code: 124, stdout, stderr, note: `超时 ${timeoutMs}ms；当时读数：${readMachineLoad()}` }
     }
     const note =
       error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'

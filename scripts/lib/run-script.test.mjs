@@ -8,7 +8,11 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { runScript, SCRIPT_OUTPUT_TAIL } from './run-script.mjs'
+import { execFileSync, spawn } from 'node:child_process'
+import { chmodSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { cpus, loadavg, tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { readMachineLoad, runScript, SCRIPT_OUTPUT_TAIL } from './run-script.mjs'
 
 const CWD = process.cwd()
 const TIMEOUT_MS = 30000
@@ -83,4 +87,67 @@ test('超时：区分得开「超时」与「被信号杀」——两者都是 c
   assert.notEqual(timedOut.code, signaled.code, '超时记 124、被信号记 null，报告里必须分得开')
   assert.match(timedOut.note ?? '', /超时/)
   assert.doesNotMatch(signaled.note ?? '', /超时/)
+})
+
+// ── 超时读数（2026-09-14 加）：让「环境假红」与「代码红」在输出上分得开 ─────────────
+// 动机是实测过的两次：① 平时 3 秒跑完的包测试在杀毒扫盘时顶到 180s 并报「退出码 124」，
+// 与「代码真的坏了」在输出上完全同形；② 有一次 `gate:full` 有一项红，但输出没留档、
+// 被 `tail` 截掉，于是「红的是哪一项」不可知——那次读数丢失本身就是这条缺陷的形状。
+// 处置是**加读数、不放宽超时**：放宽会把真缺陷一起放过去。
+
+test('超时读数：load 是当场读的（与独立读数一致），不是常量', () => {
+  const result = runScript(CWD, 'sleep 5', 300)
+  const note = result.note ?? ''
+
+  const m = /load (\d+\.\d{2})\/(\d+\.\d{2})\/(\d+\.\d{2})（(\d+) 核）/.exec(note)
+  assert.ok(m !== null, `note 里必须有 load 读数（1/5/15 分钟 + 核数）：${note}`)
+  const [one] = loadavg()
+  assert.ok(
+    Math.abs(Number(m[1]) - one) < 1,
+    `note 里的 1 分钟 load（${m[1]}）必须与独立读数（${one.toFixed(2)}）对得上——差太多说明它是编的`,
+  )
+  assert.equal(Number(m[4]), cpus().length, '核数必须来自这台机器')
+})
+
+test('超时读数：正在烧 CPU 的进程必须出现在读数里（真起一个烧 CPU 的进程）', () => {
+  // 用 /bin/cat 的副本当烧 CPU 的进程：**名字是独特的**，所以「它出现在前 5 名里」
+  // 只能是当场读出来的——写死的读数、缓存的读数、或只打印 load 的实现都混不过这一条。
+  const tmp = mkdtempSync(join(tmpdir(), 'run-script-load-'))
+  const burner = join(tmp, 'dshgateload-burner')
+  copyFileSync('/bin/cat', burner)
+  chmodSync(burner, 0o755)
+  const child = spawn(burner, ['/dev/zero'], { stdio: ['ignore', 'ignore', 'ignore'], detached: true })
+  try {
+    execFileSync('sleep', ['0.4']) // 让它真的跑起来并积累 CPU 时间，再触发超时
+    const note = runScript(CWD, 'sleep 5', 300).note ?? ''
+    assert.match(note, /占 CPU 前 \d+：/, `note 必须列出占 CPU 的进程：${note}`)
+    assert.match(
+      note,
+      /dshgateload-burner \d+%/,
+      `正在烧 CPU 的进程必须出现在读数里（否则这个读数不是当场读的）：${note}`,
+    )
+  } finally {
+    try {
+      process.kill(-child.pid, 'SIGKILL')
+    } catch {
+      child.kill('SIGKILL')
+    }
+    rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('超时读数：进程读不到时必须说出来，且不许把 load 一起吞掉', () => {
+  // 把 PATH 指到一个空目录 → `ps` 找不到。这是**真实的**读不到，不是喂假数据。
+  const saved = process.env.PATH
+  const empty = mkdtempSync(join(tmpdir(), 'run-script-nopath-'))
+  process.env.PATH = empty
+  try {
+    const note = readMachineLoad()
+    assert.match(note, /load \d+\.\d{2}\/\d+\.\d{2}\/\d+\.\d{2}/, 'load 来自 os 模块，读不到 ps 也必须还在')
+    assert.match(note, /进程读数取不到/, `读不到必须自己说出来，不能长得像「机器很闲」：${note}`)
+    assert.match(note, /不等于机器空闲/, '要把「读不到 ≠ 空闲」写进读数本身，否则读的人会当成客观读数')
+  } finally {
+    process.env.PATH = saved
+    rmSync(empty, { recursive: true, force: true })
+  }
 })
