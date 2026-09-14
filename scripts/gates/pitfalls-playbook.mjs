@@ -21,8 +21,11 @@
  *    写一个不存在的门禁名字 = 自我安慰，而自我安慰的清单比没有清单更坏。
  * 3. **编号**：`P-NN` 自 `P-01` 起连续、不重复。编号是引用凭据（别处会写「见 P-02」），
  *    重编号会让所有引用悄悄指错人。
- * 4. **可达性**：全文相对链接必须存在；且本账必须被 `AGENTS.md` 与 `docs/README.md`
+ * 4. **可达性**：正文相对链接必须存在；且本账必须被 `AGENTS.md` 与 `docs/README.md`
  *    链接——**没入口的总账等于不存在**，这一条防的正是本文件存在的理由。
+ *    这里只量**真的会被当成链接**的位置（跳过围栏代码块与行内代码），规则住在
+ *    `checks.mjs` 的 `collectDocLinks`：总账的用途恰恰是**逐字引用缺陷原文**，
+ *    而引用的坏链不该把总账自己判红——2026-09-14 实测撞过一次（见 P-07 的同族前科）。
  *
  * ## 本项**不**检查什么（诚实写清楚，免得被当成全覆盖）
  *
@@ -30,9 +33,13 @@
  * 判断「这句话是不是另一个家」需要语义理解，静态文本判不出。它在文档里被显式标为
  * 「约定，无强制」，而不是伪装成一条受保护的红线（这正是 P-03 要求的诚实读法）。
  *
+ * 另一处边界同样要说清：跳过行内代码意味着**写在反引号里的真链接不会被校验**。
+ * 这是显式取舍（引用缺陷原文是总账的正当写法），代价钉在自测用例上——同一段里
+ * 既有行内代码里的坏链、又有真实的坏链时，真实的那条**仍必须判红**。
+ *
  * @module
  */
-import { resolveDocLink } from './checks.mjs'
+import { collectDocLinks, resolveDocLink } from './checks.mjs'
 
 /** 总账的仓库根相对路径（也是它唯一的家）。 */
 export const PLAYBOOK_REL_PATH = 'docs/pitfalls-playbook.md'
@@ -159,10 +166,13 @@ export function checkPitfallsPlaybook({ playbookText, gateNames, fileExists, bac
     }
   }
 
-  // ④ 链接可达
-  for (const target of collectRelativeLinks(playbookText)) {
+  // ④ 链接可达（只量真的会被当成链接的位置——规则见模块注释）
+  for (const { line, link, target } of collectRelativeLinks(playbookText)) {
     if (!fileExists(target)) {
-      violations.push(`${PLAYBOOK_REL_PATH}: 链接不可达（${target}）——ADR-0009 要求链接可达由门禁校验`)
+      violations.push(
+        `${PLAYBOOK_REL_PATH}:${line}: 链接不可达（${link} → ${target}）——`
+          + 'ADR-0009 要求链接可达由门禁校验；逐字引用坏链接请写进行内代码或代码块',
+      )
     }
   }
 
@@ -221,17 +231,22 @@ function splitSections(body) {
 }
 
 /**
- * 收集文档里的相对 Markdown 链接并归一化为仓库根相对路径。
- * 跳过外链（含协议或 `#` 锚点）——它们不由仓库门禁负责。
+ * 收集文档里的相对 Markdown 链接并归一化为仓库根相对路径，带上行号。
+ *
+ * 「哪段文字算链接」不自带一份实现，而是复用 `checks.mjs` 的 `collectDocLinks`
+ * （与 `docs-links.mjs` 同一份）：这条规则曾经在两边各写一次，而分叉让**逐字引用
+ * 坏链接的总账条目**被判红——两份实现迟早分叉，分叉时没有任何东西会说话（P-07）。
+ *
+ * 外链（含协议）、`#` 锚点与绝对路径不由仓库门禁负责，在此跳过。
  * @param {string} text 文档正文
- * @returns {string[]} 去重后的仓库根相对路径
+ * @returns {Array<{line: number, link: string, target: string}>} 原文链接与其归一化目标
  */
 function collectRelativeLinks(text) {
-  const out = new Set()
-  for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
-    const link = match[1]
+  const out = []
+  for (const { line, link } of collectDocLinks(text)) {
     if (/^[a-z][a-z0-9+.-]*:/i.test(link) || link.startsWith('#') || link.startsWith('/')) continue
-    out.add(resolveDocLink(PLAYBOOK_REL_PATH, link.split('#')[0]))
+    const target = resolveDocLink(PLAYBOOK_REL_PATH, link.split('#')[0])
+    if (target) out.push({ line, link, target })
   }
-  return [...out].filter(Boolean)
+  return out
 }

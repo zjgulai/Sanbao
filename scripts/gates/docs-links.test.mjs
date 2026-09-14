@@ -74,6 +74,35 @@ test('文档链接：行内代码里的示例不得判红', () => {
   assert.equal(result.passed, true)
 })
 
+test('文档链接：双反引号定界的引用不得判红（本用例钉的是扫描器，不是正则）', () => {
+  // 2026-09-14 实测：把缺陷原文写进行内代码时，Markdown 允许用 N 个反引号作定界符。
+  // 四种写法里 `/`[^`]*`/` 只会漏**第三行**那种——引文不含反引号时，正则把开头那两个
+  // 反引号当成空代码段吃掉，`](INSTALL-CARD.md)` 原样留下、被判成真链接。
+  // 定界符长度必须成对匹配，这就是 checks.mjs 里用扫描器（stripInlineCode）而不是正则的原因。
+  const result = run([
+    {
+      path: 'docs/guide.md',
+      text: [
+        '单反引号：`](INSTALL-CARD.md)` 结束。',
+        '双反引号·引文含反引号：`` `](INSTALL-CARD.md)` `` 结束。',
+        '双反引号·引文不含反引号：``](INSTALL-CARD.md)`` 结束。',
+        '',
+      ].join('\n'),
+    },
+  ])
+  assert.deepEqual(result.violations, [])
+  assert.equal(result.passed, true)
+})
+
+test('文档链接：未闭合的反引号不得让整行链接逃过校验', () => {
+  // 反向的失效方向：一个漏写的反引号若吞掉整行，链接就会**静默不被校验**（P-11）。
+  // 这条同时是上面那条的对照——「跳过行内代码」必须仍然看得见行内的真链接。
+  const result = run([
+    { path: 'docs/guide.md', text: '这里漏了个反引号 ` 见 [坏链](nope.md)\n' },
+  ])
+  assertRed(result, 'nope.md')
+})
+
 test('文档链接：外链、页内锚点与绝对路径不得判红', () => {
   const result = run([
     {

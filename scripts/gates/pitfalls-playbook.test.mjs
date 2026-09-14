@@ -9,6 +9,10 @@
  * 最要紧的是最后一条「恒真桩突变」：把每条条目的机制换成一句**永远成立**的免责话
  * （「有门禁守着」），校验必须变红。这是 P-03 的可执行形式——机制必须**有名字**，
  * 否则「已落地机制」这四个字本身就成了一句自我安慰。
+ *
+ * 链接那半另有成对的用例，两条一起才说明它「分得清」：行内代码里逐字引用的坏链
+ * **不得**判红（引缺陷原文是本账的正当写法，误报会让这条校验被当成噪声关掉），
+ * 而同一段里**真实的**坏链仍必须判红（否则「跳过一切」也能让误报消失，校验就退化成装饰）。
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -159,6 +163,38 @@ test('总账：正文读不到时必须判红（删掉总账不该是绿的）',
 test('总账：相对链接不可达必须判红', () => {
   const text = entry('P-01', { action: '见 [不存在的文档](adr/ADR-9999.md)' })
   assertRed(run(text), 'ADR-9999.md')
+})
+
+test('总账：报错行号指向出问题的那一行（链接问题要能直接跳过去）', () => {
+  const result = run(entry('P-01', { action: '见 [不存在的文档](adr/ADR-9999.md)' }))
+  assertRed(result, 'docs/pitfalls-playbook.md:6:')
+})
+
+test('总账：行内代码里逐字引用的坏链不得判红（引缺陷原文是本账的正当写法）', () => {
+  // 2026-09-14 实测的形状：写 P-09 条目时把手册里那条随包死链 `](INSTALL-CARD.md)`
+  // 逐字引进行内代码，而本项当时不跳行内代码——于是它把总账自己判红了。
+  // 修法是让两个门禁共用同一份「哪段文字算链接」的实现，不是给本项加白名单。
+  const text = entry('P-01', { symptom: '手册里写着 `](INSTALL-CARD.md)`，而该文件从未进过载荷。' })
+  assert.equal(run(text).passed, true)
+})
+
+test('总账：围栏代码块里的写法示例不得判红', () => {
+  const text = ['```markdown', '[标题](adr/ADR-9999.md)', '```', '', entry('P-01')].join('\n')
+  assert.equal(run(text).passed, true)
+})
+
+test('总账：跳过行内代码不等于跳过一切——同一段里真实的坏链仍必须判红（钉子）', () => {
+  // 恒真桩突变：把「跳过行内代码」做成「跳过所有链接」，上面两条用例都会变绿，
+  // 误报也没了——而本项就退化成一个只会判绿的装饰。这条钉子要求两种写法各归各位。
+  const text = entry('P-01', {
+    action: '引缺陷原文写 `[坏链](ghost-quoted.md)`，真实链接见 [也不存在](ghost-real.md)',
+  })
+  const result = run(text)
+  assertRed(result, 'ghost-real.md')
+  assert.ok(
+    !result.violations.some((violation) => violation.includes('ghost-quoted.md')),
+    `行内代码里的写法不该出现在违规里，实际为：\n${result.violations.join('\n')}`,
+  )
 })
 
 test('总账：没被 AGENTS.md 回引必须判红（没入口的总账等于不存在）', () => {

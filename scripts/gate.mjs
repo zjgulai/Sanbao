@@ -673,7 +673,7 @@ const CHECKS = [
   {
     name: 'pitfalls-playbook',
     remediation:
-      '按 docs/pitfalls-playbook.md 头部写明的契约补齐：每条 `## P-NN · 标题` 必须有「症状 / 根因类 / 已落地机制 / 下一版默认动作」四段；「已落地机制」必须点名真实存在的 `gate:<名字>`（见 node scripts/gate.mjs --list）或 `script:<路径>`——机制没有名字就等于自我安慰；编号自 P-01 起连续；相对链接可达；且 AGENTS.md 与 docs/README.md 都必须链接本账（没入口的总账等于不存在）',
+      '按 docs/pitfalls-playbook.md 头部写明的契约补齐：每条 `## P-NN · 标题` 必须有「症状 / 根因类 / 已落地机制 / 下一版默认动作」四段；「已落地机制」必须点名真实存在的 `gate:<名字>`（见 node scripts/gate.mjs --list）或 `script:<路径>`——机制没有名字就等于自我安慰；编号自 P-01 起连续；正文相对链接可达（**逐字引用的坏链写进行内代码或代码块即可**——「哪段文字算链接」与 docs-link-integrity 共用同一份实现，不会因为没有第二份拷贝而冤枉引用缺陷原文的条目）；且 AGENTS.md 与 docs/README.md 都必须链接本账（没入口的总账等于不存在）',
     run() {
       return checkPitfallsPlaybook({
         playbookText: readIfExists(join(repoRoot, PLAYBOOK_REL_PATH)),
@@ -689,7 +689,7 @@ const CHECKS = [
   {
     name: 'pitfalls-playbook-selftest',
     remediation:
-      '跑 node --test scripts/gates/pitfalls-playbook.test.mjs 看红在哪条：总账校验必须能说「不」。缺段/空段/跳号/重号/链接不可达/缺入口各有一条反例，重点是「恒真桩突变」——把每条机制换成「有门禁守着」这类永远成立的免责话，校验必须失效；只会判绿的清单校验比没有校验更坏（P-02 / P-03）',
+      '跑 node --test scripts/gates/pitfalls-playbook.test.mjs 看红在哪条：总账校验必须能说「不」。缺段/空段/跳号/重号/链接不可达/缺入口各有一条反例，重点是「恒真桩突变」——把每条机制换成「有门禁守着」这类永远成立的免责话，校验必须失效；链接那半另有一对用例（行内代码里逐字引用的坏链不得判红、同段里真实的坏链仍必须判红——那条钉子防的是把「跳过行内代码」做成「跳过一切」）；只会判绿的清单校验比没有校验更坏（P-02 / P-03 / P-07）',
     run() {
       return runNodeTestFile('scripts/gates/pitfalls-playbook.test.mjs', '总账校验的反向自测失败')
     },
@@ -708,7 +708,7 @@ const CHECKS = [
   {
     name: 'docs-link-integrity-selftest',
     remediation:
-      '跑 node --test scripts/gates/docs-links.test.mjs 看红在哪条：文档链接校验必须能说「不」（层级少写一层要判红并报出解析后的错误路径），也必须不误报（代码块模板占位符、行内代码示例、外链、页内锚点、带锚点的相对链接都不该判红）——会误报的校验很快会被当成噪声关掉（P-02）',
+      '跑 node --test scripts/gates/docs-links.test.mjs 看红在哪条：文档链接校验必须能说「不」（层级少写一层要判红并报出解析后的错误路径），也必须不误报（代码块模板占位符、行内代码示例、外链、页内锚点、带锚点的相对链接都不该判红）——会误报的校验很快会被当成噪声关掉（P-02）；「哪段文字算链接」这条规则与 pitfalls-playbook 共用 `scripts/gates/checks.mjs` 的 `collectDocLinks`，本用例是它唯一的钉子（把规则改回「不跳行内代码」，这里必须红）',
     run() {
       return runNodeTestFile('scripts/gates/docs-links.test.mjs', '文档链接校验的反向自测失败')
     },

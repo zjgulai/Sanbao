@@ -171,6 +171,97 @@ export function resolveDocLink(fromPath, link) {
   return segments.join('/')
 }
 
+/** 行内 Markdown 链接。 */
+const MD_LINK_RE = /\]\(([^)\s]+)\)/g
+
+/** 围栏代码块的开闭（``` 或 ~~~）。 */
+const MD_FENCE_RE = /^\s*(```|~~~)/
+
+/**
+ * 剥掉一行里的行内代码（`` `...` ``），只留下**会被当成链接**的文字。
+ *
+ * 为什么不写成一条正则：Markdown 的行内代码可以用 N 个反引号作定界符——引文本身含反引号时
+ * 必须用两个。2026-09-14 实测四种引法，``/`[^`]*`/`` 只在**一种**上剥漏：
+ *
+ * | 写法 | 正则版 | 扫描器 |
+ * | --- | --- | --- |
+ * | `` `](x.md)` `` | 剥净 | 剥净 |
+ * | `` `` `](x.md)` `` ``（引文含反引号） | 剥净 | 剥净 |
+ * | `` ``](x.md)`` ``（引文不含反引号） | **漏出 `](x.md)`** | 剥净 |
+ * | ``` ```](x.md)``` ``` | 剥净 | 剥净 |
+ *
+ * 漏的原因：正则先把开头那两个反引号当成一个**空代码段**吃掉，之后 `](x.md)` 与结尾的
+ * 两个反引号都留了下来，于是它被判成真链接——误报只是换了个外壳，而引用缺陷原文恰恰是
+ * 总账的正当写法。定界符长度必须**成对匹配**，所以按字符扫描。
+ *
+ * 未闭合的反引号**不吞掉行内其余内容**（只跳过那一个字符）：宁可多量，不放行——
+ * 反向的失效方向会让整行链接静默不被校验（总账 P-11）。
+ * @param {string} line 单行文本
+ * @returns {string} 去掉行内代码后的文本
+ */
+function stripInlineCode(line) {
+  let out = ''
+  let i = 0
+  while (i < line.length) {
+    if (line[i] !== '`') {
+      out += line[i]
+      i += 1
+      continue
+    }
+    let open = 0
+    while (line[i + open] === '`') open += 1
+    const closer = '`'.repeat(open)
+    const end = line.indexOf(closer, i + open)
+    if (end === -1) {
+      out += line[i]
+      i += 1
+      continue
+    }
+    i = end + open
+  }
+  return out
+}
+
+/**
+ * 取出 Markdown 文档里**真的会被当成链接**的那些位置：跳过围栏代码块与行内代码。
+ *
+ * 为什么「哪段文字算链接」必须只写一份（ADR-0009）：这条规则一开始住了两个家——
+ * `docs-links.mjs` 有自己的 `linksIn`（跳代码块与行内代码），`pitfalls-playbook.mjs`
+ * 另写了一份 `collectRelativeLinks`（不跳）。两份在各自的用例下都正确，分叉只在一种
+ * 输入上暴露：**正文里逐字引用一条坏链接**。而总账的用途恰恰是逐字引用缺陷原文——
+ * 2026-09-14 写 P-09 条目时，引用的那条随包死链 `](INSTALL-CARD.md)` 把总账自己判红了。
+ *
+ * 收成一家而不是「两边都改对」：同一份实现出现两次，下次分叉时照旧没有东西会说话
+ * （总账 P-07）。因此本函数是这条规则的唯一 home，两个门禁都从这里取。
+ *
+ * 跳过而不是判红，是为了不让**引用缺陷原文**这种正确写法被冤枉：会误报的校验很快
+ * 会被当成噪声关掉，那比没有校验更坏（总账 P-02 的同族）。代价是**行内代码里的真链接
+ * 不会被校验**——这是一次显式取舍，钉在 `pitfalls-playbook.test.mjs` 的「真链接仍判红」
+ * 用例上：跳过的是代码里的写法，不是一切。
+ * @param {string} text Markdown 文档正文
+ * @returns {Array<{line: number, link: string}>} 行号从 1 起（便于直接跳到出问题的那一行）
+ */
+export function collectDocLinks(text) {
+  const out = []
+  let fence = null
+  const lines = String(text ?? '').split('\n')
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
+    const marker = MD_FENCE_RE.exec(line)
+    if (marker) {
+      // 只认与开启标记同种的闭合，避免 ``` 里的 ~~~ 被误当作结束。
+      if (fence === null) fence = marker[1]
+      else if (marker[1] === fence) fence = null
+      continue
+    }
+    if (fence !== null) continue
+    for (const match of stripInlineCode(line).matchAll(MD_LINK_RE)) {
+      out.push({ line: i + 1, link: match[1] })
+    }
+  }
+  return out
+}
+
 /**
  * 校验豁免登记只减不增、期限不延后、到期即失败（ADR-0014）。
  * @param {{exemptions: Array<Record<string, unknown>>, baseline: Array<Record<string, unknown>>, today: string}} input
