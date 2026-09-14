@@ -104,7 +104,9 @@ export function listField(block, key) {
  * 读全部契约，抽出 frontmatter 与 `cards` 引用。
  *
  * @param {string} contractsDir 契约目录（其下 A/ B/ 两个子目录）
- * @returns {{contracts:Array, problems:Array}}
+ * @returns {{contracts:Array, problems:Array, missing:boolean}} `missing` 是**第三种读数**：
+ *   true 表示契约目录不存在，即「输入没拿到」——调用方转成退出码 2，**不得判绿**。
+ *   它与 `contracts.length === 0`（真·零引用）必须分开，否则「读不到」会被读成「没有」（P-02）。
  */
 export function readContracts(contractsDir) {
   const contracts = []
@@ -157,7 +159,7 @@ export function readContracts(contractsDir) {
  * @returns {{bySlug:Map, refs:Array, counts:object}}
  */
 export function resolveRefs({ contracts, slugById, installedSlugs, selIds }) {
-  /** @type {Map<string, Array<{contract:string, raw:string, kind:string}>>} */
+  /** @type {Map<string, Array<{contract:string, raw:string}>>} */
   const bySlug = new Map()
   const refs = []
   const counts = { [REF_KIND.BOUND]: 0, [REF_KIND.PENDING_INSTALL]: 0, [REF_KIND.UNRESOLVABLE]: 0 }
@@ -180,8 +182,14 @@ export function resolveRefs({ contracts, slugById, installedSlugs, selIds }) {
       refs.push({ raw, kind, slug, contract: c.id, file: c.file })
       counts[kind] += 1
       if (slug && kind === REF_KIND.BOUND) {
-        if (!bySlug.has(slug)) bySlug.set(slug, [])
-        bySlug.get(slug).push({ contract: c.id, raw })
+        // 先取后判空，不用 `?? bySlug.set(...).get(...)`：后者在类型上仍可能 undefined
+        // （TS 不跟踪「先 set 再 get」），只能再补一个假兜底——那就是把假逻辑写进类型里。
+        let bucket = bySlug.get(slug)
+        if (bucket === undefined) {
+          bucket = []
+          bySlug.set(slug, bucket)
+        }
+        bucket.push({ contract: c.id, raw })
       }
     }
   }
@@ -241,7 +249,7 @@ export function readPresetSubsets(presetsRoot) {
  * 算账：每张 p2s 卡在消费口处于哪一态。
  *
  * @param {object} a
- * @param {Array<{slug:string, id:string}>} a.items   classification.json 的 items（已装线 1338 张）
+ * @param {Array<{slug:string, id:string, l3?:string[]}>} a.items   classification.json 的 items（已装线 1338 张）
  * @param {Map<string,string[]>} a.p2sByRole          岗位 → 该岗白名单里的 p2s 条目
  * @param {Map<string,Array>} a.bySlug                卡 → 引用它的契约（resolveRefs 的产出）
  */
