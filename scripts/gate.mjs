@@ -59,6 +59,11 @@ import {
 } from './gates/dmg-layout.mjs'
 import { selectAnchorTargets } from './gates/patch-anchor-scope.mjs'
 import { selectPublishTargets } from './gates/release-publish-scope.mjs'
+import {
+  checkChangelogSections,
+  PACKAGING_CHANGELOG_REL_PATH,
+  ROOT_CHANGELOG_REL_PATH,
+} from './gates/changelog-release-sections.mjs'
 import { runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectPackages } from './gates/package-collect.mjs'
@@ -514,6 +519,55 @@ const CHECKS = [
       '跑 node --test scripts/gates/release-publish-scope.test.mjs 看红在哪条：射程判据必须能说「不」——只有清单没有 tag（v2.3.2 的形状）与只有 tag 没有清单（v2.0.1 的形状）都必须出局且不得变成永久红，draft 必须算未发布，射程为空必须报空而不是报通过。重点是恒真桩突变：把 missing 恒置空、把 draft 读成已发布、或把射程换成「所有 release/*.sha256」，用例必须失效（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/release-publish-scope.test.mjs', '发布面核对判据的反向自测失败')
+    },
+  },
+  {
+    name: 'changelog-release-sections',
+    remediation:
+      '已发布版本（**既有** release/<版本>.sha256、**又有** v<版本> tag）必须在 CHANGELOG.md 里有它自己的一行 `## [<版本>]`——CHANGELOG 是客户在仓库里读「这版改了什么」的家，没有段就等于那一版在文档里不存在。补段的内容取自该版的 GitHub Release notes（已发布的权威记录，不要凭记忆写），`[Unreleased]` 留在最上面给下一个未发布版本用；写完跑 `pnpm run gate`。射程与 `release-published` 同一把尺（ADR-0076）：只有清单没有 tag 的 2.3.2、只有 tag 没有清单的 2.0.1 都在射程外；git tag 读不到（浅克隆）时射程为空，此时版本段部分报**跳过**（跳过不算通过）。`packaging/CHANGELOG.md` 只查「`## [Unreleased]` 至多一个」——它是流水线细节的账，某版打包面没变化时**合法地**没有段，对它也要求逐版成段只会造出一条会被关掉的噪声规则（P-02 的死法）',
+    run() {
+      const scope = selectPublishTargets({
+        manifestVersions: publishedManifests(),
+        taggedVersions: releasedVersions(),
+      })
+      const readDoc = (relPath, requireVersionSections) => {
+        try {
+          return { path: relPath, text: readFileSync(join(repoRoot, relPath), 'utf8'), requireVersionSections }
+        } catch {
+          // 读不到正文交给判据去判红（删空这份账不该是绿的），不在这里静默降级。
+          return { path: relPath, text: '', requireVersionSections }
+        }
+      }
+      const result = checkChangelogSections({
+        publishedVersions: scope.inScope,
+        documents: [
+          readDoc(ROOT_CHANGELOG_REL_PATH, true),
+          readDoc(PACKAGING_CHANGELOG_REL_PATH, false),
+        ],
+      })
+      // 结构规则（Unreleased 至多一个）与射程无关，所以它**永远**说话：
+      // 射程为空时，只有「没有任何违规」才可以报跳过。
+      if (result.vacuous && result.violations.length === 0) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `${scope.note}——射程为空，本项**未核对任何版本的版本段**（只查了「Unreleased 至多一个」）`,
+        }
+      }
+      const note = result.vacuous ? `${scope.note}（射程为空，只查了结构规则）` : result.note
+      return { passed: result.passed, violations: result.violations, note }
+    },
+  },
+  {
+    name: 'changelog-release-sections-selftest',
+    remediation:
+      '跑 node --test scripts/gates/changelog-release-sections.test.mjs 看红在哪条：版本段判据必须能说「不」——修复前那份真实文本（账停在 Unreleased、2.3.3 与 2.4.0 没有段）必须判红，而补齐后必须判绿；`## [2.4.0-rc.1]` 不得冒充 `## [2.4.0]`，正文里出现版本号但**没有标题**不得算成段，并列多个 `## [Unreleased]` 必须红，账读不到正文必须判红而不是跳过，射程为空必须报 vacuous 而不是通过。重点是恒真桩突变：把判据换成 `text.includes(version)`、或把「读不到」写成 `continue`，对应用例必须失效（P-02 / P-03）',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/changelog-release-sections.test.mjs',
+        'changelog 版本段判据的反向自测失败',
+      )
     },
   },
   {
