@@ -124,16 +124,30 @@ function isQuoted(raw: string): boolean {
  * Semantics:
  *  - `disable-model-invocation` := !enabled
  *  - `user-invocable` := true
- *  - both are REPLACED (not appended), so repeated calls converge
+ *  - a key already in the block is rewritten **where it stands**; a key that was
+ *    absent is appended, last-first order, at the end of the block
+ *  - a duplicated key collapses to its last occurrence (the one the loader reads),
+ *    which is what "replaced, not appended" means once position is preserved
  *  - each key keeps the quoting style the file already used for it, so a card
  *    the pipeline serialized stays serialized that way; a key that was absent
  *    is written bare
  *  - the block's line ending is preserved (a CRLF card stays CRLF)
  *  - the body after the frontmatter is never modified
  *
+ * Why position is part of the contract: the pipeline does not always emit these
+ * two keys in the same slot. Cards that carry the curated-line fields
+ * (`rebase_evidence_*`, written by the vault-side rebase) have the switches
+ * *above* them, while the plain assembled cards have nothing after them — so
+ * "append at the end" silently re-ordered 145 of the 1390 installed cards and
+ * moved them; a card that began `… enabled / disable-model-invocation / rebase_*`
+ * came back as `… enabled / rebase_* / disable-model-invocation`. Key order is
+ * invisible to every reader, which is exactly why it survived: the value round
+ * trips, only the bytes drift. Measured 2026-09-13 against the real corpus;
+ * `corpus-write.spec.ts` catches it on all 1390 cards.
+ *
  * The consequence worth stating: **a toggle that ends where it started leaves
  * the file byte-identical.** That is what a switch promises a user who clicks
- * it twice, and it is asserted against all 1338 installed cards in
+ * it twice, and it is asserted against all 1390 installed cards in
  * `corpus-write.spec.ts`. (Residual: a block that mixes line endings *within
  * itself* normalizes to the style of its opening line.)
  * @param text - original file text.
@@ -145,26 +159,45 @@ export function rebuildFrontmatter(text: string, enabled: boolean): string | nul
   const split = splitFrontmatter(text)
   if (split === undefined) return null
   const eol = text.startsWith('---\r\n') ? '\r\n' : '\n'
-  const kept: string[] = []
+
+  /**
+   * Last line index for each switch key, and whether that occurrence was quoted.
+   * The *last* index is the slot the rewrite keeps — a block with the key twice
+   * must come back with the key once, in the position the loader was reading.
+   */
+  const slot = new Map<string, number>()
   const quoted = new Map<string, boolean>()
-  for (const line of split.block.split(/\r?\n/)) {
+  const lines = split.block.split(/\r?\n/)
+  lines.forEach((line, i) => {
     const match = SWITCH_LINE.exec(line)
-    if (match === null) {
-      kept.push(line)
-      continue
-    }
-    quoted.set(match[1] as string, isQuoted(match[2] as string))
-  }
+    if (match === null) return
+    const key = match[1] as string
+    slot.set(key, i)
+    quoted.set(key, isQuoted(match[2] as string))
+  })
+
   const write = (key: string, value: boolean): string => {
     const scalar = String(value)
     return quoted.get(key) === true ? `${key}: "${scalar}"` : `${key}: ${scalar}`
   }
-  const next = [
-    ...kept,
-    write('disable-model-invocation', !enabled),
-    write('user-invocable', true),
-  ].join(eol)
-  return `---${eol}${next}${eol}---${split.body}`
+  const values = new Map<string, string>([
+    ['disable-model-invocation', write('disable-model-invocation', !enabled)],
+    ['user-invocable', write('user-invocable', true)],
+  ])
+
+  const next: (string | null)[] = lines.map((line, i) => {
+    const match = SWITCH_LINE.exec(line)
+    if (match === null) return line
+    const key = match[1] as string
+    // Only the surviving slot is written here; earlier duplicates drop out, so
+    // every key ends up exactly once no matter how many times the block had it.
+    return slot.get(key) === i ? (values.get(key) as string) : null
+  })
+  for (const key of ['disable-model-invocation', 'user-invocable']) {
+    if (!slot.has(key)) next.push(values.get(key) as string)
+  }
+
+  return `---${eol}${next.filter((line) => line !== null).join(eol)}${eol}---${split.body}`
 }
 
 /**

@@ -106,6 +106,38 @@ describe('rebuildFrontmatter', () => {
     expect(rebuildFrontmatter(bare, false)).toBe(bare)
   })
 
+  it('keeps the switches where they stand instead of moving them to the end', () => {
+    // The regression: the pipeline does not always emit these two keys in the
+    // same slot. A curated-line card carries `rebase_*` fields *after* the
+    // switches, so "drop the old lines, append the new ones" moved them and the
+    // bytes drifted on 145 of the 1390 installed cards — invisibly, because no
+    // reader in the system cares about key order, and because the value still
+    // round-trips. Only a byte-for-byte comparison sees it.
+    const midBlock = '---\nname: "demo"\nenabled: "true"\ndisable-model-invocation: "true"\nuser-invocable: "true"\nrebase_evidence_quotes: "0"\n---\n\nbody\n'
+    expect(rebuildFrontmatter(midBlock, false)).toBe(midBlock)
+    // …and flipping on rewrites in place, still leaving the trailing key last.
+    const on = rebuildFrontmatter(midBlock, true) as string
+    expect(on.indexOf('disable-model-invocation')).toBeLessThan(on.indexOf('rebase_evidence_quotes'))
+    expect(on.indexOf('user-invocable')).toBeLessThan(on.indexOf('rebase_evidence_quotes'))
+  })
+
+  it('collapses a duplicated switch key to its last occurrence, in that slot', () => {
+    // Position preservation must not resurrect the duplicate the loader ignores:
+    // "last one wins" is the loader's rule, so the survivor is the last line's.
+    const twice = '---\nname: "demo"\ndisable-model-invocation: "true"\nmid: "x"\ndisable-model-invocation: "false"\n---\n\nbody\n'
+    const out = rebuildFrontmatter(twice, false) as string
+    expect(out.match(/disable-model-invocation:/g)?.length).toBe(1)
+    expect(out.indexOf('disable-model-invocation')).toBeGreaterThan(out.indexOf('mid'))
+    expect(out).toContain('disable-model-invocation: "true"')
+  })
+
+  it('appends only the key that was absent, leaving the present one in place', () => {
+    const half = '---\nname: "demo"\nuser-invocable: "true"\nrebase_note: "n"\n---\n\nbody\n'
+    const out = rebuildFrontmatter(half, false) as string
+    expect(out.indexOf('user-invocable')).toBeLessThan(out.indexOf('rebase_note'))
+    expect(out.indexOf('disable-model-invocation')).toBeGreaterThan(out.indexOf('rebase_note'))
+  })
+
   it('is idempotent — a second call changes nothing', () => {
     const once = rebuildFrontmatter(CARD, true) as string
     const twice = rebuildFrontmatter(once, true) as string
