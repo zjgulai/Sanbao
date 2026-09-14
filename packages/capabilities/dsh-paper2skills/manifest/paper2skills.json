@@ -355,6 +355,24 @@
   ],
   "skills": [
     {
+      "name": "p2s-absa-bert-moe",
+      "title": "Skill-ABSA-BERT-MoE",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
+      "name": "p2s-adanen-streaming-classifier",
+      "title": "Skill-AdaNEN-Streaming-Classifier",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-agentic-competitor-intelligence",
       "title": "Agent 自动化竞品情报采集与分析 — Amazon/TikTok 全渠道监控",
       "l1": "业务运营",
@@ -391,6 +409,15 @@
       "summaryZh": "量化推荐、定价、广告系统在不同用户群体间的差异，定位偏差来源，再用再校准或重采样把差距压回阈值内并复测效果。"
     },
     {
+      "name": "p2s-alchemist-weak-supervision",
+      "title": "Skill-ALCHEmist-Weak-Supervision",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-algorithmic-fairness-in-pricing",
       "title": "算法定价公平性审计 — 群体公平指标与价格歧视检测",
       "l1": "业务运营",
@@ -400,6 +427,24 @@
       "summaryZh": "检查动态定价和优惠券分发是否对不同设备、地区或人群给出系统性更高的价格，并输出带显著性检验的审计报告。"
     },
     {
+      "name": "p2s-aspect-based-sentiment-analysis",
+      "title": "Skill-Aspect-Based-Sentiment-Analysis",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
+      "name": "p2s-autotag-selfevolving-label-system",
+      "title": "Skill-AutoTag-SelfEvolving-Label-System",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-baby-age-stage-demand-segmentation",
       "title": "Skill-Baby-Age-Stage-Demand-Segmentation — 婴儿月龄需求分层",
       "l1": "业务运营",
@@ -407,6 +452,15 @@
       "l3": "需求分群",
       "role": "AGT-006",
       "summaryZh": "从评论里按月龄拆出各阶段专属痛点，把笼统的适龄描述改成精准卖点。"
+    },
+    {
+      "name": "p2s-bert-moe",
+      "title": "Skill-BERT-MoE高效方面情感分析",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
     },
     {
       "name": "p2s-blue-ocean-category-discovery",
@@ -535,6 +589,15 @@
       "summaryZh": "把不同国家评论的评分口径拉平，避免把德国用户更严格的打分误读成产品有问题，让多市场对比真正可比。"
     },
     {
+      "name": "p2s-crosslingual-sentiment-transfer",
+      "title": "Skill-CrossLingual-Sentiment-Transfer",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-csdm-diffusion-coldstart",
       "title": "扩散模型冷启动CTR - 新品零交互时的转化潜力预热",
       "l1": "业务运营",
@@ -616,6 +679,15 @@
       "summaryZh": "用交叉实验把两个排序列表混给同一批用户，把要 30 天才出结论的排序 A/B 压到 3 天，让模型迭代频率真正提上来。"
     },
     {
+      "name": "p2s-irefeed",
+      "title": "Skill-iReFeed-需求优先级排序",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "产品需求定义",
+      "role": "AGT-009",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-kg-data-fusion-pipeline",
       "title": "KG Data Fusion Pipeline — 多源采集数据驱动的知识图谱自动构建：竞品属性图谱融合",
       "l1": "业务运营",
@@ -686,6 +758,15 @@
       "l3": "竞品研究",
       "role": "AGT-007",
       "summaryZh": "用价格、评论、关键词、Listing 四个监控 Agent 全天候盯住竞品，把过去三天才发现的变化压到十几分钟并分级预警。"
+    },
+    {
+      "name": "p2s-mas-voc-data-analyst",
+      "title": "Skill-MAS-VOC-Data-Analyst",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
     },
     {
       "name": "p2s-mas-voc-multi-agent-analysis",
@@ -760,6 +841,15 @@
       "summaryZh": "分析市场报告时自动识别知识盲区并做补全，让报告覆盖更完整，减少因为没查到就没写进去的遗漏。"
     },
     {
+      "name": "p2s-openworld-class-incremental-learning",
+      "title": "Skill-OpenWorld-Class-Incremental-Learning",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-pasta-offline-assortment",
       "title": "PASTA - 离线悲观选品框架",
       "l1": "业务运营",
@@ -769,6 +859,15 @@
       "summaryZh": "用悲观估计挑出互补性最强的商品组合，避免同质商品互相抢转化。"
     },
     {
+      "name": "p2s-personabot-rag",
+      "title": "Skill-PERSONABOT-RAG用户画像生成",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "需求分群",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-position-bias-debiasing-rec",
       "title": "Position Bias Debiasing Recommendation — 位置偏差去偏公平推荐",
       "l1": "业务运营",
@@ -776,6 +875,15 @@
       "l3": "组合取舍",
       "role": "AGT-008",
       "summaryZh": "用逆倾向加权纠正位置偏差，让被历史曝光抬高的老品不再霸屏、新品有机会露出。"
+    },
+    {
+      "name": "p2s-product-attribute-graph-parsing",
+      "title": "Skill-Product-Attribute-Graph-Parsing",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "竞品研究",
+      "role": "AGT-007",
+      "summaryZh": ""
     },
     {
       "name": "p2s-product-category-opportunity-scoring",
@@ -922,6 +1030,15 @@
       "summaryZh": "把 Shopee、Lazada 的热销商品按价格、销量、评分聚成价格带，看清某个定价落在哪一层，再决定硬打主流带还是做差异化。"
     },
     {
+      "name": "p2s-star",
+      "title": "Skill-StaR-观点语句排序",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-star-review-statement-ranking",
       "title": "StaR 观点语句排序 - 排序而非生成的可解释评论分析",
       "l1": "业务运营",
@@ -940,6 +1057,15 @@
       "summaryZh": "给评论和退货原因自动打标签，再按标签把问题路由到供应链、内容或客服团队，把两天的响应压到十几分钟。"
     },
     {
+      "name": "p2s-taxoadapt-taxonomy-evolution",
+      "title": "Skill-TaxoAdapt-Taxonomy-Evolution",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-tiktok-trending-product-signal",
       "title": "TikTok爆款商品信号挖掘 — 话题标签增速分析提前发现下一个爆款品类",
       "l1": "业务运营",
@@ -947,6 +1073,15 @@
       "l3": "趋势监测",
       "role": "AGT-007",
       "summaryZh": "用话题标签增速提前发现正在起量的爆款品类，让备货领先竞品几周。"
+    },
+    {
+      "name": "p2s-topicimpact",
+      "title": "Skill-TopicImpact-观点单元画像抽取",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
     },
     {
       "name": "p2s-voc-new-product-gap-scoring",
@@ -974,6 +1109,15 @@
       "l3": "VOC编码",
       "role": "AGT-006",
       "summaryZh": "把一条评论同时萃取出旅程阶段、产品问题和用户画像三类标签，用 Proxy NPS 把被高评分掩盖的隐性问题也识别出来。"
+    },
+    {
+      "name": "p2s-voc-semantic-blueprint",
+      "title": "Skill-VOC-Semantic-Blueprint",
+      "l1": "业务运营",
+      "l2": "产品与创新",
+      "l3": "VOC编码",
+      "role": "AGT-006",
+      "summaryZh": ""
     },
     {
       "name": "p2s-3d-bin-packing-optimization",
@@ -1415,6 +1559,15 @@
       "l3": "物流方案",
       "role": "AGT-019",
       "summaryZh": "输入电池容量、液体或气雾罐规格与运输方式，判出 UN 编号、包装说明和申报要求，避免漏申报被扣货。"
+    },
+    {
+      "name": "p2s-decision-conditioned-forecasting",
+      "title": "Skill-Decision-Conditioned-Forecasting",
+      "l1": "业务运营",
+      "l2": "供应与履约",
+      "l3": "补货模拟",
+      "role": "AGT-016",
+      "summaryZh": ""
     },
     {
       "name": "p2s-delivery-promise-optimization",
@@ -2227,6 +2380,15 @@
       "summaryZh": "把常温、冷藏、冷冻货拼进同一辆车的不同温区，重新排路线，让冷链配送成本降下来。"
     },
     {
+      "name": "p2s-multi-warehouse-allocation-llm",
+      "title": "Skill-Multi-Warehouse-Allocation-LLM",
+      "l1": "业务运营",
+      "l2": "供应与履约",
+      "l3": "调拨清货建议",
+      "role": "AGT-017",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-multicarrier-parcel-tracking-fusion",
       "title": "多承运商包裹追踪融合 — 跨境物流可见性引擎",
       "l1": "业务运营",
@@ -2776,6 +2938,15 @@
       "summaryZh": "给每批在途货实时打风险标签，延误提前五到十天预警，并联动补货评估与客户通知。"
     },
     {
+      "name": "p2s-shipping-cost-estimation",
+      "title": "Skill-Shipping-Cost-Estimation",
+      "l1": "业务运营",
+      "l2": "供应与履约",
+      "l3": "物流方案",
+      "role": "AGT-019",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-sir-viral-product-adoption-forecasting",
       "title": "SIR爆品传播预测 — 流行病学模型迁移至TikTok短视频爆款需求预测",
       "l1": "业务运营",
@@ -3062,6 +3233,15 @@
       "l3": "采购比价",
       "role": "AGT-015",
       "summaryZh": "把采购、仓储、物流、退货、资金成本加总看全链路成本，判断便宜 8% 的供应商到底该不该换。"
+    },
+    {
+      "name": "p2s-supply-network-simulation",
+      "title": "Skill-Supply-Network-Simulation",
+      "l1": "业务运营",
+      "l2": "供应与履约",
+      "l3": "补货模拟",
+      "role": "AGT-016",
+      "summaryZh": ""
     },
     {
       "name": "p2s-tag-optimized-logistics-routing",
@@ -3694,6 +3874,15 @@
       "summaryZh": "扩量前先预测相似受众放大后还剩多少精度与回报，判断哪个扩展比例还划算。"
     },
     {
+      "name": "p2s-cannibalization-corrected-attribution",
+      "title": "Skill-Cannibalization-Corrected-Attribution",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "增量分析",
+      "role": "AGT-035",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-case-cadence-aware-repurchase-prediction",
       "title": "CASE节奏感知补购预测 — 日历时序多尺度卷积+诱导集注意力的大规模次篮复购推荐",
       "l1": "业务运营",
@@ -3710,6 +3899,15 @@
       "l3": "增量分析",
       "role": "AGT-035",
       "summaryZh": "把按点击算的归因比例换成因果口径，让预算别再投给本来就会买的人。"
+    },
+    {
+      "name": "p2s-causal-budget-allocation",
+      "title": "Skill-Causal-Budget-Allocation",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "预算分配",
+      "role": "AGT-032",
+      "summaryZh": ""
     },
     {
       "name": "p2s-causal-churn-retention-attribution",
@@ -3980,6 +4178,15 @@
       "l3": "素材版本管理",
       "role": "AGT-031",
       "summaryZh": "一条横版演示视频自动改造成各平台要的竖版尺寸、时长和字幕风格，把一次拍摄用满五个渠道。"
+    },
+    {
+      "name": "p2s-csk-customer-sentiment-clustering",
+      "title": "Skill-CSK-Customer-Sentiment-Clustering",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "分群",
+      "role": "AGT-034",
+      "summaryZh": ""
     },
     {
       "name": "p2s-cuped-variance-reduction",
@@ -4261,6 +4468,15 @@
       "summaryZh": "让部分区域加投、其余区域当对照，判断哪些区域值得集中预算。"
     },
     {
+      "name": "p2s-gplr",
+      "title": "Skill-GPLR-人群标签生成",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "分群",
+      "role": "AGT-034",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-gplr-persona-generation",
       "title": "GPLR 用户人群标签生成 - 购买行为到可解释 Persona 的低成本桥接",
       "l1": "业务运营",
@@ -4376,6 +4592,15 @@
       "l3": "生命周期触达",
       "role": "AGT-034",
       "summaryZh": "让模型别只顾大头，把长尾和少数类也预测准，减少滞销和漏掉的流失用户。"
+    },
+    {
+      "name": "p2s-incrementality-measurement",
+      "title": "Skill-Incrementality-Measurement",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "增量分析",
+      "role": "AGT-035",
+      "summaryZh": ""
     },
     {
       "name": "p2s-instagram-reels-commerce-attribution",
@@ -4538,6 +4763,15 @@
       "l3": "实验设计",
       "role": "AGT-035",
       "summaryZh": "把团队里的一堆想法交给 LLM 批量打分排序，在有限实验位里挑出最值得测的那几个，顺带生出大促实验排期。"
+    },
+    {
+      "name": "p2s-llm-personalized-marketing-copy-generation",
+      "title": "Skill-LLM-Personalized-Marketing-Copy-Generation",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "内容策划",
+      "role": "AGT-030",
+      "summaryZh": ""
     },
     {
       "name": "p2s-logistics-sla-causal-impact",
@@ -4864,6 +5098,15 @@
       "summaryZh": "把跨渠道的转化功劳重新算清，避免预算被 Last-Click 误导，让钱花在真正带来增量的渠道上。"
     },
     {
+      "name": "p2s-offlinerl",
+      "title": "Skill-OfflineRL-触达时机优化",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "生命周期触达",
+      "role": "AGT-034",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-organic-content-causal-attribution",
       "title": "Organic Content Causal Attribution — 无用户数据的有机内容因果归因 (CDA)",
       "l1": "业务运营",
@@ -4889,6 +5132,15 @@
       "l3": "因果局限审查",
       "role": "AGT-035",
       "summaryZh": "没有随机实验时，也能给管理层一个可信的效果区间，而不是硬凑一个点估计。"
+    },
+    {
+      "name": "p2s-persona-based-ab-simulation",
+      "title": "Skill-Persona-Based-AB-Simulation",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "实验设计",
+      "role": "AGT-035",
+      "summaryZh": ""
     },
     {
       "name": "p2s-personabot-rag-profiling",
@@ -5269,6 +5521,15 @@
       "summaryZh": "按统计显著性把不相关的烧钱搜索词挑出来批量否定，把广告浪费率压下去。"
     },
     {
+      "name": "p2s-seasonal-aligned-churn-label",
+      "title": "Skill-Seasonal-Aligned-Churn-Label",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "分群",
+      "role": "AGT-034",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-seed-quality-optimization-for-lookalike",
       "title": "Seed Quality Optimization for Lookalike — 种子净化自动剔除噪声用户提升 Lookalike 质量上限",
       "l1": "业务运营",
@@ -5276,6 +5537,15 @@
       "l3": "投放诊断",
       "role": "AGT-032",
       "summaryZh": "把种子受众里的员工内购、刷单和羊毛党清出去，让相似人群投放效果回到该有的水平。"
+    },
+    {
+      "name": "p2s-self-improving-llm-agent-pipeline",
+      "title": "Skill-Self-Improving-LLM-Agent-Pipeline",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "内容实验",
+      "role": "AGT-030",
+      "summaryZh": ""
     },
     {
       "name": "p2s-sensitivity-analysis-causal",
@@ -5384,6 +5654,15 @@
       "l3": "达人筛选",
       "role": "AGT-033",
       "summaryZh": "把达人刚发布的视频和最新的评论情绪带进推荐排序，让热度和口碑变化当天就反映到推荐位。"
+    },
+    {
+      "name": "p2s-somer",
+      "title": "Skill-SoMeR-多视角用户表示",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "分群",
+      "role": "AGT-034",
+      "summaryZh": ""
     },
     {
       "name": "p2s-sparse-autoencoder-feature",
@@ -5645,6 +5924,15 @@
       "l3": "投放诊断",
       "role": "AGT-032",
       "summaryZh": "给每个流量来源打上质量分，一眼看出哪个渠道的钱花得值、哪些该砍。"
+    },
+    {
+      "name": "p2s-tscan",
+      "title": "Skill-TSCAN-上下文感知挽回策略",
+      "l1": "业务运营",
+      "l2": "品牌与增长",
+      "l3": "生命周期触达",
+      "role": "AGT-034",
+      "summaryZh": ""
     },
     {
       "name": "p2s-ugc-viral-content-potential-scorer",
@@ -7105,6 +7393,15 @@
       "summaryZh": "给每个 Agent 发一张身份卡，按任务难度把请求分给合适大小的模型，省掉不必要的调用成本。"
     },
     {
+      "name": "p2s-live-catalog-conversational-rec",
+      "title": "Skill-Live-Catalog-Conversational-Rec",
+      "l1": "数据与Agent平台",
+      "l2": "数据与AI运行",
+      "l3": "数据管道",
+      "role": "AGT-046",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-llm-annotation-weak-supervision",
       "title": "EvoPool — 进化式多智能体弱监督标注",
       "l1": "数据与Agent平台",
@@ -7852,6 +8149,15 @@
       "summaryZh": "把跨平台重复和水评压下去，让每天的评论分析只算有效意见。"
     },
     {
+      "name": "p2s-review-quality-scoring",
+      "title": "Skill-Review-Quality-Scoring",
+      "l1": "数据与Agent平台",
+      "l2": "数据与AI运行",
+      "l3": "数据质量",
+      "role": "AGT-046",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-review-velocity-anomaly-detector",
       "title": "差评速率异常检测 — 区分竞品恶意攻击与真实产品问题",
       "l1": "数据与Agent平台",
@@ -8086,6 +8392,15 @@
       "summaryZh": "用学习出来的稀疏权重词表做检索，既保留倒排索引的效率，又能把纸尿裤、nappies 这类同义说法一起召回。"
     },
     {
+      "name": "p2s-sql-agent-access-control",
+      "title": "Skill-SQL-Agent-Access-Control",
+      "l1": "独立控制",
+      "l2": "数据与AI运行",
+      "l3": "授权审查",
+      "role": "AGT-050",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-sql-agent-text-to-sql",
       "title": "Text-to-SQL Agent for Natural Language Data Query",
       "l1": "数据与Agent平台",
@@ -8111,6 +8426,15 @@
       "l3": "数据质量",
       "role": "AGT-046",
       "summaryZh": "渠道流量矩阵缺了一大半，也能把空格子补回来，让跨渠道对比重新可信。"
+    },
+    {
+      "name": "p2s-stateful-skill-runtime",
+      "title": "Skill-Stateful-Skill-Runtime",
+      "l1": "数据与Agent平台",
+      "l2": "数据与AI运行",
+      "l3": "容量管理",
+      "role": "AGT-049",
+      "summaryZh": ""
     },
     {
       "name": "p2s-streaming-analytics-agent",
@@ -8410,6 +8734,15 @@
       "summaryZh": "一条投诉里同时有技术故障和政策问题，它按真实的语义关系把工单分给对的 Agent，而不是只看关键词。"
     },
     {
+      "name": "p2s-agrs",
+      "title": "Skill-AGRS-属性引导评论摘要",
+      "l1": "业务运营",
+      "l2": "服务与体验",
+      "l3": "体验分析",
+      "role": "AGT-038",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-ai-parenting-advice-hallucination-guard",
       "title": "AI Parenting Advice Hallucination Guard — AI育儿建议幻觉防护（LLM医疗内容安全）",
       "l1": "业务运营",
@@ -8480,6 +8813,15 @@
       "l3": "客诉聚类",
       "role": "AGT-038",
       "summaryZh": "把字面很像但意图完全不同的客服对话聚成意图树，让退款、换货、咨询、投诉、安全事件各走各的路。"
+    },
+    {
+      "name": "p2s-dialogue-to-action-graph",
+      "title": "Skill-Dialogue-to-Action-Graph",
+      "l1": "业务运营",
+      "l2": "服务与体验",
+      "l3": "售后处理",
+      "role": "AGT-037",
+      "summaryZh": ""
     },
     {
       "name": "p2s-digital-wellbeing-screen-time-model",
@@ -8554,6 +8896,15 @@
       "summaryZh": "记住每位妈妈买过什么、在意什么，宝宝进入下一阶段时主动推荐该升级的那一件。"
     },
     {
+      "name": "p2s-maa",
+      "title": "Skill-MAA-行动建议生成",
+      "l1": "业务运营",
+      "l2": "服务与体验",
+      "l3": "体验分析",
+      "role": "AGT-038",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-mas-customer-service-intelligent-escalation",
       "title": "MAS客服智能升级路由 — 首答Agent/人工升级/风控三者协作路由机制",
       "l1": "业务运营",
@@ -8624,6 +8975,15 @@
       "l3": "客诉分诊",
       "role": "AGT-037",
       "summaryZh": "新品类上线不用重新标注数据，换几个示例就能把评论按统一标准分好，结果直接进看板。"
+    },
+    {
+      "name": "p2s-nps-driver-analysis",
+      "title": "Skill-NPS-Driver-Analysis",
+      "l1": "业务运营",
+      "l2": "服务与体验",
+      "l3": "体验分析",
+      "role": "AGT-038",
+      "summaryZh": ""
     },
     {
       "name": "p2s-nps-proxy-retention-predictor",
@@ -8714,6 +9074,15 @@
       "l3": "选购指导",
       "role": "AGT-036",
       "summaryZh": "记得你上次买的是哪段奶粉，宝宝满 6 个月时主动提醒升阶，并对齐同品牌有机配方。"
+    },
+    {
+      "name": "p2s-spiral-of-silence",
+      "title": "Skill-Spiral-of-Silence-沉默少数派挖掘",
+      "l1": "业务运营",
+      "l2": "服务与体验",
+      "l3": "体验分析",
+      "role": "AGT-038",
+      "summaryZh": ""
     },
     {
       "name": "p2s-vip-tier-upgrade-action",
@@ -8932,6 +9301,15 @@
       "summaryZh": "把点击到复购的各阶段转化率摆在一起比，看出哪个渠道的漏斗更顺，并为预算倾斜给出依据。"
     },
     {
+      "name": "p2s-agentic-catalog-enrichment",
+      "title": "Skill-Agentic-Catalog-Enrichment",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "Listing优化",
+      "role": "AGT-022",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-ai-cultural-sensitivity-localization",
       "title": "AI Cultural Sensitivity Localization — AI文化敏感性本地化评估（跨市场内容风险）",
       "l1": "业务运营",
@@ -9056,6 +9434,15 @@
       "l3": "转化优化",
       "role": "AGT-023",
       "summaryZh": "首页先猜宝宝几个月大，再据此换品类：4 月龄用户看到的是辅食工具，而不是学步车。"
+    },
+    {
+      "name": "p2s-behavioral-intent-tree-parsing",
+      "title": "Skill-Behavioral-Intent-Tree-Parsing",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "转化优化",
+      "role": "AGT-023",
+      "summaryZh": ""
     },
     {
       "name": "p2s-brand-hijacking-realtime-monitor",
@@ -9418,6 +9805,15 @@
       "summaryZh": "买完奶粉就推辅食工具：先用大模型读懂用户处在哪个育儿阶段，再用图模型挑真正会被一起买的商品。"
     },
     {
+      "name": "p2s-crosslingual-semantic-alignment",
+      "title": "Skill-CrossLingual-Semantic-Alignment",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "术语治理",
+      "role": "AGT-028",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-cultural-adaptation-agent",
       "title": "Cultural Adaptation Agent — 跨文化适应：母婴跨境的本地化 AI 策略",
       "l1": "业务运营",
@@ -9578,6 +9974,15 @@
       "l3": "促销规划",
       "role": "AGT-026",
       "summaryZh": "4 小时的闪购该怎么打折才能卖完又不亏：算清折扣率与售罄时间的最佳组合。"
+    },
+    {
+      "name": "p2s-funnel-causal-coupon-allocation",
+      "title": "Skill-Funnel-Causal-Coupon-Allocation",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "促销规划",
+      "role": "AGT-026",
+      "summaryZh": ""
     },
     {
       "name": "p2s-fx-dynamic-pricing-adjustment",
@@ -9958,6 +10363,15 @@
       "summaryZh": "让推荐同时看得懂促销：只把可能因为这个折扣才买的商品排给用户，别浪费曝光和预算。"
     },
     {
+      "name": "p2s-mas-consumer-behavior-simulation",
+      "title": "Skill-MAS-Consumer-Behavior-Simulation",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "促销规划",
+      "role": "AGT-026",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-mas-dynamic-pricing-coalition",
       "title": "MAS多SKU定价联盟博弈 — 母婴品牌多SKU组合利润最大化联合定价",
       "l1": "业务运营",
@@ -9974,6 +10388,24 @@
       "l3": "行动组合",
       "role": "AGT-021",
       "summaryZh": "把补货、广告调价、Listing 更新、客服分诊这些每天重复的运营动作交给多 Agent 事件驱动编排，高风险动作留人工审批，团队只处理异常。"
+    },
+    {
+      "name": "p2s-mas-marl-dynamic-pricing",
+      "title": "Skill-MAS-MARL-Dynamic-Pricing",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "价格敏感性",
+      "role": "AGT-026",
+      "summaryZh": ""
+    },
+    {
+      "name": "p2s-mas-multi-objective-recommendation",
+      "title": "Skill-MAS-Multi-Objective-Recommendation",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "转化优化",
+      "role": "AGT-023",
+      "summaryZh": ""
     },
     {
       "name": "p2s-mas-pricing-coalition-stability",
@@ -10453,6 +10885,15 @@
       "summaryZh": "买家在评论里是怎么说这件商品的，就用他们的话去写标题，搜索命中率自然上去。"
     },
     {
+      "name": "p2s-revision",
+      "title": "Skill-REVISION-无点击意图挖掘",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "搜索意图分析",
+      "role": "AGT-022",
+      "summaryZh": ""
+    },
+    {
       "name": "p2s-reward-model-rlhf-ecommerce",
       "title": "RLHF奖励模型电商 — 人类偏好对齐的电商AI质量提升",
       "l1": "业务运营",
@@ -10685,6 +11126,15 @@
       "l3": "漏斗诊断",
       "role": "AGT-023",
       "summaryZh": "把 TikTok Shop 从曝光到付款拆成六段，找出流失最狠的一环，并给出提升该环节对 ROAS 的杠杆与内容预算分配比例。"
+    },
+    {
+      "name": "p2s-tjap",
+      "title": "Skill-TJAP-跨市场品类组合定价",
+      "l1": "业务运营",
+      "l2": "渠道经营",
+      "l3": "组合设计",
+      "role": "AGT-026",
+      "summaryZh": ""
     },
     {
       "name": "p2s-topological-data-analysis-cross-sell",
@@ -11111,7 +11561,7 @@
     },
     {
       "name": "p2s-mediation-causal-mechanism-analysis",
-      "title": "Causal Mediation Analysis — Decomposing \\\"Why It Works",
+      "title": "Causal Mediation Analysis — Decomposing \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Why It Works",
       "l1": "经营管理",
       "l2": "经营与组织",
       "l3": "GMV归因分析",
@@ -11135,6 +11585,15 @@
       "l3": "情景模拟",
       "role": "AGT-003",
       "summaryZh": "把关税突变、海运封锁这类尾部风险跑成概率分布，看清最坏 5% 情景下这个 SKU 到底赚还是亏。"
+    },
+    {
+      "name": "p2s-multi-agent-collaboration-tax",
+      "title": "Skill-Multi-Agent-Collaboration-Tax",
+      "l1": "经营管理",
+      "l2": "经营与组织",
+      "l3": "能力匹配",
+      "role": "AGT-002",
+      "summaryZh": ""
     },
     {
       "name": "p2s-multi-agent-skill-composition",
@@ -11198,6 +11657,15 @@
       "l3": "GMV归因分析",
       "role": "AGT-003",
       "summaryZh": "指标突然异常时，自动生成假设、逐条查证据，几分钟给出最可能的根因。"
+    },
+    {
+      "name": "p2s-routed-graph-handoff",
+      "title": "Skill-Routed-Graph-Handoff",
+      "l1": "经营管理",
+      "l2": "经营与组织",
+      "l3": "依赖协调",
+      "role": "AGT-002",
+      "summaryZh": ""
     },
     {
       "name": "p2s-sc-digital-twin-sync-architecture",

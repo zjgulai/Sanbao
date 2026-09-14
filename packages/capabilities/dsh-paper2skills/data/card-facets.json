@@ -17,34 +17,34 @@
   },
   "counts": {
     "p2s_venue": {
-      "filled": 6,
-      "blank": 1332,
-      "total": 1338
+      "filled": 33,
+      "blank": 1357,
+      "total": 1390
     },
     "p2s_venue_tier": {
-      "filled": 93,
+      "filled": 145,
       "blank": 1245,
-      "total": 1338
+      "total": 1390
     },
     "p2s_evidence_grade": {
-      "filled": 5,
-      "blank": 1333,
-      "total": 1338
+      "filled": 21,
+      "blank": 1369,
+      "total": 1390
     },
     "p2s_paper_id": {
-      "filled": 46,
-      "blank": 1292,
-      "total": 1338
+      "filled": 90,
+      "blank": 1300,
+      "total": 1390
     },
     "p2s_code_level": {
       "filled": 1338,
-      "blank": 0,
-      "total": 1338
+      "blank": 52,
+      "total": 1390
     },
     "__vault_join": {
-      "filled": 93,
+      "filled": 145,
       "blank": 1245,
-      "total": 1338
+      "total": 1390
     }
   },
   "items": {
@@ -86,6 +86,9 @@
     },
     "p2s-abandoned-cart-recovery-trigger": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-absa-bert-moe": {
+      "p2s_venue_tier": "non-paper"
     },
     "p2s-account-association-risk-detection": {
       "p2s_code_level": "完整实现·可解析"
@@ -135,6 +138,11 @@
     },
     "p2s-adactx-dynamic-context-budget-allocation": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-adanen-streaming-classifier": {
+      "p2s_venue": "ACM TKDD 2024",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "10.1145/3639054"
     },
     "p2s-adaptive-crawl-scheduling": {
       "p2s_code_level": "完整实现·可解析"
@@ -233,6 +241,12 @@
     "p2s-agentic-ab-testing": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-agentic-catalog-enrichment": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.20844"
+    },
     "p2s-agentic-competitor-intelligence": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -272,6 +286,9 @@
     },
     "p2s-agenttrust-runtime-safety-interception": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-agrs": {
+      "p2s_venue_tier": "preprint"
     },
     "p2s-agrs-aspect-guided-review-summarization": {
       "p2s_code_level": "完整实现·可解析"
@@ -354,6 +371,11 @@
     "p2s-aim-rm-llm-inventory-mas-memory": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-alchemist-weak-supervision": {
+      "p2s_venue": "NeurIPS 2024",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "2407.11004"
+    },
     "p2s-algorithmic-accountability-audit": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -416,6 +438,9 @@
     "p2s-arima-garch-demand-volatility": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-aspect-based-sentiment-analysis": {
+      "p2s_venue_tier": "non-paper"
+    },
     "p2s-atlas-gradient-free-continual": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -476,6 +501,11 @@
     "p2s-autoskill-lifelong-learning": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-autotag-selfevolving-label-system": {
+      "p2s_venue": "arXiv preprint (Amazon)",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_paper_id": "2405.07195"
+    },
     "p2s-b2c-delivery-timeliness-experience-kpi": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -511,6 +541,16 @@
     },
     "p2s-bccb-causal-bandits": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-behavioral-intent-tree-parsing": {
+      "p2s_venue": "arXiv preprint (Netflix)",
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2408.05353"
+    },
+    "p2s-bert-moe": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2602.12778"
     },
     "p2s-bert-srl-event-frame-extraction": {
       "p2s_venue_tier": "preprint",
@@ -606,6 +646,12 @@
       "p2s_paper_id": "2303.17760",
       "p2s_code_level": "无代码"
     },
+    "p2s-cannibalization-corrected-attribution": {
+      "p2s_venue": "ADKDD 2026",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2606.26690"
+    },
     "p2s-capacity-constraint-production-schedule-kpi": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -644,6 +690,12 @@
     },
     "p2s-causal-attribution-bridge": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-causal-budget-allocation": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.10182"
     },
     "p2s-causal-churn-retention-attribution": {
       "p2s_code_level": "完整实现·可解析"
@@ -1086,6 +1138,16 @@
     "p2s-crossborder-logistics-mode-selection": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-crosslingual-semantic-alignment": {
+      "p2s_venue": "ACL 2023",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "2206.07587"
+    },
+    "p2s-crosslingual-sentiment-transfer": {
+      "p2s_venue": "ACL 2025 (底本未声明 venue)",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "2508.09515"
+    },
     "p2s-crowdsourced-last-mile-ai-dispatch": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -1100,6 +1162,9 @@
     },
     "p2s-csdm-diffusion-coldstart": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-csk-customer-sentiment-clustering": {
+      "p2s_venue_tier": "preprint"
     },
     "p2s-cultural-adaptation-agent": {
       "p2s_code_level": "完整实现·可解析"
@@ -1187,6 +1252,12 @@
     "p2s-decision-audit-trail-ontology": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-decision-conditioned-forecasting": {
+      "p2s_venue": "KDD 2026",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.25871"
+    },
     "p2s-decision-confidence-calibration-sc": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -1257,6 +1328,11 @@
     },
     "p2s-dialin-llm-case-intent-clustering": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-dialogue-to-action-graph": {
+      "p2s_venue": "arXiv preprint (LG AI Research / University of Michigan)",
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2312.04668"
     },
     "p2s-did-difference-in-differences": {
       "p2s_venue_tier": "non-paper",
@@ -1543,6 +1619,12 @@
     "p2s-full-funnel-growth-dashboard": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-funnel-causal-coupon-allocation": {
+      "p2s_venue": "CIKM 2026",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.11675"
+    },
     "p2s-fx-dynamic-pricing-adjustment": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -1608,6 +1690,11 @@
     },
     "p2s-gp-tweedie-intermittent-new-product-demand": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-gplr": {
+      "p2s_venue": "SIGIR 2025",
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "2504.17304"
     },
     "p2s-gplr-persona-generation": {
       "p2s_code_level": "完整实现·可解析"
@@ -1789,6 +1876,12 @@
     "p2s-inclusive-design-accessibility-ai": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-incrementality-measurement": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2607.09608"
+    },
     "p2s-index-health-monitoring": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -1873,6 +1966,10 @@
     },
     "p2s-ip-trademark-brand-monitoring": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-irefeed": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2603.28677"
     },
     "p2s-itext2kg-schema-free-kg-induction": {
       "p2s_code_level": "完整实现·可解析"
@@ -2048,6 +2145,12 @@
     "p2s-live-audience-real-time-personalization": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-live-catalog-conversational-rec": {
+      "p2s_venue": "RecSys 2026 (Demo)",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.27006"
+    },
     "p2s-live-commerce-stream-algorithm": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -2122,6 +2225,10 @@
     },
     "p2s-llm-negotiation-conversion-agent": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-llm-personalized-marketing-copy-generation": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2505.23809"
     },
     "p2s-llm-review-manipulation-detection": {
       "p2s_code_level": "完整实现·可解析"
@@ -2237,6 +2344,9 @@
       "p2s_venue_tier": "non-paper",
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-maa": {
+      "p2s_venue_tier": "preprint"
+    },
     "p2s-maa-review-to-action-decision": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -2286,6 +2396,10 @@
     "p2s-mas-consensus-mechanism": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-mas-consumer-behavior-simulation": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2510.18155"
+    },
     "p2s-mas-cross-market-compliance-orchestrator": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -2309,6 +2423,14 @@
     },
     "p2s-mas-inventory-consensus-action": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-mas-marl-dynamic-pricing": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2507.02698"
+    },
+    "p2s-mas-multi-objective-recommendation": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2512.24325"
     },
     "p2s-mas-multi-warehouse-replenishment-consensus": {
       "p2s_code_level": "完整实现·可解析"
@@ -2337,6 +2459,10 @@
     },
     "p2s-mas-video-content-optimization": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-mas-voc-data-analyst": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2402.01386"
     },
     "p2s-mas-voc-multi-agent-analysis": {
       "p2s_code_level": "完整实现·可解析"
@@ -2473,6 +2599,12 @@
     "p2s-multi-account-operational-isolation": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-multi-agent-collaboration-tax": {
+      "p2s_venue": "EMNLP 2026",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.22152"
+    },
     "p2s-multi-agent-debate": {
       "p2s_venue_tier": "CCF-B",
       "p2s_paper_id": "2305.19118",
@@ -2566,6 +2698,12 @@
     },
     "p2s-multi-temperature-logistics": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-multi-warehouse-allocation-llm": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2606.29366"
     },
     "p2s-multicarrier-parcel-tracking-fusion": {
       "p2s_code_level": "完整实现·可解析"
@@ -2704,6 +2842,10 @@
     "p2s-notears-causal-discovery": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-nps-driver-analysis": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2510.16551"
+    },
     "p2s-nps-proxy-retention-predictor": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -2715,6 +2857,10 @@
     },
     "p2s-observability-ml-pipelines": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-offlinerl": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2202.03867"
     },
     "p2s-omnichannel-inventory-sync": {
       "p2s_code_level": "完整实现·可解析"
@@ -2750,6 +2896,10 @@
     },
     "p2s-openre-llm-knowledge-extraction": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-openworld-class-incremental-learning": {
+      "p2s_venue": "ACL 2025",
+      "p2s_venue_tier": "CCF-A"
     },
     "p2s-operating-cash-flow-forecast": {
       "p2s_code_level": "完整实现·可解析"
@@ -2815,6 +2965,16 @@
     },
     "p2s-perishable-inventory-markdown-optimization": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-persona-based-ab-simulation": {
+      "p2s_venue": "EMNLP 2026 Industry Track",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2609.01038"
+    },
+    "p2s-personabot-rag": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2505.17156"
     },
     "p2s-personabot-rag-profiling": {
       "p2s_code_level": "完整实现·可解析"
@@ -2984,6 +3144,10 @@
     },
     "p2s-product-attribute-completion": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-product-attribute-graph-parsing": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2410.21237"
     },
     "p2s-product-background-scene-generation": {
       "p2s_code_level": "完整实现·可解析"
@@ -3294,6 +3458,10 @@
     "p2s-review-qa-extraction": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-review-quality-scoring": {
+      "p2s_venue_tier": "CCF-B",
+      "p2s_paper_id": "2510.08081"
+    },
     "p2s-review-sentiment-growth-trigger": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3302,6 +3470,10 @@
     },
     "p2s-review-velocity-anomaly-detector": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-revision": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2510.22739"
     },
     "p2s-reward-model-rlhf-ecommerce": {
       "p2s_code_level": "完整实现·可解析"
@@ -3338,6 +3510,12 @@
     "p2s-root-cause-analysis-agent": {
       "p2s_venue_tier": "non-paper",
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-routed-graph-handoff": {
+      "p2s_venue": "EMNLP 2026",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.25277"
     },
     "p2s-rtb-multi-objective-bidding": {
       "p2s_code_level": "完整实现·可解析"
@@ -3445,6 +3623,12 @@
     "p2s-search-voc-signal-loop": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-seasonal-aligned-churn-label": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.18174"
+    },
     "p2s-seasonal-keyword-rotation-strategy": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3461,6 +3645,10 @@
       "p2s_venue_tier": "preprint",
       "p2s_paper_id": "2303.17651",
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-self-improving-llm-agent-pipeline": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2408.06292"
     },
     "p2s-self-rag-reflective-retrieval": {
       "p2s_code_level": "完整实现·可解析"
@@ -3520,6 +3708,12 @@
     },
     "p2s-shipment-risk-tag-realtime-tracker": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-shipping-cost-estimation": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2607.16230"
     },
     "p2s-shopee-lazada-sea-market-intelligence": {
       "p2s_code_level": "完整实现·可解析"
@@ -3604,6 +3798,10 @@
     "p2s-social-voc-viral-potential-score": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-somer": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2405.05275"
+    },
     "p2s-sop-sales-operations-planning": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3619,6 +3817,10 @@
     "p2s-speculative-rag": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-spiral-of-silence": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2502.00952"
+    },
     "p2s-splade-learned-sparse-retrieval": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3627,6 +3829,12 @@
     },
     "p2s-spot-freight-consolidation": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-sql-agent-access-control": {
+      "p2s_venue": "arXiv preprint",
+      "p2s_venue_tier": "preprint",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2607.22115"
     },
     "p2s-sql-agent-text-to-sql": {
       "p2s_venue_tier": "non-paper",
@@ -3650,6 +3858,9 @@
     "p2s-stamimputer-spatiotemporal": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-star": {
+      "p2s_venue_tier": "preprint"
+    },
     "p2s-star-review-statement-ranking": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3658,6 +3869,12 @@
     },
     "p2s-state-space-inventory-signal-smoothing": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-stateful-skill-runtime": {
+      "p2s_venue": "EMNLP",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2608.26263"
     },
     "p2s-step-back-prompting": {
       "p2s_code_level": "完整实现·可解析"
@@ -3774,6 +3991,12 @@
     "p2s-supply-chain-working-capital-optimization": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-supply-network-simulation": {
+      "p2s_venue": "Winter Simulation Conference 2026",
+      "p2s_venue_tier": "CCF-B",
+      "p2s_evidence_grade": "A",
+      "p2s_paper_id": "2607.09745"
+    },
     "p2s-survival-causal-effect": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3866,6 +4089,10 @@
     "p2s-tax-evasion-risk-signal-monitor": {
       "p2s_code_level": "完整实现·可解析"
     },
+    "p2s-taxoadapt-taxonomy-evolution": {
+      "p2s_venue_tier": "CCF-A",
+      "p2s_paper_id": "2506.10737"
+    },
     "p2s-temporal-fusion-transformer": {
       "p2s_venue_tier": "non-paper",
       "p2s_code_level": "完整实现·可解析"
@@ -3948,6 +4175,10 @@
     "p2s-timecma-llm-forecasting": {
       "p2s_code_level": "完整实现·不可解析"
     },
+    "p2s-tjap": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2603.18114"
+    },
     "p2s-tokenpilot-lifecycle-context-eviction": {
       "p2s_code_level": "完整实现·可解析"
     },
@@ -3964,6 +4195,10 @@
       "p2s_venue_tier": "preprint",
       "p2s_paper_id": "2602.14878",
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-topicimpact": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2507.13392"
     },
     "p2s-topological-data-analysis-cross-sell": {
       "p2s_code_level": "无代码"
@@ -3990,6 +4225,10 @@
       "p2s_venue_tier": "CCF-A",
       "p2s_paper_id": "2305.10601",
       "p2s_code_level": "无代码"
+    },
+    "p2s-tscan": {
+      "p2s_venue_tier": "preprint",
+      "p2s_paper_id": "2504.18881"
     },
     "p2s-two-echelon-inventory-drl": {
       "p2s_venue": "AI4M 2023 (ECML PKDD Workshop)",
@@ -4136,6 +4375,10 @@
     },
     "p2s-voc-returns-cost-driver": {
       "p2s_code_level": "完整实现·可解析"
+    },
+    "p2s-voc-semantic-blueprint": {
+      "p2s_venue": "ACL 2023",
+      "p2s_venue_tier": "CCF-A"
     },
     "p2s-voc-supply-chain-signal-bridge": {
       "p2s_code_level": "完整实现·可解析"

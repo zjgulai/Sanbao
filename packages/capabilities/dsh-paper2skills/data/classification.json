@@ -1,7 +1,7 @@
 {
  "version": "1.0",
- "total": 1338,
- "classified": 1327,
+ "total": 1390,
+ "classified": 1390,
  "unassigned": 11,
  "taxonomy_version": "1.0",
  "by_confidence": {
@@ -45710,6 +45710,2021 @@
    "fills_gap_adjacent": [],
    "fills_gap_dropped": [],
    "note": "零样本增量三元组抽取自动扩展图谱边，服务主数据图谱构建与入库管道。"
+  },
+  {
+   "id": "Skill-ABSA-BERT-MoE",
+   "slug": "p2s-absa-bert-moe",
+   "title": "Skill-ABSA-BERT-MoE",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "以方面级情感分析把评论拆成方面-情感对，服务用户反馈的结构化编码，供产品复盘使用。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-ABSA-BERT-MoE.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-AGRS-属性引导评论摘要",
+   "slug": "p2s-agrs",
+   "title": "Skill-AGRS-属性引导评论摘要",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "体验分析",
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-06",
+    "l2_domain": "服务与体验",
+    "l3_id": "DOM-06-114",
+    "l3_business": "体验分析",
+    "l3_all": "体验分析 / VOC编码",
+    "l1_l2_l3": "业务运营/服务与体验/体验分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-06"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "产出属性级评论摘要与负面占比预警，服务产品体验问题归因与季度复盘；属性提取即VOC编码。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-AGRS-属性引导评论摘要.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-ALCHEmist-Weak-Supervision",
+   "slug": "p2s-alchemist-weak-supervision",
+   "title": "Skill-ALCHEmist-Weak-Supervision",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "让LLM生成标注程序批量给评论打标签，业务动作就是把用户反馈编码成标签，即VOC编码。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-ALCHEmist-Weak-Supervision.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-AdaNEN-Streaming-Classifier",
+   "slug": "p2s-adanen-streaming-classifier",
+   "title": "Skill-AdaNEN-Streaming-Classifier",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "流式分类器持续给新增评论打标签并在反馈模式漂移时告警，服务VOC编码的持续维护。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-AdaNEN-Streaming-Classifier.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Agentic-Catalog-Enrichment",
+   "slug": "p2s-agentic-catalog-enrichment",
+   "title": "Skill-Agentic-Catalog-Enrichment",
+   "src_domain": "00-电商Agent",
+   "l3": [
+    "Listing优化",
+    "主数据治理"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-067",
+    "l3_business": "Listing优化",
+    "l3_all": "Listing优化 / 主数据治理",
+    "l1_l2_l3": "业务运营/渠道经营/Listing优化"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把SKU适用月龄材质认证等属性补齐写回商品目录，服务Listing优化；带证据的写库闸门属主数据治理。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/00-电商Agent/Skill-Agentic-Catalog-Enrichment.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Aspect-Based-Sentiment-Analysis",
+   "slug": "p2s-aspect-based-sentiment-analysis",
+   "title": "Skill-Aspect-Based-Sentiment-Analysis",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码",
+    "体验分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码 / 体验分析",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "对评论做方面级情感编码，输出各维度正负占比与负面问题清单，供体验改进与选品参考。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Aspect-Based-Sentiment-Analysis.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-AutoTag-SelfEvolving-Label-System",
+   "slug": "p2s-autotag-selfevolving-label-system",
+   "title": "Skill-AutoTag-SelfEvolving-Label-System",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "多平台评价自动打L1-L4层级标签并支持标签自进化，业务动作就是VOC编码。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-AutoTag-SelfEvolving-Label-System.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-BERT-MoE高效方面情感分析",
+   "slug": "p2s-bert-moe",
+   "title": "Skill-BERT-MoE高效方面情感分析",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "用MoE版BERT做多语言评论的方面情感分类，服务VOC编码的多语种与低成本推理需求。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-BERT-MoE高效方面情感分析.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Behavioral-Intent-Tree-Parsing",
+   "slug": "p2s-behavioral-intent-tree-parsing",
+   "title": "Skill-Behavioral-Intent-Tree-Parsing",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "转化优化",
+    "生命周期触达"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-070",
+    "l3_business": "转化优化",
+    "l3_all": "转化优化 / 生命周期触达",
+    "l1_l2_l3": "业务运营/渠道经营/转化优化"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "由独立站行为序列识别购买意图阶段并据此推送差异化内容促转化，弃购用户用于24小时挽回触达。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Behavioral-Intent-Tree-Parsing.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-CSK-Customer-Sentiment-Clustering",
+   "slug": "p2s-csk-customer-sentiment-clustering",
+   "title": "Skill-CSK-Customer-Sentiment-Clustering",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-101",
+    "l3_business": "分群",
+    "l3_all": "分群",
+    "l1_l2_l3": "业务运营/品牌与增长/分群"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "用评论情感特征聚类出满意型、价格敏感型、服务抱怨型等用户分群，直接对应CRM分群责任。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-CSK-Customer-Sentiment-Clustering.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Cannibalization-Corrected-Attribution",
+   "slug": "p2s-cannibalization-corrected-attribution",
+   "title": "Skill-Cannibalization-Corrected-Attribution",
+   "src_domain": "13-广告分析",
+   "l3": [
+    "增量分析",
+    "预算分配"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-105",
+    "l3_business": "增量分析",
+    "l3_all": "增量分析 / 预算分配",
+    "l1_l2_l3": "业务运营/品牌与增长/增量分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "用增量实验标定渠道真实增量、校正品牌词收割造成的归因虚高，产出用于站内站外预算配比。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/13-广告分析/Skill-Cannibalization-Corrected-Attribution.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Causal-Budget-Allocation",
+   "slug": "p2s-causal-budget-allocation",
+   "title": "Skill-Causal-Budget-Allocation",
+   "src_domain": "13-广告分析",
+   "l3": [
+    "预算分配",
+    "增量分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-096",
+    "l3_business": "预算分配",
+    "l3_all": "预算分配 / 增量分析",
+    "l1_l2_l3": "业务运营/品牌与增长/预算分配"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡为月度广告预算在站内广告位与站外种草之间分配，服务投放预算分配；分配依据是因果增量而非响应倾向。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/13-广告分析/Skill-Causal-Budget-Allocation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-CrossLingual-Semantic-Alignment",
+   "slug": "p2s-crosslingual-semantic-alignment",
+   "title": "Skill-CrossLingual-Semantic-Alignment",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "术语治理",
+    "主数据治理"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-085",
+    "l3_business": "术语治理",
+    "l3_all": "术语治理 / 主数据治理",
+    "l1_l2_l3": "业务运营/渠道经营/术语治理"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡把同一商品的多语言描述对齐成统一语义图，服务跨市场术语口径统一与商品主数据理解。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-CrossLingual-Semantic-Alignment.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-CrossLingual-Sentiment-Transfer",
+   "slug": "p2s-crosslingual-sentiment-transfer",
+   "title": "Skill-CrossLingual-Sentiment-Transfer",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡对多语言市场评论做方面级情感分析，产出各市场可归类可对比的VOC编码结果。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-CrossLingual-Sentiment-Transfer.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Decision-Conditioned-Forecasting",
+   "slug": "p2s-decision-conditioned-forecasting",
+   "title": "Skill-Decision-Conditioned-Forecasting",
+   "src_domain": "03-时间序列",
+   "l3": [
+    "补货模拟",
+    "需求预测"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-03",
+    "l2_domain": "供应与履约",
+    "l3_id": "DOM-03-048",
+    "l3_business": "补货模拟",
+    "l3_all": "补货模拟 / 需求预测",
+    "l1_l2_l3": "业务运营/供应与履约/补货模拟"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-03"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡按候选促销排期仿真未来销量轨迹，直接服务大促前FBA备货量测算与补货模拟。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/03-时间序列/Skill-Decision-Conditioned-Forecasting.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Dialogue-to-Action-Graph",
+   "slug": "p2s-dialogue-to-action-graph",
+   "title": "Skill-Dialogue-to-Action-Graph",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "售后处理",
+    "客诉分诊"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-06",
+    "l2_domain": "服务与体验",
+    "l3_id": "DOM-06-111",
+    "l3_business": "售后处理",
+    "l3_all": "售后处理 / 客诉分诊",
+    "l1_l2_l3": "业务运营/服务与体验/售后处理"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-06"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡从历史工单挖掘标准处理路径并预警升级风险，服务售后处理规范化与客诉分诊。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Dialogue-to-Action-Graph.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Funnel-Causal-Coupon-Allocation",
+   "slug": "p2s-funnel-causal-coupon-allocation",
+   "title": "Skill-Funnel-Causal-Coupon-Allocation",
+   "src_domain": "13-广告分析",
+   "l3": [
+    "促销规划",
+    "增量分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-078",
+    "l3_business": "促销规划",
+    "l3_all": "促销规划 / 增量分析",
+    "l1_l2_l3": "业务运营/渠道经营/促销规划"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡为券档位与Best Deal锁档及补贴预算切分提供增量依据，服务促销规划。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/13-广告分析/Skill-Funnel-Causal-Coupon-Allocation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-GPLR-人群标签生成",
+   "slug": "p2s-gplr",
+   "title": "Skill-GPLR-人群标签生成",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-101",
+    "l3_business": "分群",
+    "l3_all": "分群",
+    "l1_l2_l3": "业务运营/品牌与增长/分群"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡把用户嵌入转为可执行人群标签并生成精准人群包，服务营销分群。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-GPLR-人群标签生成.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Incrementality-Measurement",
+   "slug": "p2s-incrementality-measurement",
+   "title": "Skill-Incrementality-Measurement",
+   "src_domain": "14-用户分析",
+   "l3": [
+    "增量分析",
+    "实验设计"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-105",
+    "l3_business": "增量分析",
+    "l3_all": "增量分析 / 实验设计",
+    "l1_l2_l3": "业务运营/品牌与增长/增量分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡用受众级随机化与渠道完整口径测真实增量，服务增量分析与增量实验设计。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/14-用户分析/Skill-Incrementality-Measurement.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-LLM-Personalized-Marketing-Copy-Generation",
+   "slug": "p2s-llm-personalized-marketing-copy-generation",
+   "title": "Skill-LLM-Personalized-Marketing-Copy-Generation",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "内容策划",
+    "Listing优化"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-089",
+    "l3_business": "内容策划",
+    "l3_all": "内容策划 / Listing优化",
+    "l1_l2_l3": "业务运营/品牌与增长/内容策划"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡按用户画像与市场生成差异化详情页与邮件文案，服务内容策划与Listing优化。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-LLM-Personalized-Marketing-Copy-Generation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Live-Catalog-Conversational-Rec",
+   "slug": "p2s-live-catalog-conversational-rec",
+   "title": "Skill-Live-Catalog-Conversational-Rec",
+   "src_domain": "00-电商Agent",
+   "l3": [
+    "数据管道",
+    "主数据治理"
+   ],
+   "facets": {
+    "l1_id": "PLN-PLT",
+    "l1_plane": "数据与Agent平台",
+    "l2_id": "DOM-08",
+    "l2_domain": "数据与AI运行",
+    "l3_id": "DOM-08-141",
+    "l3_business": "数据管道",
+    "l3_all": "数据管道 / 主数据治理",
+    "l1_l2_l3": "数据与Agent平台/数据与AI运行/数据管道"
+   },
+   "planes": [
+    "PLN-PLT"
+   ],
+   "domains": [
+    "DOM-08"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡用三重标识做商品目录增量对账与索引同步，服务目录数据管道与商品主数据治理。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/00-电商Agent/Skill-Live-Catalog-Conversational-Rec.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-MAA-行动建议生成",
+   "slug": "p2s-maa",
+   "title": "Skill-MAA-行动建议生成",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "体验分析",
+    "客诉聚类"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-06",
+    "l2_domain": "服务与体验",
+    "l3_id": "DOM-06-114",
+    "l3_business": "体验分析",
+    "l3_all": "体验分析 / 客诉聚类",
+    "l1_l2_l3": "业务运营/服务与体验/体验分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-06"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "卡把评论聚成问题主题并生成可排序的改进建议，服务体验分析与客诉聚类。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-MAA-行动建议生成.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-MAS-Consumer-Behavior-Simulation",
+   "slug": "p2s-mas-consumer-behavior-simulation",
+   "title": "Skill-MAS-Consumer-Behavior-Simulation",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "促销规划",
+    "情景模拟"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-078",
+    "l3_business": "促销规划",
+    "l3_all": "促销规划 / 情景模拟",
+    "l1_l2_l3": "业务运营/渠道经营/促销规划"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "虚拟消费者仿真用于黑五折扣方案预演，拆解增量与转移效应，直接服务促销方案规划；同时属经营情景模拟。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-MAS-Consumer-Behavior-Simulation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-MAS-MARL-Dynamic-Pricing",
+   "slug": "p2s-mas-marl-dynamic-pricing",
+   "title": "Skill-MAS-MARL-Dynamic-Pricing",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "价格敏感性",
+    "促销规划"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-077",
+    "l3_business": "价格敏感性",
+    "l3_all": "价格敏感性 / 促销规划",
+    "l1_l2_l3": "业务运营/渠道经营/价格敏感性"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "以价格弹性估计驱动美英德分市场动态定价，直接服务价格敏感性与黑五促销期的定价博弈。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-MAS-MARL-Dynamic-Pricing.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-MAS-Multi-Objective-Recommendation",
+   "slug": "p2s-mas-multi-objective-recommendation",
+   "title": "Skill-MAS-Multi-Objective-Recommendation",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "转化优化",
+    "组合设计"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-070",
+    "l3_business": "转化优化",
+    "l3_all": "转化优化 / 组合设计",
+    "l1_l2_l3": "业务运营/渠道经营/转化优化"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "首页推荐按转化与利润多目标重排，服务站点转化优化；同时改变高利润商品与品类的曝光组合。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-MAS-Multi-Objective-Recommendation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-MAS-VOC-Data-Analyst",
+   "slug": "p2s-mas-voc-data-analyst",
+   "title": "Skill-MAS-VOC-Data-Analyst",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码",
+    "体验分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码 / 体验分析",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "多智能体对35万条评论做主题编码与情感共现，产出痛点、机会与趋势洞察，服务VOC编码与体验分析。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-MAS-VOC-Data-Analyst.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Multi-Agent-Collaboration-Tax",
+   "slug": "p2s-multi-agent-collaboration-tax",
+   "title": "Skill-Multi-Agent-Collaboration-Tax",
+   "src_domain": "10-MAS",
+   "l3": [
+    "能力匹配",
+    "依赖协调"
+   ],
+   "facets": {
+    "l1_id": "PLN-MGT",
+    "l1_plane": "经营管理",
+    "l2_id": "DOM-01",
+    "l2_domain": "经营与组织",
+    "l3_id": "DOM-01-005",
+    "l3_business": "能力匹配",
+    "l3_all": "能力匹配 / 依赖协调",
+    "l1_l2_l3": "经营管理/经营与组织/能力匹配"
+   },
+   "planes": [
+    "PLN-MGT"
+   ],
+   "domains": [
+    "DOM-01"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "回答选品与补货流程该不该拆成多Agent并量化协调损耗，服务任务与能力组合的匹配判断及多角色依赖协调。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/10-MAS/Skill-Multi-Agent-Collaboration-Tax.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Multi-Warehouse-Allocation-LLM",
+   "slug": "p2s-multi-warehouse-allocation-llm",
+   "title": "Skill-Multi-Warehouse-Allocation-LLM",
+   "src_domain": "04-供应链",
+   "l3": [
+    "调拨清货建议",
+    "补货模拟"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-03",
+    "l2_domain": "供应与履约",
+    "l3_id": "DOM-03-052",
+    "l3_business": "调拨清货建议",
+    "l3_all": "调拨清货建议 / 补货模拟",
+    "l1_l2_l3": "业务运营/供应与履约/调拨清货建议"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-03"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把已定的补货批量分到FBA与海外仓，输出逐仓TID与平衡率，属仓间调拨建议；批量与总量由上游定，故兼补货模拟。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/04-供应链/Skill-Multi-Warehouse-Allocation-LLM.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-NPS-Driver-Analysis",
+   "slug": "p2s-nps-driver-analysis",
+   "title": "Skill-NPS-Driver-Analysis",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "体验分析",
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-06",
+    "l2_domain": "服务与体验",
+    "l3_id": "DOM-06-114",
+    "l3_business": "体验分析",
+    "l3_all": "体验分析 / VOC编码",
+    "l1_l2_l3": "业务运营/服务与体验/体验分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-06"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "从评论抽取属性情感并归因NPS驱动因素，输出改进优先级，服务体验洞察；方面抽取与打分属VOC编码。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-NPS-Driver-Analysis.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-OfflineRL-触达时机优化",
+   "slug": "p2s-offlinerl",
+   "title": "Skill-OfflineRL-触达时机优化",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "生命周期触达"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-102",
+    "l3_business": "生命周期触达",
+    "l3_all": "生命周期触达",
+    "l1_l2_l3": "业务运营/品牌与增长/生命周期触达"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "按用户状态决定推送时机与人群频次上限，避免打扰并提升留存，属CRM生命周期触达；分群来自上游GPLR不做归属。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-OfflineRL-触达时机优化.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-OpenWorld-Class-Incremental-Learning",
+   "slug": "p2s-openworld-class-incremental-learning",
+   "title": "Skill-OpenWorld-Class-Incremental-Learning",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "标签体系扩展后增量更新VOC分类器，避免新标签漏分错分且不遗忘旧标签，服务VOC编码能力本身。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-OpenWorld-Class-Incremental-Learning.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-PERSONABOT-RAG用户画像生成",
+   "slug": "p2s-personabot-rag",
+   "title": "Skill-PERSONABOT-RAG用户画像生成",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "需求分群",
+    "分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-018",
+    "l3_business": "需求分群",
+    "l3_all": "需求分群 / 分群",
+    "l1_l2_l3": "业务运营/产品与创新/需求分群"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "以真实评论检索生成个体与群体画像，按需求、痛点与使用场景聚合用户，服务需求分群，并支撑客户分群。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-PERSONABOT-RAG用户画像生成.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Persona-Based-AB-Simulation",
+   "slug": "p2s-persona-based-ab-simulation",
+   "title": "Skill-Persona-Based-AB-Simulation",
+   "src_domain": "02-A_B实验",
+   "l3": [
+    "实验设计",
+    "内容实验"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-104",
+    "l3_business": "实验设计",
+    "l3_all": "实验设计 / 内容实验",
+    "l1_l2_l3": "业务运营/品牌与增长/实验设计"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "在花掉流量前用真实行为人格agent对详情页候选做方向粗筛与排序，服务实验候选筛选，被筛对象为内容变体。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/02-A_B实验/Skill-Persona-Based-AB-Simulation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Product-Attribute-Graph-Parsing",
+   "slug": "p2s-product-attribute-graph-parsing",
+   "title": "Skill-Product-Attribute-Graph-Parsing",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "竞品研究",
+    "商品诊断"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-020",
+    "l3_business": "竞品研究",
+    "l3_all": "竞品研究 / 商品诊断",
+    "l1_l2_l3": "业务运营/产品与创新/竞品研究"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "案例A用属性图谱产出竞品属性差异矩阵支撑定位决策，主归属竞品研究；案例B评自家商品属性完整度找缺口。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Product-Attribute-Graph-Parsing.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-REVISION-无点击意图挖掘",
+   "slug": "p2s-revision",
+   "title": "Skill-REVISION-无点击意图挖掘",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "搜索意图分析",
+    "需求分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-066",
+    "l3_business": "搜索意图分析",
+    "l3_all": "搜索意图分析 / 需求分群",
+    "l1_l2_l3": "业务运营/渠道经营/搜索意图分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "从无点击查询聚类出隐含意图并映射响应策略，即搜索意图分析；意图类别可作需求分群输入。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-REVISION-无点击意图挖掘.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Review-Quality-Scoring",
+   "slug": "p2s-review-quality-scoring",
+   "title": "Skill-Review-Quality-Scoring",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "数据质量"
+   ],
+   "facets": {
+    "l1_id": "PLN-PLT",
+    "l1_plane": "数据与Agent平台",
+    "l2_id": "DOM-08",
+    "l2_domain": "数据与AI运行",
+    "l3_id": "DOM-08-140",
+    "l3_business": "数据质量",
+    "l3_all": "数据质量",
+    "l1_l2_l3": "数据与Agent平台/数据与AI运行/数据质量"
+   },
+   "planes": [
+    "PLN-PLT"
+   ],
+   "domains": [
+    "DOM-08"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "对采集评论做质量评分与虚假检测，过滤低质评论后才进下游分析，属数据质量把关。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Review-Quality-Scoring.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Routed-Graph-Handoff",
+   "slug": "p2s-routed-graph-handoff",
+   "title": "Skill-Routed-Graph-Handoff",
+   "src_domain": "10-MAS",
+   "l3": [
+    "依赖协调",
+    "接口契约"
+   ],
+   "facets": {
+    "l1_id": "PLN-MGT",
+    "l1_plane": "经营管理",
+    "l2_id": "DOM-01",
+    "l2_domain": "经营与组织",
+    "l3_id": "DOM-01-006",
+    "l3_business": "依赖协调",
+    "l3_all": "依赖协调 / 接口契约",
+    "l1_l2_l3": "经营管理/经营与组织/依赖协调"
+   },
+   "planes": [
+    "PLN-MGT"
+   ],
+   "domains": [
+    "DOM-01"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把多Agent委派写成带前置条件的类型化依赖图以消掉错序与丢约束，即依赖协调；交付物是交接契约。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/10-MAS/Skill-Routed-Graph-Handoff.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-SQL-Agent-Access-Control",
+   "slug": "p2s-sql-agent-access-control",
+   "title": "Skill-SQL-Agent-Access-Control",
+   "src_domain": "09-DataAgent-LLM",
+   "l3": [
+    "授权审查",
+    "访问控制"
+   ],
+   "facets": {
+    "l1_id": "PLN-CTL",
+    "l1_plane": "独立控制",
+    "l2_id": "DOM-08",
+    "l2_domain": "数据与AI运行",
+    "l3_id": "DOM-08-135",
+    "l3_business": "授权审查",
+    "l3_all": "授权审查 / 访问控制",
+    "l1_l2_l3": "独立控制/数据与AI运行/授权审查"
+   },
+   "planes": [
+    "PLN-CTL"
+   ],
+   "domains": [
+    "DOM-08"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "用越权率与过度拒答率双指标审取数Agent是否守住角色×表×列×操作权限，即授权审查。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/09-DataAgent-LLM/Skill-SQL-Agent-Access-Control.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Seasonal-Aligned-Churn-Label",
+   "slug": "p2s-seasonal-aligned-churn-label",
+   "title": "Skill-Seasonal-Aligned-Churn-Label",
+   "src_domain": "06-增长模型",
+   "l3": [
+    "分群",
+    "生命周期触达"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-101",
+    "l3_business": "分群",
+    "l3_all": "分群 / 生命周期触达",
+    "l1_l2_l3": "业务运营/品牌与增长/分群"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "修正被季节性污染的衰退标签后产出复购用户衰退预警清单，供客服运营按人群干预，主属分群。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/06-增长模型/Skill-Seasonal-Aligned-Churn-Label.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Self-Improving-LLM-Agent-Pipeline",
+   "slug": "p2s-self-improving-llm-agent-pipeline",
+   "title": "Skill-Self-Improving-LLM-Agent-Pipeline",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "内容实验",
+    "竞品研究"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-091",
+    "l3_business": "内容实验",
+    "l3_all": "内容实验 / 竞品研究",
+    "l1_l2_l3": "业务运营/品牌与增长/内容实验"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "场景一用CTR反馈迭代五十组商品文案并沉淀优劣对比，属内容实验；场景二自动萃取竞品情报。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Self-Improving-LLM-Agent-Pipeline.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Shipping-Cost-Estimation",
+   "slug": "p2s-shipping-cost-estimation",
+   "title": "Skill-Shipping-Cost-Estimation",
+   "src_domain": "03-时间序列",
+   "l3": [
+    "物流方案",
+    "经济性分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-03",
+    "l2_domain": "供应与履约",
+    "l3_id": "DOM-03-056",
+    "l3_business": "物流方案",
+    "l3_all": "物流方案 / 经济性分析",
+    "l1_l2_l3": "业务运营/供应与履约/物流方案"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-03"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "按路由加权与费率卡估算分区加权单均运费，支撑尾程物流方案与包邮门槛、价格下限等经济性判断。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/03-时间序列/Skill-Shipping-Cost-Estimation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-SoMeR-多视角用户表示",
+   "slug": "p2s-somer",
+   "title": "Skill-SoMeR-多视角用户表示",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "分群",
+    "需求分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-101",
+    "l3_business": "分群",
+    "l3_all": "分群 / 需求分群",
+    "l1_l2_l3": "业务运营/品牌与增长/分群"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "四视角融合出统一用户嵌入并聚类细分人群，主属分群；可解释维度即需求类型，可作需求分群。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-SoMeR-多视角用户表示.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Spiral-of-Silence-沉默少数派挖掘",
+   "slug": "p2s-spiral-of-silence",
+   "title": "Skill-Spiral-of-Silence-沉默少数派挖掘",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "体验分析",
+    "需求分群"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-06",
+    "l2_domain": "服务与体验",
+    "l3_id": "DOM-06-114",
+    "l3_business": "体验分析",
+    "l3_all": "体验分析 / 需求分群",
+    "l1_l2_l3": "业务运营/服务与体验/体验分析"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-06"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "从评论观点聚类中挖出被沉默的少数派意见及占比，用于发现体验隐患与被掩盖的需求。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-Spiral-of-Silence-沉默少数派挖掘.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-StaR-观点语句排序",
+   "slug": "p2s-star",
+   "title": "Skill-StaR-观点语句排序",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "从评论提取原子观点语句、语义去重并排序成规范语句集，即把原始用户声音编码为结构化观点。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-StaR-观点语句排序.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Stateful-Skill-Runtime",
+   "slug": "p2s-stateful-skill-runtime",
+   "title": "Skill-Stateful-Skill-Runtime",
+   "src_domain": "16-智能体工程",
+   "l3": [
+    "容量管理",
+    "失败恢复"
+   ],
+   "facets": {
+    "l1_id": "PLN-PLT",
+    "l1_plane": "数据与Agent平台",
+    "l2_id": "DOM-08",
+    "l2_domain": "数据与AI运行",
+    "l3_id": "DOM-08-150",
+    "l3_business": "容量管理",
+    "l3_all": "容量管理 / 失败恢复",
+    "l1_l2_l3": "数据与Agent平台/数据与AI运行/容量管理"
+   },
+   "planes": [
+    "PLN-PLT"
+   ],
+   "domains": [
+    "DOM-08"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把长流程 agent 每步 prompt 锁成常数、累计 token 不二次增长，服务容量与预算控制；坏补丁回滚重试。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/16-智能体工程/Skill-Stateful-Skill-Runtime.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-Supply-Network-Simulation",
+   "slug": "p2s-supply-network-simulation",
+   "title": "Skill-Supply-Network-Simulation",
+   "src_domain": "04-供应链",
+   "l3": [
+    "补货模拟",
+    "物流方案"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-03",
+    "l2_domain": "供应与履约",
+    "l3_id": "DOM-03-048",
+    "l3_business": "补货模拟",
+    "l3_all": "补货模拟 / 物流方案",
+    "l1_l2_l3": "业务运营/供应与履约/补货模拟"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-03"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "多级供应网络离散事件仿真，在再订货点与目标水位下算满足率、丢单与报废，服务备货档位决策；并对比双仓互备等网络配置。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/04-供应链/Skill-Supply-Network-Simulation.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-TJAP-跨市场品类组合定价",
+   "slug": "p2s-tjap",
+   "title": "Skill-TJAP-跨市场品类组合定价",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "组合设计",
+    "价格敏感性",
+    "市场进入"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-04",
+    "l2_domain": "渠道经营",
+    "l3_id": "DOM-04-079",
+    "l3_business": "组合设计",
+    "l3_all": "组合设计 / 价格敏感性 / 市场进入",
+    "l1_l2_l3": "业务运营/渠道经营/组合设计"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-04"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "为新市场联合推荐上架产品组合与最优定价区间，实质是商品组合设计与价格敏感性估计，并支撑新市场新平台进入决策。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-TJAP-跨市场品类组合定价.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-TSCAN-上下文感知挽回策略",
+   "slug": "p2s-tscan",
+   "title": "Skill-TSCAN-上下文感知挽回策略",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "生命周期触达"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-05",
+    "l2_domain": "品牌与增长",
+    "l3_id": "DOM-05-102",
+    "l3_business": "生命周期触达",
+    "l3_all": "生命周期触达",
+    "l1_l2_l3": "业务运营/品牌与增长/生命周期触达"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-05"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "为流失用户估计各挽回动作的增量效果并选出最优安抚或触达策略，直接对应留存复购里的生命周期触达决策。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-TSCAN-上下文感知挽回策略.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-TaxoAdapt-Taxonomy-Evolution",
+   "slug": "p2s-taxoadapt-taxonomy-evolution",
+   "title": "Skill-TaxoAdapt-Taxonomy-Evolution",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "让消费者反馈标签体系随新品类与季节性自动扩宽加深，并逐层输出每条评论的标签路径，正是 VOC 编码体系的维护。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-TaxoAdapt-Taxonomy-Evolution.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-TopicImpact-观点单元画像抽取",
+   "slug": "p2s-topicimpact",
+   "title": "Skill-TopicImpact-观点单元画像抽取",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码",
+    "体验分析"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码 / 体验分析",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把整条评论拆成主题、片段、情感三元的观点单元，服务 VOC 细粒度编码；并据此定位体验痛点与退货隐患。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-TopicImpact-观点单元画像抽取.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-VOC-Semantic-Blueprint",
+   "slug": "p2s-voc-semantic-blueprint",
+   "title": "Skill-VOC-Semantic-Blueprint",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "VOC编码",
+    "竞品研究"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-019",
+    "l3_business": "VOC编码",
+    "l3_all": "VOC编码 / 竞品研究",
+    "l1_l2_l3": "业务运营/产品与创新/VOC编码"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "high",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把评论解析为方面、观点、情感、原因、场景的结构化蓝图，正是 VOC 编码的结构化产出；同一结构可用于竞品反馈对比。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-VOC-Semantic-Blueprint.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
+  },
+  {
+   "id": "Skill-iReFeed-需求优先级排序",
+   "slug": "p2s-irefeed",
+   "title": "Skill-iReFeed-需求优先级排序",
+   "src_domain": "07-NLP-VOC",
+   "l3": [
+    "产品需求定义",
+    "产品范围管理"
+   ],
+   "facets": {
+    "l1_id": "PLN-OPS",
+    "l1_plane": "业务运营",
+    "l2_id": "DOM-02",
+    "l2_domain": "产品与创新",
+    "l3_id": "DOM-02-026",
+    "l3_business": "产品需求定义",
+    "l3_all": "产品需求定义 / 产品范围管理",
+    "l1_l2_l3": "业务运营/产品与创新/产品需求定义"
+   },
+   "planes": [
+    "PLN-OPS"
+   ],
+   "domains": [
+    "DOM-02"
+   ],
+   "cross_plane": false,
+   "confidence": "medium",
+   "fills_gap": [],
+   "fills_gap_strong": [],
+   "fills_gap_adjacent": [],
+   "fills_gap_dropped": [],
+   "note": "把用户反馈聚成需求簇并做三目标优化，输出下一版本该做哪些功能需求，服务需求定义与发布范围取舍。",
+   "_provenance": {
+    "from": "paper2skills-vault/07-资源库/card-classification.json",
+    "source": "new",
+    "vault_path": "paper2skills-vault/07-NLP-VOC/00-知识库-Skill卡片/Skill-iReFeed-需求优先级排序.md",
+    "added_by": "PHASE6 S5/B11 append-selected-line.mjs"
+   }
   }
  ]
 }
