@@ -31,6 +31,11 @@ import {
   readContracts, resolveRefs, readPresetSubsets, computeLedger, filterSubset,
   contractsWithoutBinding, frontmatterBlock, listField,
 } from '../lib/contract-gate.js'
+// 冷进程子探针必须用**真 node**：`process.execPath` 在 pnpm 生命周期脚本下是宿主 Electron，
+// 拿它起子脚本会「退出码 0 + 没有任何输出」，于是下面那三条 exit 2 断言全部恒真（ADR-0040）。
+// 这不是风格问题：本文件自己的 S12 变异测试就是靠这三条子进程断言抓 `main()` 里的守卫，
+// 用错解释器 = 那三条断言变成摆设。
+import { nodeCommand } from '../../../../scripts/lib/real-node.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG_ROOT = resolve(HERE, '..')
@@ -352,7 +357,9 @@ cards:
   //    故这里**起子进程跑真 CLI**，直接断言退出码。
   const self = fileURLToPath(import.meta.url)
   const runCli = (args) => {
-    const r = spawnSync(process.execPath, [self, ...args], { encoding: 'utf8' })
+    // 两半一起拿：`command` 决定「哪个可执行文件」，`env` 决定「它该以什么身份跑」。
+    const { command, env } = nodeCommand()
+    const r = spawnSync(command, [self, ...args], { encoding: 'utf8', env })
     return { code: r.status, out: (r.stdout ?? '') + (r.stderr ?? '') }
   }
   const badRun = runCli(['--presets', join(tmp, 'p-bad')])

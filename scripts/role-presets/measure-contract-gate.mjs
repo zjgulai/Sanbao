@@ -27,6 +27,10 @@ import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { tmpdir, homedir } from 'node:os'
+// 本仪器靠**两臂逐字节比对**下结论，两臂由子进程跑同一个生成器产出。用 `process.execPath`
+// 起子进程在 pnpm 下是宿主 Electron ⇒ 「退出码 0 且没有输出」⇒ 两臂都是空产出，
+// 而 A/B/C/D/E 五条判据会在空集合上照样「通过」（ADR-0040）。
+import { nodeCommand } from '../lib/real-node.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..')
@@ -70,10 +74,11 @@ function readCompositionSubsets(root) {
 
 function runGenerator(mode, outDir) {
   mkdirSync(outDir, { recursive: true })
-  const r = spawnSync(process.execPath, [GENERATE], {
+  const { command, env } = nodeCommand()
+  const r = spawnSync(command, [GENERATE], {
     cwd: REPO,
     encoding: 'utf8',
-    env: { ...process.env, P2S_CONTRACT_GATE: mode, ROLE_PRESET_OUT: outDir },
+    env: { ...env, P2S_CONTRACT_GATE: mode, ROLE_PRESET_OUT: outDir },
   })
   if (r.status !== 0) {
     console.error(`✗ ${mode} 臂生成失败（exit ${r.status}）`)
@@ -192,11 +197,16 @@ assert(`E2 找得到并摘掉了引用 ${probeCard} 的契约（${removedContrac
 
 const revOut = join(WORK, 'reverse')
 mkdirSync(revOut, { recursive: true })
-const revRun = spawnSync(process.execPath, [GENERATE], {
-  cwd: REPO,
-  encoding: 'utf8',
-  env: { ...process.env, P2S_CONTRACT_GATE: 'enforce', P2S_VAULT: revVault, ROLE_PRESET_OUT: revOut },
-})
+/** 反向臂与正向两臂同形，只是多一层 vault 覆盖——起子进程的两半同样整对拿走。 */
+function runGeneratorReverse(vault, outDir) {
+  const { command, env } = nodeCommand()
+  return spawnSync(command, [GENERATE], {
+    cwd: REPO,
+    encoding: 'utf8',
+    env: { ...env, P2S_CONTRACT_GATE: 'enforce', P2S_VAULT: vault, ROLE_PRESET_OUT: outDir },
+  })
+}
+const revRun = runGeneratorReverse(revVault, revOut)
 assert('E3 反向臂生成成功', revRun.status === 0, `exit=${revRun.status} ${(revRun.stderr ?? '').slice(0, 200)}`)
 const revSub = readSubsets(revOut)
 assert(`E4 摘掉契约后，${probeCard} 从模型目录消失（因果翻面）`,
