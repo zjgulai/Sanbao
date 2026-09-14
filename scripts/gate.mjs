@@ -795,6 +795,23 @@ const CHECKS = [
     },
   },
   {
+    name: 'installer-preset-update-selftest',
+    remediation:
+      '跑 bash packaging/scripts/installer-preset-update-test.sh 看红在哪条：安装器 5/6 对「技能」与「预设」必须是**两条语义**——技能合并不覆盖（技能文件里住着用户状态：算法技能页的开关写在 SKILL.md 的 frontmatter 上，ADR-0083），预设按产品内容处理（载荷里的那些有差异先备份、再整体替换；载荷里没有的一律不动，客户自建的预设不是产品内容）。T1 钉住替换 + 旧副本进 .pre-lute-<stamp> 备份，T2 钉住技能那一半**没有**被一起改成覆盖，T3 钉住客户自建预设原地不动，T4/T5 钉住「一致就不动、不留同内容备份」与「新增项装上且不产生备份」，T6 钉住 RESTORE_PRESETS 接上回滚，M1 把替换退回旧的 `cp -Rn` 后 T1 必须失效。背景：2.4.0 的 payload 里 agt-033 带着一条本机装配行 → 客户机「结伴」preset 加载失败，而 `cp -Rn` 让修好的下一版也覆盖不上已装机器（ADR-0084）',
+    run() {
+      const script = join(repoRoot, 'packaging', 'scripts', 'installer-preset-update-test.sh')
+      const result = runScript(repoRoot, `bash "${script}"`, 120000)
+      if (result.code === 0) return { passed: true, violations: [] }
+      const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+      const lines = text
+        .split('\n')
+        .filter((line) => /\[FAIL\]|\[自测\]/.test(line))
+        .map((line) => line.trim())
+      const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+      return { passed: false, violations: lines.length > 0 ? lines : [`安装器预设更新语义自测失败（${verdict}）`] }
+    },
+  },
+  {
     name: 'brand-icons',
     remediation:
       '按报错对齐三处的**同一张表**（它在 dsh-patches/brand-replay.sh 的 ICON_PAIRS 里）：表 ↔ 资产目录 `packaging/assets/brand-icons/` ↔ 已装 app 的 `app.asar.unpacked/build/`。少一个资产、多一个没被引用的资产、资产的实际像素与声明不符、目标名重复、已装 app 里没有那个目标名——都判红。重点在**资产那一侧**：`brand-replay.sh --apply` 量的是目标尺寸，资产自己错了没人管，`cp` 照落（Dock 图标成一张放大的模糊图而读数全绿，ADR-0081）',

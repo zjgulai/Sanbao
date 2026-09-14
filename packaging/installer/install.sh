@@ -34,17 +34,28 @@ elevate(){ # 以管理员权限执行一段 shell（AppleScript 双引号串转�
   osascript -e "do shell script \"$script\" with administrator privileges" >/dev/null 2>&1
 }
 
-# 回滚模型：REMOVE=失败时删除的新写入；RESTORE_PROFILE/RESTORE_APP/RESTORE_AEIS=失败时搬回
+# 回滚模型：REMOVE=失败时删除的新写入；RESTORE_PROFILE/RESTORE_APP/RESTORE_AEIS/RESTORE_PRESETS=失败时搬回
 REMOVE=()
 RESTORE_PROFILE=""
 RESTORE_APP=""
 RESTORE_AEIS=""
+RESTORE_PRESETS=""
 rollback(){
   say "⚠ 安装失败，开始回滚…"
   for f in "${REMOVE[@]}"; do [ -e "$f" ] && rm -rf "$f" || true; done
   if [ -n "$RESTORE_PROFILE" ] && [ -d "$RESTORE_PROFILE" ]; then
     mkdir -p "$PROFILE_DIR"
     mv "$RESTORE_PROFILE"/. "$PROFILE_DIR"/ 2>/dev/null || true
+  fi
+  # 预设：5/6 替换过的那些，从 .pre-lute-<stamp> 备份逐个搬回（与 app / profile 同一语义：
+  # 包拥有的内容整体替换，失败就整体搬回）。没被替换的预设本来就没动过，备份目录里也没有它们。
+  if [ -n "$RESTORE_PRESETS" ] && [ -d "$RESTORE_PRESETS" ]; then
+    for d in "$RESTORE_PRESETS"/*/; do
+      [ -d "$d" ] || continue
+      n="$(basename "$d")"
+      rm -rf "$DSH_HOME_DIR/.agent-presets/$n" 2>/dev/null || true
+      cp -R "$d" "$DSH_HOME_DIR/.agent-presets/$n" 2>/dev/null || true
+    done
   fi
   if [ -n "$RESTORE_AEIS" ] && [ -d "$RESTORE_AEIS" ]; then
     mv "$RESTORE_AEIS" "$DSH_HOME_DIR/aeis-venv" 2>/dev/null || true
@@ -286,17 +297,60 @@ for o in dsh-llm dsh-tool-subagent dsh-file-reference-local; do
 done
 say "4/6 overrides 恢复完成"
 
-# ── 5/6 技能 + 预设（合并，不覆盖已有）────────────────────────────────────────
+# ── 5/6 技能 + 预设 ──────────────────────────────────────────────────────────
+# >>> preset-update:begin（自测 packaging/scripts/installer-preset-update-test.sh 按这两个哨兵
+#     逐字节抽出本段、配桩运行；改这一段时自测跟着改。删掉哨兵 = 自测判红，不会静默空转）
 mkdir -p "$STAGING_DIR"
 tar --no-same-owner -xzf "$HERE/skills-presets.tar.gz" -C "$STAGING_DIR"
+# 技能：合并、**不覆盖已有**。技能文件里住着用户状态——算法技能页的开关就写在 SKILL.md 的
+# frontmatter 上（ADR-0083），覆盖它等于把用户的选择洗掉。
 [ -d "$DSH_HOME_DIR/skills" ] || mkdir -p "$DSH_HOME_DIR/skills"
 cp -Rn "$STAGING_DIR/skills/." "$DSH_HOME_DIR/skills/" 2>/dev/null || true
 clear_qa "$DSH_HOME_DIR/skills"
-[ -d "$DSH_HOME_DIR/.agent-presets" ] || mkdir -p "$DSH_HOME_DIR/.agent-presets"
-cp -Rn "$STAGING_DIR/presets/." "$DSH_HOME_DIR/.agent-presets/" 2>/dev/null || true
-clear_qa "$DSH_HOME_DIR/.agent-presets"
+# 预设：**载荷里的那些按产品内容处理**——有差异先备份、再整体替换；载荷里没有的一律不动
+# （客户自建的预设不是产品内容）。语义与 2/6 对 profile 的 OWNED 项一致。
+#
+# 为什么与技能不同：预设是产品内容（岗位卡由 scripts/role-presets/generate.mjs 生成），
+# 技能里住着用户状态。此前两者都走 `cp -Rn`（合并、不覆盖已有），代价 2026-09-14 实测到：
+# 2.4.0 的 payload 里 presets/agt-033 带着一条本机装配行、而出货 profile 里没有那个包 ⇒
+# 客户机「结伴 · 达人与联盟合作」preset 加载失败；更糟的是 `cp -Rn` 让**修好的下一版也覆盖不上**
+# ——修正交付不到已装机器（ADR-0084 的已知缺口，本段就是补它的那一半）。
+PRESET_DIR="$DSH_HOME_DIR/.agent-presets"
+PRESET_BACKUP="$PRESET_DIR.pre-lute-$STAMP"
+mkdir -p "$PRESET_DIR"
+PRESET_REPLACED=0; PRESET_NEW=0; PRESET_SAME=0
+for src in "$STAGING_DIR"/presets/*/; do
+  [ -d "$src" ] || continue
+  name="$(basename "$src")"
+  target="$PRESET_DIR/$name"
+  if [ ! -d "$target" ]; then
+    cp -R "$src" "$target"
+    PRESET_NEW=$((PRESET_NEW + 1))
+    continue
+  fi
+  # 内容一致就不动它、也不留备份：升级后大多数预设属于这一档，不该每装一次堆一份同内容副本
+  if diff -rq "$src" "$target" >/dev/null 2>&1; then
+    PRESET_SAME=$((PRESET_SAME + 1))
+    continue
+  fi
+  mkdir -p "$PRESET_BACKUP"
+  rm -rf "$PRESET_BACKUP/$name"
+  cp -R "$target" "$PRESET_BACKUP/$name"
+  rm -rf "$target"
+  cp -R "$src" "$target"
+  PRESET_REPLACED=$((PRESET_REPLACED + 1))
+done
+clear_qa "$PRESET_DIR"
+if [ "$PRESET_REPLACED" -gt 0 ] || [ "$PRESET_NEW" -gt 0 ]; then
+  RESTORE_PRESETS="$PRESET_BACKUP"
+fi
+say "5/6 预设：替换 ${PRESET_REPLACED}、新增 ${PRESET_NEW}、未变 ${PRESET_SAME}（载荷里没有的预设一律不动）"
+if [ -d "$PRESET_BACKUP" ]; then
+  say "     被替换项的旧副本在 ${PRESET_BACKUP}（回滚时从这里搬回）"
+fi
+# <<< preset-update:end
 rm -rf "$STAGING_DIR/skills" "$STAGING_DIR/presets" 2>/dev/null || true
-say "5/6 技能+预设合并完成"
+say "5/6 技能+预设完成"
 
 # ── 6/6 灵枢 venv（便携版随包）+ 补丁锚点校验 ─────────────────────────────────
 if [ -f "$HERE/aeis-portable.tar.gz" ]; then
