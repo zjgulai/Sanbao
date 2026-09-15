@@ -123,18 +123,26 @@ export function parseFrontmatter(text) {
 export const jstr = (v) => JSON.stringify(v);
 
 /**
- * 生成出海/通用线的 frontmatter（§12.3 四件套 + provenance 块）。
- * 值一律 JSON 引号化 —— 中文里的冒号、逗号、引号都会破坏未引号的标量。
+ * 描述行的组合口径 —— 两条线**共用**这一份，只有写进 frontmatter 的形态不同。
+ *
+ * 片段之间必须带句号 —— 早期用 join("") 会产出「…结构化纪要触发词：会议纪要、…」这种黏连句。
+ * 不要在数据侧给 summaryZh 手补句号来绕：那样摘要末尾会多出一个句号，是拿数据补代码的漏。
  */
-export function buildFrontmatter(meta, extra = {}) {
+export function composeDescription(meta) {
   const triggers = (meta.triggers || []).join("、");
-  // 片段之间必须带句号 —— 早期用 join("") 会产出「…结构化纪要触发词：会议纪要、…」这种黏连句。
-  // 不要在数据侧给 summaryZh 手补句号来绕：那样摘要末尾会多出一个句号，是拿数据补代码的漏。
-  const description = [
+  return [
     meta.summaryZh,
     `触发词：${triggers ? triggers + "、" : ""}${meta.name}。`,
     meta.notUse ? `何时不用：${meta.notUse}` : "",
   ].filter(Boolean).map((s) => (/[。！？]$/.test(s) ? s : s + "。")).join("");
+}
+
+/**
+ * 生成出海/通用线的 frontmatter（§12.3 四件套 + provenance 块）。
+ * 值一律 JSON 引号化 —— 中文里的冒号、逗号、引号都会破坏未引号的标量。
+ */
+export function buildFrontmatter(meta, extra = {}) {
+  const description = composeDescription(meta);
   const userSummary = meta.userSummary || meta.summaryZh;
 
   const lines = ["---", `name: ${jstr(meta.name)}`];
@@ -159,4 +167,32 @@ export function buildFrontmatter(meta, extra = {}) {
   for (const [k, v] of Object.entries(md)) lines.push(`  ${k}: ${jstr(String(v))}`);
   lines.push("---", "");
   return lines.join("\n");
+}
+
+/**
+ * 生成 AI 全栈线的 frontmatter（SOP §12.9「全栈标准形态」）。
+ *
+ * 三处与出海/通用线的差异都是**有意**的，不是漏写：
+ *
+ * 1. 只允许**纯标量行** —— `verify-fullstack.mjs` 的正则就是对这条形状约定的执行。
+ * 2. 没有 `user_summary` / `user_try` —— 全栈页的卡片数据取自 `manifest/fullstack-skills.json`，
+ *    不读技能自身的 frontmatter，写了也没有消费者。
+ * 3. 没有 `metadata:` 块 —— 溯源写进技能目录的 `README.usage.md`（见 intake-install 的 writeUsageReadme）。
+ *    这一条是 §12.9 写明的：全栈线把溯源放在侧车里，不放 frontmatter。
+ *
+ * 实测（2026-09-15）库里 30 条全栈件 30/30 是扁平形态，其中只有 1 条有 README.usage.md——
+ * 即那条约定是最近一次单条入库才立的。本函数与 writeUsageReadme 一起把两者都补齐。
+ */
+export function buildFrontmatterFlat(meta) {
+  return [
+    "---",
+    `name: ${jstr(meta.name)}`,
+    `title: ${jstr(meta.title)}`,
+    `description: ${jstr(composeDescription(meta))}`,
+    "enabled: \"true\"",
+    "disable-model-invocation: false",
+    "user-invocable: true",
+    "---",
+    "",
+  ].join("\n");
 }

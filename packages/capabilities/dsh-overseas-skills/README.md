@@ -9,20 +9,20 @@ DSH Desktop 设置页「出海技能」插件：从 Accio 导入的跨境电商�
 （[ADR-0044](../../../../docs/adr/ADR-0044.md)）。
 
 > 页面位于 设置 → 出海技能（侧边导航 order 26）。AI全栈技能（order 27）共用同一个组件但**不带
-> `org` 属性**，因此保持原有分组视图——那 30 条没有场景轴。
+> `org` 属性**，因此保持原有分组视图——那 70 条没有场景轴。
 
 ## 结构
 
 | 文件 | 职责 |
 | --- | --- |
 | `lib/index.js` | Host：`/api/dsh-overseas-skills/{list,fullstack-list,org,toggle,credential,prompt-template}`（全部 loopback 栅栏）；toggle 写 frontmatter 的 `disable-model-invocation` + `user-invocable` |
-| `lib/catalog.js` | 场景 / 细分 / 223 项目录 + AI全栈 30 项（由 `scripts/build_preset_catalog.py` 从 `manifest/*.json` 生成） |
+| `lib/catalog.js` | 场景 / 细分 / 223 项目录 + AI全栈 70 项（由 `scripts/build_preset_catalog.py` 从 `manifest/*.json` 生成） |
 | `lib/org-tree.js` | **纯函数**：把场景目录 × 归位表 × 岗位骨架拼成四层树（含计数、诊断、接线索引）；有单测 |
 | `lib/preset-roles.js` | 读 `~/.dsh/.agent-presets/agt-*/manifest.json` 的 `x_lute`（面 / 责任域 / order / 责任名 / 接线 subset / 头像）——组织骨架的运行时家 |
 | `lib/role-map.js` | **构建产物**：`manifest/role-assignments.json` → 宿主可 import 的归位表，由 `scripts/build_role_map.py` 生成（`--check` 供门禁用） |
 | `lib/layer-icons.js` | **构建产物**：4 面 + 8 责任域的 12 枚头像，由 `scripts/gen-layer-icons.mjs` 从 lute-brand-icons 烘焙；与算法技能页**逐字节相同**（有跨包测试） |
 | `lib/client.js` | settings.section 页面（id `overseas-skills`、order 26）与输入框胶囊（`ovp*`）：四层下钻 + 搜索 + 开关，全部 `dsw-*` 语义 Token |
-| `manifest/role-assignments.json` | **归位判定的唯一事实源**：253 条技能 → 岗位（含 `source` / `confidence` / 逐字证据 / 删除理由） |
+| `manifest/role-assignments.json` | **归位判定的唯一事实源**：293 条技能 → 岗位（含 `source` / `confidence` / 逐字证据 / 删除理由） |
 | `manifest/skills.json` 等 | 目录的权威映射（name / 中文 title / 场景 / 细分 / toolBadcked） |
 | `scripts/build_role_map.py` | 编译归位表（`--check` 断言 lib 与 manifest 一致） |
 | `scripts/gen-layer-icons.mjs` | 烘焙 12 枚层头像 |
@@ -56,7 +56,7 @@ python3 scripts/build_role_map.py           # 重新编译（改了 manifest 之
 python3 scripts/validate_assignments.py     # 断言判定本身对不对（**正确性**，见下）
 python3 scripts/validate_assignments.py --check-roles-live   # 岗位快照 vs 运行时 preset 漂移
 node scripts/gen-layer-icons.mjs            # 重新烘焙 12 枚层头像（改了品牌技能之后）
-npm run typecheck && npm test               # tsc + node --test（71 项）
+npm run typecheck && npm test               # tsc + node --test（72 项）
 ```
 
 ### `--check` 与 `validate_assignments.py` 不是一回事（R4，2026-09-13）

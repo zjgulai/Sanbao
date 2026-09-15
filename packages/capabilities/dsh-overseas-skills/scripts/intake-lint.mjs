@@ -112,14 +112,53 @@ export function lintUnit(unit) {
     for (const m of text.matchAll(/(?:^|[\s"'`(=[])((?:\/data\/clawd|\/home\/oai|\/home\/user|\/mnt\/data|\/workspace|\/root)\/[\w./@-]*)/g)) {
       if (!foreign.has(m[1])) foreign.set(m[1], rel);
     }
-    // F5 断引用：markdown 相对链接指向未随附的文件
+    // 射程的三种形态都不是想象出来的——②③ 是 2026-09-15 实测补上的，此前它的名字比射程大：
+    //   ① markdown 链接 `](./x.md)` / `](../x.md)`（原实现，至今仍是最准的一类）
+    //   ② 裸相对链接 `](references/x.md)` —— 不带 ./ 前缀，同样是相对引用，此前一条都不查
+    //   ③ **SKILL.md 里以 `references/` 开头的行内代码路径**（见下方窄射程说明）
+    // 为什么 ③ 的射程这么窄：实测根因是「判据分不出『这个文件必须存在』与『举例时提到一个路径』」。
+    // 放开成「SKILL.md 里所有行内代码路径」→ 40 条来件得 9 条告警，其中 8 条假红，全是
+    // **技能将要创建的文件**或**模板占位**：`tasks/plan.md`、`skills/*/SKILL.md`、
+    // `exact/path/to/file.py`、`.claude/typescript.md`、`references/[domain].md`。
+    // 收到「`references/` 前缀 + 排除 `[ < * {` 占位符」后，只剩真缺陷。
+    // ② 保留但**噪声明确**：40 条来件里它贡献的 3 条全是示例路径（`.claude/*.md`、`docs/CONTRIBUTING.md`）。
+    // 之所以不revert ②：一种是「技能让用户自己建的文件」（假红），另一种是「随包该有却漏了」
+    // （真缺陷），两者文字上分不开；宁可让人扫一眼 3 条清单，也不要让真断链一条都报不出来。
+    // 注意：`../../` 形态按下面的 `startsWith("..")` 一律跳过，所以 observability 那条
+    // （`../../references/observability-checklist.md`）**不在这条判据的射程内**——它是登记在
+    // staging/intake-repairs.json 的已知缺口，不是被这条判据抓到的。别把两者混起来读。
     if (/\.md$/i.test(rel)) {
       const dir = path.posix.dirname(rel);
-      for (const m of text.matchAll(/\]\((\.{1,2}\/[^)#\s]+?)\)/g)) {
-        const target = path.posix.normalize(path.posix.join(dir, m[1]));
+      const cands = [];
+      for (const m of text.matchAll(/\]\(([^)#\s]+?)\)/g)) cands.push(m[1]);
+      // 行内代码形态：**只认 SKILL.md 里以 `references/` 开头的那一类**，且排除占位符。
+      //
+      // 这个窄射程是量出来的，不是省事：
+      //   · 放开成「SKILL.md 里所有行内代码路径」→ 40 条来件得 9 条告警，其中 8 条是假红，
+      //     它们全是**技能将要创建的文件**或**模板占位**：`tasks/plan.md`、`skills/*/SKILL.md`、
+      //     `exact/path/to/file.py`、`.claude/typescript.md`、`references/[domain].md`。
+      //     判据分不出「这个文件必须存在」与「举例时提到一个路径」，而假红会让人学会绕过它。
+      //   · 放到 references/ 里查 → 同样是举例占多数。
+      //   · 只认 `references/` 前缀 + 排除 `[ < * {` 占位符 → 实测只留下真缺陷（slo-implementation
+      //     引用的 references/slo-definitions.md 与 references/error-budget.md 未随包）。
+      // 另外：`../../` 形态按下面的 `startsWith("..")` 一律跳过，所以 observability 那条
+      // （`../../references/observability-checklist.md`）**不在这条判据的射程内**——它是登记在
+      // staging/intake-repairs.json 的已知缺口，不是被这条判据抓到的。别把两者混起来读。
+      if (/^skill\.md$/i.test(rel)) {
+        for (const m of text.matchAll(/`(references\/[^`\s]+?\.(?:md|json|ya?ml|sh|py))`/g)) {
+          if (/[[\]<>*{]/.test(m[1])) continue;            // 模板占位符
+          cands.push(m[1]);
+        }
+      }
+      for (const raw of cands) {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) continue;        // 绝对 URL / mailto
+        if (raw.startsWith("#")) continue;                     // 纯锚点
+        if (raw.startsWith("/")) continue;                     // 站点绝对路径（/docs/auth 之类），不是文件引用
+        if (!raw.includes("/")) continue;                      // 裸文件名不算路径
+        const target = path.posix.normalize(path.posix.join(dir, raw));
         if (target.startsWith("..")) continue;                 // 指向来件之外，本来就不该随附
         if (present.has(target)) continue;
-        if (!brokenRefs.has(m[1])) brokenRefs.set(m[1], rel);
+        if (!brokenRefs.has(raw)) brokenRefs.set(raw, rel);
       }
     }
   }
@@ -140,7 +179,11 @@ export function lintUnit(unit) {
     }
   }
   if (brokenRefs.size) {
-    warn.push(`断引用 ${brokenRefs.size} 处：${[...brokenRefs.keys()].slice(0, 4).join(", ")}`);
+    // **必须点名文件**：首版只报路径不报文件，读者（人和 agent）只能猜「这处引用在哪」——
+    // 2026-09-15 实测就照这个缺口把两条缺口登记写错了位置（都写成「正文引用」，实际都在 references/ 里），
+    // 而错的事实会一路进 provenance 与侧车。报出文件名是判据的一部分，不是装饰。
+    const shown = [...brokenRefs.entries()].slice(0, 4).map(([ref, file]) => `${ref}（见 ${file}）`);
+    warn.push(`断引用 ${brokenRefs.size} 处：${shown.join(", ")}`);
   }
 
   // F7/F8 frontmatter（双层嵌套时，实际要检查的是壳内那份）

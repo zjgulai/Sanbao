@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "第三方技能来源留底（SOP §12.2）：批次 / 原始单元 / 逐文件 sha256 / 许可证结论 / 已应用的修补。失去 .git 内置版本控制后，靠它做升级比对与回滚。",
     "from": "/Users/lute/Downloads/skills",
-    "updated": "2026-09-15T03:05:39.684Z"
+    "updated": "2026-09-15T10:27:30.238Z"
   },
   "skills": {
     "meeting-minutes": {
@@ -450,6 +450,1079 @@
         "scripts/reformat_parse.py": "1b5618ae2a423e9c0abb8eb7e1bf3c41d97ef24353b4a886432052170942f974",
         "scripts/render_body.py": "7cdd0ad4cfd845eefabf641c41265c934639f4a43be2290b25c5e23313667c7e",
         "scripts/render_cover.js": "5511c5b72d1e95e5fd8dc424c360d7ccd16fb70bc15235db327c1317cb875ba7"
+      }
+    },
+    "git-commit": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/git-commit.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:22:45.272Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "554d1a3c6d95f15bc1170160659ecdc9a9958b64f377f3988941b672c249b13f"
+      }
+    },
+    "api-designer": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/api-designer.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:22:45.431Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "75a1d0df12641ef02803a1c8dba1e079f0b4cd7b238dd53ab4c257fad5b49e93",
+        "references/error-handling.md": "f4f53b35360da99e4abd5edc86e53d1a34adc77f5172fa7ba8c50acff8df9c87",
+        "references/openapi.md": "cef05ac175cb3f69e3ff247fba5b05838229d3644ad7f9f4e53b1eff1750988f",
+        "references/pagination.md": "6f12180b54539525048610ab2cbc22a3c09792623f4b64be85b4cb335213ea6b",
+        "references/rest-patterns.md": "d1d493065f10387a5c9198ea5c0c1d45c7757daf188aff763e582f342c8ce21b",
+        "references/versioning.md": "7abc655037778fbf09a575f7b245a18710d49a11e340ca0eee62e97fcd76a034"
+      }
+    },
+    "incident-retrospective": {
+      "batch": "kimi",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/incident-retrospective",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:22:45.478Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "0beaefcd97e462f28f215a41d42c4ae3ad565e4b0654a005b3d89e55ade026f4",
+        "SKILL.md": "b3beca143f29e5fe304bcd976fb9179e64d972d726a79600b86de620faae6ba7",
+        "scripts/generate_postmortem.py": "887ee0606d807d7b0799da4107b359d104b47f0b81958cac02ba55ebe474b5fa"
+      }
+    },
+    "spec-driven-development": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/spec-driven-development.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:32.985Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "f7129bca8742bad73f60209bd237e8b10dab6f1fae8576dc552fb1923bc1e721"
+      }
+    },
+    "writing-plans": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/writing-plans.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:33.062Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "48508f44bbfd7d24b029fbf3a314f3cd14c9615599059366e922f47b8dc08cf2",
+        "plan-document-reviewer-prompt.md": "aa728b96aad603c8be28875a4305637f6c984aa81ffcadcb13e743202fa2a0c7"
+      }
+    },
+    "graphql-architect": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/graphql-architect.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:30.423Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "0a4e1eb5f4a3f1e4f127339c781005c91691e5046e48cc3b1de5d7b5b2adb1c8",
+        "references/federation.md": "1e6d69c8f04c5361e9a9f1734c673627fff2e243c0f444c4aa2ab467a94f1c46",
+        "references/migration-from-rest.md": "9945f1c60a8b8a775f02495546c855275fb7d2dfe65e17a08e439b4beeecd15d",
+        "references/resolvers.md": "9afe8b918261aaa9f9e06414412ea321fa387112d6245f506ae2d477e6e51d25",
+        "references/schema-design.md": "c248fc402e41bfe50f7ee78b484f8319f30441dbaba111ff5ed620c2178ac771",
+        "references/security.md": "385fc5a98ee18751e1ee5dd920aafb7daea9f41312c5e713612827846c8b4f25",
+        "references/subscriptions.md": "83f6f57a6b8692daddb319eea85e9534fa208b7c796cf9650c6042fe2dbb5ddc"
+      }
+    },
+    "content-modeling-best-practices": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/content-modeling-best-practices.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:33.464Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "f1c4466372a564bf2c387143fb995d1b5f1524fd2374e28c45318d51aa0885a5",
+        "references/content-reuse.md": "0f4725e8c9f09afe1906d228bfbf87708f7d7562c1bef7f11ec2ab85fea9ece4",
+        "references/reference-vs-embedding.md": "798553ba4342884f15cd269afe95cb7c591d41ade9a6d38d224e2df97055d405",
+        "references/separation-of-concerns.md": "d9edcc8cd8e595d8f6192e08fa1badbda2c1cfd1c0c7772ef963bec1d26f560b",
+        "references/taxonomy-classification.md": "622b02e1fd26a6df484a9f8ec9437343d1047ade14bbe2bee87c99f86456e4f7"
+      }
+    },
+    "clickhouse-architecture-advisor": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/clickhouse-architecture-advisor.zip",
+      "license": "Apache-2.0",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:30.837Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "AGENTS.md": "e4363743c1e8c950df14942db166a7b94dfb608ebeca24cef63207aede75dc45",
+        "README.md": "b53ff729ab83a1c65614842626c2077d7099e1a04ee54d70d8320dbe1c19e4f8",
+        "SKILL.md": "edaba60acfe951828102707e6746e2e8abef583aeb4d1cca8ab307c9fb8d13ae",
+        "examples/README.md": "33d8e76d1c4842a46e689945b9efcf0e6a3cd8490bd1ea63bf81b6e3b446cd9a",
+        "examples/finserv-market-surveillance.md": "8c8aec93d4693b96b0c8af7c83f4df30f5ac5c22c692b317e7ffba0bededc286",
+        "examples/observability-high-throughput.md": "ea883b81183dc7574e2862635bca82a1fa9fcf02f3ae72c1fcb37e43f2f48028",
+        "examples/siem-security-analytics.md": "b0d552fc58a69035eb015711502188a037415df9b55acd2d255ab09abfa3fe26",
+        "mappings/doc_links.yaml": "911ff03e79ce36a56ded0e008f394e2dc15fa297049618d0801ecf3f6f09754c",
+        "metadata.json": "fb6666aeebc0a11ebc7441f39f07143bd5e6f7fd4397afd7b3648ea921dc0a20",
+        "rules/decision-ingestion-strategy.md": "c96a56222cf6e258e392678579c2ee92fa34f6d1d0590920f88ec2c45437ccbc",
+        "rules/decision-join-enrichment.md": "ba810c72dfda365cc4f63518fb62f9c6bd09eeb5e9c8b3297876503f2d012859",
+        "rules/decision-late-arriving-upserts.md": "ee5636cad40d8377f7b7d875982439f65a282eb4307e8387317a7915dcfdb08a",
+        "rules/decision-partitioning-timeseries.md": "0dd428fa071a3d2a84a042fc5d708ab7143d49d969a9f1ed52dbcc13d6feb4c8",
+        "rules/decision-real-time-preaggregation.md": "7831822d1b2e987bbc698c7290613c5876fc31aaa6d25517957f89ba62e35c04",
+        "schemas/recommendation_schema.yaml": "cdf27b3996d8f4ab8f5cece25bc1fc697aa654286cc89eac8ad4f82b2e97fae1"
+      }
+    },
+    "langchain-architecture": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/langchain-architecture.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:31.011Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "0c8dcec1d171a00467eda176a0716866c5bf6c9e86fd0830a74dcabd626bc06a",
+        "references/details.md": "6b277544290c0c4f2b5e470e85aa2212d5d73a44ad054f42c9d8e924b66a4f6e"
+      }
+    },
+    "refactor": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/refactor.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:23:34.292Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "58a38edd230cdcdd866939906321c8ba6f47c98a70d0cda373360196ee2ca1a7"
+      }
+    },
+    "dependency-updater": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/dependency-updater.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:23:34.422Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "README.md": "1817de53b7a35fa1606241695ca40ce3251d5a772d9c34e22a0f8fd7796b8681",
+        "SKILL.md": "e3a63ca4bbf78d97d79d5a0dc30b7634974190479ee1e0d8a5280fce4001759f",
+        "scripts/check-tool.sh": "80a2cba1a6ecd82c6c69fc58d3e2c0059c9fe7fe958b2e4a7b0836ef2fafae45",
+        "scripts/run-taze.sh": "b2748f41ec77599cea1649285bcd8b7585441807b4d2c31ce35567c957f024fa"
+      }
+    },
+    "make-repo-contribution": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/make-repo-contribution.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:34.576Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "8452ae255064604f38942a920ff92bd05a6a4d5bcd0b94ad58b13b07d1abd1b7",
+        "assets/issue-template.md": "82a8a9847134450248f2b2d4e7104cdb2ed764ce3407745c7c443bdb47bb5761",
+        "assets/pr-template.md": "90a6f48c16217a9dd87dd85c1bb345fd29f0edbb4a8d80bcda1c51ecf5cb402b"
+      }
+    },
+    "ci-cd-and-automation": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/ci-cd-and-automation.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:34.882Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "a6ed8ed56456b01ff8314c44eefc69897d9905ae4e06bb2b7036286efb79b5f0"
+      }
+    },
+    "observability-and-instrumentation": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/observability-and-instrumentation.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:34.969Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "e7fcb0820306d46268de9594d676ad98e35040858926c412b7000faa52a61f87"
+      }
+    },
+    "slo-implementation": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/slo-implementation.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:35.063Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "1436f6003627c6978872e3a8c94f8f601315e39105c04565d8883f661c827150",
+        "references/details.md": "5ec829a44c438dd828e910ab7db9986768d79e5b9cb550ca217ed71376cedce9"
+      }
+    },
+    "prometheus-configuration": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/prometheus-configuration.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:35.171Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "e28770f8645d98ce351e6de07535af743a126cd61fc7576485175f9f49e0d9a9",
+        "references/details.md": "2eca0fa66750e1fa672575d086a03fc30fee9867fdb3f1481c423e02ae41d7e1"
+      }
+    },
+    "postgres": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/postgres.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:23:35.829Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "f64f17253d3b74da106027701fc2f0ea385d4cdaf28ff80115265b9fd307c358",
+        "references/backup-recovery.md": "f15d748b172f3f88a9e2091203f5c52b26475a5cb54304f71cbaa99a092b4668",
+        "references/index-optimization.md": "e0a1599a9bb90ae0bf0c99672e64b4394f09a86fad11baa7734a0e04ef125409",
+        "references/indexing.md": "57e5fd51cf2476d9a90d19672666fe5780dfa5f8d63e06f348a4f6d8bec2f431",
+        "references/memory-management-ops.md": "254473cffe6b6d61c24de3bb993f142462a54612bb7e4fbfbfd1ded9ed39747d",
+        "references/monitoring.md": "7a5204b12f64f8053b0e6279436be6765338cfbcffc05e14724721edd8d24c66",
+        "references/mvcc-transactions.md": "b42f91d62cc7f8385713e55732b6a539121a776ba013de12c7f3e030cf1612e9",
+        "references/mvcc-vacuum.md": "8488330653b4156dcb42b1a21850e4aced51b9a4edbffef142ed04fb3236c63e",
+        "references/optimization-checklist.md": "7babe582af123bc5e9772cb4c311914093a07faf3a18aa4d0ff8f85abc673c99",
+        "references/partitioning.md": "9472fdfde8c215e36a8324d70124162083603f3eb28a31b4ba368f46fc673c11",
+        "references/pgbouncer-configuration.md": "c89c7998e36c6b886029c1819aa633ab5d116bb362fa44b862f4e432c848cac1",
+        "references/process-architecture.md": "0845e6c26c4272b9fb2be43e7676b35e169a3de12a5041131ccbb2c308342ff2",
+        "references/ps-cli-api-insights.md": "e0560165c3832c0b9f469089e9b31ee2e543ac67828499b5ddd73b8fcbee4ec9",
+        "references/ps-cli-commands.md": "df8bafeefea6399ac638bbe36b798afda398575818a5aa26e373ec97b805d308",
+        "references/ps-connection-pooling.md": "3bafc9c70e96b4efa37f153b3b0419736e0459088db1361e458a0d3b69c49bda",
+        "references/ps-connections.md": "e166e515a5192ba0eedadffe88f5560f74c6c5c09239d3e5210dec28fa63bc4d",
+        "references/ps-extensions.md": "8ce87f920ec90ab4c6c359373935c85876513f627d8afe78d0c45d686a34d6df",
+        "references/ps-insights.md": "0cf50eacad9f25b66a907d77bc96660da3c31c367b2901210397a7ac062991bc",
+        "references/query-patterns.md": "cf36ecf9df77c38155f1f444d65ebc69051bed7a55c8a988eb6073e90a668e66",
+        "references/replication.md": "0a78d1574edfe96876c95540ca2997136a71201e114e995b295583efd7c7ebb2",
+        "references/schema-design.md": "a831161ebd0343cfb506a069e0d6d4b274c671c81d2580c544c4ffed136a04ba",
+        "references/storage-layout.md": "8a8cbf0e0884161ad33605f103ccae94f06d3428e55963987a006eab007645fa",
+        "references/wal-operations.md": "1ab325520242a7d3792a2edf9579e7b416931cf2d281476ede423c9ac2f8d877"
+      }
+    },
+    "dbt-transformation-patterns": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/dbt-transformation-patterns.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:36.109Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "c402788b6294bdd4b613a27e65cdcdb5a2509e7b2655ac3c18ce8804ea2bff07",
+        "references/details.md": "f560a1ba857fdf4a2a78ac3c634c1a952afaee2ffc3a13baa21811284586d6e2"
+      }
+    },
+    "sql-queries": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/sql-queries.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:36.207Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "dbd5a5e2d563d83ca6d4d033206f285f503296eabff4a35545cdb4cb5302bd9a"
+      }
+    },
+    "markdown-to-html": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/markdown-to-html.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:31.444Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "断引用 2 处：~/.marked.json, docs/CONTRIBUTING.md"
+      ],
+      "files": {
+        "SKILL.md": "a51376b7c8e88e009c60f20af5b9c1157d4e5c3b40dd62f43abc0e873381e0e4",
+        "references/basic-markdown-to-html.md": "fe2c21cc2979a7ef382ea891f1ddd5138d1254c37336c9df33ba594c001a8743",
+        "references/basic-markdown.md": "cb614319900c5310b772356bdce26ea1e534cec9fe1fb435523ae892429faef5",
+        "references/code-blocks-to-html.md": "f25469077e4142356eba9bf88c2b65357ca609d7205617db608720b85dc3545d",
+        "references/code-blocks.md": "09acb6851036607dd8434be4ec98bb173a481e47f49718cb9b3c2c3e1f25b2e1",
+        "references/collapsed-sections-to-html.md": "72e891ce1547548cdc1ff335336b85786c29e069ec60f73990f197f5e1eaa0ab",
+        "references/collapsed-sections.md": "b16b66173e07f583081117048c31143ecb0cde302d97d025548e9a61367b4c27",
+        "references/gomarkdown.md": "101e2c241cc979fb71d8bf69d286733321c40b23d68ca67a06247a9bceb908d5",
+        "references/hugo.md": "61b686a9f5fcbce181fb98fccacda05dd347dce34fdeb973143d60007e4ca3bc",
+        "references/jekyll.md": "382c9ef8f5a7461457c0b83bac30257ec1e4c81c8bb82f24de89a6d0d9927d87",
+        "references/marked.md": "751ff133116f6e6c5bbe97ea2e68bf338b2cc6d7be66b21a157352ff316b38b4",
+        "references/pandoc.md": "affffb14575d2bb2b6c317cc7fab7ea0775d538eea4971877873f0777c216d1b",
+        "references/tables-to-html.md": "8161b9b6108806d86d60cff72f983f31823f1323aa1e42dead0503aac70e35be",
+        "references/tables.md": "fedbed90b834dc218ba0d7cd252a20b207ba1e912226fa2b0af071da7e3b361e",
+        "references/writing-mathematical-expressions-to-html.md": "f4acbe1c3f80d80e340ddd039f3c16055cdfdbdf379d401607d6d35ae3f9e163",
+        "references/writing-mathematical-expressions.md": "e3f2935468cdee61c0272a50fca3762ffe6944bf8037c77586f48c4da23fdfd3"
+      }
+    },
+    "crafting-effective-readmes": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/crafting-effective-readmes.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:23:37.235Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": [
+          "正文引用的 ../LICENSE 位于来件单元之外（子目录截取打包所致），随包无许可证文件"
+        ]
+      },
+      "lintWarnings": [
+        "断引用 1 处：../LICENSE"
+      ],
+      "files": {
+        "README.md": "f3be191de12d5f3ffb1293348830b28e067d181542f606e5efcbe5563ae106ca",
+        "SKILL.md": "638b271fdc148249ed8896dbdcf15f9067a8d64ba7d2d82ec3e86f8d82831b51",
+        "references/art-of-readme.md": "8ca299e44ce728bd5e15803b1414b893c52ff67aed1d395181a789a5b7c98123",
+        "references/make-a-readme.md": "81b1d33bc39b53dd8444c627fb7a5424a6a1272507a3f03e1a13c4bc03761057",
+        "references/standard-readme-example-maximal.md": "75133e20217c8a431ab33d42c53e22a69bb5a57828cea6dfd2c93c1bc8693ba2",
+        "references/standard-readme-example-minimal.md": "1377439694911b257ed0ced67efd8b46212c9f05e1d831730fa3ff7180fcd162",
+        "references/standard-readme-spec.md": "e1b5584f15ed13e60442ff78e4989af7b6934c42330faa6fe567e9757aafbb22",
+        "section-checklist.md": "e9da988cb2f4ec9f9bb830e7e39e161ff7053c80d55f2c6f043fa2beaf4b777b",
+        "style-guide.md": "9bc6308113d392d75bbd792799db1c4b12c852d45ec500e2d10f4e2b1230ce60",
+        "templates/internal.md": "6d2d0ac208385fa97f5753608f3a941411f40daaa1901fb60021d29ed24c6ff0",
+        "templates/oss.md": "4e92c24937dee83f1d7fe7b8265ddaf91e5f1b1ae6808e1863f704d94949fa74",
+        "templates/personal.md": "2aea82c27a5f779b4cd4d67c3d5c08fc4c6ed476a18298ca7b3070f8a7ec6714",
+        "templates/xdg-config.md": "129095375dedfc2856bf68b561d7968c57aae433721f5ac412442e51ff94abc5",
+        "using-references.md": "de80ec04ef24a43fdb205d47883efcc544acc6e179f8c072c54778f663045ce6"
+      }
+    },
+    "agent-md-refactor": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/agent-md-refactor.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:31.619Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "断引用 5 处：.claude/typescript.md, .claude/testing.md, .claude/code-style.md, .claude/git-workflow.md"
+      ],
+      "files": {
+        "README.md": "7d869ba570d3649430ab8dbce3e24de9415679aa99028ab0afd05e12898e8477",
+        "SKILL.md": "f20e68b59875ba43cd2680519cf5e77f6c55b51330b927394291f8f11478c21e"
+      }
+    },
+    "prompt-engineer": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/prompt-engineer.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:31.811Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "1ab0f43e1c6d91501ffe2d432914b9f2b4462e071f4127c54536c186e36c4b81",
+        "references/context-management.md": "7baceb0abd3cbac9e911fa48bfbc97965f122fe53b93e9967c002bfbdcd1b66b",
+        "references/evaluation-frameworks.md": "0eff6ae070d12c0d62f2c9ce952e7e5225e5ec4197fcb8a717cd359c189b9d22",
+        "references/prompt-optimization.md": "ccc38e0e5816f1afd9e62dda4b7e0f14b8b57f5d79fea2f84d4f574ee4ec3bee",
+        "references/prompt-patterns.md": "b749ede7feb361c9f7ac0c729c19bce11c5d733c3a0e93d72b6f3e99f7b7f0cb",
+        "references/structured-outputs.md": "aa01c577ff3a23f281cc9385475293e9d46ded5ac99c712e318941fd5f4b9969",
+        "references/system-prompts.md": "18a3054c96edbc7f5cbbeba338898fc49fbfe56b3f07b004285da292acd22513"
+      }
+    },
+    "spark-optimization": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/spark-optimization.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:01.563Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "6af24df5e512113dac3238dcd9ed862c0a866ff91af92b95d024cf995959ac01",
+        "references/details.md": "1ea455732366d868059dfba807169336df1db75acf4e7f558aee3b41b7f8d210"
+      }
+    },
+    "data-context-extractor": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/data-context-extractor.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:01.764Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "6d05dec52ac3667b551898b9eb943f5ee08141bc8d2fabb69a8e39bb9ce7c754",
+        "references/domain-template.md": "ad5658dba15bf15faae05ade116cdb9bc5c7cac2057a3dbd56a52556bf25faba",
+        "references/example-output.md": "b19e188ed03d9417ff1136187944a6f9125c7da40b6ecb22abe096edd985932e",
+        "references/skill-template.md": "0ceedd25de9a1e278832fc84e6124334af1bc6eaf7e4d3a29f31c23451cb3a71",
+        "references/sql-dialects.md": "a62f61bf64699f7919f4360cce7255794522406c36689069c78c95796fce0ba0",
+        "scripts/package_data_skill.py": "ce79da32ea049db99c91fff0dfcc8ba1ece91940bbbf992de9283cdebe5a4d64"
+      }
+    },
+    "turborepo": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/turborepo.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:02.479Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "9906c12fc389f21fb3630284d589be4884f850c3ca2628b5c6a4a84e908ade08",
+        "command/turborepo.md": "ad4437d5dd02aa30835c556504ef836f43c29e660d9ed7dd5865b7daf3b8b4fd",
+        "references/best-practices/RULE.md": "ab7d339168386107d0a6b9259f2e6586b1526d53975682a08442babfa1b7bb58",
+        "references/best-practices/dependencies.md": "422cbba88be554e857fd2bce4bd60983198bfd48e253f8b57ac833741077f3d3",
+        "references/best-practices/packages.md": "eb393cfc4e2824612e862db5d30868948952e22c48b9885b20ef43f5d982732e",
+        "references/best-practices/structure.md": "26765c1c056b463c0fb5d6f1f3c23e3e33beed73f487a6b408941f17fdfbfb4f",
+        "references/boundaries/RULE.md": "a5e89ae67ed9097f4f59f38386b33080ec4c441ca24d812a638e7480f142078b",
+        "references/caching/RULE.md": "cb68d066937eb4a91999236d2afb685b623ae641e44c8e839cb993b4c8f66527",
+        "references/caching/gotchas.md": "4a301996476b0b140a7ff434767c6f9b1ac91559222706cf56987d520fdcf2ab",
+        "references/caching/remote-cache.md": "aadde0562fd51fb6593c890af25851419730b714d84e9477d8c190479d31e530",
+        "references/ci/RULE.md": "f78461824b21955f702c24a4fbf287c71a4f9eec79d79e9fc0fd11b014a2eaf1",
+        "references/ci/github-actions.md": "3574ff2979a8fe859d3d30068c7a9d0d5fed392dc1733230e994c3e78051434d",
+        "references/ci/patterns.md": "fdaa9fa17dae3f4849efa9a9312dfb2929181609b0ed428224db03bb4fcbe6d7",
+        "references/ci/vercel.md": "cf47de0da926980841aebd9cbfc649f49e0d18a108afc622386825705538b946",
+        "references/cli/RULE.md": "7f323ad405086b17fbafa516a9feec597ad94323492954329e9aafb5b51f8e18",
+        "references/cli/commands.md": "013ab5d62143416fd90363c6f6e08326a3b180ba372f2f8d3f169e924bb4d8ef",
+        "references/configuration/RULE.md": "f14444c1a75b0107a98d63260954254c3e54f2eeb370da6d64b7c618291a8405",
+        "references/configuration/global-options.md": "a9cda5ba17756d82944b8f085f41790fcfcae26554ab5637476394c868c141a7",
+        "references/configuration/gotchas.md": "5623c00a9b0ff15fe4e769a7cd5a447d3c4af356fbe053799523353976812d38",
+        "references/configuration/tasks.md": "d41b3a6efc6852206aa2bf39778727fdc2f9dd84521b13702a403cb18f84fd55",
+        "references/environment/RULE.md": "dc116925a38b6b5a30a9c3ce8fd465ffdfd0566557576826b8f189a9c054c77f",
+        "references/environment/gotchas.md": "026804f00883d9adbd49c7ec966597396ff9997d025ab868a86bc36239836a68",
+        "references/environment/modes.md": "e62247076f8b84d6897ab3ec835642736074fc36da10980ede69c23c1c923fd8",
+        "references/filtering/RULE.md": "335f9b9f6a032a7c9442f7e6c551d86c5e523f4b02aff499173d642d0e3c8175",
+        "references/filtering/patterns.md": "c03f856b8c76f137a1ef31efdbc9796b18c0a2b096e48aff6ce2ee5ff4cac4f0",
+        "references/watch/RULE.md": "9f0706f10dc7cf3a9115214f31195d6dadf237966cba13fe7ff8b264ba993c2b"
+      }
+    },
+    "pnpm-upgrade": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/pnpm-upgrade.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:31.966Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "643c80f3c7680fff1061eeff9382132313909871ed85b9399907ca09c219e4c8",
+        "agents/openai.yaml": "125e9bb8311451aa5d685bb670d4eab2af4ca6c97d6e704f47e4808fa2eefa3c",
+        "scripts/preflight.mjs": "26ff3da3b8dbede7cd48592ae3b29b68416230d118ec00ee58c54d7a2b586926"
+      }
+    },
+    "supabase-postgres-best-practices": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/supabase-postgres-best-practices.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:24:03.852Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "CHANGELOG.md": "751ad110037c85d400018c9894716a04fa46357ff55c22b1169b280752e19e88",
+        "SKILL.md": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855",
+        "references/_contributing.md": "191e039e7d94764e6073410b513b559f9a594e0fdf0252a30c2a2986df2ab3bc",
+        "references/_sections.md": "c9e992612b422c7122de0b7542ebc2450db283edaab08cfe86c6d657fcccccd5",
+        "references/_template.md": "6299954250f212caabe339d752c3e5313a8e07d1a182a4e4b425baee91df1bd2",
+        "references/advanced-full-text-search.md": "40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28",
+        "references/advanced-jsonb-indexing.md": "24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106",
+        "references/conn-idle-timeout.md": "630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5",
+        "references/conn-limits.md": "11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2",
+        "references/conn-pooling.md": "88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5",
+        "references/conn-prepared-statements.md": "174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e",
+        "references/data-batch-inserts.md": "531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37",
+        "references/data-n-plus-one.md": "21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2",
+        "references/data-pagination.md": "73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa",
+        "references/data-upsert.md": "2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7",
+        "references/lock-advisory.md": "c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab",
+        "references/lock-deadlock-prevention.md": "09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347",
+        "references/lock-short-transactions.md": "5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602",
+        "references/lock-skip-locked.md": "6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b",
+        "references/monitor-explain-analyze.md": "4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7",
+        "references/monitor-pg-stat-statements.md": "89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098",
+        "references/monitor-vacuum-analyze.md": "2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a",
+        "references/query-composite-indexes.md": "73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554",
+        "references/query-covering-indexes.md": "daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6",
+        "references/query-index-types.md": "472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282",
+        "references/query-missing-indexes.md": "91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1",
+        "references/query-partial-indexes.md": "6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd",
+        "references/schema-constraints.md": "90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8",
+        "references/schema-data-types.md": "e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8",
+        "references/schema-foreign-key-indexes.md": "7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd",
+        "references/schema-lowercase-identifiers.md": "4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab",
+        "references/schema-partitioning.md": "541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90",
+        "references/schema-primary-keys.md": "3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9",
+        "references/security-privileges.md": "095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663",
+        "references/security-rls-basics.md": "e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096",
+        "references/security-rls-performance.md": "2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014"
+      }
+    },
+    "dispatching-parallel-agents": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/dispatching-parallel-agents.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:04.229Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "1968923066f3b707eb01d1992cdf4c42284c3855f70253b9cd5000ff45fca13c"
+      }
+    },
+    "git-workflow-and-versioning": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/git-workflow-and-versioning.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:04.303Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "b7465d187935c52546d39fdc7bd6ac36d94eda25a9500ef8c18b767d2eb116ea"
+      }
+    },
+    "finishing-a-development-branch": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/finishing-a-development-branch.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:24:04.374Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65"
+      }
+    },
+    "github-gem-seeker": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/github-gem-seeker.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:32.054Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "05042dca5df6d1af0ced96a3212e8e5699b1218021073bf60c060e311e453964"
+      }
+    },
+    "agentic-eval": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/agentic-eval.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:29.356Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "fb198a5c9b12e746d01a43c9ff3368598fdc1134bb458766f580186f31001573"
+      }
+    },
+    "verification-before-completion": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/verification-before-completion.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:29.409Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+      }
+    },
+    "performance": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/performance.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:29.510Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "b0c220185d88c61f7770eb127d8facf86c86d2dd1fd82b86e15a4965a0137265",
+        "references/MEASUREMENT.md": "128f6f20c6c8fb55fcccd8b259cf680811022cf262dc55b03e9d623bcb555a99",
+        "references/RUM.md": "a2bdf660ecb23098afbadfb83254d39cef10c0da82938225f61271bad3f81b19"
+      }
+    },
+    "web-perf": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/web-perf.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:29.583Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "79c531e95ca4d96a7de920c28c127c2c09ec55cd452a92222267d2954580be23"
+      }
+    },
+    "accessibility": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/accessibility.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:29.684Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "267fb2a0707d6142f2871f22688203a42ba21291a2aa200fb740936e41362b5d",
+        "references/A11Y-PATTERNS.md": "f10e238dd4dd3c4f51134c2056bc02d3dd4f8fb6ccc9145c2c1ba7aab4d58140",
+        "references/WCAG.md": "16683e025e3833d931c9d880645d98a448827f97e10189b6c8f12c832e7a2361"
+      }
+    },
+    "sql-optimization-patterns": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/sql-optimization-patterns.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:29.774Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "cfe8234323daaeb47577261c96933f519004fad2f45f1460f340b883af5d7354",
+        "references/details.md": "e1b8db12016767f08d2ee85791c856c273cb8db0adbe19415e0d1ed6e4a48887"
+      }
+    },
+    "code-documenter": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/code-documenter.zip",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T10:27:30.006Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": [
+          "正文引用的两张示例截图未随包：./images/dashboard-annotated.png、./images/create-key.png（示例段缺配图，技能本身照常可用）"
+        ]
+      },
+      "lintWarnings": [
+        "断引用 16 处：/docs/auth, /docs/queries, /docs/errors, /docs/tutorial/step-5"
+      ],
+      "files": {
+        "SKILL.md": "9db40547fcaf27844d3b2ca80737bd7e5b94da99094d7f7ca2b27b540b2686f2",
+        "references/api-docs-fastapi-django.md": "5506708ca897d28169ea43be038f1e4346a518bf8194d4b5b13a3779b4946413",
+        "references/api-docs-nestjs-express.md": "fb1b07526b74edc5b3ba7e704a50a0f3aa5f542f97d80dffc90c95f585c4c9b5",
+        "references/coverage-reports.md": "8688b82cbc2963f2909194a229901e2aa75231ebfc86801542380ea85e9900a6",
+        "references/documentation-systems.md": "b12392c057147925974faa380e3a249013f9b608a14344ed268df20b15ccd3b8",
+        "references/interactive-api-docs.md": "c1b57eac676576644152d6293ad17c9ece51e39fdbc2966ef7b981061210dfaf",
+        "references/python-docstrings.md": "f852d307f2dfaa44b7ec27137933ae4ace086991454e832f59fdeaa6d0a40a25",
+        "references/typescript-jsdoc.md": "a100430b78e885b3c2070740491590578dcb3d35918755c1495e8c8b621a6b2d",
+        "references/user-guides-tutorials.md": "18c05418351ec3b362b8ee7a577c40e4417f3f624c53dd72a43fd7833ab52f3b"
+      }
+    },
+    "web-design-reviewer": {
+      "batch": "manus",
+      "line": "fs",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/web-design-reviewer.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T10:27:30.146Z",
+      "translated": true,
+      "usageReadme": true,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "a08a147cfe555dabe30f2c8f2e267f287e992f74f2b802e68989884338e23b17",
+        "references/framework-fixes.md": "e678c549dd5f69094d53eb5785f0c34ae4cd150a92ac1f79785065fc835276f6",
+        "references/visual-checklist.md": "1b69f0544481861186705f8446f1b44040d9a9879cfa7ba363a44afe7e5ad510"
       }
     }
   }

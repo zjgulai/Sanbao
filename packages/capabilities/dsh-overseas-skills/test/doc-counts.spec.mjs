@@ -92,7 +92,8 @@ test("R1 归位：README 的「未归岗 M」== coverage.without_roles", () => {
   assert.equal(m.length, 1, `README 的归位/未归岗行应恰好 1 处，实得 ${m.length} 处`);
   const [, assigned, unassigned] = m[0].map(Number);
   // 页面口径（buildOrgTree 的 cardsAssigned / cardsUnassigned）只在**出海目录**上算，
-  // 即 SKILLS 而非全 253 条。故分母用 SKILLS，避免把两个口径混起来。
+  // 即 SKILLS 而非全表（出海 223 + 全栈，见 manifest.coverage.skills）。
+  // 故分母用 SKILLS，避免把两个口径混起来。
   assert.equal(
     assigned + unassigned,
     SKILLS.length,

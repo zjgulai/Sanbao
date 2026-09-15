@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /** verify-fullstack.mjs — AI全栈技能适配测试闸门（P2）
- * ① 30/30 安装 + frontmatter 解析/引号/name/description
+ * ① 逐条安装 + frontmatter 解析/引号/name/description/title/模型可调用（条数取自
+ *    scripts/fullstack-mapping.json，**不硬编码**——硬编码会让「少了一条」与「清单变长了」
+ *    无法区分，而这两种情况要修的地方完全不同）
  * ② diagnosing-bugs/scripts 的 Python 编译（py_compile）
  * ③ wizard/template.sh 与各 scripts 的 bash -n 语法
  * ④ 路由型 3 个冒烟（正文含目标技能名）
@@ -38,6 +40,8 @@ for (const s of MAPPING.skills) {
   if (!desc || desc[1].length < 10) problems.push(`${s.name}: description 过短/缺失`);
   if (!/disable-model-invocation:\s*false/.test(fm)) problems.push(`${s.name}: 未默认模型可调用`);
   if (/[\u4e00-\u9fa5]/.test((m[2] || ""))) translated++;
+  // 全栈线 frontmatter 只允许**纯标量行**（SOP §12.9）：这一条不是形式洁癖，而是这条线的形状约定——
+  // 溯源走技能目录的 README.usage.md，不进 frontmatter，所以这里没有 metadata 块可容纳。
   for (const line of fm.split(/\r?\n/)) {
     if (!line.trim()) continue;
     if (!/^[A-Za-z_][\w-]*:\s*(".*"|true|false)$/.test(line)) problems.push(`${s.name}: 非法fm行 ${line.slice(0, 40)}`);
@@ -96,6 +100,7 @@ if (!existsSync(presetSkillsDir)) {
   }
   presetCopiesNote = `预设 ${PRESET_ID} 副本 ${names.length}/${names.length} 在`;
 }
-console.log(`AI全栈适配测试 | 安装 ${installed}/30 | 已汉译 ${translated}/30 | ${presetCopiesNote} | 问题 ${problems.length}`);
+const TOTAL = MAPPING.skills.length;
+console.log(`AI全栈适配测试 | 安装 ${installed}/${TOTAL} | 已汉译 ${translated}/${TOTAL} | ${presetCopiesNote} | 问题 ${problems.length}`);
 if (problems.length) { problems.forEach((x) => console.log("  - " + x)); process.exit(1); }
-console.log("✓ 30/30 全项通过");
+console.log(`✓ ${installed}/${TOTAL} 全项通过`);

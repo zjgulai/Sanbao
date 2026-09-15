@@ -27,6 +27,7 @@ bash scripts/pipeline.sh --import   # 含 81 转换安装（幂等，保留开�
 
 # 单步
 node scripts/import-81skills.mjs            # 81 转换安装（dry 加 --dry）
+python3 scripts/add-fs-brand-icons.py       # 全栈徽章生成（--write；40 行 sk-fs-* 归入 lute-brand-icons catalog 并重建）
 python3 scripts/assign_lute_icons.py        # 头像分配（改映射就改这个脚本）
 node scripts/unify-directories.mjs          # 存量目录统一（幂等）
 node scripts/normalize-zh.mjs              # AI全栈中英排版归一（幂等，ADR-0008）
@@ -34,7 +35,7 @@ node scripts/soften-clarify.mjs            # 指令分级措辞软化（幂等�
 node scripts/gen_bmg_preset.mjs             # 预设再生成（白名单随 81-mapping）
 node scripts/verify_static.mjs              # 静态闸门（名字唯一/图标覆盖/悬空引用/三线名单/运行时前提）
 node scripts/verify-generic.mjs             # 通用线闸门（T0 是否真的挂进每个岗位 preset）
-node scripts/verify-fullstack.mjs           # AI全栈闸门（30/30 安装 + frontmatter + 资源脚本）
+node scripts/verify-fullstack.mjs           # AI全栈闸门（安装数由映射推导 + frontmatter + 资源脚本）
 
 # 通用技能线（第三条线，§12.11）——改了这四处中任何一处就要按序重跑
 node scripts/build-generic-manifest.mjs     # 归位清单（派生自 intake-localize + provenance）
@@ -208,21 +209,32 @@ bash scripts/preset_mount_probe.sh          # 预设挂载探测
 
 **路径 B · 通用型**（不挂岗）—— `roles: []`，且**必须**同时给分型与理由：
 
-| `no_role_kind` | 含义 | 典型 |
-| --- | --- | --- |
-| `GENERIC_METHOD` | 跨岗位通用的**方法论**：任何岗位都能用，但不承载某一岗的责任 | `tdd`、`code-review`、`doc-coauthoring`、`grilling` |
-| `GENERIC_OFFICE` | **通用办公**：写作/文书/演示/会议/表格/翻译等任何岗位日常都要用的产出能力 | `meeting-minutes`、`work-report-writer`、`copy-editor`、`weighted-scoring` |
-| `GENERIC_ANALYTICS` | **通用数据方法**：跨领域的分析手法，输入任意数据、不绑定业务口径 | `validate-data`、`outlier-scan`、`regression-insight` |
-| `DEV_ENGINEERING` | **工程能力**：面向代码/系统的开发与运维能力，不服务出海业务的某一岗 | `ci-cd-and-automation`、`observability-and-instrumentation` |
-| `TOOL_ONLY` | **纯工具/格式处理形态**：无业务语义，只做转换或呈现 | `docx`、`pptx`、`xlsx`、`pdf`、`anysearch`、`lieflat-charts`、`chart-gen` |
-| `OUT_OF_SCOPE` | 有明确业务语义，但不在本体系出海链路内 | `freemium-upgrade-optimizer`（面向 SaaS 付费墙） |
-| `OTHER` | 兜底（需在 `no_role_reason` 说清） | — |
+⚠️ **只有下面标「生效」的四类能被写下**。其余三类是**已提议、尚未生效**的词汇表（见本节末），
+校验器 `scripts/validate_assignments.py` 的 `NO_ROLE_KINDS` 与 `test/role-map.spec.mjs` 目前都只认四类，
+写了会被判 `J4-NO-ROLE-KIND` —— **那不是你写错了，是这张表曾经跑在实现前面**（2026-09-15 由 40 条全栈件入库时实测发现）。
 
-> **2026-09-14 新增前三个分型**（原只有 `GENERIC_METHOD` / `TOOL_ONLY` / `OUT_OF_SCOPE` / `OTHER` 四类）：
-> 本批 592 个来件里**通用件有 70+ 条**，一个 `GENERIC_METHOD` 装不下——把「会议纪要」和
-> 「跨仓库工程方法论」放进同一格，卡片分组与后续按族挂载都会失去区分度。
-> `GENERIC_*` 与 `DEV_ENGINEERING` 三条的边界是**用途域**，`GENERIC_METHOD` 的边界是
-> **方法论属性**；判不准时优先看「它产出的是不是业务结论」（是 → 路径 A 挂岗）。
+| `no_role_kind` | 状态 | 含义 | 典型 |
+| --- | --- | --- | --- |
+| `GENERIC_METHOD` | **生效** | 跨岗位通用的**方法论**：任何岗位都能用，但不承载某一岗的责任 | `tdd`、`code-review`、`doc-coauthoring`、`grilling` |
+| `TOOL_ONLY` | **生效** | **纯工具/格式处理形态**：无业务语义，只做转换或呈现 | `docx`、`pptx`、`anysearch`、`chart-gen` |
+| `OUT_OF_SCOPE` | **生效** | 有明确业务语义，但不在本体系出海链路内 | `freemium-upgrade-optimizer`（面向 SaaS 付费墙） |
+| `OTHER` | **生效** | 兜底（需在 `no_role_reason` 说清） | — |
+| `GENERIC_OFFICE` | 🕓 未生效 | **通用办公**：写作/文书/演示/会议/表格/翻译等任何岗位日常都要用的产出能力 | `meeting-minutes`、`work-report-writer`、`copy-editor`、`weighted-scoring` |
+| `GENERIC_ANALYTICS` | 🕓 未生效 | **通用数据方法**：跨领域的分析手法，输入任意数据、不绑定业务口径 | `validate-data`、`outlier-scan`、`regression-insight` |
+| `DEV_ENGINEERING` | 🕓 未生效 | **工程能力**：面向代码/系统的开发与运维能力，不服务出海业务的某一岗 | `ci-cd-and-automation`、`observability-and-instrumentation` |
+
+> **2026-09-14 提议新增后三个分型**（原只有生效的四类）：本批 592 个来件里**通用件有 70+ 条**，
+> 一个 `GENERIC_METHOD` 装不下——把「会议纪要」和「跨仓库工程方法论」放进同一格，卡片分组与
+> 后续按族挂载都会失去区分度。`GENERIC_*` 与 `DEV_ENGINEERING` 三条的边界是**用途域**，
+> `GENERIC_METHOD` 的边界是**方法论属性**；判不准时优先看「它产出的是不是业务结论」（是 → 路径 A 挂岗）。
+>
+> **2026-09-15 实测更正**：这三条**从未落地**——只写进了本表，没进校验器、没进测试、
+> 没进 `manifest/role-assignments.json` 的任何一条（该表 68 条无岗件全部落在生效四类里）。
+> 后果是**照本表判就会撞红**：写 `DEV_ENGINEERING` 的条目会被 `J4-NO-ROLE-KIND` 判失败，
+> 而报错措辞把责任指向判定人而不是文档。已按「文档不许承诺没被守住的东西」改成本表的状态列。
+> 要真正启用需三处同改：`validate_assignments.py` 的 `NO_ROLE_KINDS`、`test/role-map.spec.mjs`
+> 的分型集合、以及**既有 68 条已判无岗条目的分型重判**（新词汇会改变大量条目的归属）。
+> 这是一次产品可见的分组变化（页面按分型在场景组头聚合显示），**未获明确决定前保持四类**。
 
 **判别要点：技能是「产出业务结论」还是「只做呈现/转换」。** 图表渲染输入任意数据、不选品不归因不做经营判断 → `TOOL_ONLY`；同组的 `ecommerce-sales-dashboard` 挂了 AGT-021/AGT-003，因为它**自带业务口径**——这是两者的分界，不能因为「都出报表」就抄同一个答案。
 
@@ -237,7 +249,12 @@ cd ~/project/Magpie-Horch/packages/capabilities/dsh-overseas-skills
 python3 scripts/build_role_map.py            # manifest → lib/role-map.js
 python3 scripts/build_preset_catalog.py      # manifest → lib/catalog.js（自带 preset-skills.json 防清空守卫）
 
-# 2) 契约门（含 coverage 计数一致性）
+# 1b) 只改了技能正文/图标/摘要时的同步线（与 1) 互不替代）
+node scripts/build-evidence-corpus.mjs --check  # 证据语料是否覆盖目录里每一条（缺一条即 from_skill 不可复核）
+python3 scripts/add-fs-brand-icons.py           # 新增全栈技能 → lute-brand-icons catalog（--write 才落盘）
+python3 scripts/assign_lute_icons.py            # 再烘焙 manifest/skill-icons-{fs,gn}.json
+
+# 2) 契约门（含 coverage 计数一致性、SOP 分型表与校验器对账）
 node --test test/*.spec.mjs                  # 期望全绿
 
 # 3) 重启桌面进程（catalog 在宿主内存里，不重启页面看不到新卡片）
@@ -277,9 +294,9 @@ curl -s http://127.0.0.1:43120/api/dsh-overseas-skills/list | \
 | 安装管线 | 手动 tarball | `import-fullstack.mjs` 多根回退：`staging/third-party/<name>/` 优先（仓库内版本化缓存），`/tmp/mattpocock-skills/skills` 兜底 |
 | 映射表 | `manifest/skills.json` | **两处**：`scripts/fullstack-mapping.json`（安装+图标管线事实源，src/name/title/cat/summaryZh）+ `manifest/fullstack-skills.json`（catalog 构建读） |
 | taxonomy | `mapping` + `overseasNames` | `mapping["<name>"] = "h2-agent-skill"` + `fullstackNames` 数组 |
-| 归位 | `catalog: "overseas"` + 细分场景 | `role-assignments.json`：`catalog: "fs"` + `scenario: fs-*`（8 组：clarify/spec/architecture/implement/quality/infra/collab/writing）+ 挂岗或 `GENERIC_METHOD`/`TOOL_ONLY` |
-| 头像 | `skill-icons.json` | lute-brand-icons `scripts/catalog.js` 加 `sk-fs-<name>` 条目 → `node scripts/build.js` → `assign_lute_icons.py` 自动写 `skill-icons-fs.json` |
-| 计数闸门 | — | `verify-fullstack.mjs` 硬编码「29/29」等计数**必须同步 +1**（易漏） |
+| 归位 | `catalog: "overseas"` + 细分场景 | `role-assignments.json`：`catalog: "fs"` + `scenario: fs-*`（8 组：clarify/spec/architecture/implement/quality/infra/collab/writing）+ 挂岗或 `GENERIC_METHOD`/`TOOL_ONLY`。**两条支撑脚本**：`scripts/build-evidence-corpus.mjs`（把新技能正文补进证据语料；缺了则 `from_skill` 全部「不可复核」，结论无据可查）、`scripts/apply-role-fragments.py`（合并判定片段 + 重算 `coverage` + 同步 `_meta.purpose`；写盘前先跑正式判据与序列化守卫） |
+| 头像 | `skill-icons.json` | `scripts/add-fs-brand-icons.py` 把 `sk-fs-<name>` 条目按 id 归入 lute-brand-icons `scripts/catalog.js` 的既有块（**40 个徽章选型留档在仓库里**，不再只活在本机资产）→ `node scripts/build.js` → `assign_lute_icons.py` 自动写 `skill-icons-fs.json` |
+| 计数闸门 | — | `verify-fullstack.mjs` 的 `TOTAL` **已改为从映射推导**（2026-09-15 去硬编码，「30/30」一类手改计数不再存在）。README 里那几处会腐烂的数字（归位条数、测试条数）由 `test/doc-counts.spec.mjs` 守着 |
 | 验收接口 | `/api/.../list` | `/api/.../fullstack-list`：`groups[]` 目标 fs 组条目数 +1，卡片 installed/modelEnabled/icon 齐全 |
 
 判 `GENERIC_METHOD` 的对照锚：`codebase-design`、`improve-codebase-architecture`、`tdd`——跨仓库通用的工程方法论，不承载任一岗位三条责任。

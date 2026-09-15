@@ -22,7 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   SKILLS_DIR, collectUnits, listUnit, readEntry, readEntryRaw, sha256, innerPath,
-  parseFrontmatter, buildFrontmatter,
+  parseFrontmatter, buildFrontmatter, buildFrontmatterFlat,
 } from "./intake-lib.mjs";
 import { lintUnit } from "./intake-lint.mjs";
 
@@ -74,6 +74,71 @@ function backupDir(src, dstDir) {
   } catch (e) {
     say(`  ⚠ 备份失败：${e.message}`);
   }
+}
+
+/**
+ * 全栈线的溯源侧车（SOP §12.9：这条线的溯源**不进 frontmatter**，放技能目录的 README.usage.md）。
+ *
+ * 每条内容都来自管线已经掌握的读数（来件清单 / provenance / 四件套），**没有一句是编的**：
+ * 「内置资源」是归并后的真实目录清单，「安装事实」是本次安装的 sha256 与时间，
+ * 「已知缺口」直接来自 staging/intake-repairs.json 的 knownGaps。
+ *
+ * 库里 30 条全栈件实测只有 1 条有本文件（最近一次单条入库立的约定），所以这不是补手续，
+ * 是把那条约定铺到整条线上。
+ */
+function writeUsageReadme(dst, ctx) {
+  const { meta, unit, files, sha, licenseBasis, repairs } = ctx;
+  const dirs = new Map();
+  for (const rel of files) {
+    const top = rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : "(根目录)";
+    dirs.set(top, (dirs.get(top) || 0) + 1);
+  }
+  const resources = [...dirs.entries()].sort((a, b) => b[1] - a[1])
+    .map(([d, n]) => `- \`${d}\` —— ${n} 个文件`).join("\n");
+
+  const L = [];
+  L.push("# README.usage.md · 本地安装与使用说明", "");
+  L.push("> 本文件由 `dsh-overseas-skills/scripts/intake-install.mjs` 在入库时生成",
+    "> （SOP §12.9：AI 全栈线的溯源放这里，不进 frontmatter）。",
+    `> 上游 \`SKILL.md\` 正文经管线注入汉译（\`staging/translations/${meta.name}.body.md\`），资源文件保真。`, "");
+  L.push("---", "", "## 一、使用方法", "", "### 1.1 它是什么", "", meta.summaryZh, "");
+  if (meta.userSummary) L.push(meta.userSummary, "");
+  L.push("### 1.2 怎么触发", "", "在任意会话直接说人话，模型按 `SKILL.md` 自动路由。例如：", "");
+  if (meta.userTry) L.push(`> ${meta.userTry}`, "");
+  if (meta.triggers?.length) L.push(`触发词：${meta.triggers.join("、")}`, "");
+  L.push(`**何时不用**：${meta.notUse || "本技能没有特别排除的场景。"}`, "");
+  L.push("### 1.3 内置资源", "", resources || "- （无额外资源，只有 `SKILL.md`）", "");
+  L.push("---", "", "## 二、安装事实（本机）", "",
+    "| 项 | 值 |", "| --- | --- |",
+    `| 安装位置 | \`~/.dsh/skills/${meta.name}/\` |`,
+    `| 来源批次 | \`${meta.source}\` |`,
+    `| 原始单元 | \`${unit}\` |`,
+    `| SKILL.md 原文 sha256 | \`${sha}\` |`,
+    `| 许可证 | ${meta.license || "unknown"}（${licenseBasis}） |`,
+    `| 入库文件数 | ${files.length} |`,
+    `| 安装时间 | ${new Date().toISOString()} |`);
+  const r = repairs || {};
+  const touched = (r.dropped?.length || 0) + (r.rewrote || 0) + (r.regenerated?.length || 0);
+  if (touched) {
+    L.push(`| 已应用修补 | 丢弃 ${r.dropped?.length || 0} / 改写 ${r.rewrote || 0} / 重生成 ${r.regenerated?.length || 0} |`);
+  }
+  if (r.accepted?.length) L.push(`| 拉黑豁免（已认领的致命缺陷） | ${r.accepted.join("；")} |`);
+  L.push("");
+  if (r.knownGaps?.length) {
+    L.push("### 已知缺口", "", ...r.knownGaps.map((g) => `- ${g}`), "");
+  }
+  L.push("---", "", "## 三、更新与回滚", "",
+    "技能目录**不含 `.git`**（SOP §12.2：入库必然改写 frontmatter），升级走重跑管线：", "",
+    "```bash", `NAME=${meta.name}`, "SKILL=\"$HOME/.dsh/skills/$NAME\"",
+    "PKG=\"$HOME/project/Magpie-Horch/packages/capabilities/dsh-overseas-skills\"", "",
+    "# 备份（回滚就靠它；用 ditto，实测 cp -R 会拍平带资源分支的目录）",
+    "ditto \"$SKILL\" \"$SKILL.bak-$(date +%Y%m%d-%H%M%S)\"", "",
+    "# 刷新来件后重跑（覆盖安装，含汉译注入）",
+    "node \"$PKG/scripts/intake-install.mjs\" --skills \"$NAME\" --force",
+    "node \"$PKG/scripts/verify-fullstack.mjs\"", "",
+    "# 回滚", "rm -rf \"$SKILL\" && mv \"$SKILL.bak-<时间戳>\" \"$SKILL\"", "",
+    "# 卸载", "rm -rf \"$SKILL\"", "```", "");
+  fs.writeFileSync(path.join(dst, "README.usage.md"), L.join("\n"));
 }
 
 function main() {
@@ -134,7 +199,13 @@ function main() {
 
     const rawSrc = readEntry(skillEntry.entry);
     const { body } = parseFrontmatter(rawSrc);
-    const fm = buildFrontmatter(m, { sha256: sha256(readEntryRaw(skillEntry.entry)) });
+    // 形态由**数据**决定，不靠人记：四件套条目里的 catalog 字段说这条属于哪条线，
+    // 写盘形态跟着它走（ADR-0009 的口径——一份事实只有一个家，别让人在两处保持一致）。
+    //   catalog=fs → SOP §12.9「全栈标准形态」：纯标量 frontmatter + README.usage.md 侧车
+    //   其余       → §12.3 四件套 + metadata 溯源块
+    const isFs = m.catalog === "fs";
+    const srcSha = sha256(readEntryRaw(skillEntry.entry));
+    const fm = isFs ? buildFrontmatterFlat(m) : buildFrontmatter(m, { sha256: srcSha });
     // 正文汉译优先（staging/translations/<name>.body.md），缺省回退英文原文并在报告标注
     const zh = path.join(ROOT, "staging", "translations", `${m.name}.body.md`);
     const useZh = fs.existsSync(zh);
@@ -164,6 +235,13 @@ function main() {
       return out;
     };
 
+    report.repairs[m.name] = {
+      dropped: [...drop], rewrote: rewrites.length, regenerated: Object.keys(repair?.writeFiles || {}),
+      accepted: (repair?.acceptFatal || []).map((a) => a.match),
+      unwrapped: unwrap || null,
+      knownGaps: repair?.knownGaps || [],
+    };
+
     if (!DRY) {
       fs.mkdirSync(dst, { recursive: true });
       fs.writeFileSync(path.join(dst, "SKILL.md"), fm + finalBody);
@@ -178,27 +256,31 @@ function main() {
         fs.mkdirSync(path.dirname(out), { recursive: true });
         fs.writeFileSync(out, content);
       }
+      if (isFs) {
+        writeUsageReadme(dst, {
+          meta: m, unit: unit.unit, files: stripped.map((x) => x.rel), sha: srcSha,
+          licenseBasis: m.license === "internal-only"
+            ? "依据：无 LICENSE 文件且 frontmatter 未声明"
+            : "依据：实测 LICENSE 文件或 frontmatter 声明",
+          repairs: report.repairs[m.name],
+        });
+      }
     }
-
-    report.repairs[m.name] = {
-      dropped: [...drop], rewrote: rewrites.length, regenerated: Object.keys(repair?.writeFiles || {}),
-      accepted: (repair?.acceptFatal || []).map((a) => a.match),
-      unwrapped: unwrap || null,
-      knownGaps: repair?.knownGaps || [],
-    };
 
     provenance.skills[m.name] = {
       batch: m.source,
+      line: m.catalog || "overseas",
       sourceUnit: unit.unit,
       license: m.license || "unknown",
       licenseBasis: m.license === "internal-only" ? "无 LICENSE 文件且 frontmatter 未声明" : "实测 LICENSE 文件或 frontmatter 声明",
       installedAt: new Date().toISOString(),
       translated: useZh,
+      usageReadme: isFs,
       repairs: report.repairs[m.name],
       lintWarnings: lint.warn,
       files: Object.fromEntries(stripped.map((x) => [x.rel, sha256(readEntryRaw(x.entry))])),
     };
-    report.installed.push({ name: m.name, files: stripped.length, translated: useZh, repaired: !!repair });
+    report.installed.push({ name: m.name, files: stripped.length, translated: useZh, repaired: !!repair, isFs });
   }
 
   if (!DRY) {
@@ -211,7 +293,7 @@ function main() {
   for (const i of report.installed) {
     const r = report.repairs[i.name];
     const tag = r && (r.dropped.length || r.rewrote || r.regenerated.length) ? `  [修补 丢${r.dropped.length}/改${r.rewrote}/生${r.regenerated.length}]` : "";
-    say(`  ✓ ${i.name}  ${i.files} 个文件${i.translated ? "  已汉译" : ""}${tag}`);
+    say(`  ✓ ${i.name}  ${i.files} 个文件${i.translated ? "  已汉译" : ""}${i.isFs ? "  [全栈形态+侧车]" : ""}${tag}`);
   }
   const gaps = Object.entries(report.repairs).filter(([, r]) => r.knownGaps.length);
   if (gaps.length) {

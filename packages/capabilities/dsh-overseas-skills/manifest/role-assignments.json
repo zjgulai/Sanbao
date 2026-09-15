@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "purpose": "出海技能（223）+ AI全栈（30）→ 《AI组织变革》50 岗位的归位判定；页面「出海技能」四层下钻的数据源。",
+    "purpose": "出海技能（223）+ AI全栈（70）→ 《AI组织变革》50 岗位的归位判定；页面「出海技能」四层下钻的数据源。",
     "vocabulary": "岗位/责任名取自材料 docs/05-agents/role-catalog.json 与 docs/04-organization/organization-graph.json（151 条责任名，一名唯一属一岗）。",
     "relation_to_skill_map": "与 scripts/role-presets/skill-map.json 的关系：该文件是**接线**（责任名→技能供给，喂 50 个 preset）；本文件是**归位**（技能→岗位，喂页面）。source=skill-map 的条目即从前者继承。",
     "generated": "2026-09-12 十批语义判定 + 机械校验（校验器见本包 test/role-map.spec.mjs 与 scripts/validate_assignments.py，2026-09-13 起入库；此前只在未入库的 .scratch/ 里）"
   },
   "coverage": {
-    "skills": 253,
-    "with_roles": 217,
-    "without_roles": 36,
+    "skills": 293,
+    "with_roles": 225,
+    "without_roles": 68,
     "role_ids_with_supply": 49
   },
   "skills": {
@@ -5911,6 +5911,433 @@
       "roles": [],
       "no_role_kind": "GENERIC_METHOD",
       "no_role_reason": "证据驱动的代码库简化是跨岗位通用的工程方法：Survey 审计与 Change 验证对任何语言、任何仓库都成立，不承载《AI组织变革》某一岗位的三条责任；产出是简化候选与验证回执，不是出海业务结论。与同组 improve-codebase-architecture（找深化机会）互为镜像。"
+    },
+    "git-commit": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "分析真实 diff 并按 Conventional Commits 生成提交信息，是任何仓库、任何岗位都成立的提交纪律，产出是提交本身而不是岗位产物；AGT-048 的『技能版本』治理的是岗位能力的版本与评估记录，与 git 提交无关，不能因同含『版本/变更』之意挂岗。与同组 git-workflow-and-versioning（分支与发布版本策略）、finishing-a-development-branch（分支收尾）是同一条交付流水线上的相邻工序，三条都不载岗位责任。"
+    },
+    "api-designer": {
+      "catalog": "fs",
+      "scenario": "fs-architecture",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-047",
+          "responsibility": "接口契约",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "接口：资源建模、端点与 OpenAPI 3.1 契约",
+            "from_role": "接口契约"
+          },
+          "note": "产出 OpenAPI 3.1 契约，与该岗『接口契约』字面对上（先例 dropshipping-supplier-integrator 即以 REST/GraphQL API 证据挂同一责任）；该岗边界是受控的业务写接口（主体/范围/动作策略/回执/恢复），面向产品 REST 接口的契约设计只对上契约层，故取 medium。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "incident-retrospective": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-018",
+          "responsibility": "纠正预防措施",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "5 Whys 根因分析到改进措施制定",
+            "from_role": "纠正预防措施"
+          },
+          "note": "无责复盘产出的 SMART 改进措施就是该岗的纠正预防措施，五问根因分析对上使命的『根因改进闭环』与产物『质量事件与纠正措施包』；但技能对象是通用线上事故，须映射到出海业务的质量事件（FLOW-07 由 AGT-018 任结果负责人），故取 medium。"
+        },
+        {
+          "id": "AGT-049",
+          "responsibility": "",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "专业的事故复盘文档",
+            "from_role": "保证任务状态可解释并能接管恢复"
+          },
+          "note": "只对上使命层：复盘让故障状态可解释，并留下恢复与改进证据。运行监测/容量管理/失败恢复三条责任名都不字面成立——技能正文明确它是『从故障已恢复、要写复盘文档时才开始』，恢复动作本身归 diagnosing-bugs，故 responsibility 留空（沿用 handoff/AGT-049 的既有裁定）。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "spec-driven-development": {
+      "catalog": "fs",
+      "scenario": "fs-spec",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-012",
+          "responsibility": "软件需求分析",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "在写代码前把需求固化成六个核心领域齐备的规格",
+            "from_role": "软件需求分析"
+          },
+          "note": "产物形态（结构化规格）与同组 to-spec（把对话综合为规格）一致，对上该岗『软件需求分析』的产物层；技能对象是任意软件项目的规格而非本体系的业务需求，需把对象映射过来才可用，故取 medium。技能只到规格为止，不含实施计划。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "writing-plans": {
+      "catalog": "fs",
+      "scenario": "fs-spec",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-013",
+          "responsibility": "研发计划",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "把已批准的规格拆成假设执行者零上下文的实施计划",
+            "from_role": "研发计划"
+          },
+          "note": "产出的是任务级研发计划（文件结构、接口、测试步骤、提交），与同组 to-tickets（工单+阻塞边构成推进计划）同层；不含该岗另两条责任，先例 tdd/implement 已因『不产出测试方案与验证证据』判为无岗，本技能同样只到计划为止，故取 medium。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "graphql-architect": {
+      "catalog": "fs",
+      "scenario": "fs-architecture",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-047",
+          "responsibility": "接口契约",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "按领域建模设计 GraphQL schema",
+            "from_role": "接口契约"
+          },
+          "note": "GraphQL schema 与联邦图即接口契约，与同组 api-designer 分居 GraphQL / REST 两侧（该技能描述亦把两者互为分工）；该岗契约面向受控业务接口，产品级 schema 设计只对上契约层，故取 medium。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "content-modeling-best-practices": {
+      "catalog": "fs",
+      "scenario": "fs-architecture",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "内容与呈现分离、引用与嵌入取舍、复用模式与分类体系是任何 headless CMS 项目通用的内容建模方法论，服务的是内容系统本身。50 岗位里没有『内容模型』这一类产物：AGT-030 的内容策划产出对外内容方案与创意简报（本技能不写内容，只定内容类型与引用关系），AGT-045 的主数据治理管业务对象与指标的来源与责任（本技能的对象是 CMS 里的内容类型），两条都不字面成立。与同组 domain-modeling（维护代码库术语表与 ADR）互为镜像：都是为系统建模、都不产出业务结论。"
+    },
+    "clickhouse-architecture-advisor": {
+      "catalog": "fs",
+      "scenario": "fs-architecture",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "绑定 ClickHouse 单一引擎的架构决策框架（识别工作负载形态 → 读 rules/ 决策规则 → 按 official/derived/field 标注来源），产出的是带来源分级的架构建议，不是数据产物。AGT-046 的三条责任（数据质量/数据管道/溯源监测）指向数据产物的生产与治理，本技能既不含管道实现也不产出数据产物；AGT-048 的知识溯源指岗位能力与经验的来源可追溯，本技能的来源分级只约束自己的建议措辞，两条都不字面成立。与同组 langchain-architecture（框架落地范式）互为镜像：都是单一技术栈内的架构方法，承载的是工程能力而非某个出海岗位的责任。"
+    },
+    "langchain-architecture": {
+      "catalog": "fs",
+      "scenario": "fs-architecture",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "用 LangChain/LangGraph 搭 LLM 应用的落地范式（状态图、对话记忆、工具调用、测试策略）绑定这两个框架，任何岗位做 LLM 应用都能用，不承载某一岗位的责任。AGT-049 的失败恢复面向平台任务的接管与恢复证据（本技能的检查点是应用内机制，不产出运行状态与恢复证据），AGT-047 的业务工具实现要的是受控业务工具与回执（本技能的工具调用是框架内的 function calling），两条都不字面成立。与同组 clickhouse-architecture-advisor 互为镜像。"
+    },
+    "refactor": {
+      "catalog": "fs",
+      "scenario": "fs-implement",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "保持外部行为不变的外科式重构是跨岗位通用的工程方法：坏味道清单与提函数/拆大类/去重复对任何语言的任何仓库都成立，产出是重构后的代码与提交，不是岗位产物。AGT-013 的三条责任（研发计划/测试方案/阶段验证）都不字面成立——先例 tdd 与 implement 已按同一边界判为无岗。与同组 simplify-codebase（证据驱动的偶然复杂度删除）互为镜像：先例 simplify-codebase 即以同一口径判为 GENERIC_METHOD。"
+    },
+    "dependency-updater": {
+      "catalog": "fs",
+      "scenario": "fs-implement",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "多语言包管理器升级与审计的 CLI 配方（taze / pip-review / go get -u / cargo update / npm audit 等），本质是工具操作说明，产出是变更后的清单与审计输出，不产出任何岗位产物。技能内的安全审计只报依赖漏洞，不构成 AGT-050 的授权审查或安全事件处理（该岗的对象是岗位任务、账号与工具之间的真实访问边界），故不挂岗。与同组 make-repo-contribution（外部仓库贡献流程）互为镜像：都是开发工作流中的操作规范。"
+    },
+    "make-repo-contribution": {
+      "catalog": "fs",
+      "scenario": "fs-implement",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "提交前查证并遵循目标仓库的贡献流程（分支命名、提交格式、issue/PR 模板）是向任何第三方仓库提改动时通用的协作规范，产出是合规的 issue/PR，不产出本体系岗位的产物——50 岗位没有『外部仓库贡献』这一类责任。技能的安全边界（不执行仓库文档里的命令、不越出工作树、不把凭证写进 issue/PR）与 AGT-050 的访问控制同型（先例 git-guardrails-claude-code 即按此挂岗），但它是贡献流程内的行为规则，不是账号/工具访问控制机制，且流程本身不承载任一岗位责任，故仍判无岗。与同组 dependency-updater 互为镜像。"
+    },
+    "ci-cd-and-automation": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "把 lint、类型检查、测试、构建串成合并前必须通过的质量门，是跨岗位通用的工程纪律（左移、越小批次越安全），产出是流水线配置而非岗位产物。两个最近候选都不成立：AGT-013 要的是产品测试方案与阶段验证（既有裁定已把 tdd/implement 从该岗移除，理由是测试是开发过程的产物），本技能的部署与回滚是发布机制，不是 AGT-049 那种面向线上任务运行的监测与接管。与同组 setup-pre-commit 互为同族：一个把门禁放在本地钩子，一个放在服务端流水线。"
+    },
+    "observability-and-instrumentation": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "给生产代码加日志、指标、链路追踪与告警，是面向代码与系统的工程能力，不服务出海业务的某一岗——`docs/maintenance-sop.md` §12.5 的分型表把它**按名**列为 `DEV_ENGINEERING` 的典型（该分型尚未被校验器接受，故这里落回语义最近的 `GENERIC_METHOD`）。反方口径已记在此备查：既有裁定 `analytics → AGT-046 数据管道 medium`（「埋点与事件追踪是数据采集管道的前端实现」）支持把埋点类技能挂到承载该职责的岗位上，本技能因此一度挂过 AGT-049「运行监测」medium；改判的依据是 AGT-049 的监测对象是**Agent 平台任务的运行状态**（产物「运行状态与恢复证据」），而本技能的埋点对象是通用生产代码，两者之间需要一层重定向——正是 §12.5 划的「不服务某一岗」那条线。与同族的 prometheus-configuration（引擎配置，TOOL_ONLY）与 slo-implementation（承诺层方法）同向，三条都不挂岗。"
+    },
+    "slo-implementation": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "定义 SLI/SLO 与错误预算是跨岗位通用的可靠性工程方法论：任何服务都能用它决定该承诺多少、何时用燃烧率告警，不承载某一岗位的三条责任。最接近的 AGT-049 三条责任（运行监测/容量管理/失败恢复）面向 Agent 任务的运行状态与接管恢复、产物是运行状态与恢复证据，本技能产出的是可靠性目标与告警规则，对不上任何一条。与同组 prometheus-configuration（抓取与规则文件怎么配）互为镜像：一条定目标，一条配引擎。"
+    },
+    "prometheus-configuration": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "指标抓取、记录规则与告警规则的写法与排查（targets/config/query 三个接口、命名与抓取间隔规范、HA/联邦/长期存储）是特定监控引擎的配置与操作说明，产出的是配置文件而不是岗位产物。最接近的 AGT-049「运行监测」指 Agent 平台任务的运行状态监测，由平台自身承担，本技能不含任务状态解释与接管恢复。与同组 slo-implementation（先决定对用户承诺多少）互为镜像。"
+    },
+    "postgres": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "按主题索引的 Postgres 运维参考（schema 设计、索引与索引审计、MVCC/VACUUM、WAL、复制、备份恢复、PgBouncer）是特定引擎的运维与配置形态（正文即以托管商推荐与 references 清单组织），不产出岗位产物。AGT-046 的三条责任（数据质量/数据管道/溯源监测）说的是数据产物的质量状态、管道与血缘，实例参数、复制与备份不字面命中任何一条。与同组 supabase-postgres-best-practices（写库对象前的规则校验）互为镜像，与 sql-queries（查询语句本身怎么写）互为分工。"
+    },
+    "dbt-transformation-patterns": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-046",
+          "responsibility": "数据管道",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "用 dbt 构建数据转换管道",
+            "from_role": "数据管道"
+          },
+          "note": "staging/intermediate/marts 分层与物化策略就是数仓转换管道本身，字面命中「数据管道」；但技能给的是模式库而非公司实际数据产物，数据质量测试与血缘文档只部分对应「数据质量」「溯源监测」，故取 medium。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "sql-queries": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "跨方言写查询（函数对照、窗口函数、CTE、漏斗留存模板）是任何数仓都能用的通用数据方法：输入任意表、不绑定业务口径、不产出经营结论。漏斗留存只给查询模板，不构成 AGT-023 的「漏斗诊断」（先例 ecommerce-analytics-controller 同口径：无独立站漏斗环节诊断即不挂该岗），也不产出 AGT-046 要求的数据管道与质量状态。与同组 dbt-transformation-patterns（模型分层与增量物化）互为镜像，与 postgres/supabase-postgres-best-practices（同一引擎的运维与规则）互为分工。"
+    },
+    "markdown-to-html": {
+      "catalog": "fs",
+      "scenario": "fs-writing",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "正文是 marked、pandoc、gomarkdown 三条转换链的用法配置与 Jekyll/Hugo 模板系统接入（单文件、批量、进阶配置），属纯格式转换形态，无业务语义，不对应任何岗位的三条责任；与出海线已判 TOOL_ONLY 的 docx/pdf/pptx/xlsx 同型（纯格式处理）。与同组 crafting-effective-readmes 互为镜像：一个决定 README 写什么，一个只把写好的 Markdown 渲染成 HTML。"
+    },
+    "crafting-effective-readmes": {
+      "catalog": "fs",
+      "scenario": "fs-writing",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "按读者与项目类型写、更新或复查 README（创建/新增/更新/复查四类任务，开源、个人、内部、配置四套模板与章节清单）是跨岗位通用的文档写作方法，任何仓库任何岗位都能用，不承载某一岗的三条责任。先例同型：writing-for-agents 判 GENERIC_METHOD 的理由是 AGT-048 需要知识溯源、技能版本与 Playbook 评估而本技能不产出其中任何一项，此处同理；AGT-045 的指标契约与主数据治理、AGT-047 的接口契约都面向业务对象与工具接口，README 不是其中任何一种。与同组 code-documenter（代码内文档、API 规格、文档站）互为镜像。"
+    },
+    "agent-md-refactor": {
+      "catalog": "fs",
+      "scenario": "fs-writing",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "把臃肿的 agent 指令文件按渐进式披露重构（找矛盾、留必需、归类、建链接文件）是跨岗位通用的指令整理方法，产出是根文件与被链接文件的层级，不承载某一岗位的三条责任。与同组 writing-for-agents（从零写 agent 文档）互为镜像：既有裁定已写明 AGT-048 需要的是知识溯源、技能版本与 Playbook 评估，面向 agent 文档的技能三项都不产出。"
+    },
+    "prompt-engineer": {
+      "catalog": "fs",
+      "scenario": "fs-writing",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-048",
+          "responsibility": "Playbook评估",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "建设提示词的评测与测试框架",
+            "from_role": "Playbook评估"
+          },
+          "note": "评测框架（测试集、质量指标、校验检查点）与『给提示词做版本管理、记录行为』的版本纪律，对上该岗评估并版本化岗位能力的动作；但技能对象是通用 LLM 提示词，须映射到本平台的岗位技能/Playbook 才可用，且本技能不产出能力版本与评估记录本身，故取 medium。不挂 AGT-012：算法评估设计的对象是产品算法，不是提示词。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "spark-optimization": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "分区、AQE、广播 join 与内存调参是 Apache Spark 引擎的调优操作（adaptive 开关、shuffle.partitions、executor 内存、Kryo 序列化等具体配置），调优对象是既有作业的执行性能，不是构建或交付数据管道，也不产出带质量状态的数据产物，故 AGT-046 的「数据管道」不字面成立。与同组 dbt-transformation-patterns 互为镜像：一个建管道，一个调引擎。"
+    },
+    "data-context-extractor": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [
+        {
+          "id": "AGT-045",
+          "responsibility": "主数据治理",
+          "source": "assigned",
+          "confidence": "medium",
+          "evidence": {
+            "from_skill": "追问实体、指标口径与过滤约定",
+            "from_role": "主数据治理"
+          },
+          "note": "实体消歧、主标识符与实体关系正是主数据治理的对象（可作该岗口径统一的一环）；但产出是给模型看的知识包，不产出跨系统口径契约、不覆盖账号商品映射，故取 medium 而非 high；探查阶段依赖数仓 MCP 工具。"
+        }
+      ],
+      "no_role_kind": null,
+      "no_role_reason": null
+    },
+    "turborepo": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "turbo.json 任务依赖流水线、本地/远程缓存与 --affected 增量构建是 JS/TS monorepo 构建系统的配置与排查操作，属开发基建形态，不产出任何岗位产物；包级任务与根级任务的取舍是构建工具内部约定，与出海业务对象无关。与同组 pnpm-upgrade（工具链版本升级）同属工程基建的配置操作。"
+    },
+    "pnpm-upgrade": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "按九步升级 pnpm 工具链（查版本与完整性值、把 action tag 解析成 commit SHA、预检 CI 安装路径、对齐 packageManager）就是「某包管理器的升级步骤」，不产出岗位产物。与同组 turborepo 同属构建/包管理工具链的配置操作；依赖自身的升级与审计另由 dependency-updater 承担，本技能只管 pnpm 这一条工具链。"
+    },
+    "supabase-postgres-best-practices": {
+      "catalog": "fs",
+      "scenario": "fs-infra",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "TOOL_ONLY",
+      "no_role_reason": "Supabase 维护的 Postgres 规则库（8 类规则、按影响排序、正误 SQL 对照与 references 规则文件）是写库对象前的规则校验参考：输入任意 Postgres 库、不带业务口径，属特定引擎的规则与操作形态。AGT-046 的三条责任讲的是数据产物的质量、管道与血缘，规则库的索引/连接池/RLS 建议不字面命中。与同组 postgres（实例运维与架构参考）互为镜像。"
+    },
+    "dispatching-parallel-agents": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "判断多个失败是否彼此独立、按独立问题域并行分派 subagent 是跨岗位通用的编排手法，产出是分派指令与汇总结论。最近的候选只有 AGT-002 的『依赖协调』，但对不上：该岗要的是场景规则、装配决策依据与 Case 状态，边界还明确『不作为LLM路由器』、不承担执行编排，本技能只是运行时分派手法，不产出可版本化制度。与同组 handoff 相对照更清楚：handoff 交出可接管的会话状态（故能对上 AGT-049 的接管使命），本技能不交出任何状态。"
+    },
+    "git-workflow-and-versioning": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "主干开发、原子提交、worktree 与语义化版本/tag/changelog 是任何软件仓库通用的版本控制方法论，换任何岗位都成立（本仓库自身就按它治理 pin 与提交分离）。AGT-048 的『技能版本』指岗位能力的版本与评估记录，不是软件发布版本，不能因同有『版本』二字挂岗。与同组 git-commit（一次提交的格式）与 finishing-a-development-branch（分支收尾）构成三段相邻工序。"
+    },
+    "finishing-a-development-branch": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "跑全量测试后在本地合并 / 开 PR / 保留分支之间选择，是任何仓库通用的收尾流程，产出是分支处置结果而不是岗位产物。既有先例已用 dropped 记录同型技能不挂 AGT-013（implement 与 tdd 的理由同此：测试是开发过程的产物，该岗要的是测试方案与阶段验证），而该岗边界还明确不以文档或仿真替代实物与合规验收；本技能只跑到套件转绿就把去向交回人工。与同组 git-commit、git-workflow-and-versioning 同属一条交付流水线。"
+    },
+    "github-gem-seeker": {
+      "catalog": "fs",
+      "scenario": "fs-collab",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "先搜 GitHub 上经久经考验的开源项目、按 stars 与维护度分级后直接拿来解决问题，是任何岗位遇到通用问题时都成立的选型与复用方法，产出是『把问题解决掉』而不是岗位标准产物。两个最近候选都不成立：AGT-047 要的是接口契约、业务工具实现与集成验证（写接口须核对主体、范围、动作策略、回执），本技能只安装运行第三方工具、不做受控集成；AGT-014 的『供应商评估』评的是 OEM 供应商的能力与产能，不是开源仓库的 stars。与同组 migrate-to-shoehorn（把自写断言换成既有库）同属『采用现成外部件』的工具形态，本技能更靠前一步（先搜再选）。"
+    },
+    "agentic-eval": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "为生成流水线搭「生成→评审→改进」循环（反思、评估器-优化器、评分量表、LLM 评审）是跨岗位通用的方法：任何岗位要提高自己的生成质量都能直接用它，不承载某一岗的三条责任。最接近的 AGT-048 知识技能与Playbook治理要的是知识溯源、技能版本与 Playbook 评估——评估对象是岗位能力与 Playbook 资产，本技能评估的是通用生成输出，也不产出能力版本与评估记录，故不挂岗。与同组 verification-before-completion（下结论前先取证）互为镜像：一个改生成过程，一个把住结论出口。"
+    },
+    "verification-before-completion": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "「没有全新的验证证据不得作出完工声明」的门函数五步是跨岗位通用的工程纪律，执行主体可以是任何岗位；协议 §5 已把 TDD、访谈、代码评审点名为 GENERIC_METHOD 示例，本条与之同族（fs 先例 tdd、code-review、diagnosing-bugs 同口径）。字面上最易对上的两处都不成立：AGT-005 内控审计与独立复核要的是对经营动作与评估结论的独立复核（抽样审计/证据复核/利益冲突检查），本技能是执行者对自身完工声明的自证；AGT-049 的边界「不以工具返回成功代替业务最终回执」管的是业务回执，本技能管的是测试、构建与 diff 这类工程断言。与同组 agentic-eval 互为镜像：一个改生成过程，一个把住结论出口。"
+    },
+    "performance": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "按真实用户指标做前端性能优化（关键渲染路径、图片与字体、缓存、运行时与三方脚本，含性能预算与前后复测）是面向任意网页的通用工程方法，不承载某一岗的三条责任。最近的 AGT-023 站点运营承接的是独立站的经营与实验物料（漏斗诊断/站点运营/转化优化，产物为独立站经营与实验包）：本技能产出的是站点资源与代码改造及其前后测量值，既不诊断漏斗也不做转化实验，属站点侧工程质量而非渠道经营责任。与同组 web-perf（只审计不改码）互为镜像。"
+    },
+    "web-perf": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "采性能 trace、对照 CWV 阈值、逐阶段审计网络与打包配置并输出按影响排序的整改清单，是面向任意网页的通用性能审计方法，且自述到审计与建议为止、不改代码，不承载某一岗的三条责任。与同组 performance 互为镜像（一个只审计、一个按预算改造并前后复测）；两者共同的最近岗位 AGT-023 站点运营承接独立站经营与实验物料，审计清单不构成该岗产物，故不挂岗。"
+    },
+    "accessibility": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "按 WCAG 2.2 逐条审计并修复网页无障碍（对比度阈值、键盘与焦点、目标尺寸、表单标签、ARIA 与测试清单）是跨岗位通用的网页工程质量方法，对任何岗位的任何页面都成立，不承载某一岗的三条责任。合规语义容易误挂 AGT-044 产品合规与隐私，但该岗三条责任是产品准入核对、宣称审查与隐私需求分析，面向产品与市场准入要求，网页无障碍不在其内；AGT-023 站点运营同样只承接独立站经营与实验物料。与同组 web-design-reviewer 在对比度与焦点态判定上重叠，两者都不产出岗位产物（条款结论以本技能为准）。"
+    },
+    "sql-optimization-patterns": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "读 EXPLAIN 定位慢查询、按 B-Tree/GIN/覆盖索引消除全表扫描与 N+1，是跨岗位通用的数据库工程方法，任何要查库的岗位都能用，不承载某一岗的三条责任。最接近的 AGT-046 数据工程与质量，三条责任是数据质量、数据管道与溯源监测：表内已有的数据管道挂载承接采集、分块、切分这类管道构建步骤（analytics、semantic-doc-chunker 等），查询与索引优化既不是管道构建步骤也不是数据质量判定；前端加载性能归同组 performance/web-perf，与本技能分属不同层。"
+    },
+    "code-documenter": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "补 docstring 与 JSDoc、生成 OpenAPI 规格与文档站、写用户指南并校验示例可编译、出覆盖率报告，是跨岗位通用的代码文档方法，不承载某一岗的三条责任。最接近的 AGT-047 系统集成与业务工具，其接口契约承接的是工具接口的契约设计与集成验证（表内既有挂载为供应商系统对接方式的定义），本技能只把既有接口转写成文档与 OpenAPI 描述，既不定义契约边界也不做集成验证；AGT-048 要的知识溯源、技能版本与 Playbook 评估同样不产出。与同组 crafting-effective-readmes（仓库门面 README）、writing-for-agents（Agent 指令文件）互为镜像。"
+    },
+    "web-design-reviewer": {
+      "catalog": "fs",
+      "scenario": "fs-quality",
+      "sub": "",
+      "roles": [],
+      "no_role_kind": "GENERIC_METHOD",
+      "no_role_reason": "靠截图逐屏巡检线上或本地页面、再回源码修布局溢出重叠与响应式断点，是面向任意网页的通用视觉巡检方法，产出问题清单与修复前后对照，不承载某一岗的三条责任。两个最近的岗位都对不上：AGT-023 站点运营承接独立站经营与实验物料，本技能改的是视觉实现而非经营物料；AGT-010 工业设计与用户体验的三条责任（使用旅程/工业设计简报/可用性验证）面向产品体验方案，不覆盖网页视觉走查。与同组 accessibility 在对比度与焦点态上重叠。"
     }
   }
 }

@@ -333,6 +333,406 @@
       "summaryZh": "为 AI agent 编写清晰文档/指令",
       "toolGap": "",
       "icon": ""
+    },
+    {
+      "name": "git-commit",
+      "title": "约定式提交",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "分析 diff 判断变更类型与影响范围，按 Conventional Commits 规范暂存文件并生成提交信息",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "api-designer",
+      "title": "接口契约设计",
+      "category": "fs-architecture",
+      "categoryTitle": "架构设计",
+      "toolBacked": false,
+      "summaryZh": "设计 REST 与 GraphQL 接口：资源建模、端点与 OpenAPI 3.1 契约、分页、错误响应与版本演进策略",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "incident-retrospective",
+      "title": "事故复盘",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "按六步 SOP 把线上事故写成无责复盘：时间线、5 Whys 根因、SMART 改进措施，输出格式化复盘文档",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "spec-driven-development",
+      "title": "规格驱动开发",
+      "category": "fs-spec",
+      "categoryTitle": "规格规划",
+      "toolBacked": false,
+      "summaryZh": "在写代码前把需求固化成六个核心领域齐备的规格，经四阶段门禁逐段评审后才进入实现",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "writing-plans",
+      "title": "实施计划撰写",
+      "category": "fs-spec",
+      "categoryTitle": "规格规划",
+      "toolBacked": false,
+      "summaryZh": "把已批准的规格拆成假设执行者零上下文的实施计划：逐个任务写明文件、接口、测试代码与提交步骤",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "graphql-architect",
+      "title": "GraphQL 接口设计",
+      "category": "fs-architecture",
+      "categoryTitle": "架构设计",
+      "toolBacked": false,
+      "summaryZh": "按领域建模设计 GraphQL schema，覆盖联邦图、DataLoader 防 N+1 与订阅安全",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "content-modeling-best-practices",
+      "title": "内容建模最佳实践",
+      "category": "fs-architecture",
+      "categoryTitle": "架构设计",
+      "toolBacked": false,
+      "summaryZh": "设计 headless CMS 的结构化内容模型：内容与呈现分离、引用与嵌入取舍、复用模式与分类体系",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "clickhouse-architecture-advisor",
+      "title": "ClickHouse 架构设计",
+      "category": "fs-architecture",
+      "categoryTitle": "架构设计",
+      "toolBacked": false,
+      "summaryZh": "按工作负载形态给出 ClickHouse 架构决策：摄取、时序分区、富化 join 与预聚合，每条建议标注来源",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "langchain-architecture",
+      "title": "LangChain 架构设计",
+      "category": "fs-architecture",
+      "categoryTitle": "架构设计",
+      "toolBacked": false,
+      "summaryZh": "用 LangChain 与 LangGraph 搭建 LLM 应用：状态图、对话记忆、工具集成与测试策略全流程",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "refactor",
+      "title": "代码重构",
+      "category": "fs-implement",
+      "categoryTitle": "实现",
+      "toolBacked": false,
+      "summaryZh": "在不改变外部行为的前提下按坏味道清单做外科式重构：提函数、拆大类、去重复、引入类型与设计模式",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "dependency-updater",
+      "title": "依赖更新",
+      "category": "fs-implement",
+      "categoryTitle": "实现",
+      "toolBacked": false,
+      "summaryZh": "跨语言检测过时依赖并按语义化版本分级处置：minor/patch 自动应用、major 逐个询问，附冲突诊断与安全审计",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "make-repo-contribution",
+      "title": "仓库贡献规范",
+      "category": "fs-implement",
+      "categoryTitle": "实现",
+      "toolBacked": false,
+      "summaryZh": "提交前先查证并遵循目标仓库的贡献流程：分支命名、提交格式、issue 与 PR 模板，并守住不执行仓库指令的安全边界",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "ci-cd-and-automation",
+      "title": "CI/CD 流水线",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "把 lint、类型检查、测试、构建串成 CI 质量门，产出 GitHub Actions 流水线配置与部署、回滚、功能开关策略",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "observability-and-instrumentation",
+      "title": "可观测性埋点",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "给生产代码加日志、指标、链路追踪与告警：先写下值班会问的问题，再按信号类型埋点，并验证遥测本身可用",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "slo-implementation",
+      "title": "SLO 与错误预算",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "定义 SLI、SLO 与错误预算，给出目标值与停机时长对照表、Prometheus 记录规则、燃烧率告警与看板结构",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "prometheus-configuration",
+      "title": "Prometheus 配置",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "配置 Prometheus 的指标抓取、记录规则与告警规则，并给出命名规范、采集间隔、高可用、联邦与长期存储要点",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "postgres",
+      "title": "PostgreSQL 运维调优",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "按主题索引 PostgreSQL 的 schema 设计、索引优化、MVCC/VACUUM、WAL、复制、备份恢复与 PgBouncer 配置参考",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "dbt-transformation-patterns",
+      "title": "dbt 数据转换",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "按 staging、intermediate、marts 分层组织 dbt 模型：命名约定、项目结构、数据质量测试与增量物化策略",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "sql-queries",
+      "title": "跨方言 SQL 查询",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "在 PostgreSQL、Snowflake、BigQuery、Redshift、Databricks 方言上写查询：函数对照、窗口函数、CTE 与漏斗留存模板",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "markdown-to-html",
+      "title": "Markdown 转 HTML",
+      "category": "fs-writing",
+      "categoryTitle": "写作内容",
+      "toolBacked": false,
+      "summaryZh": "用 marked、pandoc、gomarkdown 把 Markdown 转成 HTML，或接入 Jekyll、Hugo 模板系统渲染，含配置与安全注意项",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "crafting-effective-readmes",
+      "title": "README 写作",
+      "category": "fs-writing",
+      "categoryTitle": "写作内容",
+      "toolBacked": false,
+      "summaryZh": "按读者与项目类型编写、更新或复查 README：先判定任务是创建、新增、更新还是复查，再套用开源、个人、内部、配置四类模板与章节清单",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "agent-md-refactor",
+      "title": "Agent 指令重构",
+      "category": "fs-writing",
+      "categoryTitle": "写作内容",
+      "toolBacked": false,
+      "summaryZh": "把臃肿的 AGENTS.md、CLAUDE.md 按渐进式披露重构：找矛盾、留必需、归类、建链接文件、标可删除项，根文件压到 50 行内",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "prompt-engineer",
+      "title": "提示词工程",
+      "category": "fs-writing",
+      "categoryTitle": "写作内容",
+      "toolBacked": false,
+      "summaryZh": "设计、优化与评测 LLM 提示词：选对模式、写系统提示词与护栏、搭结构化输出 schema，并用测试集与指标衡量效果",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "spark-optimization",
+      "title": "Spark 优化",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "用分区、AQE、广播 join 与内存调参优化慢 Spark 作业，减少 shuffle 与数据倾斜",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "data-context-extractor",
+      "title": "数据上下文提取",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "探查数仓 schema 并追问实体、指标口径与过滤约定，生成公司专属的数据分析技能包",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "turborepo",
+      "title": "Monorepo",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "配置并排查 Turborepo 构建：任务依赖流水线、本地与远程缓存、--affected 增量构建",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "pnpm-upgrade",
+      "title": "pnpm 升级",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "按九步升级 pnpm 工具链：查版本与完整性值、预检 CI 引导路径、对齐 packageManager",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "supabase-postgres-best-practices",
+      "title": "Postgres 规范",
+      "category": "fs-infra",
+      "categoryTitle": "工程基建",
+      "toolBacked": false,
+      "summaryZh": "Supabase 维护的 Postgres 规则库：索引与查询、连接管理、RLS 安全、schema 设计，附正误 SQL 对照",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "title": "并行派 Agent",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "把 2 个以上互不依赖的任务分派给并行 subagent：判断独立性、写聚焦提示词、汇总整合",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "title": "Git 分支与版本",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "分支模型与版本策略：主干开发、分支命名、原子提交与 worktree，以及语义化版本、tag 与 changelog",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "title": "分支收尾",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "实现完成后的分支收尾：跑全量测试、探测仓库或 worktree 环境，再选本地合并、开 PR 或保留",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "github-gem-seeker",
+      "title": "开源方案猎手",
+      "category": "fs-collab",
+      "categoryTitle": "协作复盘",
+      "toolBacked": false,
+      "summaryZh": "先搜 GitHub 上经久经考验的开源项目而不是自己写，按 stars 与维护度分四级选型并直接解决问题",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "agentic-eval",
+      "title": "自评迭代模式",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "为 agent 输出搭「生成→评审→改进」循环：反思、评估器-优化器、评分量表与 LLM 评审，附 Python 代码",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "verification-before-completion",
+      "title": "完工前取证",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "在声称完成、修好或通过之前强制先跑一遍验证命令并读完输出：给出门函数五步、常见失败对照表与借口拦截表",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "performance",
+      "title": "网页性能优化",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "按真实用户指标定位瓶颈后动手优化：关键渲染路径、图片与字体、缓存、运行时与三方脚本，逐项附可直接套用的代码模式",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "web-perf",
+      "title": "网页性能审计",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "采性能 trace 并对照 CWV 阈值，逐阶段审计网络、无障碍与打包配置，输出按影响排序的整改清单",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "accessibility",
+      "title": "无障碍合规审计",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "按 WCAG 2.2 逐条审计并修复网页无障碍：对比度阈值、键盘与焦点、目标尺寸、表单标签、ARIA 与测试清单",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "sql-optimization-patterns",
+      "title": "SQL 查询优化",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "读 EXPLAIN 定位慢查询，用 B-Tree/GIN/覆盖索引消除全表扫描与 N+1，附 PostgreSQL 语句",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "code-documenter",
+      "title": "代码文档化",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "补 docstring 与 JSDoc、生成 OpenAPI 规格与文档站、写用户指南，并校验示例可编译，产出覆盖率报告",
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "name": "web-design-reviewer",
+      "title": "界面视觉巡检",
+      "category": "fs-quality",
+      "categoryTitle": "质量排查",
+      "toolBacked": false,
+      "summaryZh": "用截图逐屏巡检线上或本地页面，再回源码修布局溢出重叠、响应式断点与视觉不一致，产出问题清单与修复前后对照",
+      "toolGap": "",
+      "icon": ""
     }
   ]
 }
