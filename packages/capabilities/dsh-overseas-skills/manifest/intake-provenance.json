@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "第三方技能来源留底（SOP §12.2）：批次 / 原始单元 / 逐文件 sha256 / 许可证结论 / 已应用的修补。失去 .git 内置版本控制后，靠它做升级比对与回滚。",
     "from": "/Users/lute/Downloads/skills",
-    "updated": "2026-09-15T10:27:30.238Z"
+    "updated": "2026-09-15T12:20:09.736Z"
   },
   "skills": {
     "meeting-minutes": {
@@ -850,16 +850,18 @@
       "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/postgres.zip",
       "license": "MIT",
       "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
-      "installedAt": "2026-09-15T10:23:35.829Z",
+      "installedAt": "2026-09-15T12:20:10.312Z",
       "translated": true,
       "usageReadme": true,
       "repairs": {
         "dropped": [],
-        "rewrote": 0,
+        "rewrote": 24,
         "regenerated": [],
         "accepted": [],
         "unwrapped": null,
-        "knownGaps": []
+        "knownGaps": [
+          "正文带**上游的厂商推广内容**：SKILL.md 的 references 清单与该文件本身都在介绍 PlanetScale 托管的 Postgres，`references/ps-insights.md` 整篇是 PlanetScale Query Insights 的用法（含 MCP server 工具表、dashboard 走查、`pginsights.*` 参数）。按本仓库「上游正文不改、只修坏掉的东西」的口径**逐字保留、未裁剪**（2026-09-15 经用户确认）；若本体系不用 PlanetScale 托管，这部分对读者的信息价值有限——要不要裁是内容策略，需另立决定。"
+        ]
       },
       "lintWarnings": [],
       "files": {

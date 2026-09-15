@@ -34,6 +34,7 @@ const GN_SKILL_M = /export const SKILLS_GN = (\[[\s\S]*?\]);\n/.exec(catSrc);
 const SKILLS_GN = GN_SKILL_M ? JSON.parse(GN_SKILL_M[1]) : [];
 
 const errors = [];
+let iconPaintNote = "";
 // ① 名字唯一
 const names = SKILLS.map((s) => s.name);
 if (new Set(names).size !== names.length) {
@@ -52,6 +53,49 @@ for (const s of [...SKILLS, ...SKILLS_FS, ...SKILLS_GN]) {
   if (!icon) emptyIcon.push(s.name);
 }
 if (emptyIcon.length) errors.push(`无图标行: ${emptyIcon.join(", ")}`);
+
+// ②-2 头像 SVG 的 paint 值必须合法（2026-09-15 新增，ADR-0090）
+//
+// 起源是一次**没有任何判据在看**的缺陷：生成器 `lute-brand-icons/lib/generator.js`
+// 把衬衫**名**（`G`/`GD`/`GL`/`MINT`/`W`）当作颜色**值**传进 `shoulders()`，产物里于是
+// 写着 `fill="W"` / `fill="GD"`——都不是合法 CSS 颜色，SVG 按规范回落到默认黑，
+// **每一枚图标的下装都是纯黑**。它活了很久，因为「深色下装」看着像设计而不像坏值。
+//
+// 「图标覆盖」那一项只问「这一行有没有图」，不问「这张图能不能正确渲染」——
+// 两者是不同的断言，正是本仓库记的 P-02（仪器量错了对象）。
+// 判据挂在这里而不是生成器里：生成器在本机 `~/.dsh/skills/` 下、不进仓库，
+// 而门禁能守的只有**被消费的那份产物**。
+{
+  const paint = /(?:fill|stroke)="([^"]*)"/g;
+  // 合法取值：颜色字面量 / 本文件内的渐变引用 / none / rgba() / transparent
+  const ok = /^(?:#[0-9A-Fa-f]{3,8}|url\(#[\w-]+\)|none|rgba?\([^)]*\)|transparent)$/;
+  const uris = new Set();
+  for (const uri of [...catIcon.values(), ...SKILLS.map((s) => s.icon), ...SKILLS_FS.map((s) => s.icon), ...SKILLS_GN.map((s) => s.icon)]) {
+    if (typeof uri === "string" && uri.startsWith("data:image/svg+xml;base64,")) uris.add(uri);
+  }
+  const bad = [];
+  let attrs = 0;
+  for (const uri of uris) {
+    const svg = Buffer.from(uri.slice("data:image/svg+xml;base64,".length), "base64").toString("utf8");
+    if (!svg.startsWith("<svg")) {
+      bad.push(`data URI 解不出 SVG（前 40 字符：${svg.slice(0, 40)}）`);
+      continue;
+    }
+    for (const m of svg.matchAll(paint)) {
+      attrs += 1;
+      if (!ok.test(m[1])) bad.push(`${m[0]}`);
+    }
+  }
+  // 空转哨兵：一批 SVG 里一个 fill/stroke 都没解出来 ⇒ 判据在骗人（切片口径写错就会这样），
+  // 而「零违规」与「什么都没看」必须在读数上不同形。
+  if (uris.size > 0 && attrs === 0) {
+    errors.push(`头像判据空转：解出 ${uris.size} 枚 SVG 却一个 fill/stroke 都没有 —— 先确认 base64 切片口径`);
+  }
+  if (bad.length) {
+    errors.push(`头像 paint 值非法（${bad.length} 处，SVG 会回落到默认黑）：${[...new Set(bad)].slice(0, 6).join(" / ")}`);
+  }
+  iconPaintNote = `${uris.size} 枚 / ${attrs} 个 paint 值全合法`;
+}
 // ②b v3 二级结构：8 大场景 / 28 细分 / 行级 subcategory 全覆盖 / 无 preset 残留
 const scenCount = CATEGORIES.length;
 const subCount = CATEGORIES.reduce((n, c) => n + (c.subs || []).length, 0);
@@ -171,4 +215,4 @@ if (errors.length) {
   errors.forEach((e) => console.error("  - " + e));
   process.exit(1);
 }
-console.log(`✓ verify_static 通过：${CATEGORIES.length} 大场景/${subCount} 细分 + FS ${CATEGORIES_FS.length} 组 / ${SKILLS.length}+${SKILLS_FS.length} 行 + GN ${CATEGORIES_GN.length} 组 / ${SKILLS_GN.length} 行 / 名字唯一 / 图标覆盖 / ${refs} 条路由引用无悬空 / 三线名单无漂移 / 运行时前提：${runtimeNote}`);
+console.log(`✓ verify_static 通过：${CATEGORIES.length} 大场景/${subCount} 细分 + FS ${CATEGORIES_FS.length} 组 / ${SKILLS.length}+${SKILLS_FS.length} 行 + GN ${CATEGORIES_GN.length} 组 / ${SKILLS_GN.length} 行 / 名字唯一 / 图标覆盖（${iconPaintNote}） / ${refs} 条路由引用无悬空 / 三线名单无漂移 / 运行时前提：${runtimeNote}`);

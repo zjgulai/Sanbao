@@ -54,6 +54,20 @@ CAT_ASSIGN = {
 mapping = json.load(open(os.path.join(ROOT, "scripts", "81-mapping.json"), encoding="utf-8"))
 SKILL_ASSIGN = {s["name"]: f"sk-{s['name']}" for s in mapping["skills"]}
 
+# 非 81 系的出海技能 → lute-brand-icons 的 catalog id。
+#
+# 这三条此前**没有映射**，靠下面「沿用上一轮 skill-icons.json 里的字节」那条路活着。
+# 那条路的代价在 2026-09-15 显形：生成器把衬衫名当颜色传进 shoulders()，
+# 产物里是 `fill="W"`/`fill="GL"`（非法值 ⇒ SVG 回落到纯黑），而**这三枚因为是沿用的旧字节，
+# 修好生成器也照不到它们** —— 生成器的修复被「上一次的产物」挡在门外。
+# 把来源写成表，等于把「上一轮的产物」换回「catalog」这个真正的家：
+# 现在 84 枚全部由 catalog 现算，生成器一改就全都跟着改。
+EXTRA_ASSIGN = {
+    "agent-browser": "qa-tester",
+    "lieflat-charts": "data-scientist",
+    "self-improvement": "ai-assistant",
+}
+
 
 def main():
     lute = json.load(open(LUTE, encoding="utf-8"))
@@ -64,20 +78,27 @@ def main():
             raise SystemExit(f"缺失头像：{icon_id}")
         cat_icons[key] = by_id[icon_id]
     skill_icons = {}
-    # 保留既有自定义图标（非 81 系，如 self-improvement/agent-browser），避免重跑管线时抹掉手工头像
+    # ① 先按显式映射从 catalog 现算（81 系 + EXTRA_ASSIGN 的非 81 系）。
+    #    顺序很重要：算完再谈「沿用」，否则沿用会把现算的结果盖掉。
+    for name, icon_id in {**SKILL_ASSIGN, **EXTRA_ASSIGN}.items():
+        if icon_id not in by_id:
+            raise SystemExit(f"缺失头像：{icon_id}（{name}）")
+        skill_icons[name] = by_id[icon_id]
+    # ② 兜底沿用：既不在 81 系、也不在 EXTRA_ASSIGN 里的名字，保留上一轮字节，
+    #    但**必须把保留了谁打出来**。静默沿用正是这三枚带着旧 bug 活下来的原因：
+    #    生成器修好了，而它们读的是「上一次的产物」，没人会注意到。
     prev_path = os.path.join(ROOT, "manifest", "skill-icons.json")
     if os.path.isfile(prev_path):
         try:
             prev = json.load(open(prev_path, encoding="utf-8"))
-            for name, uri in prev.items():
-                if name not in SKILL_ASSIGN:
-                    skill_icons[name] = uri
-        except Exception:
-            pass
-    for name, icon_id in SKILL_ASSIGN.items():
-        if icon_id not in by_id:
-            raise SystemExit(f"缺失头像：{icon_id}")
-        skill_icons[name] = by_id[icon_id]
+            carried = sorted(n for n in prev if n not in skill_icons)
+            for name in carried:
+                skill_icons[name] = prev[name]
+            if carried:
+                print(f"⚠️ 沿用上一轮字节（{len(carried)} 条，未在 81 系或 EXTRA_ASSIGN 里）："
+                      f"{', '.join(carried)} —— 若要它们跟着生成器走，请补进 EXTRA_ASSIGN")
+        except Exception as e:  # noqa: BLE001
+            print(f"⚠️ 读不到上一轮 skill-icons.json，跳过沿用：{e}")
     json.dump(cat_icons, open(os.path.join(ROOT, "manifest", "category-icons.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     json.dump(skill_icons, open(os.path.join(ROOT, "manifest", "skill-icons.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     # AI全栈（fs-*）：8 分类 + 29 技能
