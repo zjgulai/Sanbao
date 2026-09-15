@@ -123,10 +123,17 @@
   `category-icons-gn.json` / `skill-icons-gn.json`，而这两份仓库清单此前是**陈旧导出**
   （内容与 lute-brand-icons 当前 catalog 不一致：`gn-cat-gn-data` 的徽章已由柱状图改为仪表盘、
   `sk-gn-chart-gen` 的衬衫已由 `G` 改为 `GD`）。枚数与键序不变，本提交一并对齐。
-- **未取得读数**：SOP 第 4 项运行层验收（`/api/dsh-overseas-skills/fullstack-list` 的 fs 组计数）
-  **仍是旧值 30**——宿主进程内存持有 catalog，生效需重启 DSH；本会话若重启会被中断，
-  故**未运行**，不写成通过。重启后各组期望条目数（由 `fullstack-mapping.json` 推导，可直接对账）：
-  clarify 7 / spec 7 / architecture 10 / implement 5 / quality 12 / infra 17 / collab 7 / writing 5 = **70**。
+- **运行层验收只取到一半，两半要分开说。** 接口读数
+  （`/api/dsh-overseas-skills/fullstack-list`）**仍是旧值 30**：宿主进程内存持有 catalog，
+  生效需重启 DSH，而重启会中断当时会话 ⇒ 这一项**未运行**，不写成通过。
+  但「数据对不对」与「进程换没换」是两个问题。前者拿到了读数：进程外直接 import 宿主实际装载的
+  `lib/catalog.js`，按 `handleFullstackList → buildGroupsLegacy` 的同一条分组语义
+  （`skill.category === cat.key`）跑一遍 —— clarify 7 / spec 7 / architecture 10 /
+  implement 5 / quality 12 / infra 17 / collab 7 / writing 5 = **70**，
+  **与由映射推导的期望值逐组相等**；同轮读数：缺图标 0 / 未安装 0 /
+  frontmatter 缺 `description` 0 / 未被任何分组收纳 0。
+  ⇒ 重启后接口应当直接对上这组数字；**若对不上，问题在进程而不在数据**——
+  这正是把「三态」压成两态会丢掉的那一维。
 - **已知未修（须用户决定，另一次提交）**：lute-brand-icons 的 `lib/generator.js`
   把**衬衫名**当颜色传进 `shoulders()`（`shoulders(shirt, …)`，而紧邻的 `COLLARS`
   用的是 `${W}`/`${G}` 值），于是 `fill="W"` / `fill="GD"` 都不是合法颜色值，
