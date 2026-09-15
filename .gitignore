@@ -58,7 +58,6 @@ credentials*
 *.bak
 *.pre-*
 *.orig*
-dsh-overseas-skills/backup/
 dsh-chatui-fix/
 dsh-chatui-fix-backup/
 
