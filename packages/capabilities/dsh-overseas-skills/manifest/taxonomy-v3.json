@@ -673,5 +673,22 @@
     "wizard",
     "writing-for-agents",
     "simplify-codebase"
+  ],
+  "genericNames": [
+    "audience-adapter",
+    "chart-gen",
+    "copy-editor",
+    "guizang-ppt-skill",
+    "humanizer-zh",
+    "markdown-mermaid-writing",
+    "meeting-minutes",
+    "minimax-pdf",
+    "sn-da-excel-workflow",
+    "sn-da-non-spreadsheet-analysis",
+    "sop-writer",
+    "validate-data",
+    "weighted-scoring",
+    "work-report-writer",
+    "xindaya-translator"
   ]
 }

@@ -1,0 +1,238 @@
+{
+  "_meta": {
+    "generated": "2026-09-15T03:07:58.021Z",
+    "generator": "scripts/scan-runtime-deps.mjs",
+    "from": "/Users/lute/Downloads/skills",
+    "partialScan": true,
+    "note": "本次是局部扫描（--skills），已并入既有 manifest。全量重扫请不带 --skills。",
+    "venvPython": "/Users/lute/.dsh/skills-runtime/.venv/bin/python"
+  },
+  "scan": {
+    "units": 1,
+    "withDeps": 1,
+    "overridden": 1,
+    "broken": 1,
+    "preserved": 4
+  },
+  "broken": {
+    "chart-gen": [
+      "scripts/package.json（package.json 解析失败/非文本）"
+    ]
+  },
+  "skills": {
+    "chart-gen": {
+      "source": "kimi",
+      "overridden": true,
+      "note": "纯 Node 实现（Vega-Lite + Sharp），**不需要 matplotlib**。注意 scripts/package.json 在来件里已损坏，依赖取自 scripts/chart.mjs 的 import。这三个包必须装进技能自己的 scripts/ 里（chart.mjs 是 `import 'vega'` 解析的），装全局没用。",
+      "python": [],
+      "cli": [],
+      "node": [
+        {
+          "pkg": "vega",
+          "install": "skill-local"
+        },
+        {
+          "pkg": "vega-lite",
+          "install": "skill-local"
+        },
+        {
+          "pkg": "sharp",
+          "install": "skill-local"
+        }
+      ]
+    },
+    "guizang-ppt-skill": {
+      "source": "kimi",
+      "overridden": true,
+      "note": "无运行时依赖。扫描器一度把正文里的 `dot` 认成 Graphviz —— 已用「命令必须带参数」规则修掉，此处留档防复发。",
+      "python": [],
+      "cli": [],
+      "node": []
+    },
+    "sn-da-excel-workflow": {
+      "source": "manus",
+      "overridden": true,
+      "note": "openpyxl/pandas 是主干；matplotlib/numpy 用于条件格式与图表；scipy/scikit-learn/seaborn 只在个别 capability 子技能里用到；IPython.display 只为 notebook 里好看，脚本上下文可缺。",
+      "python": [
+        {
+          "pip": "openpyxl",
+          "module": "openpyxl",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "pandas",
+          "module": "pandas",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "numpy",
+          "module": "numpy",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "matplotlib",
+          "module": "matplotlib",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "scipy",
+          "module": "scipy",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "scikit-learn",
+          "module": "sklearn",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "seaborn",
+          "module": "seaborn",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "ipython",
+          "module": "IPython",
+          "optional": true,
+          "why": "只用于 jupyter 里 display()，脚本上下文可缺",
+          "evidence": [
+            "override"
+          ]
+        }
+      ],
+      "cli": [],
+      "node": []
+    },
+    "sn-da-non-spreadsheet-analysis": {
+      "source": "manus",
+      "overridden": true,
+      "note": "libreoffice **是软依赖**：只在旧格式 .doc/.ppt 上走 Method 0 转换（capability/word-analysis line 14/267、capability/ppt-analysis line 16/328 实测）。.docx/.pptx 直接走 python-docx/python-pptx，不需要它。",
+      "python": [
+        {
+          "pip": "python-docx",
+          "module": "docx",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "python-pptx",
+          "module": "pptx",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "openpyxl",
+          "module": "openpyxl",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "pandas",
+          "module": "pandas",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "PyMuPDF",
+          "module": "fitz",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "pdfplumber",
+          "module": "pdfplumber",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "Pillow",
+          "module": "PIL",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "lxml",
+          "module": "lxml",
+          "evidence": [
+            "override"
+          ]
+        }
+      ],
+      "cli": [
+        {
+          "bin": "libreoffice",
+          "brew": "libreoffice",
+          "optional": true,
+          "why": "仅旧格式 .doc/.ppt 转换；.docx/.pptx 不需要它",
+          "evidence": [
+            "override"
+          ]
+        }
+      ],
+      "node": []
+    },
+    "minimax-pdf": {
+      "source": "minmax",
+      "overridden": true,
+      "note": "matplotlib 用于 mathtext 公式与 chart 块（SKILL.md line 113–115 实测）；playwright 走 npm -g 安装，不是 brew 公式；跑 render_cover.js 才需要浏览器。",
+      "python": [
+        {
+          "pip": "reportlab",
+          "module": "reportlab",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "pypdf",
+          "module": "pypdf",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "matplotlib",
+          "module": "matplotlib",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "numpy",
+          "module": "numpy",
+          "evidence": [
+            "override"
+          ]
+        }
+      ],
+      "cli": [],
+      "node": [
+        {
+          "pkg": "playwright",
+          "optional": true,
+          "why": "只有 render_cover.js 走无头浏览器；纯 PDF 生成不需要"
+        }
+      ]
+    }
+  }
+}

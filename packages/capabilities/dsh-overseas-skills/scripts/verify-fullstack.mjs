@@ -20,6 +20,7 @@ const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const problems = [];
 let installed = 0, translated = 0;
+let presetCopiesNote = "预设副本未核对";
 for (const s of MAPPING.skills) {
   const file = join(SKILLS_DIR, s.name, "SKILL.md");
   if (!existsSync(file)) { problems.push(`${s.name}: 未安装`); continue; }
@@ -69,11 +70,32 @@ for (const [name, needle] of Object.entries(smoke)) {
   if (existsSync(p) && !readFileSync(p, "utf8").includes(needle)) problems.push(`${name}: 路由目标 ${needle} 未出现在正文`);
 }
 // 预设 3 技能未被触碰（预设目录仍含旧副本）
+//
+// 这一条的射程**依赖本机装没装那个 preset**，不是仓库产物。原实现把「预设目录不在本机」
+// 报成「副本丢失」——两者是不同的东西：前者是环境事实，后者是数据被动了。
+// 实测 2026-09-15 本机 `~/.dsh/.agent-presets/` 下只有 agt-001..050 + bobo-cto + lute-cordis，
+// `ai-product-developer` 这一组 preset 已不在（v3 重组时移出）。于是这条判据恒红，
+// 而恒红的判据与恒绿的判据一样没有信息量：人只会学会绕过它。
+// 现在：目录不在 → 跳过并说明；目录在 → 逐条核对，且条数取自 presets/preset-skills.json
+// 而不是硬编码的 3（硬编码会让「少了一条」与「改过清单」无法区分）。
 const PRESETS = join(homedir(), ".dsh", ".agent-presets");
-for (const n of ["tdd", "to-spec", "grill-me"]) {
-  const p = join(PRESETS, "ai-product-developer", "skills", n, "SKILL.md");
-  if (!existsSync(p)) problems.push(`预设副本丢失: ${n}`);
+const PRESET_ID = "ai-product-developer";
+const presetSkillsDir = join(PRESETS, PRESET_ID, "skills");
+if (!existsSync(presetSkillsDir)) {
+  presetCopiesNote = `预设 ${PRESET_ID} 不在本机（跳过副本核对，不判红）`;
+} else {
+  let expected = null;
+  try {
+    const ps = JSON.parse(readFileSync(join(ROOT, "presets", "preset-skills.json"), "utf8"));
+    expected = (ps.presets || []).find((p) => p.id === PRESET_ID)?.skills?.map((s) => s.name ?? s) ?? null;
+  } catch { /* 读不到就退回目录实读 */ }
+  const names = expected ?? readdirSync(presetSkillsDir);
+  for (const n of names) {
+    const p = join(presetSkillsDir, n, "SKILL.md");
+    if (!existsSync(p)) problems.push(`预设副本丢失: ${PRESET_ID}/skills/${n}`);
+  }
+  presetCopiesNote = `预设 ${PRESET_ID} 副本 ${names.length}/${names.length} 在`;
 }
-console.log(`AI全栈适配测试 | 安装 ${installed}/30 | 已汉译 ${translated}/30 | 问题 ${problems.length}`);
+console.log(`AI全栈适配测试 | 安装 ${installed}/30 | 已汉译 ${translated}/30 | ${presetCopiesNote} | 问题 ${problems.length}`);
 if (problems.length) { problems.forEach((x) => console.log("  - " + x)); process.exit(1); }
 console.log("✓ 30/30 全项通过");

@@ -1,0 +1,440 @@
+{
+  "_meta": {
+    "purpose": "通用技能线：分组 + tier + 行记录。归位（哪些技能属这条线）与接线（T0 常挂全部 preset）的唯一事实源。",
+    "schema": "groups[{key,title}] / skills[{src,name,title,category,categoryTitle,tier,summaryZh,userSummary,triggers,notUse,userTry,noRoleKind,noRoleReason,source,license,toolBacked,toolGap,icon}]",
+    "generatedBy": "scripts/build-generic-manifest.mjs（派生机械；唯一的人工判断是 T0 分档，家在 build-generic-manifest.mjs 的 T0_NAMES）",
+    "tierMeaning": "T0 = 常挂全部岗位 preset 的通用底座；T1 = 按岗位族挂。T0 名单的家是 build-generic-manifest.mjs 的 T0_NAMES（TIER_BY_NAME 由它派生）。",
+    "wiring": "T0 由 scripts/role-presets/generate.mjs 生成时并入每个 agt-* preset 的 skill-subset；此处不写进任何 preset 文件。",
+    "counts": {
+      "groups": 8,
+      "skills": 15,
+      "T0": 15,
+      "T1": 0
+    }
+  },
+  "groups": [
+    {
+      "key": "gn-writing",
+      "title": "文档与写作"
+    },
+    {
+      "key": "gn-data",
+      "title": "数据与表格"
+    },
+    {
+      "key": "gn-visual",
+      "title": "演示与图表"
+    },
+    {
+      "key": "gn-meeting",
+      "title": "会议与协作"
+    },
+    {
+      "key": "gn-process",
+      "title": "流程与规范"
+    },
+    {
+      "key": "gn-decision",
+      "title": "决策与评估"
+    },
+    {
+      "key": "gn-translation",
+      "title": "翻译与本地化"
+    },
+    {
+      "key": "gn-parsing",
+      "title": "资料解析"
+    }
+  ],
+  "skills": [
+    {
+      "src": "audience-adapter",
+      "name": "audience-adapter",
+      "title": "汇报口径适配",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "按受众（CEO、VP、技术负责人、运营）调整同一件事的信息粒度与语言，产出邮件或汇报要点",
+      "userSummary": "同一件事，对 CEO 和对技术团队说成两个版本",
+      "triggers": [
+        "向上汇报",
+        "给老板写邮件",
+        "跨部门同步",
+        "汇报材料",
+        "对齐口径"
+      ],
+      "notUse": "把一段时间的工作汇总成周期汇报用 work-report-writer；会议过程记录用 meeting-minutes",
+      "userTry": "把这次技术变更同步给 CEO，压到一页只留结论",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "同一件事对谁讲、讲到什么颗粒度，是跨岗位通用的沟通方法，50 个岗位都要向上汇报和跨部门对齐。它按受众做信息删减与语言转换，不产出某一岗位三条责任所要求的业务结论，因此不挂岗。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "copy-editor",
+      "name": "copy-editor",
+      "title": "营销文案精修",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "用七轮聚焦编辑逐轮打磨已有营销文案，聚焦清晰度、语气、证据与具体化，不从零重写",
+      "userSummary": "已有文案的转化力体检，七轮逐项打磨而不是推倒重写",
+      "triggers": [
+        "改文案",
+        "优化表达",
+        "读起来不顺",
+        "太冗长",
+        "润色文案"
+      ],
+      "notUse": "从零撰写新文案不在本技能范围；只想去掉 AI 腔而不做转化力打磨时用 humanizer",
+      "userTry": "这段产品页文案帮我按清晰度、证据、具体化过一遍",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "七轮文案编辑是跨岗位通用的写作打磨方法，任何岗位改自己手里的对外文字时都能用。它只提升表达、不改变核心信息，也不产出某一岗位三条责任所要求的业务产物，因此不挂岗。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "humanizer-zh",
+      "name": "humanizer-zh",
+      "title": "去 AI 味（中文）",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "按中文语料特征改写文本，去掉 AI 腔的套话、排比与过度修饰，读起来像人写的",
+      "userSummary": "让稿子读起来像人写的，不再一股 AI 腔",
+      "triggers": [
+        "去 AI 味",
+        "太像 AI 写的",
+        "润色成真人语气",
+        "humanize"
+      ],
+      "notUse": "需要的是严格校对纠错而不是语感改写时，用 copy-editor",
+      "userTry": "这段周报读着太像 AI 写的，帮我改成真人语气",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "语言风格改写是任何岗位写作时的通用步骤，不承载某一岗位的三条责任中的任何一条。选中文语料版本而非 Manus 的英文版：T0 是常挂全部 50 个中文岗位 preset 的通用池，基于英文 AI 高频词的词表在中文文本上会误判。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "markdown-mermaid-writing",
+      "name": "markdown-mermaid-writing",
+      "title": "技术文档与图表写作",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "用 Markdown 加内嵌 Mermaid 图写文档，含 24 种图型指引、9 套模板与统一排版规范",
+      "userSummary": "写 Markdown 文档时随手把关系画成可 diff 的图",
+      "triggers": [
+        "写文档",
+        "画流程图",
+        "加个架构图",
+        "Markdown 排版",
+        "关系图"
+      ],
+      "notUse": "要导出栅格图片（PNG/SVG）时用 chart-gen；做网页演示用 guizang-ppt-skill",
+      "userTry": "把这份方案写成 md，用 Mermaid 画个数据流转图",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "把关系画成可 diff 的文本图、按统一规范写 Markdown，是跨岗位通用的文档层约定，任何岗位产出报告、分析、说明时都适用。它规定的是「怎么写」，不产出某一岗位三条责任所要求的业务结论，因此不挂岗。",
+      "source": "manus",
+      "license": "Apache-2.0",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "minimax-pdf",
+      "name": "minimax-pdf",
+      "title": "排版级 PDF 生成",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "用令牌化设计系统把内容排成印刷级 PDF，含新建、填表单与重排版三条路由与 15 种文档类型",
+      "userSummary": "把内容排成一份拿得出手的正式 PDF，带封面和版式",
+      "triggers": [
+        "生成 PDF",
+        "做个报告 PDF",
+        "填这个表单",
+        "排版文档",
+        "简历 PDF"
+      ],
+      "notUse": "封面渲染依赖 Node 侧 playwright 与 Chromium（正文与表单填写只需 reportlab 与 pypdf）；做网页演示用 guizang-ppt-skill",
+      "userTry": "把这份 Markdown 报告排成正式 PDF，要封面和目录",
+      "noRoleKind": "TOOL_ONLY",
+      "noRoleReason": "纯渲染与格式产出形态：把任意内容按令牌化设计系统排成印刷级 PDF，或填充已有 PDF 表单、重排既有文档。设计令牌只决定观感（配色与字体按文档语义挑选），不含业务口径，也不参与任何经营判断；与已装库 docx/pptx/pdf 同属格式处理。故归 TOOL_ONLY，不挂岗。",
+      "source": "minmax",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "work-report-writer",
+      "name": "work-report-writer",
+      "title": "周报月报写作",
+      "category": "gn-writing",
+      "categoryTitle": "文档与写作",
+      "tier": "T0",
+      "summaryZh": "把零散工作记录与 git 提交整理成周报或月报，支持数据导向、叙事型与 OKR 对齐三种风格",
+      "userSummary": "零散记录和提交历史，整理成成型的周报或月报",
+      "triggers": [
+        "写周报",
+        "周报",
+        "月报",
+        "工作总结",
+        "迭代总结"
+      ],
+      "notUse": "同一件事要给不同层级出不同版本时用 audience-adapter；会议过程记录用 meeting-minutes",
+      "userTry": "把这个月的零散记录整理成月报，按 OKR 对齐风格写",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "周期性工作汇总（周报、月报、迭代总结）是全岗位共有的行政动作，不专属于任何一个岗位的职责。它把已有工作记录去碎片化后成文，不产生新的业务判断，也不对应三条责任中的任何一条，因此不挂岗。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "sn-da-excel-workflow",
+      "name": "sn-da-excel-workflow",
+      "title": "Excel 分析编排",
+      "category": "gn-data",
+      "categoryTitle": "数据与表格",
+      "tier": "T0",
+      "summaryZh": "按步骤编排 Excel 读写、清洗、筛选、分组统计与带格式导出，大文件自动转 Parquet 提速",
+      "userSummary": "多 Sheet 的 Excel 从清洗到汇总到导出，一条流水线走完",
+      "triggers": [
+        "分析这个 Excel",
+        "表格清洗",
+        "数据透视",
+        "多 Sheet 汇总",
+        "导出报表"
+      ],
+      "notUse": "处理 Word、PDF、PPT 用 sn-da-non-spreadsheet-analysis；核对分析结论是否站得住用 validate-data",
+      "userTry": "汇总每个 Sheet 的行数，并清洗表格里的空值",
+      "noRoleKind": "TOOL_ONLY",
+      "noRoleReason": "通用表格加工形态：读取、清洗、筛选、分组统计与导出，作用于用户给的任意表格数据，不携带任何业务口径（不知道什么是 GMV、不选品、不归因），产出的是数据加工结果而不是经营判断。与已装库 docx/pptx/xlsx 同属格式与数据加工形态，故归 TOOL_ONLY。注：这是本批四条 TOOL_ONLY 里把握最低的一条，理由是它的子技能里含「趋势分析」「KPI 指标分析」，比纯渲染更靠近分析；若与出海线的 ecommerce-sales-dashboard 那类自带业务口径的技能对比，本条仍不具口径，故仍判 TOOL_ONLY。",
+      "source": "manus",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "validate-data",
+      "name": "validate-data",
+      "title": "分析交付前核查",
+      "category": "gn-data",
+      "categoryTitle": "数据与表格",
+      "tier": "T0",
+      "summaryZh": "在分析交付前核查方法论、计算与统计陷阱，给出三级置信度与必须附上的注意事项",
+      "userSummary": "分析发出去之前先过一遍，把口径、算法和常见陷阱挑出来",
+      "triggers": [
+        "核查分析",
+        "数据核对",
+        "这结论靠谱吗",
+        "交付前检查",
+        "挑挑毛病"
+      ],
+      "notUse": "要从 Word、PDF、PPT 里提取数据用 sn-da-non-spreadsheet-analysis；Excel 清洗与重算用 sn-da-excel-workflow",
+      "userTry": "这份季度分析要发给管理层，先帮我挑挑毛病",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "交付前核查是跨岗位通用的分析纪律，任何岗位把自己或别人的分析送出去之前都用得上。它审的是方法与证据是否站得住，不产出任何岗位三条责任所要求的业务结论，因此不挂岗。",
+      "source": "manus",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "chart-gen",
+      "name": "chart-gen",
+      "title": "图表图片生成",
+      "category": "gn-visual",
+      "categoryTitle": "演示与图表",
+      "tier": "T0",
+      "summaryZh": "用 Node 版 Vega-Lite 渲染、Sharp 输出 PNG 或 SVG 图表图片，含折线、柱状、K 线与热力图",
+      "userSummary": "把数据丢进来，得到一张能直接贴进文档的图表图片",
+      "triggers": [
+        "生成图表",
+        "画个趋势图",
+        "做个柱状图",
+        "图表图片",
+        "导出 PNG"
+      ],
+      "notUse": "要可交互的网页图表或整页报告用 lieflat-charts；文档内的结构关系图用 markdown-mermaid-writing",
+      "userTry": "把这 12 个月的销售额做成一张 PNG 折线图",
+      "noRoleKind": "TOOL_ONLY",
+      "noRoleReason": "纯渲染与格式处理形态：输入任意 JSON 数据，输出 PNG/SVG 图片文件，不含任何业务语义——不选品、不诊断、不归因、不做经营判断。判据与已装库中同形态的 lieflat-charts 完全一致（后者亦判 TOOL_ONLY：「图表只是呈现外壳」）。故按协议 §5 归 GENERIC 工具类，不挂岗。",
+      "source": "kimi",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "guizang-ppt-skill",
+      "name": "guizang-ppt-skill",
+      "title": "网页 PPT 制作",
+      "category": "gn-visual",
+      "categoryTitle": "演示与图表",
+      "tier": "T0",
+      "summaryZh": "生成单文件 HTML 的横向翻页 PPT，提供电子杂志风与瑞士国际主义风两套模板",
+      "userSummary": "做一份能在浏览器直接翻页的分享 PPT，不用装工具",
+      "triggers": [
+        "做个 PPT",
+        "网页 PPT",
+        "杂志风 PPT",
+        "瑞士风",
+        "演示文稿"
+      ],
+      "notUse": "大段表格与图表叠加的场合不合适；要印刷级 PDF 版面用 minimax-pdf",
+      "userTry": "帮我做一份 15 分钟的分享 PPT，要杂志风",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "做分享用演示文稿是跨岗位共用的交付形态，任何岗位上台讲东西都可能用到。它提供的是版式与叙事弧骨架，讲什么内容、得出什么结论仍由岗位决定，因此不承载某一岗位的三条责任，不挂岗。",
+      "source": "kimi",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "meeting-minutes",
+      "name": "meeting-minutes",
+      "title": "会议纪要",
+      "category": "gn-meeting",
+      "categoryTitle": "会议与协作",
+      "tier": "T0",
+      "summaryZh": "把会议转写或零散笔记整理成含决议、行动项、负责人与截止日的结构化纪要",
+      "userSummary": "开完会把转写丢进来，直接得到决议和带负责人的行动项",
+      "triggers": [
+        "会议纪要",
+        "整理会议记录",
+        "行动项",
+        "开会记录",
+        "会议总结"
+      ],
+      "notUse": "只做纯语音转写而不整理成文档时不用；把一段时间的工作汇总成周期汇报用 work-report-writer",
+      "userTry": "把这段周会转写整理成纪要，列出行动项和负责人",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "任何岗位都要开会产生纪要，但纪要记录的是别人的决策与行动项，不产出该岗位自己三条责任所要求的工作产物。《AI组织变革》里没有哪一岗以「记录别人怎么开会」为责任内容，因此不挂岗。其产出可服务全部 50 个岗位的会后跟进环节。",
+      "source": "manus",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "sop-writer",
+      "name": "sop-writer",
+      "title": "流程文档编写",
+      "category": "gn-process",
+      "categoryTitle": "流程与规范",
+      "tier": "T0",
+      "summaryZh": "把口头描述的业务流程整理成含 RACI 分工、流程图、详细步骤与异常处理的 SOP 文档",
+      "userSummary": "把「平时都这么做」的流程写成带分工和异常处理的 SOP",
+      "triggers": [
+        "梳理流程",
+        "制定 SOP",
+        "明确分工",
+        "规范操作",
+        "流程文档"
+      ],
+      "notUse": "只记录一次会议的结论与行动项用 meeting-minutes；方案比选与加权打分用 weighted-scoring",
+      "userTry": "帮我梳理新品上架的流程，要 RACI 和异常处理",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "把隐性经验显性化成 SOP，是任何岗位在做交接、定分工、固化惯例时都要用的通用写作方法。它描述的是流程本身，不产出某一岗位三条责任所要求的业务结论，因此不挂岗。",
+      "source": "kimi",
+      "license": "Apache-2.0",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "weighted-scoring",
+      "name": "weighted-scoring",
+      "title": "加权评分决策",
+      "category": "gn-decision",
+      "categoryTitle": "决策与评估",
+      "tier": "T0",
+      "summaryZh": "引导完成候选方案、评估维度、权重分配、逐项评分与敏感性分析的多准则决策矩阵",
+      "userSummary": "几个方案选一个，用加权打分和敏感性分析把理由说清楚",
+      "triggers": [
+        "选哪个方案",
+        "加权评分",
+        "方案对比",
+        "技术选型",
+        "决策矩阵"
+      ],
+      "notUse": "只有两个选项且差异明显时不必套矩阵；核查已有分析结论是否可信用 validate-data",
+      "userTry": "帮我比较这三家供应商，按价格、交期、质量加权打分",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "多准则加权评估是跨岗位通用的决策框架，选供应商、选技术栈、选方案都用同一套方法。它只提供结构化的比较过程，具体选什么由岗位自己的业务判断决定，框架本身不承载任何一条责任，因此不挂岗。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "xindaya-translator",
+      "name": "xindaya-translator",
+      "title": "中英专业翻译",
+      "category": "gn-translation",
+      "categoryTitle": "翻译与本地化",
+      "tier": "T0",
+      "summaryZh": "按信达雅三层标准做中英双向翻译，覆盖学术、商务、技术与法律四域并附关键术语对照",
+      "userSummary": "中英互译并附术语对照，覆盖学术、商务、技术与法律",
+      "triggers": [
+        "翻译",
+        "中翻英",
+        "英翻中",
+        "合同翻译",
+        "技术文档翻译"
+      ],
+      "notUse": "面向目标市场的本地化改写不在本技能范围；只做中文写作打磨用 copy-editor",
+      "userTry": "把这份英文合同条款翻成中文，术语要准",
+      "noRoleKind": "GENERIC_OFFICE",
+      "noRoleReason": "中英互译是全岗位共用的语言能力，任何岗位都可能要读英文资料或把中文材料翻出去。它做的是等值转换，不产出经营结论，也不承担某一岗位三条责任中的任何一条。本地化适配属于 AGT-028 译境的职责，与本技能的语言转换不是一回事。",
+      "source": "kimi",
+      "license": "MIT",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    },
+    {
+      "src": "sn-da-non-spreadsheet-analysis",
+      "name": "sn-da-non-spreadsheet-analysis",
+      "title": "文档解析提取",
+      "category": "gn-parsing",
+      "categoryTitle": "资料解析",
+      "tier": "T0",
+      "summaryZh": "解析 Word、PDF、PPT 的正文与表格并跨文档汇总，.doc/.ppt 旧格式需 LibreOffice 转换",
+      "userSummary": "从 Word、PDF、PPT 里把表格和数字成规模地抽出来",
+      "triggers": [
+        "解析这个 PDF",
+        "提取文档表格",
+        "Word 分析",
+        "PPT 提取",
+        "合同分析"
+      ],
+      "notUse": "分析 Excel、CSV 用 sn-da-excel-workflow；生成排版级 PDF 用 minimax-pdf",
+      "userTry": "把这个 PDF 里的表格和数据都提取出来做成汇总表",
+      "noRoleKind": "TOOL_ONLY",
+      "noRoleReason": "纯文档解析与提取形态：把 .docx/.doc/.pdf/.pptx/.ppt 里的正文、表格、图表与格式信息抽成结构化数据，再跨文档汇总。它不携带业务口径、不产出经营结论——同一套流程解析采购合同和解析产品手册没有区别。与已装库 docx/pptx/pdf 处理件同属格式处理形态，故判 TOOL_ONLY。补充事实：其图片与纯图页识别走同级技能 sn-da-image-caption 的 caption.py，LibreOffice 只在 .doc/.ppt 旧格式转换时用到（.docx/.pptx 直接用 python-docx/python-pptx）。",
+      "source": "manus",
+      "license": "internal-only",
+      "toolBacked": false,
+      "toolGap": "",
+      "icon": ""
+    }
+  ]
+}

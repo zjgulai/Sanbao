@@ -114,7 +114,10 @@ export function assertNodeUsable() {
       env,
     })
   } catch (error) {
-    return { ok: false, detail: `起子进程失败：${String(error.message).slice(0, 160)}` }
+    // 显式收窄：`catch` 的绑定是 `unknown`，直接取 `.message` 在 checkJs 下不合法
+    // （包的 tsconfig 把 test/** 拉进程序后，这条会以 TS18046 冒出来）。
+    const msg = error instanceof Error ? error.message : String(error)
+    return { ok: false, detail: `起子进程失败：${msg.slice(0, 160)}` }
   }
   if (!stdout.includes(marker)) {
     return {

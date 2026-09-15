@@ -23,9 +23,12 @@ CATEGORY_ICONS_SVG = os.path.join(ROOT, "manifest", "category-icons.json")
 SKILL_ICONS = os.path.join(ROOT, "manifest", "skill-icons.json")
 CATEGORY_ICONS_FS = os.path.join(ROOT, "manifest", "category-icons-fs.json")
 SKILL_ICONS_FS = os.path.join(ROOT, "manifest", "skill-icons-fs.json")
+CATEGORY_ICONS_GN = os.path.join(ROOT, "manifest", "category-icons-gn.json")
+SKILL_ICONS_GN = os.path.join(ROOT, "manifest", "skill-icons-gn.json")
 LEGACY_SUMMARIES = os.path.join(ROOT, "scripts", "legacy-summaries.json")
 EXTRA_SKILLS = os.path.join(ROOT, "manifest", "extra-skills.json")
 FULLSTACK = os.path.join(ROOT, "manifest", "fullstack-skills.json")
+GENERIC = os.path.join(ROOT, "manifest", "generic-skills.json")
 OUT = os.path.join(ROOT, "presets", "preset-skills.json")
 CATALOG = os.path.join(ROOT, "lib", "catalog.js")
 TAXONOMY = os.path.join(ROOT, "manifest", "taxonomy-v3.json")
@@ -171,6 +174,9 @@ def main():
     fullstack = {"categories": [], "skills": []}
     if os.path.isfile(FULLSTACK):
         fullstack = json.load(open(FULLSTACK, encoding="utf-8"))
+    generic = {"groups": [], "skills": []}
+    if os.path.isfile(GENERIC):
+        generic = json.load(open(GENERIC, encoding="utf-8"))
     tax = {"scenarios": [], "mapping": {}}
     if os.path.isfile(TAXONOMY):
         tax = json.load(open(TAXONOMY, encoding="utf-8"))
@@ -189,6 +195,12 @@ def main():
     if os.path.isfile(SKILL_ICONS_FS):
         skill_svg_fs = json.load(open(SKILL_ICONS_FS, encoding="utf-8"))
     cat_icon_fs = {c["key"]: cat_svg_fs.get(c["key"], cat_svg.get('agent-tools', '')) for c in fullstack.get("categories", [])}
+    # 通用线图标：8 分组 + 15 行，由 assign_lute_icons.py 从 lute-brand-icons 的 manifest 取。
+    cat_svg_gn, skill_svg_gn = {}, {}
+    if os.path.isfile(CATEGORY_ICONS_GN):
+        cat_svg_gn = json.load(open(CATEGORY_ICONS_GN, encoding="utf-8"))
+    if os.path.isfile(SKILL_ICONS_GN):
+        skill_svg_gn = json.load(open(SKILL_ICONS_GN, encoding="utf-8"))
     m = json.load(open(MANIFEST, encoding="utf-8"))
     # v3：8 大场景（含细分场景 subs），不再使用 manifest 旧分组
     cats = [
@@ -288,13 +300,31 @@ def main():
             "toolBacked": False, "summaryZh": s.get("summaryZh", ""),
             "toolGap": "", "icon": skill_svg_fs.get(s["name"], "") or fs_cat_icon.get(s["category"], "") or cat_icon_fs.get(s["category"], ""),
         })
-    out = "// Generated from manifest/skills.json + marketing-skills.json + 81-skills.json + fullstack-skills.json + presets/preset-skills.json — do not edit by hand.\n"
+    # 通用技能线（第三条线）：自己的 8 个用途分组，**不并入**上面 8 大场景——
+    # 通用线的分组回答「这条技能干什么用」，8 大场景回答「这条技能属于出海业务的哪一段」，
+    # 两个问题不同，混在一起会让「通用」这个定语失去意义。
+    # 因此 GN 行不带 scenario/subcategory：它们本来就不在任何出海场景里。
+    gn_cats = [{"key": g["key"], "title": g["title"], "icon": cat_svg_gn.get(g["key"], "")} for g in generic.get("groups", [])]
+    gn_cat_icon = {g["key"]: cat_svg_gn.get(g["key"], "") for g in generic.get("groups", [])}
+    gn_skills = []
+    for s in generic.get("skills", []):
+        gn_skills.append({
+            "name": s["name"], "title": s["title"], "category": s["category"],
+            "categoryTitle": s.get("categoryTitle", s["category"]),
+            "tier": s.get("tier", ""),
+            "toolBacked": bool(s.get("toolBacked", False)), "summaryZh": s.get("summaryZh", ""),
+            "toolGap": s.get("toolGap", ""),
+            "icon": skill_svg_gn.get(s["name"], "") or gn_cat_icon.get(s["category"], ""),
+        })
+    out = "// Generated from manifest/skills.json + marketing-skills.json + 81-skills.json + fullstack-skills.json + generic-skills.json + presets/preset-skills.json — do not edit by hand.\n"
     out += "export const CATEGORIES = " + json.dumps(cats, ensure_ascii=False) + ";\n"
     out += "export const SKILLS = " + json.dumps(skills, ensure_ascii=False) + ";\n"
     out += "export const CATEGORIES_FS = " + json.dumps(fs_cats, ensure_ascii=False) + ";\n"
     out += "export const SKILLS_FS = " + json.dumps(fs_skills, ensure_ascii=False) + ";\n"
+    out += "export const CATEGORIES_GN = " + json.dumps(gn_cats, ensure_ascii=False) + ";\n"
+    out += "export const SKILLS_GN = " + json.dumps(gn_skills, ensure_ascii=False) + ";\n"
     open(CATALOG, "w", encoding="utf-8").write(out)
-    print(f"lib/catalog.js 已重建：{len(cats)} 大场景 / {len(skills)} 条 | AI全栈 {len(fs_cats)} 组 / {len(fs_skills)} 条")
+    print(f"lib/catalog.js 已重建：{len(cats)} 大场景 / {len(skills)} 条 | AI全栈 {len(fs_cats)} 组 / {len(fs_skills)} 条 | 通用 {len(gn_cats)} 组 / {len(gn_skills)} 条")
     if unmapped:
         print("taxonomy 未覆盖技能:", *sorted(set(unmapped)), sep="\n  ")
         sys.exit(1)

@@ -1,0 +1,456 @@
+{
+  "_meta": {
+    "purpose": "第三方技能来源留底（SOP §12.2）：批次 / 原始单元 / 逐文件 sha256 / 许可证结论 / 已应用的修补。失去 .git 内置版本控制后，靠它做升级比对与回滚。",
+    "from": "/Users/lute/Downloads/skills",
+    "updated": "2026-09-15T03:05:39.684Z"
+  },
+  "skills": {
+    "meeting-minutes": {
+      "batch": "manus",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/meeting-minutes.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:39.732Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "69420bbe78b2f6c81f9689672360dd97e71e9fc83045a70e3d6924f24973a789"
+      }
+    },
+    "humanizer-zh": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/humanizer-zh",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.740Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        ".gitignore": "e52aac198acd71945e1730f45cafba41fffda4e2a0d7d6a38175880aae8eabea",
+        "LICENSE": "aa00e74769e1b9d8e7fa7094dbfcca9b129a0ded6dce1cf4da050b99146d2fa7",
+        "README.md": "60cd3ed8b4753837ca8f8fcebf6076a38591a269d91ea1791aa7448e5a1b1b58",
+        "SKILL.md": "8d5425a0570f8ba1883d43348b8c97b95e0c336188bd49cc60871ac0179cbecf"
+      }
+    },
+    "validate-data": {
+      "batch": "manus",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/validate-data.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:39.782Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "SKILL.md": "1e424822043480375b80aef9416227b1c8083af749ca536568716265f79ca54b"
+      }
+    },
+    "copy-editor": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/copy-editor",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.789Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "b70d71e24e40fce5da8f4b6f9cd862096a048e433db7f3c8cac5e348e6d34591",
+        "SKILL.md": "79d3199f3b023cc6ae06f487446d0e79d5ac2b041896f66840190f3fd9f973fe",
+        "references/plain-english-alternatives.md": "1ca7027fade16756aaaa3101ef8ce88bab781b39a987feab260be3d9cc939691"
+      }
+    },
+    "audience-adapter": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/audience-adapter",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.791Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "5e8f707ac2fbf6c67949e2ab83ae4460023fa5859bc431310c6db7da0f7554cf",
+        "SKILL.md": "47f9c57bfb496e34dadea79ad1f45c439ccb30c28fbda108ba888a8e67326322"
+      }
+    },
+    "work-report-writer": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/work-report-writer",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.792Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "562a3089adf103772acb6f844c840e334cdabc35dfc84582d030a739ee742951",
+        "SKILL.md": "c4234127096264767a67c6add747994ef136a2108e1e238ba7e662c6ec14eb6d"
+      }
+    },
+    "sop-writer": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/sop-writer",
+      "license": "Apache-2.0",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.793Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [
+          "LICENSE.txt"
+        ],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "厂商标记文件损坏 1 个（安装时丢弃）：LICENSE.txt"
+      ],
+      "files": {
+        "SKILL.md": "6771c902f4df4970aa6ace7fb4e5061d72336cb5dd997e490ec49247d06f8600"
+      }
+    },
+    "weighted-scoring": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/weighted-scoring",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.795Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "3605b3eaca7ee6c0643d8055a4f8c6c2318a982b597e793ef0c4fffaa8d30db5",
+        "SKILL.md": "ba8a52c85d0940e28409a1e981395d22ec58700fa3f6eddea14f2c82526e1a08",
+        "scripts/decision_matrix.py": "24ff4e24686db8476d896b7c4531e23ad957315e8f9adaa29c6dffc4af4e8baa"
+      }
+    },
+    "xindaya-translator": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/xindaya-translator",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:39.796Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "LICENSE": "0b89dcf1c892b42807c1c4897d3d91d4e5c4d3755a87da85892a1e086889e438",
+        "SKILL.md": "c5f92a5b073ed2df6c9075b7f83dac89ddbb7447f7bdcdc2639b03a997838532"
+      }
+    },
+    "markdown-mermaid-writing": {
+      "batch": "manus",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/markdown-mermaid-writing.zip",
+      "license": "Apache-2.0",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:40.523Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "断引用 7 处：./README.md, ../markdown_style_guide.md, ../mermaid_style_guide.md, ../adr/ADR-001-agent-optimized-documentation-system.md"
+      ],
+      "files": {
+        "SKILL.md": "801fabc81393c8467f13ed705940468b95c3e61fdad33cb7cca7550cc7c99900",
+        "assets/examples/example-research-report.md": "05a9e64bf13415f2b4e49c46c02ce48869a4a4e4922d64b752b0cbc79fbbf6e0",
+        "references/diagrams/architecture.md": "a0ce8122c68ab040abedbd072315d86528bfbbf4167506c9449e672943b46bd5",
+        "references/diagrams/block.md": "37db54de9c926ae1b2ead4ec5c0641119d452b4ae09868df59fdfce71b244f63",
+        "references/diagrams/c4.md": "68e7f4b491cfee954f3d7228a67c78c34cb9171448d5e487fb4fed2e5e05078c",
+        "references/diagrams/class.md": "1700e36fe29e5aa687cc36b091126b86bc561688befa7f9496602a2852af9c66",
+        "references/diagrams/complex_examples.md": "d58319e3a4e8c9518dd477841b8d56b04fea37db5bce47ee4c3926c10ca55af8",
+        "references/diagrams/er.md": "86c581b8a9d6c65a245087ed82472926a5b0682214b771f3bdd59d0042c4e97e",
+        "references/diagrams/flowchart.md": "d450c52f59682f90715c11664715fa3770611434644896fe1b7c88092719a82a",
+        "references/diagrams/gantt.md": "b51ef540f6cae178c7d5b76cd9f6bf0229c5a2d6e995df5523cc49d3532a4128",
+        "references/diagrams/git_graph.md": "b93d7f713867f1c30fa879378e2624c047c324947ba0e0e739ad0dc0ff663ae0",
+        "references/diagrams/kanban.md": "b682c5f71713c7655ee992f895597ad1f6e9723efc2a62af1f2ce5e7b97cf886",
+        "references/diagrams/mindmap.md": "3a6dc95f7fce1e6c0842bb66e44c45a1ee6b9db017d62fc7e57f1b0f394dee8c",
+        "references/diagrams/packet.md": "2f456c0514b1ae521711f976b23445ea374cd9a02db0782ad86f1ccf16054e12",
+        "references/diagrams/pie.md": "94fdb61d0240f7e201538e910329ac1f0bae76e7fa2a4fc3f944d0b33fa99d6a",
+        "references/diagrams/quadrant.md": "861a023803e0d7e753118c5b1127ea33e984e8c48b245f5084239f0c4593dae7",
+        "references/diagrams/radar.md": "2024c1e28e8a2458bec6ca630e1c7f055a70227dcfb2c7861f4c5f8eed31c656",
+        "references/diagrams/requirement.md": "52b77e05935296d7a50b7056b220762061e4fb32e9ee44e2af5091b864ab2397",
+        "references/diagrams/sankey.md": "622a103a08da26bf3f194e52e1555513c1769d54806a22cefa6922c2d6add948",
+        "references/diagrams/sequence.md": "9457d93250240dd12d97b4d7481d4626f0fb262f1673f8f2d165e7f0321cbd74",
+        "references/diagrams/state.md": "a735d97bf574bba8cd0eea3beebbe99fad91770161782e28322c9408e0a74508",
+        "references/diagrams/timeline.md": "920a533f375fae3da53a30ddf7ac5538f36e55e0ead7309ed8aba05d5248e923",
+        "references/diagrams/treemap.md": "45980d28bba78eb7b83dd0b68f54561f3931a5ce26d096bb3f937b041d6244d4",
+        "references/diagrams/user_journey.md": "1c99799368a4121f84839a5eb82b75ad60e05ec6cd0f69589e2dece9d4e8aa50",
+        "references/diagrams/xy_chart.md": "4df50afcedd91e0bfbcc851ddde763e4d520d2e015b5b75775b35f5d542db9be",
+        "references/diagrams/zenuml.md": "69cfe24fd119eb3223d404dd9c07d58954cabbc70d2b3df3ecffd527f671ff2b",
+        "references/markdown_style_guide.md": "8e4f4b49339fbc125df3ce6983c4841f18b31a814a7cf866fa60568a03ed3a12",
+        "references/mermaid_style_guide.md": "a67987f78f2b39c6acb2980e866a92fecdee8efe1b6297e733dc8e94fec19c3b",
+        "templates/decision_record.md": "30192e491938d799284bc76dcf7e47600896a1815bd76a55c044bff2f47a2ead",
+        "templates/how_to_guide.md": "df0f491db8697c28914187c1375f4957644d055a512c7b6c92fec3abdadb1350",
+        "templates/issue.md": "66a7f0746f599e12208a7009d61f1296d3f9a642e430c9db4cddbe4ec8b53dc8",
+        "templates/kanban.md": "1d3e0d6f20628459bb73a63263a446d942441ced871bab4279918e2f33b82166",
+        "templates/presentation.md": "3753856520cf61d787c0ad9db640f0587dcf726df7c67a6bbf46b5c07e1b96a1",
+        "templates/project_documentation.md": "43da7e54717f97d31cec00a5a5576d838ada34fb1fa13563c2eb11820f122a21",
+        "templates/pull_request.md": "737981cb04acde56f9c0402445c9120c75c12270d17c30a3f9a3d95e660d22d1",
+        "templates/research_paper.md": "5fdcf37e2596b7a8e3917f3da3db9caf90fff5301932be68f9fe639f608815ca",
+        "templates/status_report.md": "090b5af7d41a417a365e44f4cb61f6d6e903e75d3daf8ea36edd9f67ee04d5a2"
+      }
+    },
+    "guizang-ppt-skill": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/guizang-ppt-skill",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:40.753Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [
+          "assets/motion.min.js"
+        ],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": [
+          "SKILL.md 与 references/ 共 16 处引用 assets/screenshot-backgrounds/（5+4 套内置背景），来件未随附该目录。截图取景相关版式会缺底图，需上游补件或改用自备背景。"
+        ]
+      },
+      "lintWarnings": [
+        "__MACOSX/._ 垃圾 1 项（安装时已过滤）"
+      ],
+      "files": {
+        "SKILL.md": "fa0d0b8f81c90477f652c1a790b6371a82aae788829d6edf6e3c7de64d1e7646",
+        "assets/template-swiss.html": "39f34f4b48768b719bf4f434dfbd577a44d0663e2c5083b4b0183440ff70c91a",
+        "assets/template.html": "a78c2375d8edf444269f57d4e8f67d9c6fa6b8be8e20528d5a91b0ec3c3a964e",
+        "references/checklist.md": "c5bcd3123db91a5934ff9ee1e2f3baa71fa59bab5b27eae7c785c6d7059025a6",
+        "references/components.md": "dca1b1d2476fde014f07217319f3ad90b8056255e221c680933b8db2aeddebb9",
+        "references/image-prompts.md": "dae1ce04bbeb75d5222dc2e5196d438af6512acbc125e91b1594b41a1850d6f8",
+        "references/layouts-swiss.md": "4eba0eb76e1adcff853236eedf32dd984970059ca5a849e86d02f917a7a88926",
+        "references/layouts.md": "c02ddebd043fcbeb82ccf9febf81d03451a46a812a79522dbc5c89c46c0e0488",
+        "references/screenshot-framing.md": "981ee5f10878a7cf039d31092ba8e76da6cf37b06144ea464df85afe19ea940b",
+        "references/swiss-layout-lock.md": "38d401bf65b78aba505dacf4fb6939e8b092f9d365d972f1339748389fc4ca27",
+        "references/swiss-map-component.md": "057db8cc245d2c3d760206dd73cd57a57e66c831ffc02c0c67ed799fc2092b8d",
+        "references/themes-swiss.md": "eec246cd44a1674990d6fe614ee32a59912695c317279a1b86d2710db0319bc8",
+        "references/themes.md": "a4bee3ef7b22d56fb904b0643a117368d85f0265ceccdf5111ad497fe22cc656",
+        "scripts/validate-swiss-deck.mjs": "66158ce5ce763b5886567a073a15d9b189521e5ac8e109782cb2451686dbeca1"
+      }
+    },
+    "chart-gen": {
+      "batch": "kimi",
+      "sourceUnit": "/Users/lute/Downloads/skills/kimi/skills/chart-gen",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:40.758Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [
+          "_meta.json"
+        ],
+        "rewrote": 3,
+        "regenerated": [
+          "scripts/package.json"
+        ],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "厂商标记文件损坏 1 个（安装时丢弃）：_meta.json",
+        "正文示例用原厂沙箱路径 2 处（应在入库时改写）：/data/clawd/tmp/my-chart.png, /data/clawd/tmp/"
+      ],
+      "files": {
+        "CAPABILITY.md": "ba1f23c8d65ecf2bfca3fc9c3deddedd42e470978cb36561f2453466e27f02b8",
+        "README.md": "b443251bca5dc9cf81f47bc2f91c831fbfe1f97719cc4b9f6082bfc53119706d",
+        "SKILL.md": "def86a5b0f7e931774e92b377b7c2b39938f5e620bea93b299156c4c1ff16ac5",
+        "scripts/chart.mjs": "5d5009bcab2abf7d75f39a3dc23df9c4d10036438e4e6d74fa0b0b83273c0ffe",
+        "scripts/package.json": "f8d3f543536d71064de538a1ac797d85d96fde89af63b4a2f4af4b4053b7907e"
+      }
+    },
+    "sn-da-excel-workflow": {
+      "batch": "manus",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/sn-da-excel-workflow.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:41.609Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [
+        "正文示例用原厂沙箱路径 8 处（应在入库时改写）：/mnt/data/result.xlsx, /mnt/data/comparison_analysis_chart.png, /mnt/data/analysis_report.xlsx",
+        "断引用 1 处：./{output_path}"
+      ],
+      "files": {
+        "SKILL.md": "47348dffc7c96c0f01d0d4113f3ab8d65bef58a2334555e98d5ea0139d1a6f9f",
+        "capability/excel-cell-coloring/category-coloring/SKILL.md": "d6e0201155cff41e3e2bccfcd032de111291cc6fa3130c02497f1964295e0a67",
+        "capability/excel-cell-coloring/duplicate-value-coloring/SKILL.md": "7a506a699d3e738f53ce6280327babd46bca2ddccba29b086bba2b4e25d5fa49",
+        "capability/excel-cell-coloring/outlier-coloring/SKILL.md": "d9f4512bf7ac409a7455669e1847d482172e82be16ebcfbc2eebd9705a78ca6e",
+        "capability/excel-cell-coloring/threshold-cell-coloring/SKILL.md": "539ded0021ba3acf2fdc758bd65ead3f303e3e023019c2a3ad021be56bd9168c",
+        "capability/excel-cell-coloring/top-value-coloring/SKILL.md": "8dce83c3b9e8cd025aeb97b6f206beb139f4fa7504b453df0814a0484ff6e29a",
+        "capability/excel-conditional-formatting/data-bar-formatting/SKILL.md": "f22a438b327233606622e70e3474c02f975248d14f4632a38ae51a1eefcd4b77",
+        "capability/excel-data-analysis/comparison-analysis/SKILL.md": "7ad779d213935f5087e0c998fa183be439d82fffdbac325b8bd88c99f9a945ce",
+        "capability/excel-data-analysis/group-by-analysis/SKILL.md": "aff257049757bf5ac6afa7147cca0f6fcd683ef7fa85d0ed25a8c56fb18f61eb",
+        "capability/excel-data-analysis/kpi-metric-analysis/SKILL.md": "97866770d864f5f510e8f1ed73002842cb371752bcb58724555ba748d799be8a",
+        "capability/excel-data-analysis/pivot-table-analysis/SKILL.md": "8af963f7cf600f9249d98eb77ae246ae64079f3cfcc2b094d1b4ab193d46673d",
+        "capability/excel-data-analysis/time-series-analysis/SKILL.md": "976886734b2615beb385d96ef8d78eb50811d0aedc3632948a24cf6ef61dbd4b",
+        "capability/excel-data-analysis/trend-analysis/SKILL.md": "12565195014959e913ee26ba369bb928aec2ce37549887573a2265165ab739c5",
+        "capability/excel-data-cleaning/duplicate-removal/SKILL.md": "4e635016ea259f3dea95621f51aa127c276fce12d63c0d788829e88aa733a99c",
+        "capability/excel-data-cleaning/invalid-data-cleaning/SKILL.md": "25a890b17ac40316bc33d02bdc969a5da517f15af88ee1bd9ea09bd5dab5dd6c",
+        "capability/excel-data-cleaning/missing-value-handling/SKILL.md": "514ea9975a943466588bc7b74efde47486509c020b1f128c2ab07f2eda865c0a",
+        "capability/excel-data-cleaning/numeric-format-normalization/SKILL.md": "28576fb2cc40ba5c9a4ba7c6349af7ef9a8a35b53eb9f2e89d75362e3426c57a",
+        "capability/excel-data-cleaning/outlier-detection/SKILL.md": "6d4ef501ac96e457d4ab3d775c83be08eb7ffd351772deb9d8b1855ce807a88c",
+        "capability/excel-data-cleaning/text-normalization/SKILL.md": "4f737becae53a43a6caaee35f3023049dd60cd6c16e7b65ac2d7df8523f7d4b2",
+        "capability/excel-data-filtering/category-filtering/SKILL.md": "491f09cc2f98526fdb5e615b7b26ecd4da9f43da724c021090ebe3db789987b5",
+        "capability/excel-data-filtering/condition-filtering/SKILL.md": "cf8c6d664e0245ba21f1976320997312e6647798920b237d1f0e08baf437b244",
+        "capability/excel-data-filtering/range-filtering/SKILL.md": "328a3c732d4317a083bd0220f5d4d74ada7a2b73e8206b2628198db858c510d6",
+        "capability/excel-data-filtering/threshold-filtering/SKILL.md": "91dfaf4f9852811e386131c462398112cf3c60b84180f93aab7eb776ec315615",
+        "capability/excel-data-statistics/basic-statistics/SKILL.md": "a4c80985f4a733a5fd82c1e8edd502074905108d0471df88f8346e68d9a35d9c",
+        "capability/excel-data-statistics/category-statistics/SKILL.md": "3fae4ce41aa0af6ab0c71e4be6399fcbea14459c784138789eb60be4a38f5562",
+        "capability/excel-data-statistics/grouped-statistics/SKILL.md": "6f9c47608f23c2d05a127408be6930b42ec495c9a1d8b9bbb37d1b0c0113c2f1",
+        "capability/excel-data-statistics/percentage-calculation/SKILL.md": "8e38e3a4751ba792ab373e8f206d639f19eefa8ba8a6f59b6c5fe0c8574ac677",
+        "capability/excel-data-visualization/bar-chart-visualization/SKILL.md": "cd2a81a532a94135c7841d1f790c3dcf414fec2946c193ba2767901cdcfe8162",
+        "capability/excel-data-visualization/histogram-visualization/SKILL.md": "148e4ece36fe3717873183f1a67ff05f0abd1714924aea6f4ac4d09561eabc04",
+        "capability/excel-data-visualization/line-chart-visualization/SKILL.md": "4d39e2ff4c04fdf87bdc1011d25a174d316e03d32d35adb08345d9b11e1b83c5",
+        "capability/excel-data-visualization/pie-chart-visualization/SKILL.md": "f4266ef75325ae9eead6bbb113e74b32d8ec1d7cd5d863f34c760071feb96e02",
+        "capability/excel-data-visualization/scatter-plot-visualization/SKILL.md": "40cd1c2706f009b1d9013961ed491d4ce6dcf174ae9941ae17b4fc7da75178eb",
+        "capability/excel-data-visualization/stacked-chart-visualization/SKILL.md": "767c48e99f3a8fc8f0ad1893105f62f928506738822ff74d3d8115ff6c2597fb",
+        "capability/excel-reading/large-excel-reading/SKILL.md": "28d0d70c66556cf7f1cf152a8b6b0abb05468124e5b54f8f46b9ec3d5f98f3bf",
+        "capability/excel-reading/multi-file-reading/SKILL.md": "bede26fe4dd8c7ef43b1913a727f64b05be844da615c2b8c9765e1b5d94f7f50",
+        "capability/excel-reading/multi-sheet-reading/SKILL.md": "0f860c163543f23079b91ec210b1f3341a07822ecb51ecb885f59eb52bc3cb98",
+        "capability/excel-reading/range-reading/SKILL.md": "4b8c8fcdd87377493b714f8ff4dbe041c5100adb22400d0c4e32c46b7a93d99d",
+        "capability/excel-reading/single-sheet-reading/SKILL.md": "84d603e8e091fd11d59c0a04c9a8ffc6d1916770688aa7bdc997fd8a7500b6f2",
+        "capability/excel-reading/specific-sheet-reading/SKILL.md": "391e5093095f862194c08fdd55f92a360a82392a4c6bbb07787df145db04a674",
+        "capability/excel-reading/structured-header-reading/SKILL.md": "33070ece70327fd3216da6c493dea6fc760b9765161be9ce08baa2f206fb14f7",
+        "capability/excel-result-export/chart-embedded-export/SKILL.md": "73bebfb64c8cd0dd7e18cbb4d9a2d4fa72244f8b14a70182ee41ac4be0be3d6f",
+        "capability/excel-result-export/formatted-export/SKILL.md": "57b0f63a866a4dd829be36695e7e072f89681cdc382aec433b6b952a8970a533",
+        "capability/excel-result-export/report-generation-export/SKILL.md": "5f1a618db974e69ee7f38ceaf7b7d846e361a12d8c3078bf15e282f1f7376811",
+        "capability/excel-result-export/single-sheet-export/SKILL.md": "28c511c0cb0986f2f8712386e41fd417afb3b5e33009a1de733ad0e75ea5bc4b",
+        "capability/excel-table-styling/table-theme-styling/SKILL.md": "2bdd1b059471820644ccc67b88126510db7796db7fdc936204fbf7f9a33bf913"
+      }
+    },
+    "sn-da-non-spreadsheet-analysis": {
+      "batch": "manus",
+      "sourceUnit": "/Users/lute/Downloads/skills/Manus/skill02/sn-da-non-spreadsheet-analysis.zip",
+      "license": "internal-only",
+      "licenseBasis": "无 LICENSE 文件且 frontmatter 未声明",
+      "installedAt": "2026-09-15T03:05:41.980Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": [
+          "扫描件与纯图页 OCR 依赖外部技能 sn-da-image-caption（不在本批，未安装）。文本类 .docx/.pptx/.xlsx 与可提取文字的 PDF 不受影响。"
+        ]
+      },
+      "lintWarnings": [
+        "正文示例用原厂沙箱路径 3 处（应在入库时改写）：/mnt/data/..., /mnt/data/report.pptx, /mnt/data/doc.docx"
+      ],
+      "files": {
+        "SKILL.md": "d472d8bd386131f929afe9cd51aacb1ee0a778021505a9453743e02b34d44b6e",
+        "capability/pdf-analysis/SKILL.md": "24a006cb7e92116adc4b309a404b7480730e1395d7cacdb7658d295ef50f9cbd",
+        "capability/ppt-analysis/SKILL.md": "d93099069252469a239ed9a339e56f1dea68e79f415b92eb857fb4966982d61c",
+        "capability/word-analysis/SKILL.md": "a7d512e2169960abba095d3d449f8806241827f63e3e89ffcaf5fd731c40a4fa"
+      }
+    },
+    "minimax-pdf": {
+      "batch": "minmax",
+      "sourceUnit": "/Users/lute/Downloads/skills/MinMax/skills/minimax-pdf",
+      "license": "MIT",
+      "licenseBasis": "实测 LICENSE 文件或 frontmatter 声明",
+      "installedAt": "2026-09-15T03:05:42.010Z",
+      "translated": false,
+      "repairs": {
+        "dropped": [],
+        "rewrote": 0,
+        "regenerated": [],
+        "accepted": [],
+        "unwrapped": null,
+        "knownGaps": []
+      },
+      "lintWarnings": [],
+      "files": {
+        "README.md": "ab7f0ee3ec300c87dee6f652b9bf96003ddd552c23a6c210ae1bb22cdd48396d",
+        "SKILL.md": "8b0497ddd27da142deb09b570a56f702f95e5f3f1e192cfe1ae24421416a408d",
+        "design/design.md": "870932013e86371697d88406273f8796830270a9171ac8065b13078acef6ffe2",
+        "scripts/cover.py": "ad6c6b927805c8d189869cd309e260e7a82a75cb809c92d4ca0627de4a724cfa",
+        "scripts/fill_inspect.py": "f048e44f5cc094c18790c4e8ff194d3ff6fe4018fa63bed148dd9730fff83467",
+        "scripts/fill_write.py": "afece596da883cc3bdfe112b9e46798b313312d93a05037b1bc5c3359502f993",
+        "scripts/make.sh": "c4f5c5a88be4b69f186f3712a357631dbf91be7233942e16144a864a914e25fb",
+        "scripts/merge.py": "4e194d8fe6a85a6d1981011c6f495be9a2c25c71bac5446c5386f0c3fb3e5660",
+        "scripts/palette.py": "520a55d4c3134a074fcfa24f1dab6369f489ca0a24b546f283064c3db17e86c1",
+        "scripts/reformat_parse.py": "1b5618ae2a423e9c0abb8eb7e1bf3c41d97ef24353b4a886432052170942f974",
+        "scripts/render_body.py": "7cdd0ad4cfd845eefabf641c41265c934639f4a43be2290b25c5e23313667c7e",
+        "scripts/render_cover.js": "5511c5b72d1e95e5fd8dc424c360d7ccd16fb70bc15235db327c1317cb875ba7"
+      }
+    }
+  }
+}

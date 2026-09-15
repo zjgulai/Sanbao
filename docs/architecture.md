@@ -26,6 +26,7 @@
 | `adr-note-links` | 是 | ADR 的「决策记录」链接可达，且 Note 正文回引该 ADR 编号（ADR-0015） |
 | `exemptions-frozen` | 是 | 豁免条目只减不增、期限不延后、到期即失败（ADR-0014） |
 | `profile-files-sync` | 是 | profile 副本必须与包 `package.json` 的 `files` 清单一致：清单声明但源码无（陈旧清单）、源码有而副本缺（真缺件）都失败。盯 `node_modules`（真实装载点）；`vendor` 侧由既有 `profile-metadata-sync` 负责（见 `docs/notes/implemented/contract/2026-09-11-preset-lint-and-profile-files-sync.md`） |
+| `skill-lines` | 是 | 三条技能线（出海 / AI全栈 / 通用）各自的验证器必须判绿。此前 `verify_static.mjs` 只写在 SOP §4 与 `pipeline.sh` 里、**不在 `pnpm run gate` 射程内**——规则只活在文档与人的自觉里（[ADR-0085](adr/ADR-0085.md)，总账 P-20）。本项与 `skill-runtime-preconditions` 是「装得上 / 跑得起来 / **挂得上**」三个不同问题各自的调用点；环境不在本机时跳过并写明（P-21） |
 
 退出码：`0` 全部通过 · `1` 存在失败校验 · `2` 用法错误。`--list` 输出全部校验项名称。
 

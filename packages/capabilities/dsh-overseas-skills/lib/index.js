@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { CATEGORIES, SKILLS, CATEGORIES_FS, SKILLS_FS } from "./catalog.js";
+import { CATEGORIES, SKILLS, CATEGORIES_FS, SKILLS_FS, CATEGORIES_GN, SKILLS_GN } from "./catalog.js";
 import { getPromptTemplate } from "./templates.js";
 import { errorMessage, isValidSkillName, rebuildFrontmatter } from "./host-util.js";
 import { LAYER_ICONS, LAYER_ICON_SOURCES } from "./layer-icons.js";
@@ -180,6 +180,18 @@ async function handleFullstackList() {
 }
 
 /**
+ * 通用技能线（第三条线）。
+ *
+ * 只走 `buildGroupsLegacy`，**没有 scenarios 那一层**：通用线自己的 8 个用途分组就是它的
+ * 一级分类，不再套出海业务的 8 大场景。给通用技能硬派一个「A 市场与选品」之类的场景，
+ * 等于用一个错误的坐标去满足一个不该存在的形状要求。
+ */
+async function handleGenericList() {
+  const groups = await buildGroupsLegacy(CATEGORIES_GN, SKILLS_GN);
+  return { status: 200, body: { ok: true, scenarios: [], groups } };
+}
+
+/**
  * 四层骨架（场景 → 面 → 责任域 → 岗位 → 卡）的负载。
  *
  * 单独一条路由而不是并进 /list：岗位头像 50 枚约 190KB，而 /list 会被胶囊组件
@@ -306,6 +318,20 @@ export function apply(ctx) {
         }
       }
     });
+    const disposeGenericList = ctx.webServer.register({
+      kind: "exact",
+      path: BASE + "/generic-list",
+      handler: async (req, res) => {
+        if (!isLoopbackRequest(req)) return sendJson(res, 401, { error: "unauthorized" });
+        if (req.method !== "GET") return sendJson(res, 405, { error: "method not allowed" });
+        try {
+          const result = await handleGenericList();
+          sendJson(res, result.status, result.body);
+        } catch (error) {
+          sendJson(res, 500, { ok: false, error: errorMessage(error) });
+        }
+      }
+    });
     const disposeOrg = ctx.webServer.register({
       kind: "exact",
       path: BASE + "/org",
@@ -376,6 +402,7 @@ export function apply(ctx) {
     return () => {
       disposeList();
       disposeFullstackList();
+      disposeGenericList();
       disposeOrg();
       disposeToggle();
       disposeCredential();

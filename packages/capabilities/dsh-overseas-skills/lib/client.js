@@ -893,8 +893,8 @@ function OverseasSkillsPage(props) {
 			}, "dsh-overseas-skills: css");
 			ctx.effect(function () {
 				return ctx.locale.register(NS, {
-					zh: { nav: "出海技能", fsnav: "AI全栈技能" },
-					en: { nav: "Overseas Skills", fsnav: "AI Full-Stack Skills" }
+					zh: { nav: "出海技能", fsnav: "AI全栈技能", gnnav: "通用技能" },
+					en: { nav: "Overseas Skills", fsnav: "AI Full-Stack Skills", gnnav: "General Skills" }
 				});
 			}, "dsh-overseas-skills: locale");
 ctx.slots.inject("settings.section", function () {
@@ -927,6 +927,22 @@ ctx.slots.inject("settings.section", function () {
 				},
 				function FullstackSkillsPage() {
 					return React.createElement(OverseasSkillsPage, { endpoint: "/fullstack-list", showCred: false });
+				}
+			);
+		});
+		ctx.slots.inject("settings.section", function () {
+			return ctx.slots.register(
+				{
+					name: "settings.section",
+					id: "generic-skills",
+					order: 28,
+					label: function () {
+						return ctx.locale.bind(NS)("gnnav");
+					},
+					locale: NS
+				},
+				function GenericSkillsPage() {
+					return React.createElement(OverseasSkillsPage, { endpoint: "/generic-list", showCred: false });
 				}
 			);
 		});

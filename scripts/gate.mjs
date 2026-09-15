@@ -38,6 +38,8 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkThemeTokens } from './gates/theme-tokens.mjs'
 import { checkWorktableFence } from './gates/worktable-fence.mjs'
 import { checkNodeInterpreter } from './gates/node-interpreter.mjs'
+import { checkSkillRuntimePreconditions } from './gates/skill-runtime-preconditions.mjs'
+import { checkSkillLines } from './gates/skill-lines.mjs'
 import { checkSidebarRowAxis } from './gates/sidebar-row-axis.mjs'
 import {
   checkPitfallsPlaybook,
@@ -1097,6 +1099,27 @@ const CHECKS = [
     remediation: '开发脚本起子进程一律走 scripts/lib/real-node.mjs 的 nodeCommand()——process.execPath 在 pnpm 下是宿主 Electron，子进程会「退出码 0 且没有输出」（ADR-0040）',
     run() {
       return checkNodeInterpreter({ repoRoot })
+    },
+  },
+  {
+    name: 'skill-runtime-preconditions',
+    remediation: '补齐已接线技能的运行时前提（跑 packages/capabilities/dsh-overseas-skills/scripts/install-runtime-deps.sh）；中文渲染红则重建 venv/etc/matplotlib 配置（SOP §12.10）',
+    run() {
+      return checkSkillRuntimePreconditions({ repoRoot })
+    },
+  },
+  {
+    name: 'skill-lines',
+    remediation: '三条技能线各自的验证器判红了，看输出指名的那一条：出海线跑 scripts/verify_static.mjs、通用线跑 scripts/verify-generic.mjs、全栈线跑 scripts/verify-fullstack.mjs。SOP 把 verify_static 写成入库清单的一项，但在本项出现之前 `pnpm run gate` 里没有任何一项跑过它（P-03）',
+    run() {
+      return checkSkillLines({ repoRoot })
+    },
+  },
+  {
+    name: 'skill-lines-selftest',
+    remediation: '跑 node --test scripts/gates/skill-lines.test.mjs 看红在哪条：本项自己就是为「判据从来没有跑到」而建的，所以它必须能说不——环境前提不在时必须是跳过（且 note 说清跳过了什么）而不是静默通过、验证器判红必须红且回传原文、验证器文件不存在必须红、第三个验证器红而前两个绿仍必须红、包内一条 spec 都没有必须红（空射程不得长得像通过，P-11）、恒真桩突变（把 passed 钉成常量 true）必须让用例失效。另有一条守卫钉住「红桩 key 打错字」这种**静默变空转**的反向用例（P-02：看起来验过了比没有验过更坏）',
+    run() {
+      return runNodeTestFile('scripts/gates/skill-lines.test.mjs', '三条技能线闸门的反向自测失败')
     },
   },
   {

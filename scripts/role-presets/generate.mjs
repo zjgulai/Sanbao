@@ -41,6 +41,24 @@ const OUT_ROOT = process.env.ROLE_PRESET_OUT || join(homedir(), '.dsh', '.agent-
 const SKILLS_ROOT = process.env.ROLE_SKILLS_ROOT || join(homedir(), '.dsh', 'skills')
 const SKILL_MAP_PATH = join(HERE, 'skill-map.json')
 /**
+ * 通用技能线清单（T0 的**发布副本**，本文件只读不写）。
+ *
+ * 为什么把 T0 写进**每一个**岗位 preset，而不是写进某一份共享行：
+ *   DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hideOthers` 决定，
+ *   没有「全局技能」这一层——不逐个挂，模型就是看不见。所以「通用」在装配上的含义
+ *   只能是「每个岗位各挂一份名单里同样的那几条」。
+ *
+ * 为什么名单读文件而不是在本文件里写一个常量数组：
+ *   同一份 15 条还要被设置页（显示 tier）、图标分配、`verify_static`（三线名单防漂移）
+ *   和运行时前提门禁读。常量放这里就等于有第二个家，而第二个家只能靠人对齐。
+ *   本文件读的是发布副本 `manifest/generic-skills.json`；**「哪几条算 T0」这个人工判断的家**
+ *   是派生器 `packages/capabilities/dsh-overseas-skills/scripts/build-generic-manifest.mjs`
+ *   里的 `T0_NAMES`——扩容、降档都改那里，改完重跑派生器，不要在任何消费侧手改 tier。
+ */
+const GENERIC_MANIFEST =
+  process.env.ROLE_GENERIC_MANIFEST ||
+  join(HERE, '..', '..', 'packages', 'capabilities', 'dsh-overseas-skills', 'manifest', 'generic-skills.json')
+/**
  * 生成的 skill-subset 行是否尊重技能文件的调用开关。
  *
  * 这是**唯一**的开关：它同时决定渲染进 preset 的值与收尾判据的算法，所以把它翻回去
@@ -109,6 +127,38 @@ if (CONTRACT_GATE_MODE !== 'off') {
 const contractGateBound = new Set()
 const contractGatePending = new Set()
 const contractGateRemoved = new Set()
+/**
+ * 通用线 T0：常挂全部岗位 preset 的通用底座。
+ *
+ * 读不到清单就**不许**继续（与契约闸门同一取舍）：静默降级成「没有通用技能」会生成
+ * 50 个看起来正常的 preset，而模型从此看不见这 15 条——没有任何一处会报错。
+ */
+let T0_SKILLS = []
+/** 通用线清单里非 T0 的成员：接线口径不同（T1 按岗位族挂），收尾必须显式说明它们**没被挂**。 */
+let GENERIC_NON_T0 = []
+{
+  if (!existsSync(GENERIC_MANIFEST)) {
+    console.error(`✗ 通用技能线清单读不到：${GENERIC_MANIFEST}`)
+    console.error('  它不存在时**不降级**：降级会产出 50 个「看起来正常、但模型看不见通用技能」的 preset，')
+    console.error('  而且没有任何一处会报错。用 ROLE_GENERIC_MANIFEST 指定，或先跑')
+    console.error('  `node packages/capabilities/dsh-overseas-skills/scripts/build-generic-manifest.mjs`。')
+    process.exit(2)
+  }
+  const gm = JSON.parse(readFileSync(GENERIC_MANIFEST, 'utf8'))
+  const gmSkills = gm.skills || []
+  T0_SKILLS = gmSkills.filter((s) => s.tier === 'T0').map((s) => s.name).sort()
+  GENERIC_NON_T0 = gmSkills.filter((s) => s.tier !== 'T0').map((s) => s.name).sort()
+  if (T0_SKILLS.length === 0) {
+    console.error(`✗ 通用线清单里 T0 为空：${GENERIC_MANIFEST}`)
+    console.error('  T0 是「常挂全部岗位」的那一档；为空说明清单被改坏了，不是「本批没有通用技能」。')
+    process.exit(2)
+  }
+}
+/** 收尾判据：每个岗位是否都真的挂上了完整 T0。 */
+const t0Wired = new Set()
+let t0RolesChecked = 0
+/** 落盘回读发现的缺口（岗位 → 缺哪几条）。非空即失败。 */
+const t0MissingInFile = []
 /** 被原样带过的手插行（跨岗位），收尾要点名报出来。 */
 const carriedRows = []
 
@@ -538,7 +588,7 @@ function main() {
     return off
   }
 
-  /** 解析一个岗位的 skill-subset：映射供给并集 + 参与的 Playbook 技能；返回映射明细供 manifest 存档。 */
+  /** 解析一个岗位的 skill-subset：映射供给并集 + 参与的 Playbook 技能 + 通用线 T0；返回映射明细供 manifest 存档。 */
   function resolveSkills(role, playbookIds) {
     const mapping = (role.skills || []).map((name) => {
       const entry = skillMap[name]
@@ -571,6 +621,17 @@ function main() {
     }
     for (const s of gate.bound) contractGateBound.add(s)
     for (const s of gate.pending) contractGatePending.add(s)
+    // ── 通用线 T0 并入（在契约闸门**之后**）──────────────────────────────────────
+    //
+    // 放在闸门之后的理由：闸门判的是 p2s- 卡的「这张卡有没有被契约引用」，第三方的
+    // 通用技能不是 p2s 卡、没有契约可挂。放闸门之前它们会被算成 pending；一旦把
+    // P2S_CONTRACT_GATE 切到 enforce，T0 就会被**静默删掉**——一条与计量模式无关的
+    // 接线，不该跟着另一个开关的档位改变生死。
+    for (const s of T0_SKILLS) {
+      ids.add(s)
+      if (!installedSkills.has(s)) danglingRefs.add(`${role.id} → ${s}（通用线 T0）`)
+    }
+    for (const s of T0_SKILLS) t0Wired.add(s)
     return { ids: [...ids].sort(), mapping, contractGate: gate }
   }
 
@@ -750,6 +811,10 @@ function main() {
           mapping: skillMapping,
           gaps: skillMapping.filter((d) => d.kind === 'gap').map((d) => d.name),
           shared_playbook_skills: playbookIds.map((p) => p.toLowerCase()),
+          // 通用线 T0：本岗挂载的通用底座（所有岗位同一份）。归档在此，便于事后回答
+          // 「某个岗位当时到底挂了哪些通用技能」——预设 yml 只存列表，不存来源。
+          generic_t0: T0_SKILLS,
+          generic_t0_source: 'packages/capabilities/dsh-overseas-skills/manifest/generic-skills.json',
           // S12 消费口闸门：本岗白名单里哪些卡被契约引用（bound）、哪些没有（pending）。
           // 页面据此显示「待挂契约」——归位态的第 3 个值，不是静默暴露也不是断崖式移除。
           contract_gate: {
@@ -778,6 +843,7 @@ function main() {
       scenarios: scenarioRecords.length,
       squadSkills: (role.skills || []).length,
       subsetSkills: skillIds.length,
+      t0Skills: T0_SKILLS.filter((s) => skillIds.includes(s)).length,
       gaps: skillMapping.filter((d) => d.kind === 'gap').length,
       collab: (role.collaborates_with || []).length,
     })
@@ -792,6 +858,14 @@ function main() {
     writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8')
     writeFileSync(join(dir, 'agent.cordis.yml'), composition, 'utf8')
     written++
+    // 写盘之后**按真实字节**核对 T0 是否真的落进了这一行，而不是相信上面的意图。
+    // 「写了但从没跑到」这一类缺陷只有在读回落盘产物时才拦得住（P-17）。
+    const back = readFileSync(join(dir, 'agent.cordis.yml'), 'utf8')
+    const m = /id:\s*skill-subset[\s\S]{0,600}?skills:\s*\[([^\]]*)\]/.exec(back)
+    const inFile = new Set((m?.[1] ?? '').split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean))
+    const miss = T0_SKILLS.filter((s) => !inFile.has(s))
+    if (miss.length) t0MissingInFile.push(`${dirId} 缺 ${miss.join(', ')}`)
+    t0RolesChecked++
   }
 
   // ── 汇总 ──
@@ -800,7 +874,7 @@ function main() {
   console.log(`基座：shipped standard 行集（D5）+ persona 替换 + skill-subset 追加`)
   console.log()
   console.log(
-    ['AGT', 'dir', 'order', '平面', '责任域', '节', '卡字符', 'FLOW', 'PB', 'SCN', '映射', 'subset', '缺口', '协作'].join('\t'),
+    ['AGT', 'dir', 'order', '平面', '责任域', '节', '卡字符', 'FLOW', 'PB', 'SCN', '映射', 'subset', 'T0', '缺口', '协作'].join('\t'),
   )
   for (const r of rows) {
     console.log(
@@ -817,6 +891,7 @@ function main() {
         r.scenarios,
         r.squadSkills,
         r.subsetSkills,
+        r.t0Skills,
         r.gaps,
         r.collab,
       ].join('\t'),
@@ -857,6 +932,43 @@ function main() {
   console.log(SUBSET_RESPECTS_FILE_FLAGS
     ? '★ 白名单全部生效（respectFileFlags: true，且名单内文件开关与之一致）'
     : '★ 白名单全部生效（respectFileFlags: false，岗位装配权威）')
+
+  // ── 通用线 T0：接线读数必须落到真实字节上 ────────────────────────────────────
+  //
+  // 只报「T0 名单有 15 条」是自述，不是读数：那 15 条有没有真的进每个 preset 的
+  // skill-subset，只有回读落盘文件才算数。故此处报的是**回读结果**。
+  console.log('')
+  console.log(`通用线 T0：${T0_SKILLS.length} 条 · 回读 ${t0RolesChecked} 个 agent.cordis.yml 核对`)
+  if (GENERIC_NON_T0.length > 0) {
+    console.log(`  通用线非 T0（${GENERIC_NON_T0.length} 条，按岗位族挂，本次**未接**）：${GENERIC_NON_T0.join(', ')}`)
+  }
+  if (t0MissingInFile.length > 0) {
+    console.error(`\n✗ 通用线 T0 未完整落进 preset（${t0MissingInFile.length} 个岗位）：`)
+    for (const d of t0MissingInFile.slice(0, 20)) console.error('  ' + d)
+    process.exit(1)
+  }
+  if (t0RolesChecked === 0 && !DRY_RUN) {
+    console.error('\n✗ 通用线 T0 一条都没核对到 —— 这条判据没有跑到，不能算通过（P-17）')
+    process.exit(1)
+  }
+  if (DRY_RUN) {
+    // dry-run 没有落盘可回读，但「意图」这一层仍要判：否则 dry-run 会给出一个
+    // 比真实运行更宽松的绿，而人正是拿它来决定要不要真实运行。
+    const short = rows.filter((r) => r.t0Skills !== T0_SKILLS.length)
+    if (short.length) {
+      console.error(`\n✗ 通用线 T0 未进入 ${short.length} 个岗位的待写名单（应为每岗 ${T0_SKILLS.length} 条）：`)
+      for (const r of short.slice(0, 20)) console.error(`  ${r.dirId} 只有 ${r.t0Skills} 条`)
+      process.exit(1)
+    }
+    console.log(`★ [dry-run] T0 ${T0_SKILLS.length} 条在 ${rows.length}/${rows.length} 个岗位的待写名单里齐备（尚未回读，真实运行才回读）`)
+  }
+  if (!DRY_RUN) {
+    if (t0Wired.size !== T0_SKILLS.length) {
+      console.error(`\n✗ 通用线 T0 只挂了 ${t0Wired.size}/${T0_SKILLS.length} 条：${T0_SKILLS.filter((s) => !t0Wired.has(s)).join(', ')}`)
+      process.exit(1)
+    }
+    console.log(`★ 通用线 T0 ${T0_SKILLS.length}/${T0_SKILLS.length} 条在 ${t0RolesChecked}/${rows.length} 个岗位的 skill-subset 里逐字回读命中`)
+  }
 
   // ── S12 消费口闸门：账与模式必须一起报（口径不能只留在代码里）────────────────
   if (!contractGate) {

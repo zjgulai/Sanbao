@@ -3,6 +3,11 @@ import assert from 'node:assert/strict'
 import { apply } from '../lib/index.js'
 import { ROLE_ASSIGNMENTS } from '../lib/role-map.js'
 import { SKILLS } from '../lib/catalog.js'
+import { readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
 
 /**
  * dsh-overseas-skills — 宿主路由契约测试。
@@ -70,12 +75,12 @@ function call(handler, req) {
 
 const BASE = '/api/dsh-overseas-skills'
 
-test('路由表：六条路径全部注册（漏一条 = 页面上一个功能静默消失）', () => {
+test('路由表：七条路径全部注册（漏一条 = 页面上一个功能静默消失）', () => {
   const table = routes()
-  for (const path of ['/list', '/fullstack-list', '/org', '/toggle', '/prompt-template', '/credential']) {
+  for (const path of ['/list', '/fullstack-list', '/generic-list', '/org', '/toggle', '/prompt-template', '/credential']) {
     assert.ok(table.has(BASE + path), `路由没注册：${BASE}${path}`)
   }
-  assert.equal(table.size, 6, `注册了 ${table.size} 条，期望 6 条：${[...table.keys()].join(', ')}`)
+  assert.equal(table.size, 7, `注册了 ${table.size} 条，期望 7 条：${[...table.keys()].join(', ')}`)
 })
 
 test('/org：非回环请求一律 401，方法不对一律 405', async () => {
@@ -166,4 +171,51 @@ test('/org：缓存 30 秒，重复请求返回同一个对象（不重复读盘
   const a = JSON.parse((await call(handler, LOOPBACK)).body)
   const b = JSON.parse((await call(handler, LOOPBACK)).body)
   assert.equal(a.generatedAt, b.generatedAt, '两次请求的 generatedAt 不同——缓存没生效')
+})
+
+/**
+ * `/generic-list` —— 通用技能线（第三条线）的负载契约。
+ *
+ * 这条用例存在的理由与 `/org` 那条不同：**「通用」在装配上的含义是「每个岗位都挂」**，
+ * 所以这条线有两处会各自静默失败的地方——白名单没挂上（会话里看不见，由
+ * `scripts/verify-generic.mjs` 与 `generate.mjs` 的落盘回读负责），以及**页面这一侧
+ * 拿不到行**（`buildGroupsLegacy` 靠 `skill.category === cat.key` 配对，清单里分组 key
+ * 与 catalog 里的 category 一旦写岔，返回的就是 8 个空组——页面显示成一片空白，
+ * 而不是报错）。这里量的是后一半。
+ */
+test('/generic-list：8 个分组各有行，且与 manifest 逐条对得上', async (t) => {
+  const handler = routes().get(BASE + '/generic-list')
+  assert.ok(handler, '/generic-list 没注册')
+
+  const res = await call(handler, LOOPBACK)
+  assert.equal(res.statusCode, 200, '回环 GET 应当 200，实际 ' + res.statusCode + '：' + res.body.slice(0, 200))
+  const body = JSON.parse(res.body)
+  assert.equal(body.ok, true)
+
+  const manifest = JSON.parse(
+    readFileSync(join(HERE, '..', 'manifest', 'generic-skills.json'), 'utf8'),
+  )
+  const expectedGroups = manifest.groups.map((g) => g.key)
+  const expectedNames = manifest.skills.map((s) => s.name).sort()
+
+  assert.deepEqual(body.groups.map((g) => g.key), expectedGroups, '分组 key 或顺序与 manifest 不一致')
+  const rows = body.groups.flatMap((g) => g.items)
+  assert.deepEqual(rows.map((r) => r.name).sort(), expectedNames, '行集合与 manifest 不一致')
+  // 分组非空：8 个空组是「配对写岔」最可能的形态，且页面上看不出区别
+  for (const g of body.groups) assert.ok(g.items.length > 0, `分组 ${g.key}（${g.title}）一行都没有`)
+
+  for (const r of rows) {
+    assert.ok(r.title, `${r.name} 缺中文标题`)
+    assert.ok(r.icon, `${r.name} 没有头像（会退化成分组默认图或空白）`)
+    assert.equal(r.installed, true, `${r.name} 未安装`)
+    assert.equal(r.modelEnabled, true, `${r.name} 标了 disable-model-invocation: true —— 挂了但模型不会挑它`)
+    assert.ok(r.descriptionZh, `${r.name} 缺中文摘要`)
+  }
+})
+
+/** `/generic-list` 必须**没有** scenarios 那一层：通用线不套出海业务的 8 大场景。 */
+test('/generic-list：不返回 scenarios（通用线不套出海场景）', async () => {
+  const res = await call(routes().get(BASE + '/generic-list'), LOOPBACK)
+  const body = JSON.parse(res.body)
+  assert.deepEqual(body.scenarios, [], '通用线不该有 scenarios——给它硬派一个出海场景会让「通用」失去意义')
 })
