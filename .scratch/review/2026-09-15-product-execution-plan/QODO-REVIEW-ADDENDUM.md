@@ -1,7 +1,7 @@
 # Qodo 复核增量与任务映射
 
 - 复核日期：2026-09-16
-- 状态：`planning-only`
+- 状态：`active-plan`；部分根因已进入本地实现，未完成项与远端证据继续按任务卡跟踪
 - Qodo operation：`79cbe315-e172-4c52-a8a8-2bcd002b7ce8`
 - 工具版本：Qodo CLI 1.0.0
 - 使用能力：Codebase Wisdom、local full/deep review
@@ -58,11 +58,12 @@ Qodo 审查使用了以下时点事实：
 
 ### R04：intake 对账与退出码
 
-- [ ] 把 upstream/imported/skipped/already-installed 建成互斥 set，并按唯一 ID 验证双向差集。
-- [ ] 所有 problems 必须在成功输出和写文件前统一决定 exit code。
-- [ ] `--check` 必须只读；生成模式只在零问题后原子替换。
-- [ ] 保留“69 被算成 72”“37 被算成 66”作为需重采的 Red 线索，不把审查时数字写成永久常量。
-- [ ] 完成 `QG-011` 后再把该 checker 接入 `QG-007` required CI。
+- [x] 把 upstream/imported/skipped/already-installed 建成互斥 set，并按唯一 ID 验证双向差集。
+- [x] 所有 problems 必须在成功输出和写文件前统一决定 exit code。
+- [x] `--check` 必须只读；生成模式只在零问题后原子替换。
+- [x] 保留“69 被算成 72”“37 被算成 66”作为 Red 线索，并在实施时重采为 `69=63+3+3`、`37=5+3+29`，没有把旧错误加总写成目标常量。
+- [x] `QG-011` checker 已接入本地 root quick/full gate。
+- [ ] 由 `QG-007` 把该 checker 设为远端 required CI；本地结果不替代该证据。
 
 ### R07 / R11：第三方来源、批准与调用权限
 
@@ -70,16 +71,18 @@ Qodo 审查使用了以下时点事实：
 - [ ] tree、raw/blob、provenance 必须绑定同一个 resolved commit；逐文件复算 Git blob OID 与 SHA-256。
 - [ ] cache hit 与首次取件走同一验证；二进制按原始 bytes，不用 text round-trip。
 - [ ] 来源 commit、license、权限声明或任一资源变化时自动撤销 approval。
-- [ ] `QG-010` 对 89 whitelist 和 invocation flags 做批准集合全等；没有被当前样本触发的 R11 仍保留 mutation fixture。
+- [x] `QG-010` 对 89 ID whitelist 做批准集合全等；scope 明确为 preset composition。
+- [ ] invocation flag 的产品策略仍归 `DEC-009`；QG-010 只校验字段存在、布尔类型与 `respectFileFlags:true`，不擅自统一取值。
 - [ ] 只有 `SEC-RT-002` 的离线 clean-machine、profile 与 release 三层证据齐全后，才能把第三方字节写成可交付。
 
 ### R08：138 catalog 与 89 产品意图
 
-- [ ] 70 mapping + 68 extra 形成唯一 canonical 138 set，先检查跨源重复和 ID 归一化冲突。
-- [ ] 138 条全部进入相同的安装、frontmatter、资源、脚本和调用开关检查。
-- [ ] 把批准的 89 项产品选择物化为 tracked whitelist，不从当前安装结果或任意合法子集反推。
-- [ ] 对 89 做双向集合全等；同数替换、少一、多一、重复都必须打红。
-- [ ] 工程闭合由 `QG-010` 完成；大目录的发现效率、错误恢复和性能预算由 `PROD-UX-003` 完成，两者不能互相代替。
+- [x] 70 mapping + 68 extra 形成唯一 canonical 138 set，先检查跨源重复和 ID 归一化冲突。
+- [x] 138 条全部进入相同的安装、frontmatter、资源、脚本和调用开关检查。
+- [x] owner 明确签核后，把批准的 89 项产品选择物化为 tracked whitelist；没有从当前安装结果自动反推。
+- [x] 对 89 做双向集合全等；同数替换、少一、多一、重复与批准指纹漂移都必须打红。
+- [x] `QG-010` 已完成 138 catalog 与 89 approved set 的本地工程闭合。
+- [ ] 大目录的发现效率、错误恢复和性能预算仍由 `PROD-UX-003` 完成，不能用 QG-010 替代。
 
 ### R02 / R06 / R10：Settings 实现、产物与验收仪器
 
@@ -91,10 +94,10 @@ Qodo 审查使用了以下时点事实：
 
 ### R09：live-presets 射程
 
-- [ ] 使用结构化 YAML 或等价 typed parser 枚举所有插件 row，不用模块说明符前缀猜测是否该检查。
-- [ ] bare/scoped/file/relative/absolute/builtin、disabled 与未知表达式分别进入 checked 或 typed skip。
-- [ ] expected = checked + typed skipped，根存在但零行不能报告健康。
-- [ ] 由 `QG-002` 的 mutation fixture、`QG-006A` 的隔离基础设施和 `QG-006B` 的并发/零副作用约束共同验收。
+- [x] `QG-002` 使用结构化 row 解析枚举插件，不再用模块说明符前缀猜射程。
+- [x] bare/scoped/file/relative/absolute/builtin、disabled 与未知表达式分别进入 checked、typed skip 或 failed。
+- [x] `expected = checked + typed skipped + failed`，根存在但零行不能报告健康。
+- [ ] `QG-006A/QG-006B` 仍需补齐跨 suite 的 fixture 隔离、并发与零副作用证明；不反向撤销 QG-002 的本地契约结果。
 
 ## 4. Qodo 未覆盖但独立审查保留的高优先级项
 

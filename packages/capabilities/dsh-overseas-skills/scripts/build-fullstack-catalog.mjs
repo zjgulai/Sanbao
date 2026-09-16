@@ -65,6 +65,7 @@ export const NODES = [
 
 const KEY_BY_ID = new Map(NODES.map((n) => [n.id, n.key]))
 const TITLE_BY_KEY = new Map(NODES.map((n) => [n.key, n.title]))
+const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'))
 const writeAtomic = (p, text) => {
@@ -81,30 +82,39 @@ const writeAtomic = (p, text) => {
  *
  * @returns {{rows: Array<object>, problems: string[]}}
  */
-export function mergeRows() {
+export function mergeRowsFromDocuments(mapping, extra) {
   const problems = []
-  const mapping = readJson(MAPPING)
-  const extra = readJson(EXTRA)
 
   const seen = new Map()
-  const take = (name, cat, title, summaryZh, origin) => {
+  const normalizedSeen = new Map()
+  const take = (name, cat, title, summaryZh, origin, sourceName, sourceRef) => {
     if (!name || !cat) { problems.push(`${origin}: 缺 name 或 cat`); return }
-    if (!KEY_BY_ID.has(cat)) { problems.push(`${origin}: ${name} 的 cat「${cat}」不在 M00–M13 里`); return }
-    if (seen.has(name)) { problems.push(`重名：${name} 同时出现在 ${seen.get(name)} 与 ${origin}`); return }
+    const normalized = String(name).normalize('NFKC').toLowerCase()
+    if (!NAME_RE.test(name)) problems.push(`${origin}: ${name} 不是合法的 kebab-case install ID`)
+    if (normalizedSeen.has(normalized) && normalizedSeen.get(normalized) !== name) {
+      problems.push(`ID 归一化碰撞：${normalizedSeen.get(normalized)} 与 ${name} 在 NFKC/case 后同为 ${normalized}`)
+      return
+    }
+    const category = KEY_BY_ID.get(cat)
+    if (!category) { problems.push(`${origin}: ${name} 的 cat「${cat}」不在 M00–M13 里`); return }
+    if (seen.has(name)) { problems.push(`跨源重复/重名：${name} 同时出现在 ${seen.get(name)} 与 ${origin}`); return }
     if (!title) problems.push(`${origin}: ${name} 缺标题`)
     if (!summaryZh) problems.push(`${origin}: ${name} 缺中文简介`)
+    normalizedSeen.set(normalized, name)
     seen.set(name, origin)
     return {
       name,
       title: title ?? name,
-      category: KEY_BY_ID.get(cat),
-      categoryTitle: TITLE_BY_KEY.get(KEY_BY_ID.get(cat)),
+      category,
+      categoryTitle: TITLE_BY_KEY.get(category),
       toolBacked: false,
       summaryZh: summaryZh ?? '',
       toolGap: '',
       icon: '',
       nodeId: cat,
       origin,
+      sourceName,
+      sourceRef,
     }
   }
 
@@ -112,13 +122,13 @@ export function mergeRows() {
   for (const n of NODES) {
     for (const s of mapping.skills ?? []) {
       if (s.cat !== n.id) continue
-      const r = take(s.name, s.cat, s.title, s.summaryZh, 'mapping')
+      const r = take(s.name, s.cat, s.title, s.summaryZh, 'mapping', s.name, s.src)
       if (r) rows.push(r)
     }
     for (const s of extra.skills ?? []) {
       if (s.cat !== n.id) continue
       const name = s.installAs ?? s.name
-      const r = take(name, s.cat, s.titleZh, s.summaryZh, 'extra')
+      const r = take(name, s.cat, s.titleZh, s.summaryZh, 'extra', s.name, `${s.repo ?? ''}:${s.dir ?? ''}`)
       if (r) rows.push(r)
     }
   }
@@ -131,6 +141,10 @@ export function mergeRows() {
     if (!covered.has(name)) problems.push(`extra: ${name} 未被收进任何节点`)
   }
   return { rows, problems }
+}
+
+export function mergeRows() {
+  return mergeRowsFromDocuments(readJson(MAPPING), readJson(EXTRA))
 }
 
 /** 期望落盘的 manifest 形状（`skills` 里去掉本脚本自用的溯源字段）。 */

@@ -2,9 +2,9 @@
 
 - 创建日期：2026-09-15
 - 最近复核：2026-09-16（Qodo deep review + Understand 全量知识图谱 + 本地独立复核）
-- 状态：`active-plan`；`BATCH-001` 已完成本地验收并关闭，下一批待用户选择
+- 状态：`active-plan`；`QG-010/QG-011` 已完成本地实现与分层验收，本 checkpoint 只固化这两项；QG-007 远端 required check 仍 deferred
 - 适用仓库：LUTE Agentic System / Magpie-Horch
-- 本轮权限：先完成整合方案，再按 [BATCH-001](batches/BATCH-001-boundary-and-shopify.md) 的精确 allowlist 实施 `BASE-001`、`BASE-002`、`SEC-RT-001`；不授权其他代码、配置、发布、commit 或 push
+- 当前权限：选择性 commit 并仅 push `QG-010/QG-011` 到 GitHub，确认 Codeup 不变后只实施 `QG-006A`；不得进入 `QG-006B`、远端 CI、安装、发布或其他任务
 
 ## 1. 计划目标
 
@@ -62,10 +62,10 @@
 
 ### 当前执行断点
 
-- 最近 batch：`BATCH-001`，状态 `local-complete / live-deferred / closed`。
-- `BASE-001`、`BASE-002` 已把并发脏树、三目标文件 hash、allowlist、验证命令和停止条件冻结。
-- `SEC-RT-001` 已完成真实 Red、17/17 tests、typecheck 与目标 diff-check；真实店铺/live/clean-machine/DMG 未执行。
-- 下一批由用户在 `SEC-RT-003A` 与 `QG-001 + QG-002` 之间选择；本轮不自动推进。
+- 最近已推送 checkpoint：`cdf50c85`，仅在 GitHub `origin/main`；Codeup 仍停在 `44f49940`。
+- `QG-010` 已闭合 catalog 138/138、owner 批准 whitelist 89/89 与 live 节点归属；`QG-011` 已闭合第三方 intake 互斥终态、守恒与错误非零退出。两项只代表本地工程证据，QG-007 远端 required CI 未开始。
+- 本文件所在 checkpoint 只纳入 `QG-010/QG-011` 及其 ADR/Note/计划证据；未验收的 `QG-003` candidate 不得混入。
+- checkpoint 推送并确认 Codeup 不变后，只执行 `QG-006A` mutation fixture 隔离基础设施；完成后停止，不自动进入 `QG-006B`。
 - Advisor 父运行时本轮不可用，没有可归因结论；Understand 全量图谱已在用户确认 `.ua/.understandignore` 后完成，新增事实、限制与校验见 [Understand 图谱证据](UNDERSTAND-GRAPH-EVIDENCE.md)。
 
 ## 4. 文件导航

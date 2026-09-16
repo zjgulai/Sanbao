@@ -757,3 +757,38 @@
 - **下一版默认动作**：任何批处理先把“最终会交给 open/copy/rename 的名字”列成一张 immutable plan，
   全批校验完才能拿锁；循环只消费已证明的 plan，不再做产品发现。若 mutation 需要多个固定目录，
   明说是 journaled crash consistency，不把“每次 rename 原子”写成“整批原子”。
+
+## P-29 · 错误在成功之后才被发现，重复终态让守恒式自己骗自己
+
+- **症状**：`build-third-party-intake.mjs --check` 打印“事实源一致”并退出 0；同一次进程随后才算出
+  `pm: 63 + 6 + 3 = 72 ≠ 69`、`mp: 5 + 32 + 29 = 66 ≠ 37`。目标 hash 没变，说明只读成立，
+  但退出结论是假的。
+- **根因类**：P-02（仪器假绿）与 P-16（格式层不变量没有读者）。`alreadyInstalled` 先被追加进
+  `skip`，又作为第四个手写数字再次加总；accounting problems 还在成功输出与写入分支之后才追加。
+  只比总数也挡不住“删一项、补一个未知项”。
+- **已落地机制**：`gate:third-party-intake`（106 个 upstream ID + 1 个结构/生成一致性对象的 canonical
+  守恒；逐 repo 输出 imported/skipped/alreadyInstalled 双向差集）、
+  `gate:third-party-intake-selftest`（overlap、duplicate、missing、unexpected、同总数替换、坏 JSON、
+  写前失败、只读与原子替换负控）、
+  `script:packages/capabilities/dsh-overseas-skills/scripts/build-third-party-intake.mjs`
+  （所有问题先收口；零问题后才 tmp + fsync + rename）。
+- **下一版默认动作**：只要一个对象可能有多个“已处理”理由，就先定义互斥终态与版本化 ID set；
+  在构造 Set 前检查 duplicate，按 ID 做 missing/unexpected/overlap，最后才允许打印成功或写盘。
+  数字相等只是结果，不是证明。
+
+## P-30 · 一个目录有两份来源，checker 只读其中一份却报告全量通过
+
+- **症状**：AI 全栈页面与 manifest 已有 138 条，`verify-fullstack.mjs` 仍打印 `70/70 全项通过`；
+  真实来源是 mapping 70 + extra 68，但 checker 只遍历 mapping。68 条 extra 的缺失、坏 frontmatter、
+  坏资源和调用开关全部在“全项通过”的射程外。
+- **根因类**：P-11（射程没有定义）与 P-16（同一事实多个家）。生成器知道两份来源，manifest 知道合并结果，
+  verifier 却另写一个只读 mapping 的循环；页面扩容时没有任何机制要求验证分母同步扩容。另一个同形陷阱是
+  把 live preset 的 89 条当前结果当作 approved product set——数量和结构都对，也不能证明 owner 批准了逐 ID 集合。
+- **已落地机制**：`gate:fullstack-catalog`（canonical `138/138 = 70 + 68`，逐项报告）、
+  `script:packages/capabilities/dsh-overseas-skills/scripts/fullstack-contract.mjs`（两源先合并，重复/归一化碰撞/
+  manifest 双向差集后再走同一 artifact 契约）、`gate:fullstack-whitelist`（owner 批准的 89 项 exact set、指纹与
+  138 catalog 闭合）、`gate:fullstack-contract-selftest`（extra 缺失、坏资源、删一补一、任意 whitelist 子集、
+  同数替换、重复项与指纹漂移负例）。live materialization 再由 `gate:agent-fullstack` 与批准集合双向全等。
+- **下一版默认动作**：只要一个产品列表由两份以上输入组成，checker 必须 import 与生成器相同的合并实现，
+  分母从版本化输入推导；产品“选择”再单独有一份 owner 批准的 exact set，不能用 live、安装结果或总数反推。
+  catalog 与 selection 必须在 gate summary 里保留两个分母，任一缺失都不能被另一边的绿遮住。

@@ -1,0 +1,924 @@
+{
+  "$comment": "本文件由 scripts/build-third-party-intake.mjs 从 fullstack-mapping.json + fullstack-extra.json + third-party-skip.json + third-party-source-inventory.json 生成。不要手改；分类清单不冒充不可变来源证明。",
+  "repos": [
+    {
+      "id": "pm",
+      "repo": "phuryn/pm-skills",
+      "note": "产品管理技能集；本机 clone 不可靠，走 trees+raw",
+      "accounting": {
+        "upstream": 69,
+        "imported": 63,
+        "skipped": 3,
+        "alreadyInstalled": 3
+      },
+      "skills": [
+        {
+          "name": "ab-test-analysis",
+          "sourceName": "ab-test-analysis",
+          "dir": "pm-data-analytics/skills/ab-test-analysis",
+          "installAs": "ab-test-analysis",
+          "category": "M12",
+          "titleZh": "对照实验分析",
+          "summaryZh": "按统计功效设计并解读对照实验，控制样本量与显著性，避免把随机波动当成真实提升"
+        },
+        {
+          "name": "analyze-feature-requests",
+          "sourceName": "analyze-feature-requests",
+          "dir": "pm-product-discovery/skills/analyze-feature-requests",
+          "installAs": "analyze-feature-requests",
+          "category": "M03",
+          "titleZh": "功能请求分析",
+          "summaryZh": "把零散的功能请求归并成需求主题，并按证据强度排出处理顺序"
+        },
+        {
+          "name": "ansoff-matrix",
+          "sourceName": "ansoff-matrix",
+          "dir": "pm-product-strategy/skills/ansoff-matrix",
+          "installAs": "ansoff-matrix",
+          "category": "M04",
+          "titleZh": "增长路径矩阵",
+          "summaryZh": "在现有与新产品、现有与新市场四个组合上评估增长选项并排出优先顺序"
+        },
+        {
+          "name": "beachhead-segment",
+          "sourceName": "beachhead-segment",
+          "dir": "pm-go-to-market/skills/beachhead-segment",
+          "installAs": "beachhead-segment",
+          "category": "M04",
+          "titleZh": "滩头市场选择",
+          "summaryZh": "从多个候选细分市场中选出最容易先赢下的一个，作为后续扩张的跳板"
+        },
+        {
+          "name": "brainstorm-experiments-existing",
+          "sourceName": "brainstorm-experiments-existing",
+          "dir": "pm-product-discovery/skills/brainstorm-experiments-existing",
+          "installAs": "brainstorm-experiments-existing",
+          "category": "M03",
+          "titleZh": "存量实验构思",
+          "summaryZh": "为已有产品想出一批可快速验证假设的实验方案，并说明各自的验证目标"
+        },
+        {
+          "name": "brainstorm-experiments-new",
+          "sourceName": "brainstorm-experiments-new",
+          "dir": "pm-product-discovery/skills/brainstorm-experiments-new",
+          "installAs": "brainstorm-experiments-new",
+          "category": "M03",
+          "titleZh": "新品实验构思",
+          "summaryZh": "为新产品构思一批低成本验证关键假设的实验，明确每个实验要证实或证伪什么"
+        },
+        {
+          "name": "brainstorm-ideas-existing",
+          "sourceName": "brainstorm-ideas-existing",
+          "dir": "pm-product-discovery/skills/brainstorm-ideas-existing",
+          "installAs": "brainstorm-ideas-existing",
+          "category": "M02",
+          "titleZh": "存量创意发散",
+          "summaryZh": "围绕已有产品收集用户痛点与机会线索，发散出一批可评估的新功能或新方向创意"
+        },
+        {
+          "name": "brainstorm-ideas-new",
+          "sourceName": "brainstorm-ideas-new",
+          "dir": "pm-product-discovery/skills/brainstorm-ideas-new",
+          "installAs": "brainstorm-ideas-new",
+          "category": "M02",
+          "titleZh": "新品创意发散",
+          "summaryZh": "从市场缺口与用户场景出发，发散出若干新产品创意并做初步收敛筛选"
+        },
+        {
+          "name": "brainstorm-okrs",
+          "sourceName": "brainstorm-okrs",
+          "dir": "pm-execution/skills/brainstorm-okrs",
+          "installAs": "brainstorm-okrs",
+          "category": "M04",
+          "titleZh": "关键结果共创",
+          "summaryZh": "把战略意图翻译成一组可衡量的目标与关键结果，并检查目标之间是否对齐"
+        },
+        {
+          "name": "business-model",
+          "sourceName": "business-model",
+          "dir": "pm-product-strategy/skills/business-model",
+          "installAs": "business-model",
+          "category": "M04",
+          "titleZh": "商业模式设计",
+          "summaryZh": "梳理价值创造、传递与获取的完整链条，明确收入来源、成本结构与关键合作方"
+        },
+        {
+          "name": "cohort-analysis",
+          "sourceName": "cohort-analysis",
+          "dir": "pm-data-analytics/skills/cohort-analysis",
+          "installAs": "cohort-analysis",
+          "category": "M12",
+          "titleZh": "同期群留存分析",
+          "summaryZh": "按加入时间切分用户群体，对比各群留存曲线与行为差异，定位留存下滑的环节"
+        },
+        {
+          "name": "competitive-battlecard",
+          "sourceName": "competitive-battlecard",
+          "dir": "pm-go-to-market/skills/competitive-battlecard",
+          "installAs": "competitive-battlecard",
+          "category": "M02",
+          "titleZh": "竞品作战卡",
+          "summaryZh": "把竞品的定位、强弱项与应对话术整理成一页材料，供销售在对抗场景中直接使用"
+        },
+        {
+          "name": "competitor-analysis",
+          "sourceName": "competitor-analysis",
+          "dir": "pm-market-research/skills/competitor-analysis",
+          "installAs": "competitor-analysis",
+          "category": "M02",
+          "titleZh": "竞品分析",
+          "summaryZh": "系统梳理主要竞品的功能、定价与打法，找出自身可切入的差异空间"
+        },
+        {
+          "name": "create-prd",
+          "sourceName": "create-prd",
+          "dir": "pm-execution/skills/create-prd",
+          "installAs": "create-prd",
+          "category": "M05",
+          "titleZh": "需求文档撰写",
+          "summaryZh": "把要解决的问题、目标用户、功能范围与验收标准写成一份可评审的产品需求文档"
+        },
+        {
+          "name": "customer-journey-map",
+          "sourceName": "customer-journey-map",
+          "dir": "pm-market-research/skills/customer-journey-map",
+          "installAs": "customer-journey-map",
+          "category": "M03",
+          "titleZh": "客户旅程地图",
+          "summaryZh": "沿用户从认知到复购的各阶段还原触点、行为与情绪，标出体验断点"
+        },
+        {
+          "name": "dummy-dataset",
+          "sourceName": "dummy-dataset",
+          "dir": "pm-execution/skills/dummy-dataset",
+          "installAs": "dummy-dataset",
+          "category": "M09",
+          "titleZh": "测试数据生成",
+          "summaryZh": "按指定字段与分布造出一批假数据，供测试、演示或评测在没有真实数据时使用"
+        },
+        {
+          "name": "growth-loops",
+          "sourceName": "growth-loops",
+          "dir": "pm-go-to-market/skills/growth-loops",
+          "installAs": "growth-loops",
+          "category": "M12",
+          "titleZh": "增长回路设计",
+          "summaryZh": "设计用户行为带动新增与留存的循环机制，并给出衡量每个回路效率的指标"
+        },
+        {
+          "name": "gtm-motions",
+          "sourceName": "gtm-motions",
+          "dir": "pm-go-to-market/skills/gtm-motions",
+          "installAs": "gtm-motions",
+          "category": "M12",
+          "titleZh": "上市打法选择",
+          "summaryZh": "比较自助、销售驱动、渠道合作等进入市场的打法，选出与客单价和产品形态匹配的一种"
+        },
+        {
+          "name": "gtm-strategy",
+          "sourceName": "gtm-strategy",
+          "dir": "pm-go-to-market/skills/gtm-strategy",
+          "installAs": "gtm-strategy",
+          "category": "M12",
+          "titleZh": "上市策略制定",
+          "summaryZh": "明确目标市场、切入顺序、渠道组合与上市节奏，形成可执行的进入市场方案"
+        },
+        {
+          "name": "ideal-customer-profile",
+          "sourceName": "ideal-customer-profile",
+          "dir": "pm-go-to-market/skills/ideal-customer-profile",
+          "installAs": "ideal-customer-profile",
+          "category": "M02",
+          "titleZh": "理想客户画像",
+          "summaryZh": "刻画最值得投入的目标客户特征与典型场景，作为获客与产品投入的筛选依据"
+        },
+        {
+          "name": "identify-assumptions-existing",
+          "sourceName": "identify-assumptions-existing",
+          "dir": "pm-product-discovery/skills/identify-assumptions-existing",
+          "installAs": "identify-assumptions-existing",
+          "category": "M03",
+          "titleZh": "存量假设识别",
+          "summaryZh": "把已有产品当前依赖的关键判断逐条显性化，找出尚未被证据支持的假设"
+        },
+        {
+          "name": "identify-assumptions-new",
+          "sourceName": "identify-assumptions-new",
+          "dir": "pm-product-discovery/skills/identify-assumptions-new",
+          "installAs": "identify-assumptions-new",
+          "category": "M03",
+          "titleZh": "新品假设识别",
+          "summaryZh": "列出新产品成立所依赖的客户、市场与可行性假设，按风险高低整理清楚"
+        },
+        {
+          "name": "intended-vs-implemented",
+          "sourceName": "intended-vs-implemented",
+          "dir": "pm-ai-shipping/skills/intended-vs-implemented",
+          "installAs": "intended-vs-implemented",
+          "category": "M09",
+          "titleZh": "意图实现比对",
+          "summaryZh": "对照规格与设计意图核查代码实际行为，找出被实现走样或被悄悄改动的部分"
+        },
+        {
+          "name": "interview-script",
+          "sourceName": "interview-script",
+          "dir": "pm-product-discovery/skills/interview-script",
+          "installAs": "interview-script",
+          "category": "M03",
+          "titleZh": "访谈提纲编写",
+          "summaryZh": "围绕待验证的假设设计开放式问题与追问路径，形成可直接执行的用户访谈提纲"
+        },
+        {
+          "name": "job-stories",
+          "sourceName": "job-stories",
+          "dir": "pm-execution/skills/job-stories",
+          "installAs": "job-stories",
+          "category": "M05",
+          "titleZh": "任务故事撰写",
+          "summaryZh": "用情境、动机与预期结果的句式描述用户要完成的事，替代笼统的功能描述"
+        },
+        {
+          "name": "lean-canvas",
+          "sourceName": "lean-canvas",
+          "dir": "pm-product-strategy/skills/lean-canvas",
+          "installAs": "lean-canvas",
+          "category": "M04",
+          "titleZh": "精益画布填写",
+          "summaryZh": "在一页画布上说清问题、方案、关键指标与成本收入结构，快速检验商业设想"
+        },
+        {
+          "name": "market-segments",
+          "sourceName": "market-segments",
+          "dir": "pm-market-research/skills/market-segments",
+          "installAs": "market-segments",
+          "category": "M02",
+          "titleZh": "市场细分",
+          "summaryZh": "按需求、场景或付费能力把整体市场切成若干块，评估各块规模与可进入性"
+        },
+        {
+          "name": "market-sizing",
+          "sourceName": "market-sizing",
+          "dir": "pm-market-research/skills/market-sizing",
+          "installAs": "market-sizing",
+          "category": "M02",
+          "titleZh": "市场规模测算",
+          "summaryZh": "自上而下与自下而上估算总体、可服务与可获取的市场规模，给出测算依据"
+        },
+        {
+          "name": "metrics-dashboard",
+          "sourceName": "metrics-dashboard",
+          "dir": "pm-product-discovery/skills/metrics-dashboard",
+          "installAs": "metrics-dashboard",
+          "category": "M12",
+          "titleZh": "指标看板设计",
+          "summaryZh": "围绕核心目标挑选分层指标并安排看板布局，让团队一眼看清业务健康度"
+        },
+        {
+          "name": "monetization-strategy",
+          "sourceName": "monetization-strategy",
+          "dir": "pm-product-strategy/skills/monetization-strategy",
+          "installAs": "monetization-strategy",
+          "category": "M04",
+          "titleZh": "变现策略设计",
+          "summaryZh": "选择收费对象、收费方式与收费时机，设计能持续产生收入的变现组合"
+        },
+        {
+          "name": "north-star-metric",
+          "sourceName": "north-star-metric",
+          "dir": "pm-marketing-growth/skills/north-star-metric",
+          "installAs": "north-star-metric",
+          "category": "M04",
+          "titleZh": "北极星指标",
+          "summaryZh": "选出一个能代表用户获得核心价值的指标作为北极星，并拆出可操作的支撑指标"
+        },
+        {
+          "name": "opportunity-solution-tree",
+          "sourceName": "opportunity-solution-tree",
+          "dir": "pm-product-discovery/skills/opportunity-solution-tree",
+          "installAs": "opportunity-solution-tree",
+          "category": "M04",
+          "titleZh": "机会方案树",
+          "summaryZh": "从目标出发逐层挂出用户机会、候选方案与验证实验，让选做哪件事有据可依"
+        },
+        {
+          "name": "outcome-roadmap",
+          "sourceName": "outcome-roadmap",
+          "dir": "pm-execution/skills/outcome-roadmap",
+          "installAs": "outcome-roadmap",
+          "category": "M04",
+          "titleZh": "成果导向路线图",
+          "summaryZh": "以要达成的业务成果而非功能清单来编排路线图，说明每个阶段的验证目标"
+        },
+        {
+          "name": "pestle-analysis",
+          "sourceName": "pestle-analysis",
+          "dir": "pm-product-strategy/skills/pestle-analysis",
+          "installAs": "pestle-analysis",
+          "category": "M02",
+          "titleZh": "宏观环境分析",
+          "summaryZh": "从政治、经济、社会、技术与法律环境扫描外部变化，识别对业务的机会与威胁"
+        },
+        {
+          "name": "porters-five-forces",
+          "sourceName": "porters-five-forces",
+          "dir": "pm-product-strategy/skills/porters-five-forces",
+          "installAs": "porters-five-forces",
+          "category": "M02",
+          "titleZh": "五力竞争分析",
+          "summaryZh": "从供应商、买方、替代品、新进入者与同业竞争五个方向判断行业利润空间"
+        },
+        {
+          "name": "positioning-ideas",
+          "sourceName": "positioning-ideas",
+          "dir": "pm-marketing-growth/skills/positioning-ideas",
+          "installAs": "positioning-ideas",
+          "category": "M04",
+          "titleZh": "定位方案发散",
+          "summaryZh": "为产品生成多个候选定位表述，比较各自面向的替代方案与差异化理由"
+        },
+        {
+          "name": "pre-mortem",
+          "sourceName": "pre-mortem",
+          "dir": "pm-execution/skills/pre-mortem",
+          "installAs": "pre-mortem",
+          "category": "M13",
+          "titleZh": "事前风险演练",
+          "summaryZh": "假设计划已经失败，倒推出可能导致失败的原因并提前安排应对措施"
+        },
+        {
+          "name": "pricing-strategy",
+          "sourceName": "pricing-strategy",
+          "dir": "pm-product-strategy/skills/pricing-strategy",
+          "installAs": "pricing-strategy",
+          "category": "M04",
+          "titleZh": "定价策略设计",
+          "summaryZh": "结合价值感知、成本与竞品价格设计价格结构，给出分层与折扣的规则"
+        },
+        {
+          "name": "prioritization-frameworks",
+          "sourceName": "prioritization-frameworks",
+          "dir": "pm-execution/skills/prioritization-frameworks",
+          "installAs": "prioritization-frameworks",
+          "category": "M04",
+          "titleZh": "优先级框架应用",
+          "summaryZh": "用合适的评分框架把待办事项排出先后顺序，并说明每个框架的适用条件"
+        },
+        {
+          "name": "prioritize-assumptions",
+          "sourceName": "prioritize-assumptions",
+          "dir": "pm-product-discovery/skills/prioritize-assumptions",
+          "installAs": "prioritize-assumptions",
+          "category": "M03",
+          "titleZh": "假设优先级排序",
+          "summaryZh": "按影响程度与验证难度给假设排序，先验证那些一旦错误就推翻方案的假设"
+        },
+        {
+          "name": "prioritize-features",
+          "sourceName": "prioritize-features",
+          "dir": "pm-product-discovery/skills/prioritize-features",
+          "installAs": "prioritize-features",
+          "category": "M04",
+          "titleZh": "功能优先级排序",
+          "summaryZh": "在资源有限的前提下比较功能的价值、成本与风险，排出先做后做的顺序"
+        },
+        {
+          "name": "privacy-policy",
+          "sourceName": "privacy-policy",
+          "dir": "pm-toolkit/skills/privacy-policy",
+          "installAs": "privacy-policy",
+          "category": "M10",
+          "titleZh": "隐私政策草拟",
+          "summaryZh": "按业务收集与处理数据的方式起草隐私政策草稿，交由法务定稿"
+        },
+        {
+          "name": "product-name",
+          "sourceName": "product-name",
+          "dir": "pm-marketing-growth/skills/product-name",
+          "installAs": "product-name",
+          "category": "M04",
+          "titleZh": "产品命名",
+          "summaryZh": "按定位与调性生成一批候选名称，并按易记、可注册与歧义风险做筛选"
+        },
+        {
+          "name": "product-strategy",
+          "sourceName": "product-strategy",
+          "dir": "pm-product-strategy/skills/product-strategy",
+          "installAs": "product-strategy",
+          "category": "M04",
+          "titleZh": "产品战略制定",
+          "summaryZh": "确定目标市场、取胜方式与投入取舍，把产品要走的路写成一份可检验的战略"
+        },
+        {
+          "name": "product-vision",
+          "sourceName": "product-vision",
+          "dir": "pm-product-strategy/skills/product-vision",
+          "installAs": "product-vision",
+          "category": "M04",
+          "titleZh": "产品愿景撰写",
+          "summaryZh": "用一段清晰的话描述产品想为谁带来什么改变，作为长期决策的判断基准"
+        },
+        {
+          "name": "release-notes",
+          "sourceName": "release-notes",
+          "dir": "pm-execution/skills/release-notes",
+          "installAs": "release-notes",
+          "category": "M10",
+          "titleZh": "发布说明撰写",
+          "summaryZh": "把本次发布的功能改动、修复与升级注意事项整理成用户能读懂的发布说明"
+        },
+        {
+          "name": "retro",
+          "sourceName": "retro",
+          "dir": "pm-execution/skills/retro",
+          "installAs": "retro",
+          "category": "M13",
+          "titleZh": "团队复盘",
+          "summaryZh": "组织团队回顾一个迭代的做得好的与待改进之处，并落实成具体改进项"
+        },
+        {
+          "name": "sentiment-analysis",
+          "sourceName": "sentiment-analysis",
+          "dir": "pm-market-research/skills/sentiment-analysis",
+          "installAs": "sentiment-analysis",
+          "category": "M03",
+          "titleZh": "反馈情感分析",
+          "summaryZh": "对用户评论、访谈或工单文本判断情绪倾向，汇总出不满集中的主题与强度"
+        },
+        {
+          "name": "shipping-artifacts",
+          "sourceName": "shipping-artifacts",
+          "dir": "pm-ai-shipping/skills/shipping-artifacts",
+          "installAs": "shipping-artifacts",
+          "category": "M10",
+          "titleZh": "发布产物准备",
+          "summaryZh": "在发版前把变更清单、配置说明与回滚预案等交付物准备齐并逐项核对"
+        },
+        {
+          "name": "sprint-plan",
+          "sourceName": "sprint-plan",
+          "dir": "pm-execution/skills/sprint-plan",
+          "installAs": "sprint-plan",
+          "category": "M05",
+          "titleZh": "迭代计划编排",
+          "summaryZh": "把下一个迭代要做的工作拆成任务并估算容量，明确承诺范围与依赖关系"
+        },
+        {
+          "name": "stakeholder-map",
+          "sourceName": "stakeholder-map",
+          "dir": "pm-execution/skills/stakeholder-map",
+          "installAs": "stakeholder-map",
+          "category": "M03",
+          "titleZh": "干系人地图",
+          "summaryZh": "列出与需求相关的各方，标注其关注点与影响力，确定沟通与确认的重点对象"
+        },
+        {
+          "name": "startup-canvas",
+          "sourceName": "startup-canvas",
+          "dir": "pm-product-strategy/skills/startup-canvas",
+          "installAs": "startup-canvas",
+          "category": "M04",
+          "titleZh": "创业画布填写",
+          "summaryZh": "用一页画布梳理初创产品的客户、价值主张、渠道与收入，暴露最不确定的一环"
+        },
+        {
+          "name": "strategy-red-team",
+          "sourceName": "strategy-red-team",
+          "dir": "pm-execution/skills/strategy-red-team",
+          "installAs": "strategy-red-team",
+          "category": "M04",
+          "titleZh": "战略红队演练",
+          "summaryZh": "站在对手与怀疑者立场攻击现有战略，找出被忽略的前提与最脆弱的环节"
+        },
+        {
+          "name": "summarize-interview",
+          "sourceName": "summarize-interview",
+          "dir": "pm-product-discovery/skills/summarize-interview",
+          "installAs": "summarize-interview",
+          "category": "M03",
+          "titleZh": "访谈纪要提炼",
+          "summaryZh": "把访谈录音或记录整理成洞察清单，标出可引用的原话与对应的需求线索"
+        },
+        {
+          "name": "summarize-meeting",
+          "sourceName": "summarize-meeting",
+          "dir": "pm-execution/skills/summarize-meeting",
+          "installAs": "summarize-meeting",
+          "category": "M00",
+          "titleZh": "会议纪要提炼",
+          "summaryZh": "把会议转写或散记整理成含决议、行动项、负责人与截止日的结构化纪要"
+        },
+        {
+          "name": "swot-analysis",
+          "sourceName": "swot-analysis",
+          "dir": "pm-product-strategy/skills/swot-analysis",
+          "installAs": "swot-analysis",
+          "category": "M04",
+          "titleZh": "内外态势分析",
+          "summaryZh": "梳理自身优势与劣势以及外部机会与威胁，交叉组合出可选的行动方向"
+        },
+        {
+          "name": "test-scenarios",
+          "sourceName": "test-scenarios",
+          "dir": "pm-execution/skills/test-scenarios",
+          "installAs": "test-scenarios",
+          "category": "M09",
+          "titleZh": "测试场景编写",
+          "summaryZh": "从正常流程、边界条件与异常分支出发，列出可执行的测试场景与预期结果"
+        },
+        {
+          "name": "user-personas",
+          "sourceName": "user-personas",
+          "dir": "pm-market-research/skills/user-personas",
+          "installAs": "user-personas",
+          "category": "M03",
+          "titleZh": "用户画像构建",
+          "summaryZh": "依据调研证据合成若干典型用户画像，写明其目标、痛点与使用情境"
+        },
+        {
+          "name": "user-segmentation",
+          "sourceName": "user-segmentation",
+          "dir": "pm-market-research/skills/user-segmentation",
+          "installAs": "user-segmentation",
+          "category": "M03",
+          "titleZh": "用户分群",
+          "summaryZh": "按行为与价值把现有用户切成若干群，说明各群特征与应采取的运营重点"
+        },
+        {
+          "name": "user-stories",
+          "sourceName": "user-stories",
+          "dir": "pm-execution/skills/user-stories",
+          "installAs": "user-stories",
+          "category": "M05",
+          "titleZh": "用户故事撰写",
+          "summaryZh": "以角色、诉求与价值的三段式描述需求，并补齐验收标准以便开发直接接手"
+        },
+        {
+          "name": "value-prop-statements",
+          "sourceName": "value-prop-statements",
+          "dir": "pm-marketing-growth/skills/value-prop-statements",
+          "installAs": "value-prop-statements",
+          "category": "M04",
+          "titleZh": "价值主张表述",
+          "summaryZh": "把产品对目标客户的核心价值写成若干句可直接对外使用的主张表述"
+        },
+        {
+          "name": "value-proposition",
+          "sourceName": "value-proposition",
+          "dir": "pm-product-strategy/skills/value-proposition",
+          "installAs": "value-proposition",
+          "category": "M04",
+          "titleZh": "价值主张设计",
+          "summaryZh": "对齐客户任务、痛点与收益和产品提供的缓解方案，找到真正成立的价值主张"
+        },
+        {
+          "name": "wwas",
+          "sourceName": "wwas",
+          "dir": "pm-execution/skills/wwas",
+          "installAs": "wwas",
+          "category": "M05",
+          "titleZh": "验收条目撰写",
+          "summaryZh": "把一项工作写成动机、内容与验收条件齐全的条目，让实现范围与验收口径无歧义"
+        }
+      ],
+      "skip": [
+        {
+          "name": "draft-nda",
+          "sourceName": "draft-nda",
+          "dir": "pm-toolkit/skills/draft-nda",
+          "reason": "不收。保密协议是纯商务法务文书，与软件交付的发布清单无关；本线没有承接它的节点，硬塞会稀释分类轴。"
+        },
+        {
+          "name": "grammar-check",
+          "sourceName": "grammar-check",
+          "dir": "pm-toolkit/skills/grammar-check",
+          "reason": "不收。通用语法校对，本机已有 copy-editor 与 humanizer-zh 覆盖该职责；收它会造成一条事实两个家。"
+        },
+        {
+          "name": "review-resume",
+          "sourceName": "review-resume",
+          "dir": "pm-toolkit/skills/review-resume",
+          "reason": "不收。简历评审属招聘文书场景，与软件或产品全栈交付无关。"
+        }
+      ],
+      "alreadyInstalled": [
+        {
+          "name": "code-review",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "marketing-ideas",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "sql-queries",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        }
+      ],
+      "extraFiles": [
+        "pm-ai-shipping/README.md",
+        "pm-data-analytics/README.md",
+        "pm-execution/README.md",
+        "pm-go-to-market/README.md",
+        "pm-market-research/README.md",
+        "pm-marketing-growth/README.md",
+        "pm-product-discovery/README.md",
+        "pm-product-strategy/README.md",
+        "pm-toolkit/README.md",
+        "pm-ai-shipping/commands/derive-tests.md",
+        "pm-ai-shipping/commands/document-app.md",
+        "pm-ai-shipping/commands/ship-check.md",
+        "pm-ai-shipping/commands/security-audit-static.md",
+        "pm-ai-shipping/commands/performance-audit-static.md",
+        "pm-data-analytics/commands/analyze-cohorts.md",
+        "pm-data-analytics/commands/analyze-test.md",
+        "pm-data-analytics/commands/write-query.md",
+        "pm-execution/commands/generate-data.md",
+        "pm-execution/commands/meeting-notes.md",
+        "pm-execution/commands/plan-okrs.md",
+        "pm-execution/commands/pre-mortem.md",
+        "pm-execution/commands/red-team-prd.md",
+        "pm-execution/commands/sprint.md",
+        "pm-execution/commands/stakeholder-map.md",
+        "pm-execution/commands/test-scenarios.md",
+        "pm-execution/commands/transform-roadmap.md",
+        "pm-execution/commands/write-prd.md",
+        "pm-execution/commands/write-stories.md",
+        "pm-go-to-market/commands/battlecard.md",
+        "pm-go-to-market/commands/growth-strategy.md",
+        "pm-go-to-market/commands/plan-launch.md",
+        "pm-market-research/commands/analyze-feedback.md",
+        "pm-market-research/commands/competitive-analysis.md",
+        "pm-market-research/commands/research-users.md",
+        "pm-marketing-growth/commands/market-product.md",
+        "pm-marketing-growth/commands/north-star.md",
+        "pm-product-discovery/commands/brainstorm.md",
+        "pm-product-discovery/commands/discover.md",
+        "pm-product-discovery/commands/interview.md",
+        "pm-product-discovery/commands/setup-metrics.md",
+        "pm-product-discovery/commands/triage-requests.md",
+        "pm-product-strategy/commands/business-model.md",
+        "pm-product-strategy/commands/market-scan.md",
+        "pm-product-strategy/commands/pricing.md",
+        "pm-product-strategy/commands/strategy.md",
+        "pm-product-strategy/commands/value-proposition.md",
+        "pm-toolkit/commands/draft-nda.md",
+        "pm-toolkit/commands/privacy-policy.md",
+        "pm-toolkit/commands/proofread.md",
+        "pm-toolkit/commands/review-resume.md",
+        "pm-toolkit/commands/tailor-resume.md"
+      ]
+    },
+    {
+      "id": "mp",
+      "repo": "mattpocock/skills",
+      "note": "工程技能集；clone 可用，但统一走 trees+raw 以共用一条取件路径",
+      "accounting": {
+        "upstream": 37,
+        "imported": 5,
+        "skipped": 3,
+        "alreadyInstalled": 29
+      },
+      "skills": [
+        {
+          "name": "loop-me",
+          "sourceName": "loop-me",
+          "dir": "skills/in-progress/loop-me",
+          "installAs": "loop-me",
+          "category": "M06",
+          "titleZh": "设计计划迭代环",
+          "summaryZh": "让人类留在环内，分轮次迭代打磨设计与计划"
+        },
+        {
+          "name": "setup-ts-deep-modules",
+          "sourceName": "setup-ts-deep-modules",
+          "dir": "skills/in-progress/setup-ts-deep-modules",
+          "installAs": "setup-ts-deep-modules",
+          "category": "M07",
+          "titleZh": "深模块边界搭建",
+          "summaryZh": "为 TypeScript 代码库配置路径别名与无桶文件模块边界"
+        },
+        {
+          "name": "writing-beats",
+          "sourceName": "writing-beats",
+          "dir": "skills/in-progress/writing-beats",
+          "installAs": "writing-beats",
+          "category": "M13",
+          "titleZh": "写法·节拍",
+          "summaryZh": "先排内容节拍再落笔，用序列规划避免边写边乱"
+        },
+        {
+          "name": "writing-fragments",
+          "sourceName": "writing-fragments",
+          "dir": "skills/in-progress/writing-fragments",
+          "installAs": "writing-fragments",
+          "category": "M13",
+          "titleZh": "写法·碎片",
+          "summaryZh": "先收碎片再拼装，适合长文与文档的分段成稿"
+        },
+        {
+          "name": "writing-shape",
+          "sourceName": "writing-shape",
+          "dir": "skills/in-progress/writing-shape",
+          "installAs": "writing-shape",
+          "category": "M13",
+          "titleZh": "写法·成型",
+          "summaryZh": "给草稿定整体结构与叙事弧线，让长文有骨架"
+        }
+      ],
+      "skip": [
+        {
+          "name": "claude-handoff",
+          "sourceName": "claude-handoff",
+          "dir": "skills/in-progress/claude-handoff",
+          "reason": "宿主专属：该技能逐字要求调用 Claude Code 的 `claude --bg` CLI 起后台 agent。DSH 上没有这个可执行文件，装进来是一条永远跑不动的技能——比不装更糟，因为它会出现在候选里并误导路由。DSH 侧的同类能力由 handoff 与 subagent 承担。"
+        },
+        {
+          "name": "implement-spec",
+          "sourceName": "implement-spec",
+          "dir": "skills/in-progress/implement-spec",
+          "reason": "**本轮不收，非因重复**（旧理由「≈ write-spec」已证伪）。它是 spec+issues → 分票 → implementer 子 agent 各自 worktree → merger 子 agent → 滚动推进前沿的编排技能。不收的原因是：它的编排语义与 DSH 的 subagent/workflow 工具面需要逐个对齐（原文假设 Claude Code 的 subagent 与 worktree 约定），属单独的适配批次。"
+        },
+        {
+          "name": "retro",
+          "sourceName": "retro",
+          "dir": "skills/in-progress/retro",
+          "reason": "**本轮不收，非因缺陷**（旧理由「README 标注 STUB」已证伪）。它是对编码会话的工程复盘（改进导航指针、自动化检查、编码规范、AGENTS.md、工具经济性等 8 类候选），与已纳入的 pm 版 retro（团队冲刺复盘）职责不同、并非重复。不收的原因是：它需要对 DSH 会话日志格式做适配（原文要求搜索本机会话日志），属单独的适配批次。"
+        }
+      ],
+      "alreadyInstalled": [
+        {
+          "name": "ask-matt",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "code-review",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "codebase-design",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "diagnosing-bugs",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "domain-modeling",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "git-guardrails-claude-code",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "grill-me",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "grill-with-docs",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "grilling",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "handoff",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "implement",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "improve-codebase-architecture",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "migrate-to-shoehorn",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "prototype",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "research",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "resolving-merge-conflicts",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "scaffold-exercises",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "setup-matt-pocock-skills",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "setup-pre-commit",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "tdd",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "teach",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "to-questionnaire",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "to-spec",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "to-tickets",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "triage",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "wait-what",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "wayfinder",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "wizard",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        },
+        {
+          "name": "writing-for-agents",
+          "reason": "本机已有等价或同名能力，已由 fullstack-mapping.json 或 dsh-overseas-skills manifest 追踪；本批不重复取件，避免静默覆盖已被产品清单引用的副本。"
+        }
+      ]
+    }
+  ],
+  "commandMap": {
+    "pm-ai-shipping/commands/derive-tests": "test-scenarios",
+    "pm-ai-shipping/commands/document-app": "intended-vs-implemented",
+    "pm-ai-shipping/commands/ship-check": "shipping-artifacts",
+    "pm-data-analytics/commands/analyze-cohorts": "cohort-analysis",
+    "pm-data-analytics/commands/analyze-test": "ab-test-analysis",
+    "pm-execution/commands/generate-data": "dummy-dataset",
+    "pm-execution/commands/meeting-notes": "summarize-meeting",
+    "pm-execution/commands/plan-okrs": "brainstorm-okrs",
+    "pm-execution/commands/pre-mortem": "pre-mortem",
+    "pm-execution/commands/red-team-prd": "strategy-red-team",
+    "pm-execution/commands/stakeholder-map": "stakeholder-map",
+    "pm-execution/commands/test-scenarios": "test-scenarios",
+    "pm-execution/commands/transform-roadmap": "outcome-roadmap",
+    "pm-execution/commands/write-prd": "create-prd",
+    "pm-go-to-market/commands/battlecard": "competitive-battlecard",
+    "pm-go-to-market/commands/plan-launch": "gtm-strategy",
+    "pm-market-research/commands/analyze-feedback": "sentiment-analysis",
+    "pm-market-research/commands/competitive-analysis": "competitor-analysis",
+    "pm-marketing-growth/commands/north-star": "north-star-metric",
+    "pm-product-discovery/commands/setup-metrics": "metrics-dashboard",
+    "pm-product-discovery/commands/triage-requests": "analyze-feature-requests",
+    "pm-product-strategy/commands/pricing": "pricing-strategy",
+    "pm-product-strategy/commands/value-proposition": "value-proposition",
+    "pm-toolkit/commands/privacy-policy": "privacy-policy"
+  },
+  "commandMapUnmapped": {
+    "pm-ai-shipping/commands/security-audit-static": null,
+    "pm-ai-shipping/commands/performance-audit-static": null,
+    "pm-data-analytics/commands/write-query": null,
+    "pm-execution/commands/sprint": null,
+    "pm-execution/commands/write-stories": null,
+    "pm-go-to-market/commands/growth-strategy": null,
+    "pm-market-research/commands/research-users": null,
+    "pm-marketing-growth/commands/market-product": null,
+    "pm-product-discovery/commands/brainstorm": null,
+    "pm-product-discovery/commands/discover": null,
+    "pm-product-discovery/commands/interview": null,
+    "pm-product-strategy/commands/business-model": null,
+    "pm-product-strategy/commands/market-scan": null,
+    "pm-product-strategy/commands/strategy": null,
+    "pm-toolkit/commands/draft-nda": null,
+    "pm-toolkit/commands/proofread": null,
+    "pm-toolkit/commands/review-resume": null,
+    "pm-toolkit/commands/tailor-resume": null
+  },
+  "commandPlanRevision": {
+    "originalPlan": "折进对应技能正文的「调用模板」小节（每条技能一段）",
+    "revisedPlan": "作为上游编排模式的事实存档保留在 staging/third-party/，不装进 ~/.dsh/skills",
+    "evidence": {
+      "totalBytes": 175587,
+      "largestFile": "pm-ai-shipping/commands/security-audit-static.md (11785 bytes)",
+      "orchestrators": "至少 ship-check(8162) / sprint(5164) / discover(4921) / market-scan(4583) / business-model(6001) 是跨多技能/多命令的编排器，非单技能调用模板"
+    },
+    "reason": "把它们塞进技能正文会破坏 M00–M13 的「一节点一职责」分类轴；而 DSH 没有 Claude Code 的斜杠命令机制，装成技能也会变成 42 条永远不被路由到的条目。"
+  }
+}

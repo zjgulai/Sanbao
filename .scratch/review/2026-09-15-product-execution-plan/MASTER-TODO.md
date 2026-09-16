@@ -17,9 +17,10 @@ BASE-001 当前工作树边界确认
   ├─ DEC-009 第三方代码准入 ──────→ SEC-RT-002 ──────────────┤
   │                                      ↑ SEC-RT-003/003A   │
   ├─ DEC-010 artifact 权威源 ─────→ REL-001/QG-003 ──────────┤
+  ├─ QG-006A mutation fixture 隔离基础设施 ───────────────────┐
   └─ QG-001 三态契约 ─┬→ QG-002..005 ─┐                     │
-                      ├→ QG-010/011/012 ├→ QG-006A → QG-006B → QG-007 → QG-008
-                      └─────────────────┘                     │
+                      ├→ QG-010/011/012 ├→ QG-006B → QG-007 → QG-008
+                      └─────────────────┘        ↑ QG-006A   │
 SEC-RT-001/002/003/003A/004 ─→ SEC-RT-010 ───────────────────┤
 REL-001 clean source ─→ REL-002 payload attestation ─────────┤
 REL-003 版本不可重制 ─────────────────────────────────────────┤
@@ -53,7 +54,7 @@ PROD-006 ─→ OBS-002；DEC-008 ─→ BUS-001 ─→ BUS-002 ─────�
 - [x] 记录禁止覆盖清单和三个 Shopify 目标文件的 hash 快照。
 - [x] 目标文件在两次复核中 hash 一致；每次 patch 前继续复核。
 - 验收：实施前后未授权文件的 hash 不变；`git status --porcelain=v2` 的变化只来自获批任务。
-- 当前状态：已完成；证据与精确边界见 [BATCH-001](batches/BATCH-001-boundary-and-shopify.md)。
+- 当前状态：边界快照与写入隔离已完成；Settings 候选的最终归属仍由 `PROD-UX-001` 收口，不把该未决项误写成已验收。
 
 ### BASE-002 · 建立任务批次记录
 
@@ -95,10 +96,10 @@ PROD-006 ─→ OBS-002；DEC-008 ─→ BUS-001 ─→ BUS-002 ─────�
 | QG-003 | 修复 plugin-entry-contract 射程与入口解析 | P0 | QG-001 | M | 高 |
 | QG-004 | profile metadata/files/bundles 覆盖率闭合 | P0 | QG-001 | M | 中 |
 | QG-005 | changedPackages 覆盖远端基线和 untracked | P1 | QG-001 | S | 高 |
-| QG-010 | Fullstack 138 全量验证与 tracked 89 whitelist 全等 | P0 | QG-001 | M | 高 |
-| QG-011 | Third-party intake 分类守恒与错误非零退出 | P0 | QG-001 | M | 高 |
+| QG-010 | Fullstack 138 全量验证与 tracked 89 whitelist 全等（本地 L1/L2/L3 完成；QG-007 remote required deferred） | P0 | QG-001 | M | 高 |
+| QG-011 | Third-party intake 分类守恒与错误非零退出（local implementation + E1/E2/E3 acceptance complete；QG-007 remote required check deferred） | P0 | QG-001 | M | 高 |
 | QG-012 | Settings AX 独立校准锚与仪器负控 | P0 验收 | QG-001 | M | 高 |
-| QG-006A | mutation fixture 隔离基础设施 | P0 基础设施 | BASE-001,QG-002..005,QG-010..012 | M | 低 |
+| QG-006A | mutation fixture 隔离基础设施 | P0 基础设施 | BASE-001（先行基础设施；退出条件覆盖 QG-002..005,QG-010..012） | M | 低 |
 | QG-006B | 聚合并发、失败/SIGTERM 与零副作用证明 | P0 收口 | QG-006A | M | 低 |
 | REL-001 | 正式产物强制 clean source | P0 | DEC-010,QG-003,QG-005 | S/M | 中 |
 | REL-002 | smoke attestation 绑定 payload 字节 | P0 | REL-001 | M | 中 |
@@ -114,8 +115,8 @@ PROD-006 ─→ OBS-002；DEC-008 ─→ BUS-001 ─→ BUS-002 ─────�
 - [ ] 无射程不会显示 `ok`。
 - [ ] live-presets 每一条真实 `name:` 行都进入 checked、disabled、failed 三者之一。
 - [ ] plugin-entry 每个候选都有 checked 或类型化 skip，缺入口不能静默消失。
-- [ ] Fullstack 138 条全部逐项验证，tracked 89 项白名单与批准产品意图双向全等。
-- [ ] third-party intake 分类互斥且守恒，任何后置 accounting error 均非零退出且零写入。
+- [x] Fullstack 138 条全部逐项验证，tracked 89 项白名单与批准产品意图双向全等。
+- [x] third-party intake 分类互斥且守恒，任何后置 accounting error 均非零退出且零写入。
 - [ ] Settings AX 校准锚与目标控件独立，目标尺寸 mutation 能稳定打红。
 - [ ] 门禁测试成功、失败、SIGTERM 和并发执行前后工作树一致。
 - [ ] preset/skill 的路径逃逸、symlink、批末失败和中断恢复负例均保持允许根外字节不变。
@@ -214,14 +215,15 @@ PROD-006 ─→ OBS-002；DEC-008 ─→ BUS-001 ─→ BUS-002 ─────�
 
 ## 8. 建议的未来实施顺序
 
-用户后续已授权从完整方案进入阶段执行；当前授权严格由 `BATCH-001` 圈定，不构成后续代码、删除、安装、提交、推送或发布授权。按下列批次逐个执行并在每批后停止：
+用户后续已授权从完整方案进入阶段执行；每一轮权限以最新用户消息和对应任务卡共同圈定，不从历史 batch 推导额外授权。当前只允许固化 `QG-010/QG-011` 到 GitHub，随后实施 `QG-006A` 并停止；不构成删除、安装、Codeup 推送、发布或后续任务授权。按下列批次逐个执行并在每批后停止：
 
 1. `BASE-001` + `BASE-002`：已完成；冻结文件归属、hash 与验收边界。
-2. `SEC-RT-001`：当前唯一代码任务；独立修复 Shopify hostname/凭证外传，不与供应链重构混写。
+2. `SEC-RT-001`：已完成本地修复并进入既有 checkpoint；真实店铺/live/clean-machine/DMG 验收仍 deferred。
 3. `SEC-RT-003A`：已按单独授权完成本地实现与临时根 fault/concurrency/recovery 验收；真实 `~/.dsh` 未做 mutation，UI/live 人工验收 deferred，第三方 promotion 继续等 SEC-RT-002 ledger。
-4. `QG-001` + `QG-002`：已完成本地实现与 L1/L2/L3 验收；普通 gate 将 platform-disabled row 记为 typed skip，strict 如实非零。下一独立批次为 `QG-011`，关闭 intake accounting 的 exit-0 假绿；聚合并发与零副作用仍由后续 `QG-006A` / `QG-006B` 收口。
+4. `QG-001` + `QG-002` + `QG-010` + `QG-011`：均已完成本地实现与分层验收；当前 checkpoint 只固化后两项。QG-007 远端 required check 与聚合并发/SIGTERM/零副作用仍分别由后续 `QG-007`、`QG-006A/QG-006B` 收口。
 5. 用户先完成 `DEC-009`，再独立实施 `SEC-RT-003` + `SEC-RT-002`；MCP、LoopX、第三方技能分别给 Red/Green 和 clean-machine 证据。
 6. 用户先完成 `DEC-010`，再实施 `QG-003` + `QG-005` + `REL-001`，证明 clean checkout 可重建 Settings artifact 与冻结发布输入。
-7. `QG-010` 与 `PROD-UX-001` + `QG-012` 分成两个批次：前者关闭 138/89 射程，后者收口 Settings CSS 与验收仪器，避免代码修复和判据修复互相遮蔽。
+7. `QG-010` 已关闭本地 138/89 射程；下一独立批次只做 `QG-006A`，先把 mutation fixture 隔离基础设施铺好。
+8. `PROD-UX-001` + `QG-012` 继续作为后续独立 Settings 批次，避免代码修复和判据修复互相遮蔽；不得从 `QG-006A` 自动进入。
 
 Team Hub、远端 CI/ruleset、Developer ID、公证、真实安装/删除、Release 和客户机操作均在上述批次之外，仍需各自的明确授权。

@@ -45,8 +45,8 @@ export const VERIFIERS = [
   },
   {
     rel: join(PKG_REL, 'scripts', 'verify-fullstack.mjs'),
-    answers: 'AI全栈 30 条安装完整 / frontmatter 合法 / 资源脚本可编译 / 路由型冒烟',
-    remediation: '按输出逐条修；安装缺失跑 scripts/intake-install.mjs',
+    answers: 'AI全栈 mapping 70 + extra 68 是否形成唯一 138 条 catalog，并逐项满足来源、metadata 与产物契约',
+    remediation: '按输出逐条修；先跑 scripts/build-fullstack-catalog.mjs --check，安装缺失再按来源走对应 installer',
   },
 ]
 

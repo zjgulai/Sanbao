@@ -1,0 +1,54 @@
+{
+  "$comment": "本轮从第三方仓库**不收**的条目与逐条理由。由 scripts/build-third-party-intake.mjs 读取并校验。这里只放真正 skipped 的条目；alreadyInstalled 独立登记在 third-party-source-inventory.json。每条必须有 >=20 字的 reason。",
+  "$corrected": "两条旧理由已于 2026-09-16 按实测更正（见 build-third-party-intake.mjs 文件头「被更正的旧理由」段）：retro 并非 STUB（README 里 retro 与 STUB 各出现 0 次，该文件 4369 字节且有完整步骤与 Reference 段）；implement-spec 也非「≈ write-spec」（它是 2043 字节的编排技能，走 spec+issues → 分票 → 子 agent worktree → merger → 滚动前沿）。起收决定不变，理由换成立的。",
+  "skips": [
+    {
+      "repo": "mp",
+      "name": "claude-handoff",
+      "dir": "skills/in-progress/claude-handoff",
+      "reason": "宿主专属：该技能逐字要求调用 Claude Code 的 `claude --bg` CLI 起后台 agent。DSH 上没有这个可执行文件，装进来是一条永远跑不动的技能——比不装更糟，因为它会出现在候选里并误导路由。DSH 侧的同类能力由 handoff 与 subagent 承担。"
+    },
+    {
+      "repo": "mp",
+      "name": "retro",
+      "dir": "skills/in-progress/retro",
+      "reason": "**本轮不收，非因缺陷**（旧理由「README 标注 STUB」已证伪）。它是对编码会话的工程复盘（改进导航指针、自动化检查、编码规范、AGENTS.md、工具经济性等 8 类候选），与已纳入的 pm 版 retro（团队冲刺复盘）职责不同、并非重复。不收的原因是：它需要对 DSH 会话日志格式做适配（原文要求搜索本机会话日志），属单独的适配批次。"
+    },
+    {
+      "repo": "mp",
+      "name": "implement-spec",
+      "dir": "skills/in-progress/implement-spec",
+      "reason": "**本轮不收，非因重复**（旧理由「≈ write-spec」已证伪）。它是 spec+issues → 分票 → implementer 子 agent 各自 worktree → merger 子 agent → 滚动推进前沿的编排技能。不收的原因是：它的编排语义与 DSH 的 subagent/workflow 工具面需要逐个对齐（原文假设 Claude Code 的 subagent 与 worktree 约定），属单独的适配批次。"
+    },
+    {
+      "repo": "pm",
+      "name": "draft-nda",
+      "dir": "pm-toolkit/skills/draft-nda",
+      "reason": "不收。保密协议是纯商务法务文书，与软件交付的发布清单无关；本线没有承接它的节点，硬塞会稀释分类轴。"
+    },
+    {
+      "repo": "pm",
+      "name": "grammar-check",
+      "dir": "pm-toolkit/skills/grammar-check",
+      "reason": "不收。通用语法校对，本机已有 copy-editor 与 humanizer-zh 覆盖该职责；收它会造成一条事实两个家。"
+    },
+    {
+      "repo": "pm",
+      "name": "review-resume",
+      "dir": "pm-toolkit/skills/review-resume",
+      "reason": "不收。简历评审属招聘文书场景，与软件或产品全栈交付无关。"
+    }
+  ],
+  "$adjudication": {
+    "note": "5 条被分类 subagent 判为越界，我行使裁决权收 1 条、其余作为「需单独批次」登记。裁决理由随条目写在 assignments 侧（fullstack-extra.json）。",
+    "loop-me": "收。subagent 判越界（产出 workflows/*.md 而非 Axx），但 M06 的职责是「原型与 UX」，用轮次打磨设计与计划正是设计验证的一种，故归 M06。",
+    "writing-beats": "收，归 M13。subagent 判越界。收到的理由：M13 的职责含「复盘与演进」的文档产出，而这本线确实要产 PLAYBOOK/SOUL/ADR/Note 等长文，节拍规划有实际用途。这是**实用主义裁决而非分类学结论**——它不在 A00–A13 链上，只是本线确有此类产出。",
+    "writing-fragments": "同上，归 M13。",
+    "writing-shape": "同上，归 M13。",
+    "summarize-meeting": "收，归 M00。subagent 判越界（通用会议纪要）。收到的理由：pm 线里同类协作技能（summarize-interview）已收，会议纪要与访谈纪要属同一家族；且 M00 是「全局上下文」，纪要正是上下文来源。",
+    "privacy-policy": "收，归 M10。subagent 判越界（法务文书）。收到的理由：AI 产品上线（M10 发布）必须出隐私政策草稿，这是发布清单上的真实一项；技能本身产出的是草稿而非定稿（原文即要求交由法务复核），不越过合规边界。",
+    "draft-nda": "不收。保密协议是纯商务法务文书，与软件交付的发布清单无关。",
+    "grammar-check": "不收。通用语法校对，本机已有 copy-editor / humanizer-zh 覆盖该职责，收它会造成一条事实两个家。",
+    "review-resume": "不收。简历评审与软件交付无关。"
+  }
+}

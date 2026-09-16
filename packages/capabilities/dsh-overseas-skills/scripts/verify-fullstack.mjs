@@ -1,106 +1,89 @@
 #!/usr/bin/env node
-/** verify-fullstack.mjs — AI全栈技能适配测试闸门（P2）
- * ① 逐条安装 + frontmatter 解析/引号/name/description/title/模型可调用（条数取自
- *    scripts/fullstack-mapping.json，**不硬编码**——硬编码会让「少了一条」与「清单变长了」
- *    无法区分，而这两种情况要修的地方完全不同）
- * ② diagnosing-bugs/scripts 的 Python 编译（py_compile）
- * ③ wizard/template.sh 与各 scripts 的 bash -n 语法
- * ④ 路由型 3 个冒烟（正文含目标技能名）
- * ⑤ 预设 3 技能（tdd/to-spec/grill-me）预设副本未被触碰
+/**
+ * AI 全栈 catalog 验证入口。
+ *
+ * 逐项判据在 fullstack-contract.mjs：mapping 与 extra 必须先合成唯一的
+ * canonical catalog，再以同一套 metadata / 来源 / 产物规则核对。这里仅负责
+ * CLI 输出与历史 preset 副本判据，避免命令行和根 gate 各复制一套契约。
  */
-import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
-import { homedir } from "node:os";
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { auditFullstackCatalog, toCanonicalCatalogResult } from './fullstack-contract.mjs'
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, "..");
-const SKILLS_DIR = join(homedir(), ".dsh", "skills");
-const MAPPING = JSON.parse(readFileSync(join(HERE, "fullstack-mapping.json"), "utf8"));
-const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const PACKAGE_ROOT = path.join(HERE, '..')
+const PRESET_ID = 'ai-product-developer'
 
-const problems = [];
-let installed = 0, translated = 0;
-let presetCopiesNote = "预设副本未核对";
-for (const s of MAPPING.skills) {
-  const file = join(SKILLS_DIR, s.name, "SKILL.md");
-  if (!existsSync(file)) { problems.push(`${s.name}: 未安装`); continue; }
-  installed++;
-  const text = readFileSync(file, "utf8");
-  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
-  if (!m) { problems.push(`${s.name}: 无 frontmatter`); continue; }
-  const fm = m[1];
-  if (!NAME_RE.test(s.name)) problems.push(`${s.name}: name 非法`);
-  const nm = /^name:\s*"([^"]+)"/m.exec(fm);
-  if (!nm || nm[1] !== s.name) problems.push(`${s.name}: name 不符`);
-  const title = /^title:\s*"([^"]+)"/m.exec(fm);
-  if (!title) problems.push(`${s.name}: 缺 title`);
-  const desc = /^description:\s*"(.+)"/m.exec(fm);
-  if (!desc || desc[1].length < 10) problems.push(`${s.name}: description 过短/缺失`);
-  if (!/disable-model-invocation:\s*false/.test(fm)) problems.push(`${s.name}: 未默认模型可调用`);
-  if (/[\u4e00-\u9fa5]/.test((m[2] || ""))) translated++;
-  // 全栈线 frontmatter 只允许**纯标量行**（SOP §12.9）：这一条不是形式洁癖，而是这条线的形状约定——
-  // 溯源走技能目录的 README.usage.md，不进 frontmatter，所以这里没有 metadata 块可容纳。
-  for (const line of fm.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    if (!/^[A-Za-z_][\w-]*:\s*(".*"|true|false)$/.test(line)) problems.push(`${s.name}: 非法fm行 ${line.slice(0, 40)}`);
-  }
-}
-// 资源脚本编译/语法
-for (const d of ["diagnosing-bugs"]) {
-  for (const f of readdirSync(join(SKILLS_DIR, d, "scripts"))) {
-    const p = join(SKILLS_DIR, d, "scripts", f);
-    if (f.endsWith(".py")) {
-      try { execFileSync("python3", ["-m", "py_compile", p], { stdio: "pipe" }); }
-      catch (e) { problems.push(`${d}/scripts/${f} py_compile 失败`); }
-    } else if (f.endsWith(".sh")) {
-      try { execFileSync("bash", ["-n", p], { stdio: "pipe" }); }
-      catch (e) { problems.push(`${d}/scripts/${f} bash -n 失败`); }
+function checkPresetCopies() {
+  const presetSkillsDir = path.join(os.homedir(), '.dsh', '.agent-presets', PRESET_ID, 'skills')
+  if (!fs.existsSync(presetSkillsDir)) {
+    return {
+      status: 'skip',
+      expected: 0,
+      checked: 0,
+      violations: [],
+      note: `预设 ${PRESET_ID} 不在本机（跳过副本核对，不判红）`,
     }
   }
-}
-for (const [name, f] of [["wizard", "template.sh"]]) {
-  const p = join(SKILLS_DIR, name, f);
-  if (existsSync(p)) {
-    try { execFileSync("bash", ["-n", p], { stdio: "pipe" }); }
-    catch (e) { problems.push(`${name}/${f} bash -n 失败`); }
-  }
-}
-// 路由型冒烟
-const smoke = { "grill-me": "grilling", "grill-with-docs": "domain-modeling", "ask-matt": "skill" };
-for (const [name, needle] of Object.entries(smoke)) {
-  const p = join(SKILLS_DIR, name, "SKILL.md");
-  if (existsSync(p) && !readFileSync(p, "utf8").includes(needle)) problems.push(`${name}: 路由目标 ${needle} 未出现在正文`);
-}
-// 预设 3 技能未被触碰（预设目录仍含旧副本）
-//
-// 这一条的射程**依赖本机装没装那个 preset**，不是仓库产物。原实现把「预设目录不在本机」
-// 报成「副本丢失」——两者是不同的东西：前者是环境事实，后者是数据被动了。
-// 实测 2026-09-15 本机 `~/.dsh/.agent-presets/` 下只有 agt-001..050 + bobo-cto + lute-cordis，
-// `ai-product-developer` 这一组 preset 已不在（v3 重组时移出）。于是这条判据恒红，
-// 而恒红的判据与恒绿的判据一样没有信息量：人只会学会绕过它。
-// 现在：目录不在 → 跳过并说明；目录在 → 逐条核对，且条数取自 presets/preset-skills.json
-// 而不是硬编码的 3（硬编码会让「少了一条」与「改过清单」无法区分）。
-const PRESETS = join(homedir(), ".dsh", ".agent-presets");
-const PRESET_ID = "ai-product-developer";
-const presetSkillsDir = join(PRESETS, PRESET_ID, "skills");
-if (!existsSync(presetSkillsDir)) {
-  presetCopiesNote = `预设 ${PRESET_ID} 不在本机（跳过副本核对，不判红）`;
-} else {
-  let expected = null;
+
+  const violations = []
+  let names
   try {
-    const ps = JSON.parse(readFileSync(join(ROOT, "presets", "preset-skills.json"), "utf8"));
-    expected = (ps.presets || []).find((p) => p.id === PRESET_ID)?.skills?.map((s) => s.name ?? s) ?? null;
-  } catch { /* 读不到就退回目录实读 */ }
-  const names = expected ?? readdirSync(presetSkillsDir);
-  for (const n of names) {
-    const p = join(presetSkillsDir, n, "SKILL.md");
-    if (!existsSync(p)) problems.push(`预设副本丢失: ${PRESET_ID}/skills/${n}`);
+    const document = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'presets', 'preset-skills.json'), 'utf8'))
+    names = (document.presets ?? []).find((preset) => preset.id === PRESET_ID)?.skills?.map((skill) => skill.name ?? skill)
+  } catch (error) {
+    violations.push(`无法读取 ${PRESET_ID} 的版本化技能清单：${error instanceof Error ? error.message : String(error)}`)
   }
-  presetCopiesNote = `预设 ${PRESET_ID} 副本 ${names.length}/${names.length} 在`;
+  if (!Array.isArray(names) || names.length === 0) {
+    violations.push(`${PRESET_ID} 的版本化技能清单为空；不能从 live 目录反推期望集合`)
+    names = []
+  }
+  for (const name of names) {
+    if (!fs.existsSync(path.join(presetSkillsDir, name, 'SKILL.md'))) {
+      violations.push(`预设副本丢失：${PRESET_ID}/skills/${name}`)
+    }
+  }
+  return {
+    status: violations.length > 0 ? 'fail' : 'pass',
+    expected: names.length,
+    checked: Math.max(0, names.length - violations.filter((item) => item.startsWith('预设副本丢失')).length),
+    violations,
+    note: `预设 ${PRESET_ID} 副本 ${names.length}/${names.length}`,
+  }
 }
-const TOTAL = MAPPING.skills.length;
-console.log(`AI全栈适配测试 | 安装 ${installed}/${TOTAL} | 已汉译 ${translated}/${TOTAL} | ${presetCopiesNote} | 问题 ${problems.length}`);
-if (problems.length) { problems.forEach((x) => console.log("  - " + x)); process.exit(1); }
-console.log(`✓ ${installed}/${TOTAL} 全项通过`);
+
+function main(argv = process.argv.slice(2)) {
+  const unknown = argv.filter((arg) => arg !== '--json')
+  if (unknown.length > 0) {
+    console.error(`用法：node scripts/verify-fullstack.mjs [--json]\n未知参数：${unknown.join(', ')}`)
+    return 2
+  }
+
+  const catalogAudit = auditFullstackCatalog()
+  const catalog = toCanonicalCatalogResult(catalogAudit)
+  const presetCopies = checkPresetCopies()
+  const failed = catalog.status === 'fail' || presetCopies.status === 'fail'
+
+  if (argv.includes('--json')) {
+    console.log(JSON.stringify({
+      catalog,
+      items: catalogAudit.itemResults,
+      presetCopies,
+      status: failed ? 'fail' : catalog.status,
+    }, null, 2))
+  } else {
+    console.log(
+      `AI全栈适配测试 | catalog ${catalog.checked}/${catalog.expected}`
+      + `（mapping ${catalogAudit.originCounts.mapping} + extra ${catalogAudit.originCounts.extra}）`
+      + ` | ${presetCopies.note}`,
+    )
+    for (const problem of [...catalog.violations, ...presetCopies.violations]) console.log(`  - ${problem}`)
+    if (!failed && catalog.status === 'pass') console.log(`✓ catalog ${catalog.checked}/${catalog.expected} 全项通过`)
+    else if (!failed && catalog.status === 'skip') console.log(`↷ catalog live 核对跳过：${catalog.reason}`)
+  }
+  return failed ? 1 : 0
+}
+
+process.exitCode = main()

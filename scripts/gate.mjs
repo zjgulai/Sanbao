@@ -38,6 +38,13 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { runGateChecks } from './gates/gate-result.mjs'
 import { checkAgentFullstack } from '../packages/capabilities/dsh-overseas-skills/scripts/verify-agent-fullstack.mjs'
+import {
+  auditApprovedWhitelist,
+  auditFullstackCatalog,
+  toCanonicalCatalogResult,
+  toCanonicalWhitelistResult,
+} from '../packages/capabilities/dsh-overseas-skills/scripts/fullstack-contract.mjs'
+import { checkThirdPartyIntake } from './gates/third-party-intake.mjs'
 import { checkThemeTokens } from './gates/theme-tokens.mjs'
 import { checkWorktableFence } from './gates/worktable-fence.mjs'
 import { checkNodeInterpreter } from './gates/node-interpreter.mjs'
@@ -390,9 +397,37 @@ const CHECKS = [
     },
   },
   {
+    name: 'fullstack-catalog',
+    remediation:
+      '运行 node packages/capabilities/dsh-overseas-skills/scripts/verify-fullstack.mjs --json；mapping 与 extra 必须先合成唯一 catalog，再逐项修复 missing、metadata、来源或产物语法问题（ADR-0096）',
+    run() {
+      return toCanonicalCatalogResult(auditFullstackCatalog())
+    },
+  },
+  {
+    name: 'fullstack-whitelist',
+    remediation:
+      '核对 packages/capabilities/dsh-overseas-skills/manifest/agent-fullstack-whitelist.json：owner 批准的 skillIds、setSha256 与 138 catalog 必须闭合；产品变更需先更新 ADR/Note，不得从 live preset 自动反推（ADR-0096）',
+    run() {
+      const catalogAudit = auditFullstackCatalog({ checkInstalled: false })
+      return toCanonicalWhitelistResult(auditApprovedWhitelist({ catalogAudit }))
+    },
+  },
+  {
+    name: 'fullstack-contract-selftest',
+    remediation:
+      '运行 node --test packages/capabilities/dsh-overseas-skills/test/fullstack-contract.spec.mjs；extra 缺失、跨源重复、归一化碰撞、坏资源、approved set 指纹漂移、任意子集与同数量替换必须逐项判红（ADR-0096）',
+    run() {
+      return runNodeTestFile(
+        'packages/capabilities/dsh-overseas-skills/test/fullstack-contract.spec.mjs',
+        'fullstack catalog / whitelist 契约的反向自测失败',
+      )
+    },
+  },
+  {
     name: 'agent-fullstack',
     remediation:
-      '按报错修 ~/.dsh/.agent-presets/agent-fullstack/：persona 行与 SOUL.md 不同源时改 SOUL.md 再跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-persona.mjs（不要直接编辑 persona 行）；icon 行缺失或与图标库不同源时不要手抄 base64，跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-avatar.mjs（改头像要改图标库，不是改 preset.yml）；白名单报错先确认技能确实在 ~/.dsh/skills 与 138 条事实源里；压缩行报非法键就直接删键——compaction-basic 的 validateKeys 抛错会让整行不加载',
+      '按报错修 ~/.dsh/.agent-presets/agent-fullstack/：persona 行与 SOUL.md 不同源时改 SOUL.md 再跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-persona.mjs（不要直接编辑 persona 行）；icon 行缺失或与图标库不同源时不要手抄 base64，跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-avatar.mjs（改头像要改图标库，不是改 preset.yml）；白名单 missing/unexpected 或节点错挂先对照 canonical approved manifest 与 catalog nodeId，不能从 live 反写产品意图；压缩行报非法键就直接删键——compaction-basic 的 validateKeys 抛错会让整行不加载',
     run() {
       const { presetRoot, skipped, facts, problems } = checkAgentFullstack({})
       // 空射程不许与「都合格」同形（ADR-0075）：用户预设不进仓库，干净检出上本就该跳过。
@@ -405,7 +440,7 @@ const CHECKS = [
         }
       }
       const note = facts.persona
-        ? `persona 同源=${facts.persona.sameSource ? '是' : '否'} ${facts.persona.personaChars} 字符；白名单 ${facts.subset?.total ?? 0} 条；节点 ${Object.keys(facts.subset?.nodes ?? {}).length}/14；头像 ${facts.avatar ? `${facts.avatar.iconId} 同源=${facts.avatar.sameSource === null ? '未核对' : facts.avatar.sameSource ? '是' : '否'}` : '缺'}`
+        ? `persona 同源=${facts.persona.sameSource ? '是' : '否'} ${facts.persona.personaChars} 字符；白名单 runtime ${facts.subset?.total ?? 0}/approved ${facts.subset?.approved ?? 0}（owner=${facts.subset?.owner ?? 'unknown'}）；节点 ${Object.keys(facts.subset?.nodes ?? {}).length}/14（错挂=${facts.subset?.nodeMismatches ?? 'unknown'}）；头像 ${facts.avatar ? `${facts.avatar.iconId} 同源=${facts.avatar.sameSource === null ? '未核对' : facts.avatar.sameSource ? '是' : '否'}` : '缺'}`
         : undefined
       return { passed: problems.length === 0, violations: problems, note }
     },
@@ -413,9 +448,28 @@ const CHECKS = [
   {
     name: 'agent-fullstack-selftest',
     remediation:
-      '跑 node --test scripts/gates/agent-fullstack.test.mjs 看红在哪条：人格层判据必须能说「不」——干净副本必须静默；同长度单字符替换必须判红（打掉只比长度的退化实现）；P1 骨架占位、截断成开场白、缺 M09 节点、缺三无条文、缺 {{cwd}} 都必须判红，且后三条在**源与副本一起改**时仍要红（证明 6b–6d 不是逐字比对的附庸）；锚点改坏必须响亮失败而不是退化成「无发现」；SOUL.md 缺失或正文为空必须判红（P-02 / P-03）',
+      '跑 node --test scripts/gates/agent-fullstack.test.mjs 看红在哪条：人格层判据必须能说「不」——干净副本必须静默；同长度单字符替换必须判红；P1 骨架占位、截断、缺 M09、缺三无条文、缺 {{cwd}} 都必须判红；白名单同数替换必须同时点名 missing/unexpected，同集合节点错挂也必须判红；锚点损坏、SOUL.md 缺失或正文为空必须响亮失败（P-02 / P-03 / P-30）',
     run() {
       return runNodeTestFile('scripts/gates/agent-fullstack.test.mjs', '「三无 · Agent全栈专家」preset 判据的反向自测失败')
+    },
+  },
+  {
+    name: 'third-party-intake',
+    remediation:
+      '运行 node packages/capabilities/dsh-overseas-skills/scripts/build-third-party-intake.mjs --check；每个 upstream source ID 必须恰好落入 imported / skipped / alreadyInstalled 一个终态，且生成清单逐字一致（ADR-0095）',
+    run() {
+      return checkThirdPartyIntake()
+    },
+  },
+  {
+    name: 'third-party-intake-selftest',
+    remediation:
+      '运行 node --test packages/capabilities/dsh-overseas-skills/test/build-third-party-intake.spec.mjs；overlap、duplicate、missing、unexpected、同总数替换、坏 JSON 与写前失败都必须非零且不改目标（ADR-0095）',
+    run() {
+      return runNodeTestFile(
+        'packages/capabilities/dsh-overseas-skills/test/build-third-party-intake.spec.mjs',
+        'third-party intake 分类守恒与原子写入的反向自测失败',
+      )
     },
   },
   {

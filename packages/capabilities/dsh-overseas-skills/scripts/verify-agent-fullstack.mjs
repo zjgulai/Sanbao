@@ -53,6 +53,12 @@ import { DEFAULT_SOUL_PATH, loadSoulBody, extractPersonaBody } from './sync-full
 import {
   DEFAULT_ICON_ID, DEFAULT_MANIFEST_PATH, loadAvatarEntry, extractIcon,
 } from './sync-fullstack-avatar.mjs'
+import {
+  auditApprovedWhitelist,
+  auditFullstackCatalog,
+  compareRuntimeWhitelist,
+  parseRuntimeWhitelist,
+} from './fullstack-contract.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -77,6 +83,8 @@ export const PERSONA_MIN_CHARS = 2000
  * @param {string} [opts.soulPath]    人格事实源（默认仓库内的 presets/agent-fullstack/SOUL.md）
  * @param {string} [opts.skillsDir]   技能库根（默认 ~/.dsh/skills）
  * @param {string} [opts.profileBase] 行名解析面（默认 ~/.dsh/profiles/desktop）
+ * @param {string} [opts.iconManifest] 头像事实源（默认本机 lute-brand-icons manifest）
+ * @param {string} [opts.whitelistPath] 产品批准清单（默认 manifest/agent-fullstack-whitelist.json）
  * @returns {{presetRoot: string, skipped: boolean, facts: object, problems: string[]}}
  */
 export function checkAgentFullstack(opts = {}) {
@@ -154,11 +162,10 @@ export function checkAgentFullstack(opts = {}) {
   // ── 4. 技能子集层 ─────────────────────────────────────────────────────────
 
   if (yml) {
-    const block = /- id: skill-subset\b[\s\S]*$/m.exec(yml)?.[0] ?? ''
-    need(block !== '', 'agent.cordis.yml 里没有 skill-subset 行 —— 白名单不存在，preset 会话里能看到全部 1700+ 条技能')
-
+    const runtimeWhitelist = parseRuntimeWhitelist(yml)
+    const subsetNames = runtimeWhitelist.names
+    for (const problem of runtimeWhitelist.problems) problems.push(`[runtime whitelist] ${problem}`)
     // 抽不到就是空转：先断言抽到了，再断言值对。
-    const subsetNames = [...block.matchAll(/^ {6}- "([a-z0-9-]+)"$/gm)].map((m) => m[1])
     need(subsetNames.length > 0, 'skill-subset 的 skills 列表一条都没抽到 —— 缩进或引号形状变了，本条判据已空转，请同步本文件')
     need(new Set(subsetNames).size === subsetNames.length, `skill-subset 白名单有重复项：${subsetNames.filter((n, i) => subsetNames.indexOf(n) !== i).join(', ')}`)
 
@@ -166,31 +173,47 @@ export function checkAgentFullstack(opts = {}) {
     const missing = subsetNames.filter((n) => !fs.existsSync(path.join(SKILLS_DIR, n, 'SKILL.md')))
     need(missing.length === 0, `白名单里 ${missing.length} 条在技能库中不存在：${missing.join(', ')}`)
 
-    // 4b. 白名单必须与事实源（mapping + extra）一致：不许出现事实源之外的技能名
-    const facts138 = new Set()
-    try {
-      for (const s of JSON.parse(fs.readFileSync(path.join(HERE, 'fullstack-mapping.json'), 'utf8')).skills) facts138.add(s.name)
-      for (const s of JSON.parse(fs.readFileSync(path.join(HERE, 'fullstack-extra.json'), 'utf8')).skills) facts138.add(s.installAs)
-    } catch (e) {
-      problems.push(`读不到全栈事实源：${e.message}`)
+    // 4b. runtime 必须与产品 owner 批准的 tracked exact set 双向全等。
+    //     live 只能证明“现在装成了什么”，不能反过来成为产品意图的来源。
+    const catalogAudit = auditFullstackCatalog({ checkInstalled: false })
+    const approvedAudit = auditApprovedWhitelist({
+      whitelistPath: opts.whitelistPath,
+      catalogAudit,
+    })
+    for (const problem of approvedAudit.problems) problems.push(`[批准白名单] ${problem}`)
+    const runtimeComparison = compareRuntimeWhitelist(approvedAudit, subsetNames)
+    for (const problem of runtimeComparison.problems) problems.push(`[批准白名单] ${problem}`)
+
+    // exact set 仍不够：同一个 ID 被挪到错误节点时，数量与集合都不会变，但 persona 的派活轴
+    // 与 runtime 展示轴已经分叉。节点归属只认 catalog row 的 nodeId，不从 live 注释反推。
+    const expectedNodeByName = new Map(catalogAudit.rows.map((row) => [row.name, row.nodeId]))
+    const nodeMismatches = []
+    for (const [actualNode, entry] of Object.entries(runtimeWhitelist.nodes)) {
+      for (const name of entry.names) {
+        const expectedNode = expectedNodeByName.get(name)
+        if (expectedNode && expectedNode !== actualNode) {
+          nodeMismatches.push(`${name}: expected ${expectedNode}, actual ${actualNode}`)
+        }
+      }
     }
-    const outsiders = subsetNames.filter((n) => !facts138.has(n))
-    need(outsiders.length === 0, `白名单里有 ${outsiders.length} 条不属于全栈 138 条事实源：${outsiders.join(', ')}`)
+    if (nodeMismatches.length > 0) {
+      problems.push(`[批准白名单] runtime whitelist 节点归属不符：${nodeMismatches.join('；')}`)
+    }
 
     // 4c. 十四个节点必须全部有代表 —— 空节点意味着那条交付链在 preset 会话里断掉
-    const declaredNodes = [...block.matchAll(/^ {6}# (M\d\d)（(\d+) 条）$/gm)].map((m) => [m[1], Number(m[2])])
-    const counts = {}
-    let cur = null
-    for (const line of block.split('\n')) {
-      const mm = /^ {6}# (M\d\d)（\d+ 条）$/.exec(line)
-      if (mm) { cur = mm[1]; counts[cur] = 0; continue }
-      if (/^ {6}- "/.test(line) && cur) counts[cur]++
-    }
-    const badDecl = declaredNodes.filter(([k, v]) => counts[k] !== v)
-    need(badDecl.length === 0, `节点注释里声明的条数与实际列表不符：${badDecl.map(([k, v]) => `${k} 声明 ${v} 实得 ${counts[k]}`).join('; ')}`)
+    const counts = Object.fromEntries(
+      Object.entries(runtimeWhitelist.nodes).map(([node, entry]) => [node, entry.names.length]),
+    )
     const emptyNodes = NODE_IDS.filter((k) => !counts[k])
     need(emptyNodes.length === 0, `以下节点在 preset 会话里没有可用技能（交付链断点）：${emptyNodes.join(', ')}`)
-    facts.subset = { total: subsetNames.length, nodes: counts }
+    facts.subset = {
+      total: subsetNames.length,
+      nodes: counts,
+      approved: approvedAudit.expected,
+      owner: approvedAudit.owner,
+      setSha256: approvedAudit.calculatedSetSha256,
+      nodeMismatches: nodeMismatches.length,
+    }
   }
 
   // ── 5. 调用开关层：这是本 preset 存在的唯一理由 ───────────────────────────
@@ -219,7 +242,7 @@ export function checkAgentFullstack(opts = {}) {
       try {
         soulBody = loadSoulBody(soulPath)
       } catch (e) {
-        problems.push(`[人格] 读 SOUL.md 失败：${e.message}`)
+        problems.push(`[人格] 读 SOUL.md 失败：${e instanceof Error ? e.message : String(e)}`)
       }
     }
 
@@ -299,7 +322,8 @@ export function checkAgentFullstack(opts = {}) {
       } catch (e) {
         // 图标库读不到就**不猜**：判红并给出可执行的修法。这里不静默降级，
         // 否则「同源」这条判据会在缺库的机器上空转，而空转仍然报绿。
-        problems.push(`[头像] 无法核对同源：${e.message.split('\n')[0]}`)
+        const message = e instanceof Error ? e.message : String(e)
+        problems.push(`[头像] 无法核对同源：${message.split('\n')[0]}`)
       }
       if (source) {
         need(icon === source.icon, `[头像] preset.yml 的 icon 与图标库 ${source.id}（${source.name}）不同源 —— 图标库重画过而副本没跟着走，卡片上会是上一版的脸。修法：node scripts/sync-fullstack-avatar.mjs`)

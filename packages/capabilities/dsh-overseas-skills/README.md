@@ -23,6 +23,7 @@ DSH Desktop 设置页「出海技能」插件：从 Accio 导入的跨境电商�
 | `lib/layer-icons.js` | **构建产物**：4 面 + 8 责任域的 12 枚头像，由 `scripts/gen-layer-icons.mjs` 从 lute-brand-icons 烘焙；与算法技能页**逐字节相同**（有跨包测试） |
 | `lib/client.js` | settings.section 页面（id `overseas-skills`、order 26）与输入框胶囊（`ovp*`）：四层下钻 + 搜索 + 开关，全部 `dsw-*` 语义 Token |
 | `manifest/role-assignments.json` | **归位判定的唯一事实源**：293 条技能 → 岗位（含 `source` / `confidence` / 逐字证据 / 删除理由） |
+| `manifest/agent-fullstack-whitelist.json` | 产品 owner 批准的 agent-fullstack 89 项 composition exact set；集合指纹受门禁复算，不代表 DMG/发布授权 |
 | `manifest/skills.json` 等 | 目录的权威映射（name / 中文 title / 场景 / 细分 / toolBadcked） |
 | `scripts/build_role_map.py` | 编译归位表（`--check` 断言 lib 与 manifest 一致） |
 | `scripts/gen-layer-icons.mjs` | 烘焙 12 枚层头像 |
@@ -56,7 +57,7 @@ python3 scripts/build_role_map.py           # 重新编译（改了 manifest 之
 python3 scripts/validate_assignments.py     # 断言判定本身对不对（**正确性**，见下）
 python3 scripts/validate_assignments.py --check-roles-live   # 岗位快照 vs 运行时 preset 漂移
 node scripts/gen-layer-icons.mjs            # 重新烘焙 12 枚层头像（改了品牌技能之后）
-npm run typecheck && npm test               # tsc + node --test（82 项）
+npm run typecheck && npm test               # tsc + node --test（113 项）
 ```
 
 ### `--check` 与 `validate_assignments.py` 不是一回事（R4，2026-09-13）

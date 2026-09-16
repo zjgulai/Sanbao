@@ -497,6 +497,7 @@ runner 不稳定时先解决稳定性，再设置 required；不得长期忽略�
 - 估算：M
 - 依赖：QG-001；mutation harness 复用 QG-006A，并由 QG-006B 在进入 QG-007 前共同收口
 - 可并行：可与 QG-002..005、QG-011/012 并行
+- 状态：本地 L1/L2/L3 实现与验收完成；本 checkpoint 纳入 Git，QG-007 远端 required check deferred
 
 ### 目标
 
@@ -509,38 +510,46 @@ runner 不稳定时先解决稳定性，再设置 required；不得长期忽略�
 
 ### TODO
 
-- [ ] 将 70 mapping 与 68 extras 解析为带来源的 canonical set，先拒绝跨源重复、悬空项与 ID 归一化碰撞，再得到 expected 138。
-- [ ] 对 138 条逐项执行相同的存在性、metadata、入口、来源与产物契约，输出每项 result；禁止只遍历 mapping。
-- [ ] 把 ADR-0091 已批准的 89 项产品意图物化为受版本控制的唯一 whitelist manifest，并记录 owner/reason，不从当前安装结果反推。
-- [ ] 强制 whitelist 与 canonical approved set 做双向集合全等，并强制其为 138 catalog 的子集；输出 missing、unexpected、duplicate，而非只验 count。
-- [ ] gate summary 同时给出 `catalog expected=138/checked=138` 与 `whitelist expected=89/checked=89`，数量变化必须伴随同提交的产品决策与 fixture 更新。
+- [x] 将 70 mapping 与 68 extras 解析为带来源的 canonical set，先拒绝跨源重复、悬空项与 ID 归一化碰撞，再得到 expected 138。
+- [x] 对 138 条逐项执行相同的存在性、metadata、入口、来源与产物契约，输出每项 result；禁止只遍历 mapping。
+- [x] 把 ADR-0091 已批准的 89 项产品意图物化为受版本控制的唯一 whitelist manifest，并记录 owner/reason，不从当前安装结果反推。
+- [x] 强制 whitelist 与 canonical approved set 做双向集合全等，并强制其为 138 catalog 的子集；输出 missing、unexpected、duplicate，而非只验 count。
+- [x] gate summary 同时给出 `catalog expected=138/checked=138` 与 `whitelist expected=89/checked=89`，数量变化必须伴随同提交的产品决策与 fixture 更新。
 
 ### Red/Green 验证
 
-- [ ] Red：当前 checker 只遍历 70 mapping、68 extras 未被逐条验证；当前运行时选择只证明 14 项非空/unique/属于 138 的子集，不证明它与受版本控制的批准 89 项全等，任意合法子集可假绿。
-- [ ] Green：当前快照 138 条全部有逐项结果，tracked whitelist 与批准 89 项双向差集均为空，`checked === expected`；实现不得把 138/89 写成永久魔数，数字来自版本化清单。
+- [x] Red：旧 checker 真实输出 `70/70 全项通过`；68 extras 未被逐条验证。当前运行时选择仍只证明 14 节点非空/unique/属于 138 的子集，不证明它与受版本控制的批准 89 项全等，任意合法子集可假绿。
+- [x] Green：当前快照 138 条全部有逐项结果，canonical whitelist 与批准 89 项双向差集均为空，`checked === expected`；实现没有把 138/89 写成永久魔数，数字来自版本化清单。
 
 ### 负例
 
-- [ ] 删除/损坏一个 extra、在 mapping/extra 制造重复、删一项再补任意项维持 138、提交任意 14 项合法子集、在 whitelist 用未批准项替换批准项维持 89、重复一项维持数组长度，均必须非零退出。
+- [x] 删除/损坏一个 extra、在 mapping/extra 制造重复、删一项再补任意项维持 138、提交任意合法子集、在 whitelist 用未批准项替换批准项维持数量、重复一项维持数组长度、保留旧批准指纹但改集合，均由临时 fixture 判红。
+
+### 2026-09-16 实施记录
+
+- catalog：canonical `138/138 = mapping 70 + extra 68`，逐项 result 与根 gate 已接入。
+- whitelist：owner `lute` 明确签核 exact 89 与 `4ebfa9f…` 集合指纹后物化 canonical manifest；root `89/89`，live runtime `89/approved 89`、14/14 节点、节点错挂 0、双向差集为空。
+- 本地验收：package `113/113`；root quick `67/68`、full `74/75`，两者 `failed=0`，唯一非 pass 为 `live-presets` 的 159 个 disabled typed skip。manifest 在工程验收阶段尚未 commit；由本 checkpoint 与实现、测试和决策记录一并固化。
+- scope：批准仅约束 preset composition；顺序不构成契约，invocation policy 与发布授权未被本卡吸收。
 
 ### 证据层级
 
-- [ ] L1 set/parser fixture；L2 临时 catalog/whitelist mutation；L3 当前版本化清单全量报告。运行时已安装技能清单只能做 live acceptance，不得成为批准名单来源。
+- [x] L1 set/parser fixture；L2 临时 catalog/whitelist mutation；L3 当前版本化清单全量报告。运行时已安装技能清单只做 live acceptance，批准名单来自 owner 明确签核。
 
 ### 自动验收
 
-- [ ] 138 条逐项验证且无 unexplained skip；89 项 whitelist 双向集合全等。
-- [ ] 每个负例断言具体 missing/unexpected/duplicate ID 与非零退出码。
-- [ ] `gate.mjs` 汇总保留两个分母，不把 catalog pass 与产品 whitelist pass 合并成一个布尔值。
+- [x] 138 条逐项验证且无 unexplained skip；89 项 whitelist 双向集合全等。
+- [x] 每个负例断言具体 missing/unexpected/duplicate ID 与非零退出码或 fail result。
+- [x] `gate.mjs` 汇总保留两个分母，不把 catalog pass 与产品 whitelist pass 合并成一个布尔值。
 
 ### 人工验收
 
-- [ ] 产品 owner 对版本化 89 项清单逐项或按已批准变更集签核；工程 reviewer 抽查 mapping/extra 各至少 5 项。
+- [x] 产品 owner 对 exact 89 集合与指纹签核；工程 reviewer 抽查 mapping/extra 各 5 项，均能回到具体 sourceRef。
 
 ### 退出条件
 
-- [ ] 68 extras 不再是 verifier 盲区，89 项不能以等数量替换绕过；两组 mutation 进入 QG-007 required CI。
+- [x] 68 extras 不再是 verifier 盲区，89 项不能以等数量替换绕过；两组 mutation 已进入本地 root quick/full gate。
+- [ ] QG-007 将两组 mutation 设置为远端 required CI；本地 QG-010 结果不冒充该远端证据。
 
 ### 失败边界
 
@@ -552,6 +561,7 @@ runner 不稳定时先解决稳定性，再设置 required；不得长期忽略�
 - 估算：M
 - 依赖：QG-001；mutation harness 复用 QG-006A，并由 QG-006B 在进入 QG-007 前共同收口
 - 可并行：可与 QG-010/012 并行
+- 状态：本地实现与 E1/E2/E3 验收完成；QG-007 远端 required check deferred
 
 ### 目标
 
@@ -564,38 +574,48 @@ runner 不稳定时先解决稳定性，再设置 required；不得长期忽略�
 
 ### TODO
 
-- [ ] 先读取并规范化每个 source 的 upstream ID set，再建立 imported/skipped/already-installed 三个互斥 set；同一 ID 跨集合出现即失败。
-- [ ] already-installed 只能作为一个独立终态或 skip reason 之一，不能既追加到 `skip` 又再次单独计数。
-- [ ] 守恒式按唯一 ID 计算：`upstream = imported union skipped union alreadyInstalled`，并分别报告 missing、unexpected、overlap、duplicate。
-- [ ] 将所有结构、来源和 accounting 检查放在成功消息与写文件之前；最后统一 `problems.length > 0 => exit 1`。
-- [ ] `--check` 全路径只读；生成模式只在零问题后以临时文件 + rename 原子替换，失败不留下半更新 intake/provenance。
+- [x] 先读取并规范化每个 source 的 upstream ID set，再建立 imported/skipped/already-installed 三个互斥 set；同一 ID 跨集合出现即失败。
+- [x] already-installed 作为独立终态，不再追加到 `skip` 后重复计数。
+- [x] 守恒式按唯一 ID 计算：`upstream = imported union skipped union alreadyInstalled`，并分别报告 missing、unexpected、overlap、duplicate。
+- [x] 将所有结构、来源和 accounting 检查放在成功消息与写文件之前；最后统一 `problems.length > 0 => exit 1`。
+- [x] `--check` 全路径只读；生成模式只在零问题后以同目录临时文件 + fsync + rename 原子替换，失败不留下半更新 intake。
 
 ### Red/Green 验证
 
-- [ ] Red：保留“早期 problems 检查之后才追加 accounting error，因此仍退出 0”的 fixture；保留 already-installed 同时进入 skip 和独立加总的重复计数 fixture。当前审计样本 69 被算为 72、37 被算为 66，只作 Red 基线，实施时重采。
-- [ ] Green：相同样本按唯一 ID 守恒且无 overlap；任一后置 accounting problem 都在打印成功或写入之前非零退出。
+- [x] Red：旧 `--check` 在 `69→72`、`37→66` accounting error 下仍打印成功并退出 0；目标文件 SHA-256 不变，证明是假绿而非写入副作用。
+- [x] Green：同一批样本重采为 `pm 69=63+3+3`、`mp 37=5+3+29`，无 overlap；任一后置 accounting problem 都在打印成功或写入之前非零退出。
 
 ### 负例
 
-- [ ] imported/skip overlap、already-installed 重复、漏一个 upstream、加入未知 ID、重复 source ID、坏 JSON、后置才发现的问题分别断言非零；维持总数相同的“删一补一”也必须失败。
+- [x] imported/skip overlap、already-installed 重复、漏一个 upstream、加入未知 ID、重复 source ID、坏 JSON、后置才发现的问题分别断言非零；维持总数相同的“删一补一”也必须失败。
 
 ### 证据层级
 
-- [ ] L1 纯集合 accounting 单测；L2 临时 intake/provenance 生成与 `--check` mutation；L3 当前第三方 intake 只读守恒报告。上游 URL 可访问性不替代内容集合证明。
+- [x] L1 纯集合 accounting 单测；L2 临时 intake 生成与 `--check` mutation；L3 当前版本化第三方 intake 的只读守恒报告。这里没有把上游 URL 可访问性、commit/blob provenance 或 live 安装冒充为完成。
 
 ### 自动验收
 
-- [ ] 每个 source 输出唯一 upstream/imported/skipped/already-installed 数量和双向差集。
-- [ ] 任一 `problems` 非空时退出码非零、无成功文案、目标文件 hash 不变。
-- [ ] 正常生成后立刻 `--check` 幂等且零 diff。
+- [x] 每个 source 输出唯一 upstream/imported/skipped/already-installed 数量和双向差集。
+- [x] 任一 `problems` 非空时退出码非零、无成功文案、目标文件 hash 不变。
+- [x] 正常生成后立刻 `--check` 幂等且零 diff。
 
 ### 人工验收
 
-- [ ] reviewer 抽查两个 source 的 10 个 ID，能从 upstream 唯一追到一个终态与原因。
+- [x] reviewer 抽查两个 source 的 10 个 ID：pm/mp 各 5 个，覆盖 imported/skipped/alreadyInstalled，`sampled=10 failed=0`，均能从 upstream 唯一追到终态与原因。
 
 ### 退出条件
 
-- [ ] accounting 守恒、分类互斥、所有错误非零退出，并由 QG-007 对 `--check` 设置 required。
+- [x] accounting 守恒、分类互斥、所有错误非零退出，并已进入本地 root quick/full gate。
+- [ ] 由 QG-007 把该 checker 设置为远端 required check；这不是本地 QG-011 结果可替代的证据。
+
+### 实施与验收记录（2026-09-16）
+
+- 定向回归：`node --test packages/capabilities/dsh-overseas-skills/test/build-third-party-intake.spec.mjs`，12/12 通过。
+- 包级回归：`pnpm --dir packages/capabilities/dsh-overseas-skills test`，94/94 通过；README 计数已从 82 同步为 94。
+- 根 quick gate：64/65，唯一 `live-presets` typed skip；objects `1813 expected / 1654 checked / 159 skipped / 0 failed`。
+- 根 full gate：71/72，唯一 `live-presets` typed skip；objects `1820 expected / 1661 checked / 159 skipped / 0 failed`。
+- 首轮 root gate 暴露新 checker 缺 `reason`/`typedSkips` 的 schema Red；只补齐 canonical 适配并增加断言，没有放宽 gate schema。
+- 未执行：联网重取、不可变 commit/blob/license provenance、真实 `~/.dsh` 安装或 promotion、远端 CI/ruleset、DMG/Release；分别留给 SEC-RT-002/DEC-009、QG-007 与发布批次。
 
 ### 失败边界
 

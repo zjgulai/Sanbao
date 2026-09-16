@@ -38,8 +38,10 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = join(HERE, '..', '..', 'packages', 'capabilities', 'dsh-overseas-skills')
 const syncUrl = pathToFileURL(join(PKG, 'scripts', 'sync-fullstack-persona.mjs')).href
 const gateUrl = pathToFileURL(join(PKG, 'scripts', 'verify-agent-fullstack.mjs')).href
+const contractUrl = pathToFileURL(join(PKG, 'scripts', 'fullstack-contract.mjs')).href
 const { renderPersonaText, loadSoulBody, extractPersonaBody } = await import(syncUrl)
-const { checkAgentFullstack } = await import(gateUrl)
+const { checkAgentFullstack, NODE_IDS } = await import(gateUrl)
+const { auditFullstackCatalog } = await import(contractUrl)
 
 const REAL_SOUL = join(PKG, 'presets', 'agent-fullstack', 'SOUL.md')
 
@@ -291,4 +293,72 @@ test('I7 非法 paint 值必须判红（ADR-0090 的形状：静默回落成黑�
   writeIconManifest(root2, uriOf(noPaint))
   setIcon(root2, renderIconLine(uriOf(noPaint)))
   assert.ok(has(avatarProblems(root2), '一个 paint 值都没有'), '零 paint 必须与「零违规」不同形')
+})
+
+// ── 产品批准白名单（第 4 层）的端到端负例 ──────────────────────────────────
+
+const APPROVED_WHITELIST = JSON.parse(readFileSync(join(PKG, 'manifest', 'agent-fullstack-whitelist.json'), 'utf8'))
+const FULLSTACK_CATALOG = auditFullstackCatalog({ packageRoot: PKG, checkInstalled: false })
+assert.equal(FULLSTACK_CATALOG.failed, 0, `测试前提：catalog 必须闭合，实得：\n${FULLSTACK_CATALOG.problems.join('\n')}`)
+const NODE_BY_NAME = new Map(FULLSTACK_CATALOG.rows.map((row) => [row.name, row.nodeId]))
+
+function whitelistYml(names, nodeOverrides = {}) {
+  const grouped = new Map(NODE_IDS.map((node) => [node, []]))
+  for (const name of names) {
+    const node = nodeOverrides[name] ?? NODE_BY_NAME.get(name) ?? 'M00'
+    grouped.get(node).push(name)
+  }
+  return [
+    '- id: skill-subset',
+    "  name: 'dsh-skill-subset'",
+    '  config:',
+    '    respectFileFlags: true',
+    '    hideOthers: true',
+    '    skills:',
+    ...NODE_IDS.flatMap((node) => [
+      `      # ${node}（${grouped.get(node).length} 条）`,
+      ...grouped.get(node).map((name) => `      - "${name}"`),
+    ]),
+    '',
+  ].join('\n')
+}
+
+test('W0/W1/W2 live 白名单消费 approved set；同数替换与节点错挂都必须点名', () => {
+  const root = makeRoot()
+  const skillsDir = join(root, 'skills')
+  mkdirSync(skillsDir, { recursive: true })
+  for (const name of [...APPROVED_WHITELIST.skillIds, 'grill-me']) {
+    const dir = join(skillsDir, name)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'SKILL.md'), 'fixture')
+  }
+  writeFileSync(join(root, 'preset.yml'), "name: 三无 · Agent全栈专家\ndescription: 这是用于批准白名单集成回归的最小 fixture，其他层问题不在本用例射程\norder: 1\n")
+  writeFileSync(join(root, 'agent.cordis.yml'), whitelistYml(APPROVED_WHITELIST.skillIds))
+
+  const clean = checkAgentFullstack({ presetRoot: root, skillsDir, profileBase: root })
+  assert.deepEqual(clean.problems.filter((problem) => problem.startsWith('[批准白名单]')), [])
+  assert.equal(clean.facts.subset.approved, 89)
+  assert.equal(clean.facts.subset.owner, 'lute')
+  assert.equal(clean.facts.subset.nodeMismatches, 0)
+
+  writeFileSync(
+    join(root, 'agent.cordis.yml'),
+    whitelistYml(APPROVED_WHITELIST.skillIds, { 'writing-for-agents': 'M00' }),
+  )
+  const placementProblems = checkAgentFullstack({ presetRoot: root, skillsDir, profileBase: root }).problems
+    .filter((problem) => problem.startsWith('[批准白名单]'))
+  assert.ok(
+    placementProblems.some((problem) => problem.includes('节点归属不符')
+      && problem.includes('writing-for-agents: expected M13, actual M00')),
+    placementProblems.join('\n'),
+  )
+
+  const mutated = [...APPROVED_WHITELIST.skillIds]
+  const removed = mutated.pop()
+  mutated.push('grill-me')
+  writeFileSync(join(root, 'agent.cordis.yml'), whitelistYml(mutated))
+  const problems = checkAgentFullstack({ presetRoot: root, skillsDir, profileBase: root }).problems
+    .filter((problem) => problem.startsWith('[批准白名单]'))
+  assert.ok(problems.some((problem) => problem.includes(`missing：${removed}`)), problems.join('\n'))
+  assert.ok(problems.some((problem) => problem.includes('unexpected：grill-me')), problems.join('\n'))
 })
