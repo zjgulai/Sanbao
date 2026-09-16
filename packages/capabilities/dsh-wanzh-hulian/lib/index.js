@@ -8,7 +8,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { PIXPIX_BUSINESS_META, SHOPIFY_BUSINESS_META, APIFY_BUSINESS_META, MCP_STATIC_TOOL_META, staticToolMetaFor } from "./business-meta.js";
 import * as McpClient from "@deepseek-ai/dsh-mcp-client";
-import { buildBoards, errorMessage, mergeRegisteredTools, resolveShopifyToken } from "./host-util.js";
+import { buildBoards, errorMessage, fetchShopifyAdmin, mergeRegisteredTools, normalizeShopifyHost, resolveShopifyToken } from "./host-util.js";
 import { BOARDS, GETNOTE_LOGO } from "./boards.js";
 
 /**
@@ -1075,8 +1075,14 @@ async function handleCredentialSet(credentials, ref, value) {
   if (credentials === undefined) return { status: 501, body: { ok: false, error: "credentials 服务不可用" } };
   if (!(await collectCredentialRefs()).includes(ref)) return { status: 400, body: { ok: false, error: "未知凭据 ref" } };
   if (typeof value !== "string" || value.trim() === "") return { status: 400, body: { ok: false, error: "值不能为空" } };
+  let normalizedValue = value.trim();
+  if (ref === "shopify_domain") {
+    const normalizedHost = normalizeShopifyHost(normalizedValue);
+    if (normalizedHost.ok !== true) return { status: 400, body: { ok: false, error: normalizedHost.error } };
+    normalizedValue = normalizedHost.host;
+  }
   try {
-    await credentials.set(ref, value.trim());
+    await credentials.set(ref, normalizedValue);
     const info = await credentials.describe(ref);
     return { status: 200, body: { ok: true, ref, configured: info?.configured === true } };
   } catch (error) {
@@ -1099,14 +1105,19 @@ async function handleProbe(credentials) {
 }
 
 async function resolveShopifyCreds(credentials) {
-  const out = { domain: undefined, token: undefined, clientId: undefined, clientSecret: undefined, configured: false, mode: "none" };
+  /** @type {{domain: string | undefined, domainError: string | undefined, token: string | undefined, clientId: string | undefined, clientSecret: string | undefined, configured: boolean, mode: string}} */
+  const out = { domain: undefined, domainError: undefined, token: undefined, clientId: undefined, clientSecret: undefined, configured: false, mode: "none" };
   if (credentials === undefined) return out;
   try {
     const d = await credentials.resolve("shopify_domain");
     const t = await credentials.resolve("shopify_access_token");
     const cid = await credentials.resolve("shopify_client_id");
     const cs = await credentials.resolve("shopify_client_secret");
-    out.domain = typeof d?.value === "string" ? d.value.trim() : undefined;
+    if (typeof d?.value === "string" && d.value.trim()) {
+      const normalizedHost = normalizeShopifyHost(d.value);
+      if (normalizedHost.ok === true) out.domain = normalizedHost.host;
+      else out.domainError = normalizedHost.error;
+    }
     out.token = typeof t?.value === "string" ? t.value : undefined;
     out.clientId = typeof cid?.value === "string" ? cid.value.trim() : undefined;
     out.clientSecret = typeof cs?.value === "string" ? cs.value : undefined;
@@ -1141,6 +1152,7 @@ async function probeConnection(credentials, conn) {
   }
   if (kind === "shopify-shop-info") {
     const creds = await resolveShopifyCreds(credentials);
+    if (creds.domainError) return { ok: false, error: `${creds.domainError}；请重新填写商店域名。` };
     if (!creds.configured) return { ok: false, error: "未配置 Shopify 凭证：请填写商店域名 + 客户端 ID + 加密密钥（开发仪表盘应用的 API 凭据，插件自动换取访问令牌）。" };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -1152,12 +1164,14 @@ async function probeConnection(credentials, conn) {
           const exchParams = new URLSearchParams({ grant_type: "client_credentials" });
           if (creds.clientId) exchParams.set("client_id", creds.clientId);
           if (creds.clientSecret) exchParams.set("client_secret", creds.clientSecret);
-          const exc = await fetch(`https://${creds.domain}/admin/oauth/access_token`, {
+          const request = await fetchShopifyAdmin(fetch, creds.domain, "/admin/oauth/access_token", {
             method: "POST",
             headers: { "content-type": "application/x-www-form-urlencoded" },
             body: exchParams,
             signal: controller.signal
           });
+          if (request.ok !== true) return { ok: false, error: request.error };
+          const exc = request.response;
           const excBody = await exc.json().catch(() => null);
           if (!exc.ok) return { ok: false, error: `Shopify 令牌交换失败 (HTTP ${exc.status}): ${excBody?.error_description || excBody?.error || "请求失败"}` };
           return { ok: true, token: typeof excBody?.access_token === "string" ? excBody.access_token : undefined };
@@ -1166,11 +1180,15 @@ async function probeConnection(credentials, conn) {
       if (resolved.ok !== true) return { ok: false, error: resolved.error };
       const token = resolved.token;
       const via = resolved.via;
-      const url = `https://${creds.domain}/admin/api/2026-04/shop.json`;
-      const res = await fetch(url, { headers: { "x-shopify-access-token": token }, signal: controller.signal });
+      const request = await fetchShopifyAdmin(fetch, creds.domain, "/admin/api/2026-04/shop.json", {
+        headers: { "x-shopify-access-token": token },
+        signal: controller.signal
+      });
+      if (request.ok !== true) return { ok: false, error: request.error };
+      const res = request.response;
       const body = await res.json().catch(() => null);
       if (!res.ok) return { ok: false, error: `Shopify API HTTP ${res.status}: ${body?.errors ? String(body.errors) : "请求失败"}` };
-      return { ok: true, text: `连接测试通过 ✓\n认证方式: ${via}\n店铺: ${body?.shop?.name ?? "（无名称）"}\n计划: ${body?.shop?.plan_name ?? "-"}\n域名: ${body?.shop?.myshopify_domain ?? creds.domain}` };
+      return { ok: true, text: `连接测试通过 ✓\n认证方式: ${via}\n店铺: ${body?.shop?.name ?? "（无名称）"}\n计划: ${body?.shop?.plan_name ?? "-"}\n域名: ${body?.shop?.myshopify_domain ?? request.host}` };
     } catch (e) {
       return { ok: false, error: `Shopify 请求失败: ${errorMessage(e)}` };
     } finally { clearTimeout(timer); }

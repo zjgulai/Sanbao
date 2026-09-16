@@ -1,6 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { errorMessage, resolveShopifyToken, pickBoardConnections, buildBoards, mergeRegisteredTools } from '../lib/host-util.js'
+import {
+  buildBoards,
+  errorMessage,
+  fetchShopifyAdmin,
+  mergeRegisteredTools,
+  normalizeShopifyHost,
+  pickBoardConnections,
+  resolveShopifyToken,
+} from '../lib/host-util.js'
 
 /**
  * dsh-wanzh-hulian — Host 侧契约测试。
@@ -16,6 +24,34 @@ import { errorMessage, resolveShopifyToken, pickBoardConnections, buildBoards, m
  *  - mergeRegisteredTools：工具清单曾与注册表各存一份，两份副本已实际漂移
  */
 
+const INVALID_SHOPIFY_HOSTS = [
+  '',
+  '   ',
+  null,
+  undefined,
+  42,
+  'https://shop.myshopify.com',
+  'user@shop.myshopify.com',
+  'shop.myshopify.com/path',
+  'shop.myshopify.com?x=1',
+  'shop.myshopify.com#x',
+  'shop.myshopify.com:443',
+  'shop.myshopify.com.',
+  '.myshopify.com',
+  'a.b.myshopify.com',
+  'shop.myshopify.com.evil.example',
+  'shop-myshopify.com',
+  '127.0.0.1',
+  '[::1]',
+  '-shop.myshopify.com',
+  'shop-.myshopify.com',
+  'shop_name.myshopify.com',
+  'shop\u3002myshopify.com',
+  '商店.myshopify.com',
+  'xn--shop-9d0b.myshopify.com',
+  `${'a'.repeat(64)}.myshopify.com`,
+]
+
 test('errorMessage：Error 取 message，字符串取自身，其余走兜底且绝不为 undefined', () => {
   assert.equal(errorMessage(new Error('boom')), 'boom')
   assert.equal(errorMessage('boom'), 'boom')
@@ -26,6 +62,96 @@ test('errorMessage：Error 取 message，字符串取自身，其余走兜底且
 
 test('errorMessage：空 message 的 Error 不产生空串误导', () => {
   assert.equal(errorMessage(new Error('')), '')
+})
+
+test('normalizeShopifyHost：只接受并规范化单一 myshopify.com 商店 hostname', () => {
+  const cases = [
+    ['example-shop.myshopify.com', 'example-shop.myshopify.com'],
+    ['  EXAMPLE-Shop.MyShopify.Com  ', 'example-shop.myshopify.com'],
+    ['a.myshopify.com', 'a.myshopify.com'],
+    [`${'a'.repeat(63)}.myshopify.com`, `${'a'.repeat(63)}.myshopify.com`],
+  ]
+  for (const [input, expected] of cases) {
+    assert.deepEqual(normalizeShopifyHost(input), { ok: true, host: expected })
+  }
+})
+
+test('normalizeShopifyHost：拒绝 URL、伪后缀、IP、额外 label 与 Unicode 混淆', () => {
+  for (const input of INVALID_SHOPIFY_HOSTS) {
+    const result = normalizeShopifyHost(input)
+    assert.equal(result.ok, false, `应拒绝 ${String(input)}`)
+    assert.equal(typeof result.error, 'string')
+    assert.notEqual(result.error, '')
+  }
+})
+
+test('fetchShopifyAdmin：每个非法 hostname 都在 I/O 前失败', async () => {
+  for (const input of INVALID_SHOPIFY_HOSTS) {
+    let fetchCalls = 0
+    const result = await fetchShopifyAdmin(async () => {
+      fetchCalls += 1
+      return { ok: true }
+    }, input, '/admin/oauth/access_token')
+    assert.equal(result.ok, false, `应拒绝 ${input}`)
+    assert.equal(fetchCalls, 0, `非法 hostname ${input} 不得发起 fetch`)
+  }
+})
+
+test('fetchShopifyAdmin：只从已验证 hostname 构造精确 HTTPS Admin URL', async () => {
+  const seen = []
+  const response = { ok: true, status: 200 }
+  for (const pathname of ['/admin/oauth/access_token', '/admin/api/2026-04/shop.json']) {
+    const result = await fetchShopifyAdmin(async (url) => {
+      seen.push(String(url))
+      return response
+    }, '  EXAMPLE-Shop.MyShopify.Com ', pathname, { method: 'POST' })
+    assert.equal(result.ok, true)
+    assert.equal(result.host, 'example-shop.myshopify.com')
+    assert.equal(result.response, response)
+  }
+  assert.deepEqual(seen, [
+    'https://example-shop.myshopify.com/admin/oauth/access_token',
+    'https://example-shop.myshopify.com/admin/api/2026-04/shop.json',
+  ])
+})
+
+test('fetchShopifyAdmin：绝对 URL 与 network-path 不能借 pathname 改写已验证 origin', async () => {
+  for (const pathname of ['https://evil.example/steal', '//evil.example/steal', '/not-admin']) {
+    let fetchCalls = 0
+    const result = await fetchShopifyAdmin(async () => {
+      fetchCalls += 1
+      return { ok: true }
+    }, 'shop.myshopify.com', pathname)
+    assert.equal(result.ok, false)
+    assert.equal(fetchCalls, 0)
+  }
+})
+
+test('fetchShopifyAdmin：强制拒绝重定向，调用方不能恢复 follow', async () => {
+  let seenRedirect = ''
+  const result = await fetchShopifyAdmin(async (_url, init) => {
+    seenRedirect = init?.redirect ?? ''
+    return { ok: true }
+  }, 'shop.myshopify.com', '/admin/oauth/access_token', { redirect: 'follow' })
+  assert.equal(result.ok, true)
+  assert.equal(seenRedirect, 'error')
+})
+
+test('Shopify host 拒绝错误不回显原始输入或 secret canary', async () => {
+  const secretCanary = 'shpss_DO_NOT_ECHO@shop.myshopify.com'
+  const normalized = normalizeShopifyHost(secretCanary)
+  assert.equal(normalized.ok, false)
+  assert.equal(normalized.error.includes(secretCanary), false)
+  assert.equal(normalized.error.includes('shpss_DO_NOT_ECHO'), false)
+
+  let fetchCalls = 0
+  const request = await fetchShopifyAdmin(async () => {
+    fetchCalls += 1
+    return { ok: true }
+  }, secretCanary, '/admin/oauth/access_token')
+  assert.equal(request.ok, false)
+  assert.equal(request.error.includes('shpss_DO_NOT_ECHO'), false)
+  assert.equal(fetchCalls, 0)
 })
 
 test('resolveShopifyToken：直填 Admin API Token 时不再发起换取', async () => {

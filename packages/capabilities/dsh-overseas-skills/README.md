@@ -9,14 +9,14 @@ DSH Desktop 设置页「出海技能」插件：从 Accio 导入的跨境电商�
 （[ADR-0044](../../../../docs/adr/ADR-0044.md)）。
 
 > 页面位于 设置 → 出海技能（侧边导航 order 26）。AI全栈技能（order 27）共用同一个组件但**不带
-> `org` 属性**，因此保持原有分组视图——那 70 条没有场景轴。
+> `org` 属性**，因此按 M00–M13 的 14 个交付节点分组——那 138 条没有出海场景轴。
 
 ## 结构
 
 | 文件 | 职责 |
 | --- | --- |
 | `lib/index.js` | Host：`/api/dsh-overseas-skills/{list,fullstack-list,org,toggle,credential,prompt-template}`（全部 loopback 栅栏）；toggle 写 frontmatter 的 `disable-model-invocation` + `user-invocable` |
-| `lib/catalog.js` | 场景 / 细分 / 223 项目录 + AI全栈 70 项（由 `scripts/build_preset_catalog.py` 从 `manifest/*.json` 生成） |
+| `lib/catalog.js` | 场景 / 细分 / 223 项目录 + AI全栈 138 项（由 `scripts/build_preset_catalog.py` 从 `manifest/*.json` 生成） |
 | `lib/org-tree.js` | **纯函数**：把场景目录 × 归位表 × 岗位骨架拼成四层树（含计数、诊断、接线索引）；有单测 |
 | `lib/preset-roles.js` | 读 `~/.dsh/.agent-presets/agt-*/manifest.json` 的 `x_lute`（面 / 责任域 / order / 责任名 / 接线 subset / 头像）——组织骨架的运行时家 |
 | `lib/role-map.js` | **构建产物**：`manifest/role-assignments.json` → 宿主可 import 的归位表，由 `scripts/build_role_map.py` 生成（`--check` 供门禁用） |
@@ -56,7 +56,7 @@ python3 scripts/build_role_map.py           # 重新编译（改了 manifest 之
 python3 scripts/validate_assignments.py     # 断言判定本身对不对（**正确性**，见下）
 python3 scripts/validate_assignments.py --check-roles-live   # 岗位快照 vs 运行时 preset 漂移
 node scripts/gen-layer-icons.mjs            # 重新烘焙 12 枚层头像（改了品牌技能之后）
-npm run typecheck && npm test               # tsc + node --test（72 项）
+npm run typecheck && npm test               # tsc + node --test（82 项）
 ```
 
 ### `--check` 与 `validate_assignments.py` 不是一回事（R4，2026-09-13）

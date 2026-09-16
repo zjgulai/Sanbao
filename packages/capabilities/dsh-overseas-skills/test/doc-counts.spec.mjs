@@ -30,7 +30,7 @@ const read = (p) => readFileSync(path.join(ROOT, p), "utf8");
 
 const README = read("README.md");
 const MANIFEST = JSON.parse(read("manifest/role-assignments.json"));
-const { SKILLS, SKILLS_FS, CATEGORIES } = await import("../lib/catalog.js");
+const { SKILLS, SKILLS_FS, CATEGORIES, CATEGORIES_FS } = await import("../lib/catalog.js");
 
 /** 在 README 里按正则抽一个数字，并**断言恰好抽到 `exactly` 处**。 */
 function grab(label, re, exactly = 1) {
@@ -55,14 +55,18 @@ test("R1 目录：README 写的技能卡数 == lib/catalog.js 的 SKILLS 条数"
   assert.equal(doc, SKILLS.length);
 });
 
-test("R1 目录：README 的 AI全栈条数 == SKILLS_FS 条数（出现 2 处，两处都要对）", () => {
-  // 「那 30 条没有场景轴」与结构表里的「+ AI全栈 30 项」
-  const a = grab("AI全栈条数（分组视图那句）", /保持原有分组视图——那 (\d+) 条没有场景轴/);
+test("R1 目录：README 的 AI全栈条数/组数 == SKILLS_FS / CATEGORIES_FS（出现 2 处，两处都要对）", () => {
+  // 2026-09-16：全栈线的分组轴由 8 个「做法类」换成 M00–M13 十四个**交付节点**，
+  // 于是 README 那句从「保持原有分组视图」变成了「按 M00–M13 的 N 个交付节点分组」——
+  // 组数也一并成为判据：只改条数不改组数，页面会是「138 条挤在 8 个旧组里」而上面两条都看不出来。
+  const grouped = /按 M00–M13 的 (\d+) 个交付节点分组——那 (\d+) 条没有出海场景轴/.exec(README);
+  assert.ok(grouped, "README 里找不到「按 M00–M13 的 N 个交付节点分组——那 M 条…」这句");
+  const [, groups, rows] = grouped.map(Number);
   const b = grab("AI全栈条数（结构表）", /\+\s*AI全栈 (\d+) 项/);
-  assert.equal(a, SKILLS_FS.length);
-  assert.equal(b, SKILLS_FS.length);
-  // 两处若被改成不一致的值，上面两条各自仍可能对；故显式再断言一次
-  assert.equal(a, b, "README 里两处 AI全栈条数不一致");
+  assert.equal(groups, CATEGORIES_FS.length, "README 写的节点组数 ≠ CATEGORIES_FS 组数");
+  assert.equal(rows, SKILLS_FS.length, "README 写的 AI全栈条数 ≠ SKILLS_FS 条数");
+  assert.equal(b, SKILLS_FS.length, "README 结构表里的 AI全栈条数 ≠ SKILLS_FS 条数");
+  assert.equal(rows, b, "README 里两处 AI全栈条数不一致");
 });
 
 test("R1 目录：README 开头的「N 项」== SKILLS 条数", () => {

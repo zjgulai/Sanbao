@@ -18,6 +18,24 @@
       "reading": "2.3.1 的 dmg 曾以「`mdfind -name DSH-Desktop-LUTE` 全盘查不到」宣告丢失，而副本当时就在 `~/Downloads`（`hdiutil verify` VALID、与清单逐位相同）。**搜索工具的沉默不是缺席的证据**——它的射程由索引状态决定，不由文件系统决定。",
       "why": "错宣告的代价不只是少一份文件：它把一个本可核验收回的版本钉成「不可重建」，并让 `release-verify.sh` 从此对该版本**短路跳过字节核对**（ADR-0067 的 `.lost` 语义）。",
       "useInstead": "文件系统遍历：`find <目录…> -name <文件名>`（docs/sop/dmg-release.md §7 给了要遍历的目录清单与取证要求）"
+    },
+    {
+      "id": "ax-scrollarea-as-scrollability-proof",
+      "pattern": "AXScrollArea",
+      "provenOn": "2026-09-15",
+      "matchScope": "任何把「AX 树里出现滚动区域」当作「这个容器用户可滚」的判据",
+      "reading": "设置页导航（HTML nav 元素 + 本包加的 overflow-y:auto）在 AX 里落成 `AXGroup subrole=AXLandmarkNavigation`（frame 266,118,226,919），整个对话框里**没有任何节点的 role 含 Scroll**；官方那半（内容区同样可滚）也没有。Chromium 每个节点只给**一个** role，nav 的 landmark 语义赢了，不会再叠一个滚动区域。而导航**确实**可滚，对照读数：AXScrollToVisible 打在末项上，导轨首项 y 225→118（动了 107），右侧内容区 optionsY 508→508（没动）。",
+      "why": "射程为零：无论本包生效没生效，读数**恒为空集**。2026-09-15 实测它把一个已完全达标的状态判成红（L1 未通过），差一点把已经修好的 L1 打回去重做。它与仓库里已记过的两条同类（curl 拿 404、AXScrollToVisible 调用成功）是同一个病：判据写了，却从没拿一个「应该判红」的状态试过它。",
+      "useInstead": "几何读数，两条都要：① AXScrollToVisible 打末项后**导轨动了而内容区没动**（区分「滚的是 nav」与「滚的是 panel」）；② 滚到底后**末项拿得到全高**（实测 40.83 CSS px / 中位 40 = 1.02，基线恒为 0.83）。射程自检：node scripts/acceptance/settings-shell-live.mjs --self-test（5 个状态、9 条断言；恒真桩突变必须判红）。"
+    },
+    {
+      "id": "ax-node-count-as-instrument-liveness",
+      "pattern": "Accessibility 子树没有内容|AX 树只有 ?[0-9]+ ?个节点",
+      "provenOn": "2026-09-15",
+      "matchScope": "任何把「AX 树读不出内容（只剩 AXApplication、节点数≈1）」当作「app 的 Accessibility 坏了 / 仪器不可用」的判据或结论",
+      "reading": "同一个 DSH 进程、同一份代码，实测两态：窗口在后台时 CG 层报 on_screen:false，AX 树 **1 个节点**（只剩 AXApplication，连 AXWindow 都没有）；执行 set frontmost（osascript 按 bundle id ai.deepseek.dsh.desktop）之后，**同一进程** AX 树变 **1323 个节点**，窗口、导航、几何读数全部齐全。Chromium 的 Accessibility 子树是懒建的，且只对**屏上**的窗口建。",
+      "why": "2026-09-15 被它误导过一次：读到「AX 树只有 1 个节点」，于是写下「app 的 Accessibility 子树没有内容」，据此让用户**重启 DSH Desktop**。重启当然没用——重启后新窗口照样不在前台，同一条读数原样复现，一整轮工作挂在「等你重启」上。真正的原因（窗口不在前台）一行 set frontmost 就能自愈。属 P-04：错误报告路径给出了一个**自信但错误**的归因，把真实原因盖住。",
+      "useInstead": "先自愈再判：set frontmost + 轮询到「树里有 AXWindow 且拿得到触发器或对话框」为止（见 scripts/acceptance/settings-shell-live.mjs 的 ensureOnScreen）。自愈不成时报「窗口拉不到前台」这条**具体**读数，不要断言 Accessibility 坏了；「仪器坏没坏」的家是 harness-alive 那条判据（macos-harness doctor 的 permissions.accessibility）。"
     }
   ]
 }

@@ -112,7 +112,12 @@ export function checkSkillRuntimePreconditions({ repoRoot, presetDir = PRESET_DI
 
   const wired = wiredSkills(presetDir)
   if (wired.size === 0) {
-    return { passed: true, violations, note: '没有已接线的技能子集（未建立 preset 或 preset 尚未生成）' }
+    return {
+      passed: true,
+      skipped: true,
+      violations,
+      note: '没有已接线的技能子集（未建立 preset 或 preset 尚未生成）——本项未核对任何运行时前提',
+    }
   }
   if (!existsSync(deps)) {
     return {

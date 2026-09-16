@@ -173,10 +173,28 @@ async function handleList() {
   return { status: 200, body: { ok: true, scenarios, groups } };
 }
 
+/**
+ * AI 全栈技能线（第二条线）。
+ *
+ * 与通用线同理，**没有 scenarios 那一层**，而且这一条不是「顺带对齐」而是修一个真缺陷：
+ * 这里原先写的是 `buildScenarios(CATEGORIES, SKILLS_FS)` ——拿**出海**的 8 大场景坐标去
+ * 套**全栈**的行。两条线的行集互不相交（出海 223 / 全栈 138，交集 0），本不该有任何配对；
+ * 之所以还能配出东西，是生成器 `build_preset_catalog.py` 用 `tax_map.get(名字)` 查海外
+ * 分类表时被**同名撞上**：138 行里有 70 行撞出了 `h-enable / h2-agent-skill`，另 68 行为
+ * `null`。于是这里稳定产出 1 个「H 组织与工具 · 70 项」的幽灵场景。
+ *
+ * 幽灵场景为什么致命：页面的渲染分派是 **scenarios 优先于 groups**（client.js 里
+ * `visibleScen && visibleScen.length > 0` 那一支在 `visible` 之前），所以它不报错、不留空，
+ * 而是**把 14 个 M 分组整片顶掉**——数据全对（14 组 138 行一次不差地取到了），页面上却
+ * 只有一个折叠块。这类「正确的数据被另一条视图源静默覆盖」的缺陷，只有把错误那层的来源
+ * 掐掉才算修好；改渲染顺序只是把同一个错误搬到另一处。
+ *
+ * 判据：`test/host-routes.spec.mjs` 的「/fullstack-list：不返回 scenarios」与
+ * 「14 个分组各有行、头像互不相同」两条，由 `gate:skill-lines` 跑。
+ */
 async function handleFullstackList() {
-  const scenarios = await buildScenarios(CATEGORIES, SKILLS_FS);
   const groups = await buildGroupsLegacy(CATEGORIES_FS, SKILLS_FS);
-  return { status: 200, body: { ok: true, scenarios, groups } };
+  return { status: 200, body: { ok: true, scenarios: [], groups } };
 }
 
 /**

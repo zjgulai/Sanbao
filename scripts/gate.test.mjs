@@ -49,6 +49,34 @@ test('门禁 CLI：--list 暴露全部校验项名称', () => {
   }
 })
 
+test('门禁 CLI：JSON 输出可解析且逐项携带统一三态与守恒读数', () => {
+  const { stdout, code } = runGate(['--mode', 'quick', '--json'])
+  const report = JSON.parse(stdout)
+
+  assert.equal(report.schemaVersion, 1)
+  assert.equal(report.kind, 'gate-report')
+  assert.equal(report.mode, 'quick')
+  assert.equal(code, report.summary.exitCode)
+  assert.ok(report.results.length > 0)
+  for (const result of report.results) {
+    assert.ok(['pass', 'fail', 'skip'].includes(result.status))
+    assert.equal(result.expected, result.checked + result.skipped + result.failed)
+    assert.equal(typeof result.reason, 'string')
+  }
+})
+
+test('门禁 CLI：strict 遇到 skip 必须非零（结果模型负例）', () => {
+  const fixture = runGate(['--mode', 'quick', '--json'])
+  const report = JSON.parse(fixture.stdout)
+  if (report.summary.skipped === 0) return
+
+  const strict = runGate(['--mode', 'quick', '--json', '--require-no-skip'])
+  const strictReport = JSON.parse(strict.stdout)
+  assert.equal(strict.code, 1)
+  assert.equal(strictReport.summary.requireNoSkip, true)
+  assert.match(strictReport.summary.reason, /requireNoSkip/)
+})
+
 test('门禁 CLI：根包自身也受身份契约约束（负向用例）', () => {
   const { readFileSync, writeFileSync } = require('node:fs')
   const manifestPath = join(repoRoot, 'package.json')

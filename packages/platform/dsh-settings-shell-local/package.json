@@ -1,0 +1,43 @@
+{
+  "name": "dsh-settings-shell",
+  "description": "LUTE settings-shell presentation layer: keeps every settings section reachable, groups the navigation rail, and gives the panel a restrained brand-accented look.",
+  "version": "0.1.0-local.1",
+  "luteOrigin": "self",
+  "luteOwner": "lute",
+  "lutePublish": false,
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown && node scripts/validate-build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "happy-dom": "^20.11.1",
+    "tsdown": "^0.22.14",
+    "typescript": "5.6.3",
+    "vitest": "^4.1.10"
+  }
+}

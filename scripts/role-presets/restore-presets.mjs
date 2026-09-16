@@ -1,167 +1,345 @@
 #!/usr/bin/env node
-/**
- * Preset 恢复工具：把归档里的 preset 目录保真放回用户 preset 根。
- *
- * 存在理由：删除 preset 会**打断引用它的既有会话恢复**（见 scan-session-refs.mjs 头部）。
- * 修复办法是零代码改动地把目录放回去——`AgentPresets.list()/resolve()` 每次调用都重读 root
- * （源码原文 “Discovery is unmemoized…”），所以**恢复后无需重启**宿主。
- *
- * 用法：
- *   node scripts/role-presets/restore-presets.mjs --from <归档目录> --referenced
- *       恢复"被会话引用但当前缺失"的那些（推荐：范围由证据定，不靠人记）。
- *   node scripts/role-presets/restore-presets.mjs --from <归档目录> --ids a,b,c
- *       恢复指定 id。
- *   加 --dry-run 只看计划；加 --skip-existing 容忍已存在的（默认拒绝覆盖）。
- *
- * 门禁（缺一不执行）：
- *   ① 归档目录存在且每个 id 在其中
- *   ② 目标不存在（默认拒绝覆盖，避免用旧归档盖掉新内容）
- *   ③ 恢复后逐项核验 文件数 + 总字节数 与归档一致
- *
- * 纪律：一律用 `ditto` 逐目录复制。实测教训——`cp -R "$d/" "$dst/"` 在 BSD 上复制的是
- * **内容而非目录**（$d 带尾斜杠时），会把多个 preset 拍平合并成一个脏目录。归档时正是
- * 这个 bug 被完整性校验拦住，才没丢掉 15 个 preset。
- */
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { execFileSync } from 'node:child_process'
+/** Restore presets from a SEC-RT-003A SHA-256 archive transaction. */
+import { randomBytes } from 'node:crypto'
+import { accessSync, constants, existsSync, readFileSync, statfsSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import {
-  DEFAULT_SESSIONS_ROOT, DEFAULT_SHIPPED_ROOT, DEFAULT_USER_PRESET_ROOT,
-  resolveRoster, scanSessions,
+  DEFAULT_SESSIONS_ROOT,
+  DEFAULT_SHIPPED_ROOT,
+  DEFAULT_USER_PRESET_ROOT,
+  resolveRoster,
+  scanSessions,
 } from './session-refs.mjs'
+import {
+  canonicalRoot,
+  inspectTree,
+  resolveContainedTarget,
+  revalidatePathSnapshot,
+  snapshotPath,
+  validateFinalNames,
+} from '../lib/preset-skill-paths.mjs'
+import { executeDirectoryTransaction } from '../lib/preset-skill-transaction.mjs'
 
-/** 解析命令行参数。 */
-function parseArgs(argv) {
-  const out = {
-    from: null, ids: null, referenced: false, dryRun: false, skipExisting: false,
-    userRoot: DEFAULT_USER_PRESET_ROOT, sessionsRoot: DEFAULT_SESSIONS_ROOT,
-    shippedRoot: process.env['ROLE_SHIPPED_PRESET_ROOT'] ?? DEFAULT_SHIPPED_ROOT, json: false,
+export class PresetRestoreError extends Error {
+  constructor(code, message, details = {}) {
+    super(message)
+    this.name = 'PresetRestoreError'
+    this.code = code
+    this.details = details
   }
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    if (a === '--from') out.from = argv[++i]
-    else if (a === '--ids') out.ids = (argv[++i] ?? '').split(',').map((s) => s.trim()).filter(Boolean)
-    else if (a === '--referenced') out.referenced = true
-    else if (a === '--dry-run') out.dryRun = true
-    else if (a === '--skip-existing') out.skipExisting = true
-    else if (a === '--user-root') out.userRoot = argv[++i]
-    else if (a === '--sessions') out.sessionsRoot = argv[++i]
-    else if (a === '--shipped-root') out.shippedRoot = argv[++i]
-    else if (a === '--json') out.json = true
-    else if (a === '--help' || a === '-h') { printUsage(); process.exit(0) }
-    else { console.error(`未知参数：${a}`); printUsage(); process.exit(2) }
-  }
-  return out
 }
 
-/** 打印用法。 */
-function printUsage() {
-  console.error(`用法：
-  node scripts/role-presets/restore-presets.mjs --from <归档目录> (--referenced | --ids a,b,c) [选项]
-
-选项：
-  --referenced        恢复"被会话引用但当前缺失"的那些（范围由证据定）
-  --ids a,b,c         恢复指定 id
-  --dry-run           只打印计划，不写盘
-  --skip-existing     已存在的跳过（默认拒绝覆盖）
-  --user-root <dir>   目标 preset 根（默认 ${DEFAULT_USER_PRESET_ROOT}）
-  --sessions <dir>    会话根，--referenced 用（默认 ${DEFAULT_SESSIONS_ROOT}）
-  --json              机器可读输出`)
+function fail(code, message, details) {
+  throw new PresetRestoreError(code, message, details)
 }
 
-/** 统计一个目录的文件数与总字节数。 */
-function measure(dir) {
-  let files = 0, bytes = 0
-  const walk = (d) => {
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      const p = join(d, e.name)
-      if (e.isDirectory()) walk(p)
-      else if (e.isFile()) { files++; bytes += statSync(p).size }
+export function parseRestoreArgs(argv) {
+  const options = {
+    from: null,
+    ids: null,
+    referenced: false,
+    skipExisting: false,
+    apply: false,
+    dryRun: true,
+    json: false,
+    userRoot: DEFAULT_USER_PRESET_ROOT,
+    sessionsRoot: DEFAULT_SESSIONS_ROOT,
+    shippedRoot: process.env.ROLE_SHIPPED_PRESET_ROOT ?? DEFAULT_SHIPPED_ROOT,
+  }
+  let sawMode = false
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (arg === '--from' || arg === '--user-root' || arg === '--sessions' || arg === '--shipped-root') {
+      const value = argv[++i]
+      if (!value || value.startsWith('--')) fail('CLI_VALUE_MISSING', `${arg} 缺值`)
+      if (arg === '--from') options.from = value
+      else if (arg === '--user-root') options.userRoot = value
+      else if (arg === '--sessions') options.sessionsRoot = value
+      else options.shippedRoot = value
+    } else if (arg === '--ids') {
+      if (options.ids !== null) fail('CLI_IDS_DUPLICATE', '--ids 不得重复')
+      const raw = argv[++i]
+      if (!raw || raw.startsWith('--')) fail('CLI_IDS_MISSING', '--ids 缺值')
+      options.ids = raw.split(',').map((value) => value.trim())
+      if (options.ids.some((value) => value === '')) fail('CLI_IDS_EMPTY', '--ids 不得含空项')
+    } else if (arg === '--referenced') {
+      if (options.referenced) fail('CLI_REFERENCED_DUPLICATE', '--referenced 不得重复')
+      options.referenced = true
+    } else if (arg === '--skip-existing') {
+      if (options.skipExisting) fail('CLI_SKIP_DUPLICATE', '--skip-existing 不得重复')
+      options.skipExisting = true
+    } else if (arg === '--apply') {
+      if (sawMode) fail('CLI_MODE_DUPLICATE', '只能指定一次 --apply/--dry-run')
+      options.apply = true
+      options.dryRun = false
+      sawMode = true
+    } else if (arg === '--dry-run') {
+      if (sawMode) fail('CLI_MODE_DUPLICATE', '只能指定一次 --apply/--dry-run')
+      sawMode = true
+    } else if (arg === '--json') {
+      if (options.json) fail('CLI_JSON_DUPLICATE', '--json 不得重复')
+      options.json = true
+    } else if (arg === '--help' || arg === '-h') {
+      options.help = true
+    } else {
+      fail('CLI_UNKNOWN', `未知参数：${arg}`)
     }
   }
-  walk(dir)
-  return { files, bytes }
-}
-
-/** 主流程。 */
-async function main() {
-  const opts = parseArgs(process.argv.slice(2))
-  if (opts.from === null) { console.error('✗ 必须给 --from <归档目录>'); printUsage(); process.exit(2) }
-  if (!opts.referenced && opts.ids === null) { console.error('✗ 必须给 --referenced 或 --ids'); printUsage(); process.exit(2) }
-
-  const archive = resolve(opts.from)
-  if (!existsSync(archive)) { console.error(`✗ 归档目录不存在：${archive}`); process.exit(2) }
-
-  // ── 目标清单：--referenced 时由会话引用面推导（源真相是会话本身，不是人的记忆）──
-  let ids = opts.ids ?? []
-  if (opts.referenced) {
-    const roster = resolveRoster({ shippedRoot: opts.shippedRoot, userRoot: opts.userRoot })
-    const { byPreset, scanned } = await scanSessions({ sessionsRoot: opts.sessionsRoot })
-    if (scanned === 0) { console.error(`✗ 在 ${opts.sessionsRoot} 下没找到会话——--referenced 无法推导`); process.exit(2) }
-    ids = [...byPreset.keys()].filter((id) => !roster.available.has(id)).sort()
-    if (ids.length === 0) {
-      console.log(`✓ 无需恢复：扫描 ${scanned} 个会话，全部引用的 preset 都已 present`)
-      process.exit(0)
+  if (!options.help) {
+    if (!options.from) fail('CLI_FROM_MISSING', '必须给 --from <transaction root>')
+    if ((options.ids === null) === !options.referenced) {
+      fail('CLI_SCOPE', '必须且只能给 --ids 或 --referenced 之一')
     }
   }
+  return options
+}
 
-  // ── 门禁 ①：归档里必须有 ──
-  const plan = []
-  let blocked = false
+function usage() {
+  return `用法：
+  node scripts/role-presets/restore-presets.mjs --from <transaction-root> --ids a,b [--dry-run]
+  node scripts/role-presets/restore-presets.mjs --from <transaction-root> --referenced --apply
+
+只接受带 MANIFEST.json 的 SEC-RT-003A archive；默认 dry-run。`
+}
+
+function parseArchiveManifest(fromRoot) {
+  const pathname = join(fromRoot.path, 'MANIFEST.json')
+  if (!existsSync(pathname)) fail('ARCHIVE_MANIFEST_MISSING', `归档缺 MANIFEST.json：${pathname}`)
+  const before = snapshotPath(pathname)
+  if (before.type !== 'file') fail('ARCHIVE_MANIFEST_TYPE', 'MANIFEST.json 必须是普通文件')
+  let value
+  try { value = JSON.parse(readFileSync(pathname, 'utf8')) } catch (error) {
+    fail('ARCHIVE_MANIFEST_JSON', `MANIFEST.json 无法解析：${error.message}`)
+  }
+  revalidatePathSnapshot(before)
+  if (value?.schemaVersion !== 1 || value?.type !== 'preset-removal-archive'
+      || !Array.isArray(value?.items) || typeof value?.batchId !== 'string') {
+    fail('ARCHIVE_MANIFEST_SCHEMA', 'MANIFEST.json schema/type 非法')
+  }
+  const ids = validateFinalNames(value.items.map((item) => item?.id))
+  const byId = new Map()
+  for (let i = 0; i < ids.length; i += 1) {
+    const digest = value.items[i]?.treeSha256
+    if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/u.test(digest)) {
+      fail('ARCHIVE_MANIFEST_DIGEST', `${ids[i]} 的 treeSha256 非法`)
+    }
+    byId.set(ids[i], digest)
+  }
+
+  const journalPath = join(fromRoot.path, 'journal.json')
+  if (!existsSync(journalPath)) fail('ARCHIVE_JOURNAL_MISSING', `归档缺 journal.json：${journalPath}`)
+  const journalSnapshot = snapshotPath(journalPath)
+  if (journalSnapshot.type !== 'file') fail('ARCHIVE_JOURNAL_TYPE', 'journal.json 必须是普通文件')
+  let journal
+  try { journal = JSON.parse(readFileSync(journalPath, 'utf8')) } catch (error) {
+    fail('ARCHIVE_JOURNAL_JSON', `journal.json 无法解析：${error.message}`)
+  }
+  revalidatePathSnapshot(journalSnapshot)
+  if (journal?.type !== 'preset-skill-directory-transaction'
+      || journal?.kind !== 'preset' || !Array.isArray(journal?.items)
+      || journal?.batchId !== value.batchId) {
+    fail('ARCHIVE_JOURNAL_SCHEMA', 'journal 与 archive manifest 的 type/kind/batch 不一致')
+  }
+  const journalById = new Map(journal.items
+    .filter((item) => item?.action === 'remove')
+    .map((item) => [item.finalName, item.beforeDigest]))
+  for (const [id, digest] of byId) {
+    if (journalById.get(id) !== digest) {
+      fail('ARCHIVE_JOURNAL_DIGEST', `${id} 的 archive manifest 未被 transaction journal 绑定`)
+    }
+  }
+  return { value, snapshot: before, byId, journal, journalSnapshot }
+}
+
+function makeBatchId() {
+  return `preset-restore-${Date.now()}-${randomBytes(4).toString('hex')}`
+}
+
+function recoveryWorkspace(root, id) {
+  return join(dirname(root.path), `.agent-presets-restore-${id}`)
+}
+
+export async function buildRestorePlan(options, dependencies = {}) {
+  const root = canonicalRoot(options.userRoot)
+  const fromRoot = canonicalRoot(options.from)
+  const manifest = parseArchiveManifest(fromRoot)
+  const archiveRoot = canonicalRoot(join(fromRoot.path, 'archive'))
+
+  let requested = options.ids
+  let sessionsScanned = null
+  if (options.referenced) {
+    const scanner = dependencies.scanSessions ?? scanSessions
+    const sessions = await scanner({ sessionsRoot: options.sessionsRoot })
+    if (!Number.isInteger(sessions.scanned) || sessions.scanned <= 0) {
+      fail('SESSION_SCAN_EMPTY', `会话扫描结果为 ${String(sessions.scanned)}，无法推导恢复范围`)
+    }
+    if (!(sessions.byPreset instanceof Map)) fail('SESSION_SCAN_SHAPE', '会话扫描结果缺 byPreset Map')
+    const rosterResolver = dependencies.resolveRoster ?? resolveRoster
+    const roster = rosterResolver({ shippedRoot: options.shippedRoot, userRoot: root.path })
+    requested = [...sessions.byPreset.keys()].filter((id) => !roster.available.has(id)).sort()
+    sessionsScanned = sessions.scanned
+  }
+  if (!Array.isArray(requested) || requested.length === 0) {
+    return {
+      version: 1,
+      id: dependencies.batchId ?? makeBatchId(),
+      root,
+      fromRoot,
+      archiveRoot,
+      manifest,
+      ids: [],
+      skipped: [],
+      items: [],
+      sessionsScanned,
+      workspace: null,
+    }
+  }
+  const ids = validateFinalNames(requested)
+  const items = []
+  const skipped = []
   for (const id of ids) {
-    const source = join(archive, id)
-    const target = join(opts.userRoot, id)
-    if (!existsSync(source)) { console.error(`  ✗ 归档缺 ${id}（${source}）`); blocked = true; continue }
-    if (existsSync(target)) {
-      if (opts.skipExisting) { plan.push({ id, source, target, action: 'skip' }); continue }
-      console.error(`  ✗ 目标已存在，拒绝覆盖：${target}（如需容忍请加 --skip-existing）`); blocked = true; continue
+    const expected = manifest.byId.get(id)
+    if (!expected) fail('ARCHIVE_ID_UNDECLARED', `MANIFEST.json 未声明 ${id}`)
+    const source = resolveContainedTarget(archiveRoot, id, { mustExist: true })
+    const sourceManifest = inspectTree(source.path)
+    if (sourceManifest.treeSha256 !== expected) {
+      fail('ARCHIVE_DIGEST_MISMATCH', `${id} archive digest 与 MANIFEST.json 不一致`, {
+        expected,
+        actual: sourceManifest.treeSha256,
+      })
     }
-    plan.push({ id, source, target, action: 'restore' })
-  }
-  if (blocked) { console.error('✗ 门禁未过，未做任何写入'); process.exit(1) }
-
-  const toRestore = plan.filter((p) => p.action === 'restore')
-  if (!opts.json) {
-    console.log(`归档：${archive}`)
-    console.log(`目标：${opts.userRoot}`)
-    console.log(`计划：恢复 ${toRestore.length} 个${plan.length - toRestore.length > 0 ? `，跳过 ${plan.length - toRestore.length} 个` : ''}${opts.dryRun ? '（--dry-run，不写盘）' : ''}`)
-    console.log('')
-  }
-  if (opts.dryRun) {
-    for (const p of plan) console.log(`  ${p.action === 'restore' ? '将恢复' : '将跳过'} ${p.id}`)
-    process.exit(0)
-  }
-
-  // ── 执行：ditto 逐目录保真（勿用 cp -R，见文件头纪律）──
-  for (const p of toRestore) {
-    execFileSync('ditto', [p.source, p.target], { stdio: 'inherit' })
-    if (!opts.json) console.log(`  已恢复 ${p.id}`)
-  }
-
-  // ── 门禁 ③：逐项核验 文件数 + 总字节数 ──
-  const results = []
-  let mismatch = false
-  for (const p of toRestore) {
-    const a = measure(p.source)
-    const b = measure(p.target)
-    const ok = a.files === b.files && a.bytes === b.bytes
-    if (!ok) mismatch = true
-    results.push({ id: p.id, archive: a, restored: b, ok })
-  }
-
-  if (opts.json) {
-    console.log(JSON.stringify({ archive, target: opts.userRoot, restored: results }, null, 2))
-  } else {
-    console.log('')
-    console.log('逐项核验（文件数 + 总字节数）')
-    for (const r of results) {
-      console.log(`  ${r.ok ? 'OK      ' : '✗MISMATCH'} ${r.id.padEnd(28)} ${String(r.archive.files).padStart(3)} 文件 / ${String(r.archive.bytes).padStart(8)} B`)
+    const target = resolveContainedTarget(root, id, { mustExist: false })
+    if (target.exists) {
+      if (!options.skipExisting) fail('TARGET_EXISTS', `目标已存在，拒绝覆盖：${target.path}`)
+      skipped.push({ id, target: target.path })
+      continue
     }
-    console.log('')
-    console.log(mismatch ? '✗ 存在不一致' : `★ 恢复完整：${results.length}/${results.length} 逐项字节级一致`)
-    if (!mismatch) console.log('  无需重启宿主：list()/resolve() 每次调用都重读 preset 根。')
+    items.push({
+      action: 'replace',
+      finalName: id,
+      target,
+      before: null,
+      source,
+      after: sourceManifest,
+      stageMode: 'copy',
+    })
   }
-  process.exit(mismatch ? 1 : 0)
+  const id = dependencies.batchId ?? makeBatchId()
+  let restoreCapacity = null
+  if (items.length > 0) {
+    const requiredBytes = items.reduce((sum, item) => sum + item.after.entries
+      .filter((entry) => entry.type === 'file')
+      .reduce((total, entry) => total + entry.size, 0), 0) + 1024 * 1024
+    const parent = canonicalRoot(dirname(root.path))
+    try {
+      accessSync(root.path, constants.W_OK | constants.X_OK)
+      accessSync(parent.path, constants.W_OK | constants.X_OK)
+    } catch (error) {
+      fail('RESTORE_ROOT_NOT_WRITABLE', `user root 或 transaction parent 不可写：${error.message}`)
+    }
+    const fileSystem = statfsSync(parent.path, { bigint: true })
+    const availableBytes = fileSystem.bavail * fileSystem.bsize
+    if (availableBytes < BigInt(requiredBytes)) {
+      fail('RESTORE_SPACE_INSUFFICIENT', `restore staging 可用空间不足：需要至少 ${requiredBytes} B`)
+    }
+    restoreCapacity = { requiredBytes, availableBytes: availableBytes.toString() }
+  }
+  return {
+    version: 1,
+    id,
+    root,
+    fromRoot,
+    archiveRoot,
+    manifest,
+    ids,
+    skipped,
+    items,
+    sessionsScanned,
+    restoreCapacity,
+    workspace: items.length > 0 ? recoveryWorkspace(root, id) : null,
+  }
 }
 
-main().catch((error) => { console.error('✗ 恢复失败：', error instanceof Error ? error.message : String(error)); process.exit(2) })
+export function publicRestorePlan(plan) {
+  return {
+    version: plan.version,
+    dryRun: true,
+    batchId: plan.id,
+    canonicalUserRoot: plan.root.path,
+    sourceTransactionRoot: plan.fromRoot.path,
+    sourceArchiveRoot: plan.archiveRoot.path,
+    transactionRoot: plan.workspace,
+    sessionsScanned: plan.sessionsScanned,
+    requiredRestoreBytes: plan.restoreCapacity?.requiredBytes ?? 0,
+    availableBytes: plan.restoreCapacity?.availableBytes ?? null,
+    skipped: plan.skipped,
+    items: plan.items.map((item) => ({
+      id: item.finalName,
+      canonicalSource: item.source.path,
+      canonicalTarget: item.target.path,
+      treeSha256: item.after.treeSha256,
+    })),
+  }
+}
+
+export async function executeRestorePlan(plan, dependencies = {}) {
+  if (plan.items.length === 0) return { state: 'NOOP', workspace: null, journalPath: null }
+  return executeDirectoryTransaction({
+    kind: 'preset',
+    batchId: plan.id,
+    owner: dependencies.owner ?? 'restore-presets',
+    root: plan.root,
+    workspace: plan.workspace,
+    items: plan.items,
+  }, { fault: dependencies.fault })
+}
+
+export async function runRestoreCli(argv, environment = {}) {
+  const options = parseRestoreArgs(argv)
+  if (options.help) {
+    environment.stdout?.(usage())
+    return { exitCode: 0, help: true }
+  }
+  const plan = await buildRestorePlan(options, environment)
+  const dry = publicRestorePlan(plan)
+  if (!options.apply) {
+    environment.stdout?.(options.json ? JSON.stringify(dry, null, 2) : [
+      `dry-run：将恢复 ${plan.items.length} 个，跳过 ${plan.skipped.length} 个；未写盘`,
+      `来源：${plan.archiveRoot.path}`,
+      ...dry.items.map((item) => `  restore ${item.id} ${item.treeSha256}`),
+    ].join('\n'))
+    return { exitCode: 0, dryRun: true, plan: dry }
+  }
+  const result = await executeRestorePlan(plan, environment)
+  const output = {
+    state: result.state,
+    batchId: plan.id,
+    restored: plan.items.map((item) => item.finalName),
+    skipped: plan.skipped,
+    transactionRoot: result.workspace,
+    journalPath: result.journalPath,
+  }
+  environment.stdout?.(options.json
+    ? JSON.stringify(output, null, 2)
+    : `完成：恢复 ${output.restored.length} 个 preset；state=${output.state}`)
+  return { exitCode: 0, ...output }
+}
+
+const direct = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])
+if (direct) {
+  runRestoreCli(process.argv.slice(2), { stdout: (text) => console.log(text) }).then(
+    (result) => { process.exitCode = result.exitCode },
+    (error) => {
+      const payload = {
+        ok: false,
+        code: typeof error?.code === 'string' ? error.code : 'RESTORE_FAILED',
+        message: error instanceof Error ? error.message : String(error),
+        ...(error?.details && Object.keys(error.details).length > 0 ? { details: error.details } : {}),
+      }
+      console.error(process.argv.includes('--json') ? JSON.stringify(payload, null, 2) : `✗ ${payload.code}: ${payload.message}`)
+      process.exitCode = 2
+    },
+  )
+}

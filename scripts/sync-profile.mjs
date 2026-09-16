@@ -68,7 +68,13 @@ function installedDependencies(profile) {
 function vendorPairs(vendorDir) {
   const pairs = []
   for (const { relPath, dirName } of managedPackages()) {
-    const target = join(vendorDir, dirName)
+    // 路径必须是**归组后**的 relPath（`packages/<组>/<包>`），与 vendor 的实际布局
+    // `vendor/packages/<组>/<包>` 对齐。曾经这里写的是 `join(vendorDir, dirName)`：
+    // 25 个受管包**一个都命中不了**，pairs 恒为空，于是 `--apply --only-metadata`
+    // 每次都打印 `ok ... 对比 0 个包` 却从未比较过任何字节——而归组重构之后一直是这个
+    // 状态（P-02 仪器假绿）。装载点那条路径早就有「0 个包 != 都一致」的护栏，vendor
+    // 这条没有，所以它绿得毫无射程。下面的零命中护栏补上另一半。
+    const target = join(vendorDir, relPath)
     if (!existsSync(target)) continue
     const sourceDir = join(repoRoot, relPath)
     pairs.push({ name: dirName, sourceDir, targetDir: target, files: listFiles(sourceDir) })
@@ -160,9 +166,14 @@ function main() {
     if (!existsSync(targetDir)) continue
 
     const { diverged, absentInTarget } = planSync(sourceDir, targetDir, files)
-    const selected = onlyMetadata ? diverged.filter((file) => file === 'package.json') : diverged
+    // 装载点缺文件必须**能补齐**（2026-09-15 实测：`lib/host-util.js` 缺失时
+    // `--apply --loadpoint` 只打印 note、不加文件，remediation 空转，应用进恢复模式）。
+    // vendor 分支维持「不追加」：那是物化副本，不是装载点。
+    const selected = onlyMetadata
+      ? diverged.filter((file) => file === 'package.json')
+      : loadpoint ? [...absentInTarget, ...diverged] : diverged
     if (selected.length === 0) {
-      if (absentInTarget.length > 0) {
+      if (absentInTarget.length > 0 && !loadpoint) {
         process.stdout.write(`note ${name}: ${scope}未包含 ${absentInTarget.length} 个仓库文件（不追加，副本可能含运行所需产物）\n`)
       }
       continue
@@ -176,18 +187,20 @@ function main() {
     if (mode === 'apply') {
       applySync(sourceDir, targetDir, selected)
       cleanTemps(targetDir, selected)
-      process.stdout.write(`sync  ${name}: 已按 tmp+mv 原子替换 ${selected.length} 个文件\n`)
+      process.stdout.write(`sync  ${name}: 已按 tmp+mv 原子替换/补齐 ${selected.length} 个文件\n`)
     }
   }
 
   // 「一个包都没比」必须与「逐字节都一致」在读数上长得不一样——旧实现里两者同形，
   // 于是本工具在 2026-09-13 那天报的 `ok` 是空射程的 `ok`（P-02）。
-  if (loadpoint) {
-    const fileDeps = Object.values(installedDependencies(profile))
-      .filter((spec) => typeof spec === 'string' && spec.startsWith('file:')).length
-    if (fileDeps > 0 && pairs.length === 0) {
+  // 2026-09-15：这条护栏原先只挂在装载点分支上，vendor 分支**没有**，于是归组重构
+  // 把 vendor 路径写错之后，`--only-metadata` 连续多日打印 `ok ... 对比 0 个包`
+  // 而从未比过任何字节。护栏必须覆盖两条路径，否则它保护的只是自己那条。
+  if (pairs.length === 0) {
+    const managedCount = managedPackages().length
+    if (managedCount > 0) {
       process.stdout.write(
-        `warn profile 声明了 ${fileDeps} 个 file: 依赖，但没一个对上本仓库受管的包——`
+        `warn 仓库受管 ${managedCount} 个包，但${scope}里**一个都没对上**——`
           + '本次**未与仓库比较任何字节**，不是「都一致」\n',
       )
       process.exitCode = 1

@@ -14,13 +14,15 @@
   "scripts": {
     "gate": "node scripts/gate.mjs --mode quick",
     "gate:full": "node scripts/gate.mjs --mode full",
+    "gate:strict": "node scripts/gate.mjs --mode full --require-no-skip",
     "gate:list": "node scripts/gate.mjs --list",
     "test:gate": "node --test scripts/gate.test.mjs 'scripts/gates/*.test.mjs' 'scripts/lib/*.test.mjs'",
     "accept:root-brand": "node scripts/acceptance/root-brand-live-anchors.mjs",
     "accept:theme-tokens": "node scripts/acceptance/theme-tokens-live.mjs",
     "accept:worktable-fence": "node scripts/acceptance/worktable-fence-live.mjs",
     "accept:newapp-products": "node scripts/acceptance/newapp-products-live.mjs",
-    "accept:newapp-systems": "node scripts/acceptance/newapp-systems-live.mjs"
+    "accept:newapp-systems": "node scripts/acceptance/newapp-systems-live.mjs",
+    "accept:settings-shell": "node scripts/acceptance/settings-shell-live.mjs"
   },
   "dependencies": {
     "@poyoapi/cli": "^0.1.11"

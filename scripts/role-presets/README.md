@@ -24,7 +24,9 @@
 | `verify-lossless.mjs` | 全量保真校验器。10 层断言，任一层失败即非零退出 |
 | `session-refs.mjs` | 会话↔preset 引用面的共享实现（解码纪律、roster 判定、扫描） |
 | `scan-session-refs.mjs` | **删除前的引用面门禁**，含 `--would-remove` 预检 |
-| `restore-presets.mjs` | 从归档有门禁地恢复 preset（含恢复后字节级核验） |
+| `remove-preset.mjs` | 默认 dry-run 的唯一删除入口；SHA-256 归档后 rename 到 quarantine |
+| `restore-presets.mjs` | 从结构化 SHA-256 归档以 journaled swap 恢复 preset |
+| `recover-preset-transaction.mjs` | 检视/回滚 retained journal；显式、受证明约束地接管 orphan lock |
 | `install-playbook-skills.mjs` | 把 8 份 Playbook 装成共享技能 |
 | `skill-map.json` | 151 个中文业务技能名 → 英文 skill id 的人工语义映射 |
 
@@ -63,23 +65,27 @@ node scripts/role-presets/scan-session-refs.mjs --would-remove <id,id>
 
 **2026-09-11 实测事故**：删 15 个 preset 后，**28 个既有会话 / 531,173 条记录 / 1,248 条真实用户
 消息**一度全部打不开。当时只跑了「归档完整性」门禁，**没跑引用面门禁**——归档救回来是运气，
-不是流程。正确的删除类门禁是**两条**：
+不是流程。现在两条门禁已被收进唯一 mutation 入口，不能分开执行：
 
 ```sh
-# ① 归档完整（备份可回滚）
-ditto <源目录> <归档目录>            # 勿用 cp -R，见下
-# 用 文件数 + 总字节数 逐项比对源与归档
+# 默认只做全批 preflight：引用面 + canonical target + 逐树 SHA-256，不写盘
+node scripts/role-presets/remove-preset.mjs --ids <id,id> --json
 
-# ② 无既有引用会被打断（会打断则退出码 1）
-node scripts/role-presets/scan-session-refs.mjs --would-remove <拟删的 id 列表>
+# 经独立 mutation 授权后才加 --apply；有已知引用还需 --force
+node scripts/role-presets/remove-preset.mjs --ids <id,id> --apply
 ```
 
-修复用 `restore-presets.mjs`——零代码改动、**无需重启宿主**
+提交顺序是“同一锁内完整 archive + manifest → live 目录 rename 到 retained quarantine”，没有立即删除，
+也不再用文件数/总字节数冒充内容完整性。修复用 `restore-presets.mjs`——零代码改动、**无需重启宿主**
 （`list()`/`resolve()` 每次调用都重读 preset 根，源码原文 *"Discovery is unmemoized…"*）：
 
 ```sh
-node scripts/role-presets/restore-presets.mjs --from <归档目录> --referenced --dry-run
-node scripts/role-presets/restore-presets.mjs --from <归档目录> --referenced
+node scripts/role-presets/restore-presets.mjs --from <transaction-root> --referenced --json
+node scripts/role-presets/restore-presets.mjs --from <transaction-root> --referenced --apply
+
+# 中断现场默认只读；只有明确 rollback 才写
+node scripts/role-presets/recover-preset-transaction.mjs --from <transaction-root> --rollback
+node scripts/role-presets/recover-preset-transaction.mjs --from <transaction-root> --rollback --apply
 ```
 
 ### 三条实现纪律（都是用错一次换来的）
@@ -90,9 +96,9 @@ node scripts/role-presets/restore-presets.mjs --from <归档目录> --referenced
    从而误判"没有真实损失"。
 2. **roster 必须同时含 shipped 根与 user 根**。只查 `~/.dsh/.agent-presets` 会把 shipped 的
    `standard`/`ptc`/`minimal`/`cordis` 误判为缺失，凭空多出一批假失效。
-3. **归档/恢复一律用 `ditto`，不用 `cp -R`**。实测：`cp -R "$d/" "$dst/"` 在 BSD 上复制的是
-   **内容而非目录**（`$d` 带尾斜杠时），15 个 preset 会被拍平合并成一个脏目录。当时正是完整性
-   校验器报 `fail=1` 拦住了删除，才没把资产全丢。
+3. **归档/恢复只走上述事务入口，不手写 `ditto`/`cp -R`/`rm -rf`**。事务复制不追随 link，
+   每个 regular file 以 SHA-256/size/mode 入 manifest，fsync 后复扫；archive、backup、quarantine 与 journal
+   在 recovery/retention 明确前都保留。旧事故中 `cp -R "$d/" "$dst/"` 曾把 15 个 preset 拍平合并。
 4. **别用 `cmd | head && echo OK` 读退出码**。管道末端命令的退出码会掩盖真实失败——我因此
    差点放过一个语法错误。用 `cmd; echo exit=$?` 或 `${PIPESTATUS[0]}`。
 

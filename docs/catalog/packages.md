@@ -2,7 +2,7 @@
 
 本文件由 `scripts/gen-catalog.mjs` 从各包 `package.json` 生成，**请勿手改**——手改会被门禁 `catalog-fresh` 拒绝（ADR-0011）。
 
-受管包总数：**25**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
+受管包总数：**26**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
 
 | 组 | 目录 | 包名 | 来源 | owner | 发布 npm |
 | --- | --- | --- | --- | --- | --- |
@@ -25,6 +25,7 @@
 | platform | `packages/platform/dsh-file-upload-local` | `dsh-file-upload` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-rename-conversations` | `dsh-rename-conversations` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-root-brand-local` | `dsh-root-brand` | `self` | `lute` | `false` |
+| platform | `packages/platform/dsh-settings-shell-local` | `dsh-settings-shell` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-theme-local` | `dsh-theme` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-ui-polish-local` | `dsh-ui-polish` | `self` | `lute` | `false` |
 | contract | `packages/contract/dsh-preset-lint-local` | `dsh-preset-lint-local` | `self` | `lute` | `false` |
@@ -38,6 +39,6 @@
 | --- | --- |
 | capabilities | 7 |
 | surfaces | 7 |
-| platform | 7 |
+| platform | 8 |
 | contract | 2 |
 | infra | 2 |

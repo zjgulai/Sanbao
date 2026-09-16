@@ -24,6 +24,73 @@ export function errorMessage(value) {
   return String(value)
 }
 
+const SHOPIFY_HOST_SUFFIX = '.myshopify.com'
+const SHOPIFY_HOST_ERROR = 'Shopify 商店域名必须为 <shop>.myshopify.com（不要包含协议、端口或路径）'
+const SHOPIFY_ADMIN_PATH_ERROR = 'Shopify Admin API 路径非法'
+
+/**
+ * 将用户输入收窄为一个可安全承载凭证的 Shopify 商店 hostname。
+ *
+ * 这里故意不从 URL 中“猜”hostname：scheme、userinfo、port、path、额外
+ * label 或 Unicode/Punycode 都表示输入含义不明确，必须由用户重新填写。
+ * @typedef {{ok: true, host: string} | {ok: false, host?: undefined, error: string}} ShopifyHostResult
+ * @param {unknown} value 用户输入或历史凭据值
+ * @returns {ShopifyHostResult} 规范化 hostname 或可公开显示的固定错误
+ */
+export function normalizeShopifyHost(value) {
+  if (typeof value !== 'string') return { ok: false, error: SHOPIFY_HOST_ERROR }
+  const host = value.trim().toLowerCase()
+  if (!host.endsWith(SHOPIFY_HOST_SUFFIX)) return { ok: false, error: SHOPIFY_HOST_ERROR }
+
+  const shopLabel = host.slice(0, -SHOPIFY_HOST_SUFFIX.length)
+  if (
+    shopLabel.length < 1
+    || shopLabel.length > 63
+    || shopLabel.startsWith('xn--')
+    || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(shopLabel)
+  ) {
+    return { ok: false, error: SHOPIFY_HOST_ERROR }
+  }
+  return { ok: true, host }
+}
+
+/**
+ * 在每次网络 I/O 前重新验证 Shopify hostname，并从固定 HTTPS origin 构造
+ * Admin API URL。pathname 也必须留在 `/admin/` 下，防止未来调用方传入绝对
+ * URL 或 network-path reference 绕过已验证 origin。
+ *
+ * @template T
+ * @param {(url: URL, init?: RequestInit) => Promise<T>} fetchImpl 注入的 fetch
+ * @param {unknown} rawHost 用户输入或历史保存的 hostname
+ * @param {unknown} pathname Shopify Admin API 的绝对路径
+ * @param {RequestInit} [init] fetch 参数
+ * @returns {Promise<{ok: true, host: string, url: URL, response: T} | {ok: false, error: string}>}
+ */
+export async function fetchShopifyAdmin(fetchImpl, rawHost, pathname, init) {
+  const normalized = normalizeShopifyHost(rawHost)
+  if (normalized.ok !== true) return normalized
+  if (
+    typeof pathname !== 'string'
+    || !pathname.startsWith('/admin/')
+    || pathname.includes('\\')
+    || pathname.includes('?')
+    || pathname.includes('#')
+  ) {
+    return { ok: false, error: SHOPIFY_ADMIN_PATH_ERROR }
+  }
+
+  const origin = `https://${normalized.host}`
+  const url = new URL(pathname, `${origin}/`)
+  if (url.origin !== origin || !url.pathname.startsWith('/admin/')) {
+    return { ok: false, error: SHOPIFY_ADMIN_PATH_ERROR }
+  }
+
+  // 307/308 会保留 method、body 与自定义 headers；禁止跟随重定向，避免已经
+  // 固定到 Shopify host 的 secret/token 在第二跳被发送到另一个 origin。
+  const response = await fetchImpl(url, { ...init, redirect: 'error' })
+  return { ok: true, host: normalized.host, url, response }
+}
+
 /**
  * 决定用哪个令牌访问 Shopify Admin API。
  *

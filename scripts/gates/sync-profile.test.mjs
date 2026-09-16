@@ -136,3 +136,32 @@ test('装载点内容校验：逐字节相同的 bundle 通过', () => {
 
   assert.equal(result.passed, true)
 })
+
+test('装载点内容校验：源有而装载点缺失的 bundle 必须判红（2026-09-15 恢复模式事故）', () => {
+  const { src, dst } = fixture()
+  mkdirSync(join(src, 'lib'))
+  mkdirSync(join(dst, 'lib'))
+  // 源有 host-util.js 而装载点没有：应用会 ERR_MODULE_NOT_FOUND 进恢复模式。
+  writeFileSync(join(src, 'lib/host-util.js'), 'export const x = 1\n')
+  writeFileSync(join(dst, 'package.json'), '{"name":"a"}\n')
+
+  const result = checkProfileBundleSync([{ name: 'a', sourceDir: src, targetDir: dst, files: ['lib/index.js'] }])
+
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /装载点缺少 lib\/host-util\.js/)
+})
+
+test('装载点内容校验：缺失判红靠的是 lib 顶层 bundle 规则，不是 files 清单', () => {
+  const { src, dst } = fixture()
+  mkdirSync(join(src, 'lib'))
+  mkdirSync(join(dst, 'lib'))
+  // host-util.js 不在 files 清单里，但它在 lib/ 顶层 —— loadPointFiles 必须把它拉进断言面。
+  writeFileSync(join(src, 'lib/host-util.js'), 'export const x = 1\n')
+  writeFileSync(join(dst, 'package.json'), '{"name":"a"}\n')
+
+  const result = checkProfileBundleSync([{ name: 'a', sourceDir: src, targetDir: dst, files: [] }])
+
+  assert.equal(result.passed, false)
+  assert.match(result.violations[0], /lib\/host-util\.js/)
+})

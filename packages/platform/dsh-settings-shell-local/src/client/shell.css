@@ -1,0 +1,93 @@
+/*
+ * 设置 shell 呈现层样式。
+ *
+ * 选择器纪律（架构红线第 7 条「官方 UI 改写锚禁止钉哈希」）：
+ * 本文件**不含任何 CSS-module 哈希**（官方那份是 `MI-_Aa_panel` 这类内容哈希，
+ * 每次上游重建都会变）。全部锚点取自官方 DOM 的 **ARIA 语义**：
+ *   panel = [role="dialog"][aria-modal="true"]      （且直接子元素含 <nav>）
+ *   nav   = 上面那个 panel 的直接 <nav> 子元素
+ *   item  = nav 内的 button；当前项带 aria-current="true"
+ *
+ * 优先级核算：官方是单类选择器 (0,1,0)；本文件的锚都是双属性以上
+ * (0,2,0) 起步，因此**不需要 !important** 就能稳赢，且不会与官方样式打架。
+ */
+
+/* 品牌色：路特创新绿。浅色背景下原色对比度只有 2.51:1，达不到无障碍下限，
+ * 故浅色用加深变体（白底实测 4.30:1），深色用原色（实测 5.24:1）。 */
+:root {
+  --dsh-settings-shell-brand: #3d8a33;
+}
+
+body[data-ds-dark-theme] {
+  --dsh-settings-shell-brand: #58b848;
+}
+
+/* ── 面板尺寸：保守档 ──────────────────────────────────────────────
+ * 官方是 width:800px / height:min(800px, 100vh - 48px) —— 只保护小屏、
+ * 不放大屏（1580px 窗口里面板仅占 60.6%）。这里把上限提到 960px 并把
+ * 纵向边距从 48px 收到 32px；小屏保护原样保留。 */
+[role="dialog"][aria-modal="true"] {
+  width: min(960px, 100vw - 48px);
+  height: min(920px, 100vh - 32px);
+}
+
+/* ── 导航：修「点不到」 ────────────────────────────────────────────
+ * 实测 18 项导航需要 852px，而面板可用 752px —— 官方 nav 没有 overflow、
+ * panel 是 overflow:hidden，于是最后两项被裁成 1px 高、完全不可达且不报错。
+ * 这一条是本包存在的首要理由，不是外观调整。 */
+[role="dialog"][aria-modal="true"] > nav {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  /* 与内容区拉开层次：从当前主题的文字色派生 4%，自动适配明暗两态 */
+  background: color-mix(in oklab, var(--dsw-alias-label-primary, #000) 4%, transparent);
+  border-right: 1px solid color-mix(in oklab, var(--dsw-alias-label-primary, #000) 8%, transparent);
+  /* 滚动到底部时最后一项不贴圆角 */
+  padding-bottom: 14px;
+}
+
+/* ── 导航项：品牌色只做点缀，不铺底色 ─────────────────────────────
+ * 大面积染品牌色会同时破坏浅色可读性与第三方页面的既有观感，
+ * 因此当前项只用一条左侧指示条表达归属。 */
+[role="dialog"][aria-modal="true"] nav button {
+  position: relative;
+}
+
+[role="dialog"][aria-modal="true"] nav button[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--dsh-settings-shell-brand);
+  pointer-events: none;
+}
+
+/* 键盘焦点：同一个品牌色，保证「看到焦点」与「看到当前项」是同一套语言 */
+[role="dialog"][aria-modal="true"] nav button:focus-visible {
+  outline: 2px solid var(--dsh-settings-shell-brand);
+  outline-offset: -2px;
+}
+
+/* ── 分组标题 ─────────────────────────────────────────────────────
+ * 由客户端脚本按 slots 注册表注入（官方契约没有 group 字段）。
+ * 标题是纯文本节点：不包裹按钮、不改任何按钮的 ARIA —— 与第三方
+ * 导航注入（如 dsh-better-sidebar 按 `[role="dialog"] nav button` 打标记）
+ * 互不干扰。 */
+[data-dsh-ss-group] {
+  padding: 13px 12px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  color: color-mix(in oklab, var(--dsw-alias-label-primary, #000) 52%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-dsh-ss-group]:first-child {
+  padding-top: 2px;
+}

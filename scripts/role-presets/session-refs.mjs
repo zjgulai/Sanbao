@@ -9,7 +9,7 @@
  *   1. session.jsonl.zstd 是**多帧拼接**，必须走 `zstd -dc`；Node 自带的两种解码器都只解首帧。
  *   2. roster 必须同时含 shipped 根与 user 根；只查用户根会把 shipped 4 个误判为缺失。
  */
-import { readdirSync, statSync, existsSync } from 'node:fs'
+import { lstatSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { spawn } from 'node:child_process'
@@ -105,28 +105,45 @@ export async function readSession(zstd, file) {
   return await new Promise((resolve, reject) => {
     const child = spawn(zstd, ['-dc', file], { stdio: ['ignore', 'pipe', 'ignore'] })
     const rl = createInterface({ input: child.stdout, crlfDelay: Infinity })
-    let header = null, selected = null, records = 0, userMessages = 0
+    let header = null, selected = null, records = 0, userMessages = 0, parseErrors = 0
+    let spawnError = null
     rl.on('line', (line) => {
       if (line === '') return
       records++
       if (!line.includes('"session"') && !line.includes('agent-preset') && !line.includes('user/message')) return
       let r
-      try { r = JSON.parse(line) } catch { return }
+      try { r = JSON.parse(line) } catch { parseErrors++; return }
       if (r.type === 'session') header = r
       else if (r.type === 'agent-preset/selected') selected = r.agentPreset ?? selected
       else if (r.type === 'user/message') userMessages++
     })
-    child.on('error', (error) => reject(new Error(
-      `无法执行 zstd（${zstd}）：${error.message}；多帧解码必须用 zstd CLI（Node 自带解码器只解首帧）`)))
-    child.on('close', () => resolve({
-      preset: selected ?? header?.agentPreset ?? null,
-      source: selected ? 'selected' : (header?.agentPreset ? 'header' : null),
-      records, userMessages, bytes, createdAt: header?.createdAt ?? null,
-      // 首条 session 记录的 origin 决定这个会话是否真的会去解析默认 preset：
-      // origin=subagent 的会话走父方 composeFrom 组合，压根不读 agent-presets.default。
-      // 没有它，"无 agentPreset" 会被误读成"用默认"，从而高估删除默认 preset 的影响面。
-      origin: header?.origin ?? null,
-    }))
+    child.on('error', (error) => {
+      spawnError = error
+    })
+    child.on('close', (code, signal) => {
+      if (spawnError) {
+        reject(new Error(
+          `无法执行 zstd（${zstd}）：${spawnError.message}；多帧解码必须用 zstd CLI（Node 自带解码器只解首帧）`))
+        return
+      }
+      if (code !== 0) {
+        reject(new Error(`zstd 解码失败：${file}（exit=${String(code)}${signal ? `, signal=${signal}` : ''}）`))
+        return
+      }
+      if (parseErrors > 0) {
+        reject(new Error(`会话包含 ${parseErrors} 条无法解析的关键记录：${file}`))
+        return
+      }
+      resolve({
+        preset: selected ?? header?.agentPreset ?? null,
+        source: selected ? 'selected' : (header?.agentPreset ? 'header' : null),
+        records, userMessages, bytes, createdAt: header?.createdAt ?? null,
+        // 首条 session 记录的 origin 决定这个会话是否真的会去解析默认 preset：
+        // origin=subagent 的会话走父方 composeFrom 组合，压根不读 agent-presets.default。
+        // 没有它，"无 agentPreset" 会被误读成"用默认"，从而高估删除默认 preset 的影响面。
+        origin: header?.origin ?? null,
+      })
+    })
   })
 }
 
@@ -136,6 +153,13 @@ export async function readSession(zstd, file) {
  * @returns {Promise<{rows: Array<object>, byPreset: Map<string, Array<object>>, scanned: number, withPreset: number}>}
  */
 export async function scanSessions(options) {
+  let rootStat
+  try { rootStat = lstatSync(options.sessionsRoot) } catch {
+    throw new Error(`会话根不存在或不可读：${options.sessionsRoot}`)
+  }
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error(`会话根必须是非 symlink 目录：${options.sessionsRoot}`)
+  }
   const zstd = options.zstd ?? findZstd()
   const files = listSessionFiles(options.sessionsRoot)
   const rows = []

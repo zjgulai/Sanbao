@@ -142,8 +142,16 @@ test('抽取器本身：围栏边界、清单行与其**续行**', () => {
   )
 })
 
-test('登记簿自身可解析、两项都带齐证据字段', () => {
+test('登记簿自身可解析、每条都带齐证据字段、id 不重复', () => {
   const { instruments, errors } = parseRegistry(realRegistry)
   assert.deepEqual(errors, [], errors.join('\n'))
-  assert.equal(instruments.length, 2)
+  // **不钉死条数**：往登记簿里**加**一条已证伪的仪器是好事，钉死条数只会训练下一个人
+  // 无脑把数字改大（那正是「拦住」退化成「记得改数字」的形态）。这里守的是**没被清空**
+  // ——空登记簿让本项恒绿（parseRegistry 也单独判了红），下限 2 是仓库当时的实际条数。
+  assert.ok(
+    instruments.length >= 2,
+    `登记簿只剩 ${instruments.length} 条——空/近乎空的登记簿让本项恒绿（P-02）`,
+  )
+  const ids = instruments.map((i) => i.id)
+  assert.equal(new Set(ids).size, ids.length, `登记簿 id 有重复：${ids.join(' ')}`)
 })

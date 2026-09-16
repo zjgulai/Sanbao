@@ -64,10 +64,12 @@ bash scripts/preset_mount_probe.sh          # 预设挂载探测
 
 - [ ] `pnpm run gate` 全绿 —— **三条技能线的验证器现在都在射程内**（`gate:skill-lines`，
       §12.12）。清单里的前三项曾长期只写在本文档与 `pipeline.sh` 里，不在任何自动路径上
-- [ ] `verify_static.mjs` 全绿（8 大场景/28 细分 + FS 8 组 + GN 8 分组 / 名字唯一 / 图标覆盖 /
-      三线名单无漂移 / 悬空引用）
+- [ ] `verify_static.mjs` 全绿（8 大场景/28 细分 + FS 14 组（M00–M13）/ 138 行 + GN 8 分组 /
+      名字唯一 / 图标覆盖 **含分组头像互不相同** / 三线名单无漂移 / 悬空引用）
 - [ ] `verify-generic.mjs` 全绿（通用线 T0 在**每一个**岗位 preset 的 `skill-subset` 里逐字命中）
-- [ ] `verify-fullstack.mjs` 全绿（30/30；预设副本判据在预设不在本机时**跳过并说明**）
+- [ ] `verify-fullstack.mjs` 全绿（70/70；预设副本判据在预设不在本机时**跳过并说明**）
+- [ ] `verify-agent-fullstack.mjs` 全绿（七层：身份 / 组合 / 压缩键 / 89 条白名单 / `respectFileFlags` /
+      **人格同源** / **头像同源**；预设目录不在本机时跳过并说明）
 - [ ] `verify_p7.sh` 全绿（分组数/新分组/B 类标题/installed/防白屏）
 - [ ] 设置页：卡面摘要无空白、LUTE 头像渲染（含第 28 项「通用技能」8 组 / 15 行）
 - [ ] 斜杠命令：中文候选/填入/触发 + 英文回归（五步清单见 docs/cn-slash-commands.md）
@@ -105,14 +107,37 @@ bash scripts/preset_mount_probe.sh          # 预设挂载探测
 - Key：`~/.dsh/skills/anysearch/.env`（ANYSEARCH_API_KEY，chmod 600）；优先级 --api_key > .env > 环境变量 > 匿名
 - 目录行：manifest/extra-skills.json（extensible 清单，接入 build_preset_catalog.py）
 
-## 9. AI全栈技能（mattpocock/skills 稳定集 29 个）
+## 9. AI全栈技能（M00–M13 十四节点，138 条）
 
-- 决策与背景：docs/adr/（ADR-0001~0007）、docs/ai-fullstack-analysis.md
-- 管线：`node scripts/import-fullstack.mjs`（幂等；译文取 staging/translations/<name>.body.md，缺则英文回退）
-- 验收：`node scripts/verify-fullstack.mjs`（29/29 解析/开关/路由冒烟/脚本语法/预设副本）
-- 页面：设置页第二 section「AI全栈技能」+ 卡片墙双组（lib/index.js fullstack-list 端点 + lib/client.js 参数化）
-- 图标：lute 生成器 sk-fs-* / fs-cat-* 条目 → assign_lute_icons.py 双档分配
-- 升级源仓库：重新 clone mattpocock/skills → 覆盖 /tmp/mattpocock-skills → 重跑 import + verify
+- 决策与背景：[ADR-0091](../../../docs/adr/ADR-0091.md)（节点轴重建）、ADR-0089（40 条入库）、
+  ADR-0090（图标判据边界）、docs/ai-fullstack-analysis.md
+- **分组轴是十四个交付节点，不是做法类**。节点键与中文标题的唯一事实源是
+  `scripts/build-fullstack-catalog.mjs` 的 `NODES`；它派生三份产物，三份都不许手改：
+  `scripts/fullstack-mapping.json` 的 `categories`、`manifest/fullstack-skills.json`（页面读的那份）、
+  `manifest/taxonomy-v3.json` 的 `fullstackNames`。`--check` 供门禁。
+- 重建顺序（改名单/分组只跑这三条）：
+  1. `node scripts/build-fullstack-catalog.mjs` —— 归并 mapping(70) + extra(68) → 138 行
+  2. `python3 scripts/assign_lute_icons.py` —— 14 枚 `fs-cat-mNN` 分组头像 + 有专属头像的行；
+     **无专属头像的行回落所属节点分组头像，并在输出里点名**（静默回落是「以为每行都有自己的图」的来源）
+  3. `python3 scripts/build_preset_catalog.py` —— 重建 `lib/catalog.js`（打印 `AI全栈 N 组 / M 条`）
+- 技能安装：`node scripts/install-fullstack-skills.mjs` **默认只做 dry-run**；存量更新经授权使用
+  `--apply --only existing`，以完整目录（含 resources）做 journaled swap。`--only pm`/`mp` 只选对应批次，
+  不再夹带 existing；第三方真实 `--apply` 在 SEC-RT-002 的 immutable approval/license/source-digest ledger
+  完成前硬拒绝。老管线 `import-fullstack.mjs` 只覆盖存量 70 条，不得用于绕过这条 mutation 门。
+- 验收：`verify-fullstack.mjs`（存量 70/70 解析/开关/路由冒烟/脚本语法/预设副本）、
+  `verify_static.mjs`（14 组 / 138 行 **与事实源对账、不写死数字** + 分组头像存在且互不相同）、
+  `verify-agent-fullstack.mjs`（preset 七层）
+- 人格：正文之家是 `presets/agent-fullstack/SOUL.md`。**改人格只改它**，然后跑
+  `node scripts/sync-fullstack-persona.mjs`（写 preset 的 persona 行），门禁用**同一个**渲染函数逐字复核。
+  直接编辑 persona 行会判红。
+- 头像：事实源是图标库 `~/.dsh/skills/lute-brand-icons/assets/manifest.json` 里的 `sanwu-emperor`，
+  preset.yml 的 `icon:` 行是它渲染出来的物化副本。**改头像只改图标库**，然后跑
+  `node scripts/sync-fullstack-avatar.mjs`；`--check` 只比对不写。门禁第 7 层复核同源，
+  卡面头像在宿主装载预设时读取，改完要**重启 DSH**。
+- 出货登记：新增/改名 preset 目录后必须表态 —— 该发进 `packaging/shipped-presets.json` 的 `allow`，
+  不发进 `exclude`（都要写 why）。**未登记会让 `assemble.sh` 直接拒绝打包并点名**（ADR-0073）。
+- 生效：宿主在**插件装载时** `import` 了 `lib/catalog.js`，改完必须**重启 DSH** 才在页面上生效 ——
+  不重启时接口读数仍是旧值，这不是缺陷
 - 撞名注意：tdd/to-spec/grill-me 全局新版与「AI 产品开发工程师」预设旧版共存（预设层优先，ADR-0002）
 
 ## 10. 技能卡片结构化引导（Prompt 模板）

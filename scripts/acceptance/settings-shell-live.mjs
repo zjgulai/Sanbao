@@ -1,0 +1,756 @@
+#!/usr/bin/env node
+/**
+ * `dsh-settings-shell` 的**实况 AX 几何探针**（P-15 生效路径的最后一段）。
+ *
+ * ## 它回答的问题（单测与 headless 都答不了的那些）
+ *
+ * `packages/platform/dsh-settings-shell-local` 的用例跑在 happy-dom 与一个真实 Chrome
+ * 仿真壳里，它们证明的是「给定这份 DOM，注入器会算出这个几何」。**不**证明：
+ *
+ *   1. 运行中的那个实例**装载了**这个包。P-15 的原话：磁盘 <-> 磁盘的一致性是完整的，
+ *      错的只是「所以它已经生效了」这一步推论——**没有任何静态判据能回答「跑着的那个
+ *      进程读的是不是它」**。唯一能回答的是**可见读数**，也就是本探针。
+ *   2. L1 真的修好了：设置导航 18 项里最后几项被压扁（实测 `桌面设置` / `侧边卡片`
+ *      高 0.83 CSS px、`我说` 28.33 CSS px），而这是**几何事实**，不是文本事实——
+ *      DOM 里它们一直在，只是点不到。
+ *   3. L2 真的生效了：面板宽度 800 -> 960 CSS px、导航栏出现 5 个分组标题。
+ *
+ * ## 判据为什么是「比值 + 校准」而不是「像素」
+ *
+ * 实机开着 **zoom 1.2**：官方 800 CSS px 的面板在 AX 里量到 **960 AX px**，官方
+ * `min(800, 100vh-48)` 的 752 CSS px 量到 **903 AX px**（两个独立维度给出同一个
+ * 1.2，见基线）。于是「面板 960」这句话在 AX 读数里**同时**是「官方原样」与
+ * 「我的 960 目标」——直接比像素会把两个相反的状态读成同一个数。
+ * 本探针因此不赌 zoom 常量，而是**用官方从未改动过的常量现场校准**：
+ * 导航按钮高度恒为 40 CSS px（我们的 CSS 不碰它），于是
+ * `zoom = 中位按钮高(AX) / 40`。基线实测 48.7/40 = 1.2175，对真值 1.2 偏 1.5%。
+ *
+ * ## 仪器自检（没有它这片绿色不可信）
+ *
+ * - `harness-alive`：`macos-harness doctor` 的 accessibility 必须为 true，否则 exit 2。
+ * - `app-alive`：必须按 bundle id 找到运行中的 `ai.deepseek.dsh.desktop`。
+ * - `window-off-screen`：探针会**先自愈**（`set frontmost` + 轮询），把窗口拉回屏上；
+ *   拉不回来才是 exit 2。**这条是本探针最贵的一课**：Chromium 的 AX 子树懒建，
+ *   且**只对屏上的窗口建**。同一个进程、同一份代码实测两态 —— 窗口在后台时 AX 树
+ *   **1 个节点**（只剩 AXApplication），`set frontmost` 之后 **1323 个节点**、几何齐全。
+ *   2026-09-15 就是把它读成了「app 的 Accessibility 子树没有内容 → 仪器不可用」，
+ *   并据此让用户重启应用；**重启当然没用**，新窗口照样不在前台。P-04 点名的那一类：
+ *   错误报告路径自己一炸，把真实原因盖住了。
+ * - `ax-alive`：AX 树必须能读出那个窗口且宽度 > 800 —— 证明 AX 真的在读 Electron。
+ * - `settings-opened`：左栏必须能数到 >= 10 个导航按钮。**数不到一律 exit 2
+ *   （仪器不可用），不是 exit 1**：分不清「页面没打开」与「AX 看不见导航」，
+ *   就不该把任何一个读成判决。设置页**已经开着**时会直接复用那个对话框
+ *   （模态会盖掉自己的触发器，只认触发器会得到假红）。
+ * - `nav-alive`：中位按钮高必须落在 30–60 CSS px。落不进去说明校准常量已经漂了，
+ *   此时后面所有 px 都不可信 —— exit 2。
+ *
+ * ## 判据为什么是这两条几何读数
+ *
+ * L1 用「导轨独立滚动」**加上**「滚到底末项拿得到全高」，两条都要：
+ *
+ * - 前者是**判别器**：基线里 nav 不是滚动容器，`AXScrollToVisible` 滚的是 panel 的
+ *   `overflow:hidden`，于是导轨与右侧内容区**一起**位移；本包生效后内容区不动。
+ * - 后者是**用户真正要的结果**：基线里末两项恒为 0.83 CSS px，滚到底也拿不到全高。
+ *
+ * 两条**都曾经被写错**，都留下了读数：
+ *
+ * 1. 「`AXScrollToVisible` 调用成功」——基线里它同样成功，射程为零（已删）。
+ * 2. 「AX 里出现滚动区域（AXScrollArea）」——**射程同样为零**。当初的推理是
+ *    「官方 nav 无 overflow → 不是滚动容器；本包加了 `overflow-y:auto` → 应当出现
+ *    AXScrollArea」。前提错了：AX 里 nav 落成
+ *    `AXGroup subrole="AXLandmarkNavigation"`（HTML `<nav>` 的语义映射），
+ *    而 Chromium 每个节点只给**一个** role —— 它不会在 landmark 之外再叠一个
+ *    AXScrollArea。这条判据无论修好没修好都恒为 0，会把**已达标**的状态判成红。
+ *    现在它只作为读数留在报告里，并在代码里写明为什么不能当判据。
+ *
+ * ## 边界（诚实写清楚）
+ *
+ * - 探针会**打开并关闭**设置页（`AXPress` 后 `Escape`）。这是对用户 GUI 的一次真实
+ *   交互；`finally` 里无条件尝试关闭，并在报告里记 `closed`。若设置页**本来就是
+ *   用户开着的**，探针不替用户关（`dialogWasOpen=true`、`closed=false`），也不按触发器。
+ * - 它**不**验证分组归属是否正确（哪一项在哪个标题下）。那由 `groups.spec.ts` 的
+ *   连续性与排定用例覆盖；本探针只数**标题出现了几个**。
+ * - 静止时视口外的项会报 0 高，**那是滚动容器的正常读数，不是缺陷**；缺陷由
+ *   「滚到底之后」的读数判。`clippedAtRest` 只作留痕。
+ *
+ * 本探针曾经写出过一条**射程为零**的判据：直接 `curl /plugins/dsh-settings-shell/client.js`
+ * 拿 404 当作「实例里没有这个包」。对照一个**已知能用**的包（`dsh-ui-polish`）同样 404，
+ * 而该 HTTP 面整体是 401 守卫的——这条判据无论重启前后都只会回 404。所以本探针
+ * **不用 HTTP**，只用 AX 几何。
+ *
+ * ## 边界（诚实写清楚）
+ *
+ * - 探针会**打开并关闭**设置页（`AXPress` 后 `Escape`）。这是对用户 GUI 的一次真实
+ *   交互；`finally` 里无条件尝试关闭，并在报告里记 `closed`。
+ * - 它**不**验证滚动到底部后最后一项可达。L1 的判据是「没有被压扁的项」
+ *   （高 < 中位数 50%），这是**可达性的必要条件**；充分性（真能滚到）由 headless
+ *   仿真壳的 `scroll-to-bottom` 用例覆盖。两者不能互相冒充。
+ * - 它**不**验证分组归属是否正确（哪一项在哪个标题下）。那由 `groups.spec.ts` 的
+ *   连续性与排定用例覆盖；本探针只数**标题出现了几个**。
+ *
+ * 用法：`node scripts/acceptance/settings-shell-live.mjs [--out <dir>]`
+ * 退出码：0 = 已生效且 L1/L2 全部达标；1 = 已生效但有判据未达标；
+ *         2 = 前置条件或仪器不可用；**3 = 实例早于本包，需要重启才能判决**。
+ */
+import { execFile, spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+import { assertNodeUsable } from '../lib/real-node.mjs'
+
+const execFileAsync = promisify(execFile)
+
+/**
+ * 跑一段 python 给 `macos-harness`。
+ *
+ * **不能用 `execFile` 的 `input` 选项**：那是 `execFileSync` / `spawnSync` 才有的，
+ * 异步版没有它。写了它不会报错，只会被静默忽略，然后 harness 永远等 stdin ——
+ * 2026-09-15 实测的表现是探针挂到外层超时被杀。必须自己写 stdin 并 end()。
+ */
+function runHarness(bin, args = [], program = '') {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'] })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (d) => { stdout += d })
+    child.stderr.on('data', (d) => { stderr += d })
+    child.on('error', rejectPromise)
+    child.on('close', (code) => resolvePromise({ code, stdout, stderr }))
+    child.stdin.end(program)
+  })
+}
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const PROFILE_DIR = join(homedir(), '.dsh', 'profiles', 'desktop')
+const PKG_NAME = 'dsh-settings-shell'
+const BUNDLE_ID = 'ai.deepseek.dsh.desktop'
+const SENTINEL = '__AX_REPORT__'
+
+/** 官方导航按钮高度（CSS px）。我们的 CSS 不修改它，所以它是可用的校准常量。 */
+const OFFICIAL_BUTTON_CSS_PX = 40
+/** 我们声明的面板宽度上限（CSS px），见 `src/client/shell.css`。 */
+const TARGET_PANEL_CSS_PX = 960
+/** 官方面板宽度（CSS px），用作「未生效」的对照。 */
+const OFFICIAL_PANEL_CSS_PX = 800
+/** 判定为「未生效」的 CSS 上界：960 与 800 的 4% 容差带之外的中点。 */
+const PANEL_CSS_APPLIED_MIN = (TARGET_PANEL_CSS_PX * 0.96 + OFFICIAL_PANEL_CSS_PX * 1.04) / 2
+/** 低于中位高度的这个比例 = 被压扁（基线实测：0.83/40.83 = 2%）。 */
+const CRUSH_RATIO_MAX = 0.5
+/** 校准漂移的容忍带（CSS px）。 */
+const BUTTON_CSS_MIN = 30
+const BUTTON_CSS_MAX = 60
+/** 本包注入的分组标题（`src/client/groups.ts` 的 `SETTINGS_GROUPS` 的 zh 文案）。 */
+const GROUP_TITLES = ['通用', '智能体', '技能与能力', '扩展', '界面与个人']
+
+/**
+ * 「末项可达」的判定线：滚到底后末项高度 / 中位按钮高。
+ * 基线里末两项**恒为 0.83 CSS px**（面板 `overflow:hidden` 裁掉，nav 不可滚）。
+ */
+const REACHABLE_RATIO_MIN = 0.8
+
+const failures = []
+const notes = []
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/** 探针自己写的一段 python：一次 harness 调用里开→读→判→关，不留半开状态。 */
+const AX_PROGRAM = `
+import json, time
+SENTINEL = ${JSON.stringify(SENTINEL)}
+BUNDLE_ID = ${JSON.stringify(BUNDLE_ID)}
+GROUP_TITLES = ${JSON.stringify(GROUP_TITLES)}
+
+rep = {"steps": [], "errors": [], "pressed": False, "closed": None}
+APPNAME = None
+
+def median(xs):
+    xs = sorted(xs)
+    if not xs: return None
+    m = len(xs) // 2
+    return (xs[m-1] + xs[m]) / 2.0 if len(xs) % 2 == 0 else float(xs[m])
+
+def dump(n):
+    return mac.ax.dump(APPNAME, max_nodes=n).get("nodes", [])
+
+def rail_of(ns, nav):
+    rf = nav["frame"]
+    lo, hi = rf["x"] - 3, rf["x"] + rf["width"] + 3
+    b = [n for n in ns if n.get("role") == "AXButton"
+         and (n.get("frame") or {}).get("width", 0) >= 100
+         and (n.get("frame") or {}).get("x") is not None
+         and lo <= n["frame"]["x"] <= hi]
+    b.sort(key=lambda n: n["frame"]["y"])
+    return b
+
+def options_y(ns, nav):
+    rf = nav["frame"]
+    ox = rf["x"] + rf["width"]
+    ys = [n["frame"]["y"] for n in ns if n.get("role") == "AXStaticText"
+          and (n.get("frame") or {}).get("y") is not None
+          and (n.get("frame") or {}).get("x") is not None
+          and n["frame"]["x"] >= ox]
+    return median(ys)
+
+try:
+    app = next((a for a in mac.list_apps() if a.get("bundle_id") == BUNDLE_ID), None)
+    if app is None:
+        rep["errors"].append("app-not-running")
+        raise SystemExit
+    APPNAME = app["name"]
+    rep["app"] = {"name": app["name"], "pid": app["pid"]}
+
+    nodes = dump(2000)
+    rep["axNodeCount"] = len(nodes)
+    win = next((n for n in nodes if n.get("role") == "AXWindow"), None)
+    rep["window"] = win.get("frame") if win else None
+
+    # 设置页可能**已经开着**（用户自己开的，或上一次探针异常退出留下的 —— 2026-09-15
+    # 实测就是这么被绊住的）。只认「设置」触发器的写法在这种状态下必然报
+    # 「settings-trigger-missing」，把**一个完全可判定的状态**报成仪器故障：假红。
+    # 模态对话框会把自己的触发器从 AX 树里盖掉，所以「找不到触发器」本身不是证据。
+    already = any((n.get("subrole") or "") == "AXApplicationDialog" for n in nodes)
+    rep["dialogWasOpen"] = already
+    if already:
+        after = nodes
+        rep["closed"] = False      # 用户开着的东西不替用户关
+    else:
+        trig = next((n for n in nodes
+                     if (n.get("title") or "").strip() == "设置"
+                     and n.get("role") in ("AXPopUpButton", "AXButton")), None)
+        if trig is None:
+            rep["errors"].append("settings-trigger-missing")
+            raise SystemExit
+
+        mac.ax.perform(trig["element_index"], "AXPress")
+        rep["pressed"] = True
+        time.sleep(2.0)
+        after = dump(4000)
+
+    panel = next((n for n in after
+                  if n.get("role") == "AXGroup" and (n.get("title") or "") == "设置"
+                  and (n.get("frame") or {}).get("height", 0) > 200), None)
+    if panel is None:
+        big = [n for n in after if n.get("role") == "AXGroup"
+               and (n.get("frame") or {}).get("height", 0) > 200]
+        big.sort(key=lambda n: n["frame"]["width"] * n["frame"]["height"], reverse=True)
+        panel = big[0] if big else None
+    rep["panel"] = panel.get("frame") if panel else None
+
+    nav = None
+    if panel:
+        pf = panel["frame"]
+        cand = [n for n in after if n.get("role") == "AXGroup"
+                and abs((n.get("frame") or {}).get("x", -1) - pf["x"]) < 3
+                and (n.get("frame") or {}).get("height", 0) >= pf["height"] * 0.8
+                and (n.get("frame") or {}).get("width", 0) < pf["width"] * 0.5]
+        cand.sort(key=lambda n: n["frame"]["height"], reverse=True)
+        nav = cand[0] if cand else None
+    rep["nav"] = nav.get("frame") if nav else None
+    if nav is None:
+        rep["errors"].append("nav-container-missing")
+        raise SystemExit
+
+    # 这里**曾经**算过一个 rep["scrollRoles"]（「AX 里出没出现 AXScrollArea」），
+    # 2026-09-15 实测它**射程为零**：AX 里 nav 落成
+    # 「AXGroup subrole=AXLandmarkNavigation」（HTML nav 元素的语义映射），而 Chromium
+    # 每个节点只给**一个** role —— 它不会在 landmark 之外再叠一个 AXScrollArea。
+    # 于是那个读数无论修好没修好都恒为空，把**已达标**的状态判成红。
+    # 它已被整段删除并登记进 scripts/gates/dead-instruments.json（ADR-0080），
+    # 免得下一个人再把它捡回来当判据。能区分两个状态的是下面两条几何读数。
+
+    btns = rail_of(after, nav)
+    rep["buttons"] = [{"label": n.get("title"), "frame": n["frame"]} for n in btns]
+    rep["optionsYBefore"] = options_y(after, nav)
+
+    heads = [n for n in after if n.get("role") == "AXStaticText"
+             and (n.get("value") or "").strip() in GROUP_TITLES
+             and (n.get("frame") or {}).get("y") is not None
+             and abs((n.get("frame") or {}).get("x", -1) - nav["frame"]["x"]) < nav["frame"]["width"] + 6]
+    rep["headings"] = sorted([(n.get("value") or "").strip() for n in heads])
+
+    # —— L1 的行为判据 ——
+    # AXScrollToVisible 会在**最近的**滚动容器里把目标滚进视野。基线里 nav 不是滚动容器，
+    # 于是它滚的是 **panel**：轨道与右侧内容区会**一起位移**。本包生效后 nav 自己成为
+    # 滚动容器，于是只滚 nav、右侧内容区**不动**。
+    # 这条判据能区分两个状态；「AXScrollToVisible 调用成功」不能（基线里它同样成功）。
+    if btns:
+        try:
+            mac.ax.perform(btns[-1]["element_index"], "AXScrollToVisible")
+            time.sleep(1.5)
+            ns2 = dump(4000)
+            b2 = rail_of(ns2, nav)
+            rep["railFirstYAfter"] = b2[0]["frame"]["y"] if b2 else None
+            rep["optionsYAfter"] = options_y(ns2, nav)
+            rep["railLastHeightAfter"] = b2[-1]["frame"]["height"] if b2 else None
+            rep["buttonsAfter"] = [{"label": n.get("title"), "frame": n["frame"]} for n in b2]
+        except Exception as e:
+            rep["errors"].append("scroll-probe-failed:" + type(e).__name__)
+    rep["railFirstYBefore"] = btns[0]["frame"]["y"] if btns else None
+except SystemExit:
+    # 上面几处 raise SystemExit 是「提前收工」的信号，不是错误：它们带着
+    # rep["errors"] 里那条分类原因，交给下面的 finally 收尾后**照常打印哨兵行**。
+    pass
+except Exception as e:
+    # 任何没预料到的异常都必须变成**报告里的一条读数**，而不是让整段程序静默死掉。
+    # 2026-09-15 实测的代价：app 的 AX 子树整体不可用时（只剩 AXApplication 一个节点），
+    # dump 之后的 next(...) 抛异常 → 异常逃出 try → 哨兵行**从未打印** →
+    # 调用方只看到「harness 未回传报告」，把「AX 树是空的」误报成「仪器挂了」。
+    # 错误报告路径自己一炸反而盖住真实错误，正是 P-04 点名的那一类。
+    rep["errors"].append("probe-exception:" + type(e).__name__ + ":" + str(e)[:200])
+finally:
+    if rep["pressed"] and APPNAME is not None:
+        try:
+            mac.key("escape", app=APPNAME)
+            time.sleep(1.0)
+            left = mac.ax.dump(APPNAME, max_nodes=800).get("nodes", [])
+            rep["closed"] = not any((n.get("title") or "").strip() == "通用设置"
+                                    for n in left)
+        except Exception as e:
+            rep["errors"].append("close-failed:" + type(e).__name__)
+
+print(SENTINEL + json.dumps(rep, ensure_ascii=False))
+`
+
+function sha256(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex')
+}
+
+function median(values) {
+  if (values.length === 0) return null
+  const s = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(s.length / 2)
+  return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid]
+}
+
+/** 前置条件 + 仪器自检，任一不成立就 exit 2（不产出一片绿色）。 */
+async function preflight() {
+  let which
+  try {
+    which = await execFileAsync('which', ['macos-harness'])
+  } catch {
+    throw new Error('前置失败：`macos-harness` 不在 PATH 上（本探针全部读数依赖它）')
+  }
+  const harnessBin = which.stdout.trim()
+  if (!harnessBin) throw new Error('前置失败：`macos-harness` 不在 PATH 上')
+
+  const { stdout: docOut } = await runHarness(harnessBin, ['doctor'])
+  let doc
+  try {
+    doc = JSON.parse(docOut)
+  } catch {
+    throw new Error('前置失败：`macos-harness doctor` 未输出 JSON：' + docOut.slice(0, 200))
+  }
+  if (doc?.permissions?.accessibility !== true) {
+    throw new Error('仪器自检失败 harness-alive：Accessibility 未授权（TCC 绑定宿主签名，重签后需重授）')
+  }
+  await ensureOnScreen(harnessBin)
+  return harnessBin
+}
+
+/** 只读一眼窗口在不在屏上 + AX 树多大，不做任何写入。 */
+const SIGHT_PROGRAM = `
+import json
+SENTINEL = ${JSON.stringify(SENTINEL)}
+BUNDLE_ID = ${JSON.stringify(BUNDLE_ID)}
+rep = {"errors": []}
+app = next((a for a in mac.list_apps() if a.get("bundle_id") == BUNDLE_ID), None)
+if app is None:
+    rep["errors"].append("app-not-running")
+else:
+    ns = mac.ax.dump(app["name"], max_nodes=4000).get("nodes", [])
+    rep["axNodeCount"] = len(ns)
+    rep["hasWindow"] = any(n.get("role") == "AXWindow" for n in ns)
+    rep["hasDialog"] = any((n.get("subrole") or "") == "AXApplicationDialog" for n in ns)
+    rep["hasTrigger"] = any((str(n.get("title") or "").strip() == "设置")
+                            and n.get("role") in ("AXPopUpButton", "AXButton") for n in ns)
+print(SENTINEL + json.dumps(rep, ensure_ascii=False))
+`
+
+/**
+ * 把窗口弄回**屏上**再读 AX —— 2026-09-15 实测的根因，不是可选的美化。
+ *
+ * Chromium 的 Accessibility 子树是**懒建**的，而且**只对屏上的窗口建**。同一个
+ * 进程、同一份代码，实测两态：
+ *
+ *   - 窗口在后台（CG 层 `on_screen:false`）→ AX 树 **1 个节点**（只剩 AXApplication）
+ *   - `set frontmost` 把它拉到前台 → 同一进程 **1323 个节点**，几何读数齐全
+ *
+ * 这条差异曾经被**误判成「仪器不可用」**：当时读到「AX 树只有 1 个节点」，于是写下
+ * 「app 的 Accessibility 子树没有内容」，并让用户去重启应用 —— 重启当然没用，因为
+ * 重启后新窗口照样不在前台。**"读不到" 与 "不在前台" 是两件事，报告必须分开说**，
+ * 否则错误报告路径自己盖住了真实原因（P-04）。所以这里先自愈，自愈不成才报错，
+ * 且报的是**具体那一条**（窗口不在屏上）。
+ */
+async function ensureOnScreen(harnessBin) {
+  let last = null
+  for (let i = 0; i < 6; i += 1) {
+    try {
+      await execFileAsync('osascript', [
+        '-e',
+        `tell application "System Events" to set frontmost of (first process whose bundle identifier is "${BUNDLE_ID}") to true`,
+      ])
+    } catch (err) {
+      last = { errors: ['osascript-failed:' + String(err.message).slice(0, 120)] }
+    }
+    await sleep(2000)
+    const { stdout } = await runHarness(harnessBin, [], SIGHT_PROGRAM)
+    const line = stdout.split('\n').find((l) => l.startsWith(SENTINEL))
+    if (!line) {
+      last = { errors: ['harness-no-report'] }
+      continue
+    }
+    const r = JSON.parse(line.slice(SENTINEL.length))
+    last = r
+    // 「在屏上」用**树可用**判，不用节点数判 —— 节点数不是好代理：设置页（模态）
+    // 开着时主界面被盖掉，整棵树**合法地**只有 135 个节点，拿 `>200` 判会把这个
+    // 完全正常的状态误报成「窗口不在屏上」。真正的分界是**有没有 AXWindow**：
+    // off-screen 实测整棵树只有 1 个节点（只剩 AXApplication），连窗口都没有。
+    if (r.hasWindow && (r.hasTrigger || r.hasDialog)) return r
+  }
+  if (last?.errors?.includes('app-not-running')) {
+    throw new Error(`仪器自检失败 app-alive：没有运行中的 DSH Desktop（bundle id ${BUNDLE_ID}）`)
+  }
+  throw new Error(
+    `仪器自检失败 window-off-screen：窗口拉不到前台，AX 树停在 ${last?.axNodeCount ?? '?'} 个节点` +
+      `（hasWindow=${last?.hasWindow}）。Chromium **只对屏上的窗口**建 AX 子树，` +
+      '所以这不是「插件没生效」，也不是「harness 挂了」——是台面上没有那张窗口的读数。',
+  )
+}
+
+/** 静态装载点核对：跑着的实例之外能查的那一半，先把「文件对不对」钉死。 */
+function checkLoadpoint() {
+  const repoEntry = join(REPO_ROOT, 'packages/platform/dsh-settings-shell-local/lib/client.js')
+  const installedEntry = join(PROFILE_DIR, 'node_modules', PKG_NAME, 'lib/client.js')
+
+  if (!existsSync(repoEntry)) throw new Error(`前置失败：仓库产物不存在 ${repoEntry}（先跑 pnpm --filter ${PKG_NAME} build）`)
+  if (!existsSync(installedEntry)) throw new Error(`前置失败：装载点不存在 ${installedEntry}（先跑 node scripts/sync-profile.mjs --apply --loadpoint）`)
+
+  const a = sha256(repoEntry)
+  const b = sha256(installedEntry)
+  const same = a === b
+  if (!same) failures.push(`装载点与仓库产物不一致：${a.slice(0, 12)} != ${b.slice(0, 12)}`)
+
+  const profilePkg = JSON.parse(readFileSync(join(PROFILE_DIR, 'package.json'), 'utf8'))
+  const inBundles = (profilePkg?.dsh?.profile?.bundles ?? []).includes(PKG_NAME)
+  if (!inBundles) failures.push(`profile 的 dsh.profile.bundles 里没有 ${PKG_NAME}`)
+
+  return { repoEntry, installedEntry, same, inBundles, sha: a.slice(0, 12) }
+}
+
+async function readAxis(harnessBin) {
+  const { stdout } = await runHarness(harnessBin, [], AX_PROGRAM)
+  const line = stdout.split('\n').find((l) => l.startsWith(SENTINEL))
+  if (!line) throw new Error('仪器自检失败 ax-alive：harness 未回传报告：' + stdout.slice(0, 300))
+  return JSON.parse(line.slice(SENTINEL.length))
+}
+
+function judge(ax) {
+  if ((ax.errors ?? []).includes('app-not-running')) {
+    throw new Error('仪器自检失败 app-alive：没有运行中的 DSH Desktop（bundle id ' + BUNDLE_ID + '）')
+  }
+  if (ax.window === null || ax.window === undefined) {
+    // 走到这里说明 `ensureOnScreen` 已经把窗口拉过一次前台、等过了、又重试过 ——
+    // 也就是说**「窗口不在屏上」这个已知原因已经被排除或已被自愈处理**。
+    // 2026-09-15 的教训：这条分支曾经写死「它的 Accessibility 子树没有内容 → 仪器不可用」，
+    // 而实测原因是窗口不在前台（Chromium 只对屏上的窗口建 AX 子树）。那句断言把一个
+    // 可自愈的状态说成了设备故障，还据此让用户白重启了一次 —— **不要再断言原因**，
+    // 只报「走到了哪一步 + 手上有什么读数」，把归因留给下一个人。
+    const why = (ax.errors ?? []).length > 0 ? `；errors=${ax.errors.join(',')}` : ''
+    throw new Error(
+      `仪器自检失败 ax-alive：自愈（拉前台 + 轮询重试 6 次）之后仍读不到 AXWindow` +
+        `（AX 树 ${ax.axNodeCount ?? '?'} 个节点${why}）。` +
+        '**本探针没有产出判决**：读不到窗口时，任何 px 读数都无从谈起。',
+    )
+  }
+  if (ax.window.width < 800) {
+    throw new Error(`仪器自检失败 ax-alive：窗口宽 ${ax.window.width} 不像一个真实窗口`)
+  }
+
+  const buttons = ax.buttons ?? []
+  if (buttons.length < 10) {
+    throw new Error(
+      `仪器自检失败 settings-opened：左栏只数到 ${buttons.length} 个按钮（无导航时数不到）。` +
+        '分不清「设置页没打开」与「AX 看不见导航」，不判决。',
+    )
+  }
+
+  const heights = buttons.map((b) => b.frame.height)
+  const medH = median(heights)
+  const zoom = medH / OFFICIAL_BUTTON_CSS_PX
+  const btnCss = medH / zoom
+
+  if (btnCss < BUTTON_CSS_MIN || btnCss > BUTTON_CSS_MAX) {
+    throw new Error(
+      `仪器自检失败 nav-alive：中位按钮高校准后为 ${btnCss.toFixed(1)} CSS px，落在 ` +
+        `${BUTTON_CSS_MIN}-${BUTTON_CSS_MAX} 之外——校准常量已漂，本探针的 px 读数不可信。`,
+    )
+  }
+
+  const crushed = buttons.filter((b) => b.frame.height / medH < CRUSH_RATIO_MAX)
+  const headings = ax.headings ?? []
+  const panelCss = ax.panel ? ax.panel.width / zoom : null
+
+  // ── L1：导航是否**用户可滚** ────────────────────────────────────────────────
+  // 两条独立读数，缺一不可：
+  // ① AXScrollToVisible 只滚了导航、**右侧内容区没动** —— 基线里两者一起动
+  //    （滚的是 panel 的 overflow:hidden，那只有程序滚得动）。**这条是判别器**。
+  // ② 滚到底之后**末项拿到全高** —— 这是用户真正要的那个结果：
+  //    「18 项里最后几项点得到」。基线里末两项恒为 0.83 CSS px。
+  // **「AXScrollToVisible 调用成功」不是判据**：基线里它同样成功。这条判据曾经
+  // 按那个写法起草，被基线读数字证伪后改掉。
+  // **「AX 里出现滚动区域（AXScrollArea）」更不是判据**：射程为零，已整段删除并
+  // 登记进 scripts/gates/dead-instruments.json（原因见 AX_PROGRAM 里那段说明）。
+  const optBefore = ax.optionsYBefore ?? null
+  const optAfter = ax.optionsYAfter ?? null
+  const optionsMoved =
+    optBefore !== null && optAfter !== null && Math.abs(optAfter - optBefore) > 0.5
+  const railScrolled =
+    ax.railFirstYBefore !== null && ax.railFirstYAfter !== null &&
+    Math.abs(ax.railFirstYAfter - ax.railFirstYBefore) > 0.5
+  const railIndependent = railScrolled && !optionsMoved
+
+  const lastAfter = ax.railLastHeightAfter ?? null
+  const lastRatio = lastAfter !== null && medH > 0 ? lastAfter / medH : null
+  const lastReachable = lastRatio !== null && lastRatio >= REACHABLE_RATIO_MIN
+
+  const btnsAfter = ax.buttonsAfter ?? []
+  // ⚠️ 「矮的项」**两次都没能当判据用**，别再试第三次：
+  //   ① 静止时视口外的项矮 —— 滚动容器的正常读数（基线里那两项是**永久**矮）；
+  //   ② 滚到底后**上方**的项也矮（实测 4 项各 0.83 CSS px，正是被裁剩的那条边）——
+  //      任何滚动位置都会在两端裁掉东西，这不区分「修好」与「没修好」。
+  // 真正能区分的是「**目标项**（末项）滚到底后拿不拿得到全高」，那由 lastReachable 判。
+  // 这两个集合只作留痕：它们解释「为什么这一屏看起来是这样」，不参与判决。
+  const crushedAfterScroll = btnsAfter.filter((b) => b.frame.height / medH < CRUSH_RATIO_MAX)
+
+  const l1Ok = railIndependent && lastReachable
+
+  return {
+    navCount: buttons.length,
+    medianButtonCssPx: Number(btnCss.toFixed(2)),
+    zoom: Number(zoom.toFixed(4)),
+    // ⚠️ 静止时「矮」**不是**缺陷读数：nav 一旦成为滚动容器，视口外的项本来就会
+    // 报 0 高（被自己裁）。基线里那两项是**永久** 0.83 CSS px，区别在滚到底之后
+    // 拿不拿得到全高 —— 那由 lastReachable 判。这里只作留痕。
+    clippedAtRest: crushed.map((b) => ({
+      label: b.label,
+      cssPx: Number((b.frame.height / zoom).toFixed(2)),
+    })),
+    headings,
+    panelCssPx: panelCss === null ? null : Number(panelCss.toFixed(1)),
+    navCssPx: ax.nav ? Number((ax.nav.height / zoom).toFixed(1)) : null,
+    railScrolled,
+    optionsMoved,
+    railIndependent,
+    lastRailCssPx: lastAfter === null ? null : Number((lastAfter / zoom).toFixed(2)),
+    lastReachable,
+    // 读数，非判据（见上面的说明：两次都没能区分两个状态）
+    crushedAfterScroll: crushedAfterScroll.map((b) => ({
+      label: b.label,
+      cssPx: Number((b.frame.height / zoom).toFixed(2)),
+    })),
+    pluginLoaded: headings.length >= 2,
+    l1Ok,
+    l2Ok: panelCss !== null && panelCss >= PANEL_CSS_APPLIED_MIN,
+  }
+}
+
+/**
+ * 判据射程自检：**把已知状态的读数喂进 `judge()`，看它认不认得出**。
+ *
+ * 为什么必须有这一段：本探针至今写错过**三条**判据，全是「射程为零」——
+ * 无论修好没修好都返回同一个值，于是要么永远绿，要么永远红：
+ *
+ * 1. `curl /plugins/.../client.js` 拿 404 当「实例里没有这个包」——该 HTTP 面整体
+ *    401 守卫，对照一个已知能用的包同样 404。
+ * 2. 「`AXScrollToVisible` 调用成功」——基线里它同样成功。
+ * 3. 「AX 里出现 AXScrollArea」——nav 落成 `AXLandmarkNavigation`，Chromium 每节点
+ *    只给一个 role，恒为 0。
+ *
+ * 三次的共同点是：**判据写了，但没人拿它去跑一个「应该判红」的状态**。这段自检
+ * 把这件事变成机制：每个判据至少要有**一对**读数（该绿的 + 该红的），少一对就报错。
+ * 它跑的是纯函数 `judge()`，不碰 GUI、不需要重启、不需要应用在跑。
+ */
+function selfTest() {
+  const b = (h = 48) => ({ label: 'x', frame: { x: 280, y: 100, width: 187, height: h } })
+  /** 造一份「仪器健康 + 树可用」的最小读数，各用例只改自己要考的那几个字段。 */
+  const base = (over = {}) => ({
+    errors: [],
+    window: { x: 52, y: 77, width: 1580, height: 960 },
+    axNodeCount: 1400,
+    buttons: Array.from({ length: 18 }, (_, i) => ({ label: `n${i}`, frame: { x: 280, y: 200 + i * 48, width: 187, height: 48 } })),
+    headings: [...GROUP_TITLES],
+    panel: { x: 266, y: 118, width: 1152 },
+    nav: { x: 266, y: 118, width: 226, height: 919 },
+    optionsYBefore: 508,
+    optionsYAfter: 508,
+    railFirstYBefore: 225,
+    railFirstYAfter: 118,
+    railLastHeightAfter: 48,
+    buttonsAfter: [],
+    ...over,
+  })
+
+  // 每个判据一对：`want` 是该状态**应当**得到的判决。
+  const cases = [
+    {
+      name: '生效（实测读数：面板 960、5 标题、导轨独立滚、末项全高）',
+      ax: base({ panel: { x: 266, y: 118, width: 1152 } }),
+      want: { pluginLoaded: true, l1Ok: true, l2Ok: true },
+    },
+    {
+      name: '未生效（实例早于本包：无分组标题、面板官方 800）',
+      ax: base({
+        headings: [],
+        panel: { x: 266, y: 118, width: 960 }, // 800 CSS * zoom1.2 = 960 AX px
+        railFirstYAfter: 225, // 滚不动
+        railLastHeightAfter: 1, // 末项恒为 0.83 CSS px
+      }),
+      want: { pluginLoaded: false },
+    },
+    {
+      name: '装上了但 nav 不会滚（CSS 没落到 nav 上：滚的是 panel，内容区跟着动）',
+      ax: base({ optionsYAfter: 615 }), // 内容区也动了 107 px
+      want: { pluginLoaded: true, l1Ok: false },
+    },
+    {
+      name: 'nav 会滚但末项仍够不着（拿不到全高）',
+      ax: base({ railLastHeightAfter: 1 }),
+      want: { pluginLoaded: true, l1Ok: false },
+    },
+    {
+      name: '面板没变宽（尺寸档没生效）',
+      ax: base({ panel: { x: 266, y: 118, width: 960 } }),
+      want: { l2Ok: false },
+    },
+  ]
+
+  const problems = []
+  for (const c of cases) {
+    let got
+    try {
+      const v = judge(c.ax)
+      got = { pluginLoaded: v.pluginLoaded, l1Ok: v.l1Ok, l2Ok: v.l2Ok }
+    } catch (err) {
+      problems.push(`「${c.name}」judge() 抛异常（应当给出判决）：${err.message}`)
+      continue
+    }
+    for (const [k, want] of Object.entries(c.want)) {
+      if (got[k] !== want) {
+        problems.push(`「${c.name}」判据 ${k}：期望 ${want}，实得 ${got[k]} —— 该判据对这一对读数没有射程`)
+      }
+    }
+  }
+
+  if (problems.length > 0) {
+    console.error('✗ 判据射程自检未通过：')
+    for (const p of problems) console.error(`  ✗ ${p}`)
+    return 1
+  }
+  console.log(`✓ 判据射程自检：${cases.length} 个状态、${cases.reduce((n, c) => n + Object.keys(c.want).length, 0)} 条断言，全部按预期红/绿。`)
+  console.log('  （覆盖：未生效 / 装上了但 nav 不会滚 / nav 会滚但末项够不着 / 尺寸档没生效）')
+  return 0
+}
+
+async function main() {
+  assertNodeUsable()
+
+  const argv = process.argv.slice(2)
+  if (argv.includes('--self-test')) return selfTest()
+  const outIdx = argv.indexOf('--out')
+  const outDir = outIdx >= 0 ? argv[outIdx + 1] : null
+
+  const harnessBin = await preflight()
+  const loadpoint = checkLoadpoint()
+  const ax = await readAxis(harnessBin)
+  const verdict = judge(ax)
+
+  const report = {
+    at: new Date().toISOString(),
+    loadpoint,
+    raw: ax,
+    verdict,
+    failures,
+    notes,
+  }
+
+  if (outDir) {
+    mkdirSync(outDir, { recursive: true })
+    const p = join(outDir, 'settings-shell-live.json')
+    writeFileSync(p, JSON.stringify(report, null, 2) + '\n')
+    console.log(`报告：${p}`)
+  }
+
+  console.log(`窗口 ${ax.window.width}x${ax.window.height} AX px · 校准 zoom=${verdict.zoom}（中位按钮 ${verdict.medianButtonCssPx} CSS px）`)
+  console.log(`导航项 ${verdict.navCount} 个 · 导航容器 ${verdict.navCssPx} CSS px · 面板 ${verdict.panelCssPx} CSS px`)
+  console.log(
+    `导航独立滚动=${verdict.railIndependent}（导轨动了=${verdict.railScrolled} 内容区也动了=${verdict.optionsMoved}）` +
+      ` · 滚到底末项 ${verdict.lastRailCssPx} CSS px（全高=${verdict.lastReachable}）`,
+  )
+  console.log(`装载点 sha=${loadpoint.sha} · bundles 登记=${loadpoint.inBundles} · 设置页已关闭=${ax.closed}（探针开启=${!ax.dialogWasOpen}）`)
+
+  if (failures.length > 0) {
+    console.error('\n装载点判据未通过（与实例是否重启无关）：')
+    for (const f of failures) console.error(`  ✗ ${f}`)
+    return 1
+  }
+
+  if (!verdict.pluginLoaded) {
+    console.log('\n判决：**未生效** —— 左栏没有本包注入的分组标题。')
+    console.log(`  静止时视口外 ${verdict.clippedAtRest.length} 项（${verdict.clippedAtRest.map((c) => c.label).join(' / ') || '无'}），面板 ${verdict.panelCssPx} CSS px（官方 ${OFFICIAL_PANEL_CSS_PX}）。`)
+    console.log('  这是「实例早于本包」的正常读数，不是失败：')
+    console.log('  生效路径 = 构建 -> sync-profile --apply --loadpoint -> **重启应用** -> 重跑本探针。')
+    console.log('  （刷新页面不是生效路径，见 P-15 / ADR-0078。）')
+    return 3
+  }
+
+  const bad = []
+  if (!verdict.l1Ok) {
+    const why = []
+    if (verdict.optionsMoved) {
+      why.push('导轨与右侧内容区**一起**动了 —— 滚的是 panel 的 overflow:hidden，那是程序滚、用户滚不动')
+    } else if (!verdict.railScrolled) {
+      why.push('导轨根本没动 —— AXScrollToVisible 没能把末项带进视野')
+    }
+    if (!verdict.lastReachable) {
+      why.push(
+        `滚到底后末项只有 ${verdict.lastRailCssPx} CSS px（中位按钮 ${verdict.medianButtonCssPx}，` +
+          `要求 >= ${(verdict.medianButtonCssPx * REACHABLE_RATIO_MIN).toFixed(1)}）`,
+      )
+    }
+    if (verdict.crushedAfterScroll.length > 0) {
+      why.push(
+        `滚到底后矮的项：${verdict.crushedAfterScroll.map((c) => `${c.label}(${c.cssPx})`).join(' ')}` +
+          '（多数是滚到上方视口外的，仅供定位，本身不算缺陷）',
+      )
+    }
+    bad.push(`L1：导航不是用户可滚的（${why.join('；')}）`)
+  }
+  if (!verdict.l2Ok) bad.push(`L2：面板 ${verdict.panelCssPx} CSS px，未到 ${PANEL_CSS_APPLIED_MIN.toFixed(0)} 的判定线`)
+  if (verdict.headings.length < GROUP_TITLES.length) bad.push(`L2：只数到 ${verdict.headings.length}/${GROUP_TITLES.length} 个分组标题（${verdict.headings.join(' ')}）`)
+
+  if (bad.length > 0) {
+    console.error('\n已生效但判据未达标：')
+    for (const b of bad) console.error(`  ✗ ${b}`)
+    return 1
+  }
+
+  console.log(`\n✓ 已生效：分组标题 ${verdict.headings.length}/${GROUP_TITLES.length}（${verdict.headings.join(' ')}）`)
+  console.log(
+    `✓ L1：导航独立可滚（导轨动了=${verdict.railScrolled}、内容区没动=${!verdict.optionsMoved}；` +
+      `滚到底末项 ${verdict.lastRailCssPx} CSS px = 全高的 ${(verdict.lastRailCssPx / verdict.medianButtonCssPx).toFixed(2)}）`,
+  )
+  console.log(`✓ L2：面板 ${verdict.panelCssPx} CSS px（官方 ${OFFICIAL_PANEL_CSS_PX}）`)
+  return 0
+}
+
+main().then(
+  (code) => process.exit(code),
+  (err) => {
+    console.error(`\n✗ ${err.message}`)
+    console.error('  exit 2：前置条件或仪器不可用，本探针**没有**产出判决。')
+    process.exit(2)
+  },
+)

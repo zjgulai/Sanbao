@@ -5,7 +5,7 @@
  *   1 = 存在失败校验
  *   2 = 用法错误
  *
- * 用法：node scripts/gate.mjs [--mode quick|full] [--list]
+ * 用法：node scripts/gate.mjs [--mode quick|full] [--list] [--json] [--require-no-skip]
  *   quick（默认）提交前使用；full 推送前使用（含变更包 typecheck/test，二期接入 git 钩子后启用）。
  */
 import { existsSync, lstatSync, readFileSync, readlinkSync, readdirSync, statSync } from 'node:fs'
@@ -35,6 +35,9 @@ import {
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
 import { checkProfileBundleSync, checkProfileFilesSync, checkProfileMetadata } from './gates/sync-profile.mjs'
 import { checkSharedSync } from './gates/sync-shared.mjs'
+import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
+import { runGateChecks } from './gates/gate-result.mjs'
+import { checkAgentFullstack } from '../packages/capabilities/dsh-overseas-skills/scripts/verify-agent-fullstack.mjs'
 import { checkThemeTokens } from './gates/theme-tokens.mjs'
 import { checkWorktableFence } from './gates/worktable-fence.mjs'
 import { checkNodeInterpreter } from './gates/node-interpreter.mjs'
@@ -95,6 +98,14 @@ const TCC_GUIDANCE_SURFACES = [
 /** 校验项注册表：新增校验在此登记，name 会出现在 --list 输出中。 */
 const CHECKS = [
   {
+    name: 'gate-result-selftest',
+    remediation:
+      '跑 node --test scripts/gates/gate-result.test.mjs；canonical/legacy 混用、计数不守恒、空射程 pass、throw 或 strict skip 任一反例都必须判红（ADR-0094）',
+    run() {
+      return runNodeTestFile('scripts/gates/gate-result.test.mjs', '统一 gate result schema 的反向自测失败')
+    },
+  },
+  {
     name: 'package-identity',
     remediation: '在每个受管 package.json 补 luteOrigin / luteOwner / lutePublish（ADR-0012）',
     run() {
@@ -149,7 +160,12 @@ const CHECKS = [
     run() {
       const target = 'docs/catalog/packages.md'
       const current = readIfExists(join(repoRoot, target))
-      if (current === '') return { passed: true, violations: [] }
+      if (current === '') {
+        return {
+          passed: false,
+          violations: [`必备治理文件 ${target} 不存在或为空——没有事实源，不能声称目录新鲜`],
+        }
+      }
       return checkCatalogFresh({
         current,
         regenerated: renderCatalog({ packages: collectManifests() }),
@@ -213,16 +229,38 @@ const CHECKS = [
       // 注意：vendor/ 不是装载点（DSH 从 profile/node_modules 解析包）。本项只保证
       // 内嵌副本的元数据不漂；「改动是否生效」由下面的 profile-bundle-sync 断言。
       const profileVendor = join(process.env.HOME ?? '', '.dsh', 'profiles', 'desktop', 'vendor')
-      if (!existsSync(profileVendor)) return { passed: true, violations: [] }
-      return checkProfileMetadata(
-        collectManifests()
-          .filter((entry) => entry.dir !== '.')
-          .map((entry) => ({
-            name: entry.dir,
-            sourceDir: join(repoRoot, entry.dir),
-            targetDir: join(profileVendor, entry.dir.split('/').pop()),
-          })),
-      )
+      if (!existsSync(profileVendor)) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: '可选 profile/vendor 不存在——本项未核对任何内嵌副本',
+        }
+      }
+      // targetDir 必须用**归组后**的 repo 相对路径：vendor 的实际布局是
+      // `vendor/packages/<组>/<包>`。这里曾经写的是 `entry.dir.split('/').pop()`
+      // （扁平 basename），于是每个目标都落在不存在的路径上、被 checkProfileMetadata
+      // 的 `existsSync` 静默 continue —— 本项因此**永远绿**，连它自己给出的
+      // remediation（`--apply --only-metadata`，同样写错了路径）也是空射程的（P-02）。
+      // 现在同时断言「真的比过」，换个布局不会再假装通过。
+      const pairs = collectManifests()
+        .filter((entry) => entry.dir !== '.')
+        .map((entry) => ({
+          name: entry.dir,
+          sourceDir: join(repoRoot, entry.dir),
+          targetDir: join(profileVendor, entry.dir),
+        }))
+      const compared = pairs.filter((pair) => existsSync(join(pair.targetDir, 'package.json')))
+      if (pairs.length > 0 && compared.length === 0) {
+        return {
+          passed: false,
+          violations: [
+            `内嵌副本一个包都没比到（受管 ${pairs.length} 个，vendor 里 0 个含 package.json）——`
+              + '路径布局可能又变了，这不是「都一致」',
+          ],
+        }
+      }
+      return checkProfileMetadata(pairs)
     },
   },
   {
@@ -234,7 +272,14 @@ const CHECKS = [
       // （2026-09-11 实测报错路径即 profiles/desktop/node_modules/dsh-preset-lint-local/lib/...）。
       // vendor/ 是另一份命名不同的副本，两份都缺 linter——本项只对装载点断言。
       const target = join(profile, 'node_modules')
-      if (!existsSync(target)) return { passed: true, violations: [] }
+      if (!existsSync(target)) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: '可选 profile/node_modules 不存在——本项未核对任何装载文件',
+        }
+      }
       const packages = new Map(collectManifests().filter((entry) => entry.dir !== '.').map((entry) => [entry.dir.split('/').pop(), entry]))
       const pairs = []
       for (const [name, spec] of Object.entries(installedProfileDependencies(profile))) {
@@ -258,7 +303,14 @@ const CHECKS = [
     run() {
       const profile = join(process.env.HOME ?? '', '.dsh', 'profiles', 'desktop')
       const target = join(profile, 'node_modules')
-      if (!existsSync(target)) return { passed: true, violations: [], note: '装载点不存在，本项未校验任何包' }
+      if (!existsSync(target)) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: '可选装载点不存在——本项未校验任何包',
+        }
+      }
       const packages = new Map(collectManifests().filter((entry) => entry.dir !== '.').map((entry) => [entry.dir.split('/').pop(), entry]))
       const pairs = []
       let fileDeps = 0
@@ -305,6 +357,65 @@ const CHECKS = [
     remediation: '改共享层请改 shared/ 后跑 node scripts/sync-shared.mjs --write 把改动写回各副本（ADR-0009）',
     run() {
       return checkSharedSync(repoRoot)
+    },
+  },
+  {
+    name: 'live-presets',
+    remediation:
+      '按报错修 ~/.dsh/.agent-presets/<id>/agent.cordis.yml：占位符只允许出现在 cordis.patch.yml（预设加载器不展开）；行名必须是 cordis:/相对/绝对/file: 路径或 profile node_modules 向上可达的包名。若是经批准的结构变更，重采并审查 scripts/gates/live-presets.expected.json；删除预设一律走 node scripts/role-presets/remove-preset.mjs（强制引用面预检 + 归档）',
+    run() {
+      return toCanonicalLivePresetResult(checkLivePresetsAgainstInventory({}))
+    },
+  },
+  {
+    name: 'live-presets-selftest',
+    remediation:
+      '跑 node --test scripts/gates/live-presets.test.mjs 看红在哪条：本项必须能说「不」——__DSH_HOME__ 残留、解析不到的包名/绝对路径必须判红；宿主会跳过的 disabled 行不得判红；空射程必须「跳过并写明」；块标量内容里的 name: 不得当插件行；M1 恒真桩突变：只查占位符的退化实现必须放过解析不到的行（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/live-presets.test.mjs', '用户预设写后核验的反向自测失败')
+    },
+  },
+  {
+    name: 'destructive-preset-skill-transactions',
+    remediation:
+      '跑 node --test scripts/lib/preset-skill-paths.test.mjs scripts/lib/preset-skill-transaction.test.mjs scripts/gates/session-refs-fail-closed.test.mjs scripts/gates/preset-maintenance-transaction.test.mjs packages/capabilities/dsh-overseas-skills/test/install-fullstack-skills.spec.mjs；路径逃逸、symlink/hard-link、全批预检、锁、SHA-256 staging、fault rollback、archive/restore 或 installer 任一反例失败都不得发布（ADR-0093）',
+    run() {
+      return runNodeTestFiles([
+        'scripts/lib/preset-skill-paths.test.mjs',
+        'scripts/lib/preset-skill-transaction.test.mjs',
+        'scripts/gates/session-refs-fail-closed.test.mjs',
+        'scripts/gates/preset-maintenance-transaction.test.mjs',
+        'packages/capabilities/dsh-overseas-skills/test/install-fullstack-skills.spec.mjs',
+      ], 'preset/skill 破坏性事务契约自测失败')
+    },
+  },
+  {
+    name: 'agent-fullstack',
+    remediation:
+      '按报错修 ~/.dsh/.agent-presets/agent-fullstack/：persona 行与 SOUL.md 不同源时改 SOUL.md 再跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-persona.mjs（不要直接编辑 persona 行）；icon 行缺失或与图标库不同源时不要手抄 base64，跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-avatar.mjs（改头像要改图标库，不是改 preset.yml）；白名单报错先确认技能确实在 ~/.dsh/skills 与 138 条事实源里；压缩行报非法键就直接删键——compaction-basic 的 validateKeys 抛错会让整行不加载',
+    run() {
+      const { presetRoot, skipped, facts, problems } = checkAgentFullstack({})
+      // 空射程不许与「都合格」同形（ADR-0075）：用户预设不进仓库，干净检出上本就该跳过。
+      if (skipped) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `预设目录不存在（${presetRoot}）—— 本项没量到任何东西`,
+        }
+      }
+      const note = facts.persona
+        ? `persona 同源=${facts.persona.sameSource ? '是' : '否'} ${facts.persona.personaChars} 字符；白名单 ${facts.subset?.total ?? 0} 条；节点 ${Object.keys(facts.subset?.nodes ?? {}).length}/14；头像 ${facts.avatar ? `${facts.avatar.iconId} 同源=${facts.avatar.sameSource === null ? '未核对' : facts.avatar.sameSource ? '是' : '否'}` : '缺'}`
+        : undefined
+      return { passed: problems.length === 0, violations: problems, note }
+    },
+  },
+  {
+    name: 'agent-fullstack-selftest',
+    remediation:
+      '跑 node --test scripts/gates/agent-fullstack.test.mjs 看红在哪条：人格层判据必须能说「不」——干净副本必须静默；同长度单字符替换必须判红（打掉只比长度的退化实现）；P1 骨架占位、截断成开场白、缺 M09 节点、缺三无条文、缺 {{cwd}} 都必须判红，且后三条在**源与副本一起改**时仍要红（证明 6b–6d 不是逐字比对的附庸）；锚点改坏必须响亮失败而不是退化成「无发现」；SOUL.md 缺失或正文为空必须判红（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/agent-fullstack.test.mjs', '「三无 · Agent全栈专家」preset 判据的反向自测失败')
     },
   },
   {
@@ -1056,7 +1167,14 @@ const CHECKS = [
       // 11:05 的快照，而当天 21:29~23:31 才修好 verify-patches-v2 的默认路径、install.sh、
       // sign-and-dmg、smoke——直接对那份 payload 制 dmg，客户跑校验工具默认必红。
       const stagingRoot = join(repoRoot, 'packaging', 'staging')
-      if (!existsSync(stagingRoot)) return { passed: true, violations: [] }
+      if (!existsSync(stagingRoot)) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: '可选 packaging/staging 不存在——本项未核对任何待发布载荷',
+        }
+      }
       const pairs = [
         ['payload/tools/verify-patches-v2.sh', 'packaging/verify-patches-v2.sh'],
         ['payload/tools/rewrite-file-deps.mjs', 'packaging/scripts/rewrite-file-deps.mjs'],
@@ -1138,9 +1256,17 @@ const CHECKS = [
     },
   },
   {
+    name: 'settings-shell-criteria-selftest',
+    remediation:
+      '跑 node --test scripts/gates/settings-shell-criteria.test.mjs 看红在哪条：设置页探针的判据必须**有射程**——它至今写错过三条零射程判据（curl 拿 404 当「没装」、AXScrollToVisible 调用成功、AX 树里出现滚动区域），共同点是「判据写了，却从没拿一个该判红的状态试过它」。本项把探针自带的 --self-test（5 个已知状态的读数喂进纯函数 judge()）跑起来，并做**突变控制**：把 l1Ok / l2Ok / pluginLoaded 分别改成恒真桩，自检必须当场判红并点名是哪条——突变不红，就说明拦住缺陷的不是判据本身（P-02 / P-08）。纯函数用例，不碰 GUI、不需要应用在跑',
+    run() {
+      return runNodeTestFile('scripts/gates/settings-shell-criteria.test.mjs', '设置页探针判据的射程自测失败')
+    },
+  },
+  {
     name: 'theme-tokens',
     modes: ['full'],
-    remediation: '改用真实 token（官方主题包或 dsh-theme-local 供给的名字）；存量违规登记在 scripts/gates/theme-tokens-baseline.json，该文件只减不增、条目失效即拒绝（ADR-0014、ADR-0028 的 C2 验收）',
+    remediation: '改用真实 token（官方主题包或 dsh-theme-local 供给的名字）；存量违规登记在 scripts/gates/theme-tokens-baseline.json，该文件只减不增、条目失效即拒绝（ADR-0014、ADR-0028 的 C2 验收）。若被引用的是一个**组件自有的局部自定义属性**（声明它的文件与引用它的文件同属一个包），那是假红而不是违规——见 theme-tokens-selftest',
     run() {
       const appDir = join('/', 'Applications', 'DSH Desktop.app')
       // 环境相关：app 未安装时由 checkThemeTokens 自身报告跳过（与 patch-anchors 同一语义）。
@@ -1149,6 +1275,15 @@ const CHECKS = [
         appDir,
         baseline: JSON.parse(readIfExists(THEME_TOKENS_BASELINE_PATH) || '[]'),
       })
+    },
+  },
+  {
+    name: 'theme-tokens-selftest',
+    modes: ['full'],
+    remediation:
+      '跑 node --test scripts/gates/theme-tokens.test.mjs 看红在哪条：本项在 2026-09-15 差点成了假红制造机——`dsh-settings-shell-local/src/client/shell.css` 在 `:root` 声明 `--dsh-settings-shell-brand` 并在同一文件用 `var()` 引用它（组件自有的局部变量），却因前缀撞上平台命名空间 `--dsh-` 被判「从未被任何地方定义」；而判据文字写着「两种定义形态都要认」，实现只认 `"--dsw-x": v` 这一种。修法的风险**不在漏报而在过度放行**，故用例以负向为主：跨包引用一个只在别的包内部声明的名字必须仍判红（否则射程被放宽成「别处声明过」，本项退化成恒真桩）、幻觉 token 不得被任何局部声明放行、注释里的名字不算声明、局部集合必须真小于引用总量。重点是恒真桩突变：把「局部判定」改成恒真必须让 4 条负向用例失效，把「剥注释」去掉必须让注释那条失效——突变不红就说明拦住缺陷的不是判据本身（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/theme-tokens.test.mjs', '主题 token 可达性判据的反向自测失败')
     },
   },
 ]
@@ -1242,6 +1377,21 @@ function runNodeTestFile(relPath, failureLabel) {
   const { command, env } = nodeCommand()
   const script = join(repoRoot, relPath)
   const result = runScript(repoRoot, `"${command}" --test "${script}"`, 120000, env)
+  if (result.code === 0) return { passed: true, violations: [] }
+  const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  const lines = text
+    .split('\n')
+    .filter((line) => /^\s*✖/.test(line) || /AssertionError/.test(line))
+    .map((line) => line.trim())
+  const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+  return { passed: false, violations: lines.length > 0 ? lines : [`${failureLabel}（${verdict}）`] }
+}
+
+/** Run one node:test process over a related contract suite. */
+function runNodeTestFiles(relPaths, failureLabel) {
+  const { command, env } = nodeCommand()
+  const scripts = relPaths.map((relPath) => `"${join(repoRoot, relPath)}"`).join(' ')
+  const result = runScript(repoRoot, `"${command}" --test ${scripts}`, 120000, env)
   if (result.code === 0) return { passed: true, violations: [] }
   const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
   const lines = text
@@ -1535,9 +1685,14 @@ function installedProfileDependencies(profileDir) {
 function parseArgs(argv) {
   let mode = 'quick'
   let list = false
+  let json = false
+  let requireNoSkip = false
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--list') list = true
+    else if (argv[i] === '--json') json = true
+    else if (argv[i] === '--require-no-skip') requireNoSkip = true
     else if (argv[i] === '--mode') {
+      if (argv[i + 1] === undefined) return { error: '--mode 缺少值（quick / full）' }
       mode = argv[i + 1]
       i += 1
     } else {
@@ -1545,7 +1700,7 @@ function parseArgs(argv) {
     }
   }
   if (!MODES.includes(mode)) return { error: `未知模式：${mode}（可用：${MODES.join(' / ')}）` }
-  return { mode, list }
+  return { mode, list, json, requireNoSkip }
 }
 
 /**
@@ -1563,50 +1718,52 @@ function trackedTypeFiles(dir) {
 
 /** 程序入口：解析参数、跑校验、按失败数设置退出码。 */
 function main() {
-  const { mode, list, error } = parseArgs(process.argv.slice(2))
+  const { mode, list, json, requireNoSkip, error } = parseArgs(process.argv.slice(2))
   if (error) {
     process.stderr.write(`${error}\n`)
     process.exitCode = 2
     return
   }
   if (list) {
-    process.stdout.write(`${CHECKS.map((check) => check.name).join('\n')}\n`)
+    const checks = CHECKS.map((check) => ({ name: check.name, modes: check.modes ?? MODES }))
+    process.stdout.write(json
+      ? `${JSON.stringify({ schemaVersion: 1, kind: 'gate-list', checks }, null, 2)}\n`
+      : `${checks.map((check) => check.name).join('\n')}\n`)
     return
   }
 
   const active = CHECKS.filter((check) => !check.modes || check.modes.includes(mode))
-  let failed = 0
-  let skipped = 0
-  for (const check of active) {
-    const result = check.run()
-    // 三种读数，不许合并：`ok` / `skip`（射程为空——本项**没量到任何东西**）/ `fail`。
-    // 先前这里把 `note` 丢掉，于是「跳过」与「校验通过」在读数上完全同形：
-    // 几处 check 的注释写着「环境不存在时跳过，不假绿也不假红」，而输出里两者都是
-    // `ok contract <名字>`。模型里有这个区分、读数里没有，等于没有（P-02 的第二种形态）。
-    if (result.skipped) {
-      skipped += 1
-      process.stdout.write(`skip contract ${check.name}${result.note ? `（${result.note}）` : ''}\n`)
-      continue
+  const report = runGateChecks(active, { requireNoSkip })
+  if (json) {
+    process.stdout.write(`${JSON.stringify({
+      schemaVersion: 1,
+      kind: 'gate-report',
+      mode,
+      requireNoSkip,
+      summary: report.summary,
+      results: report.results,
+    }, null, 2)}\n`)
+  } else {
+    for (const result of report.results) {
+      const label = result.status === 'pass' ? 'ok  ' : result.status === 'skip' ? 'skip' : 'fail'
+      const accounting = `expected=${result.expected}, discovered=${result.discovered}, checked=${result.checked}, skipped=${result.skipped}, failed=${result.failed}`
+      process.stdout.write(`${label} contract ${result.name} [${accounting}]（${result.note ?? result.reason}）\n`)
+      if (result.status === 'fail') {
+        for (const violation of result.violations) process.stdout.write(`     - ${violation}\n`)
+        if (result.remediation) process.stdout.write(`     → ${result.remediation}\n`)
+      }
     }
-    if (result.passed) {
-      process.stdout.write(`ok   contract ${check.name}${result.note ? `（${result.note}）` : ''}\n`)
-      continue
-    }
-    failed += 1
-    process.stdout.write(`fail contract ${check.name}\n`)
-    for (const violation of result.violations) process.stdout.write(`     - ${violation}\n`)
-    process.stdout.write(`     → ${check.remediation}\n`)
-  }
 
-  // 通过数不再把跳过算进去：`40/41` 里的 41 是「参与本模式的项数」，跳过项单列出来。
-  const passed = active.length - failed - skipped
-  const skipTail = skipped > 0 ? `，跳过 ${skipped}` : ''
-  process.stdout.write(
-    failed === 0
-      ? `ok ${passed}/${active.length} 项通过（mode=${mode}${skipTail}）\n`
-      : `fail ${passed}/${active.length} 项通过（mode=${mode}${skipTail}）\n`,
-  )
-  process.exitCode = failed === 0 ? 0 : 1
+    const summary = report.summary
+    const skipTail = summary.skipped > 0 ? `，跳过 ${summary.skipped}` : ''
+    const strictTail = requireNoSkip ? '，strict=no-skip' : ''
+    const prefix = report.exitCode === 0 ? 'ok' : 'fail'
+    process.stdout.write(
+      `${prefix} ${summary.passed}/${summary.total} 项通过（mode=${mode}${skipTail}${strictTail}；`
+      + `objects: expected=${summary.expected}, discovered=${summary.discovered}, checked=${summary.checked}, skipped=${summary.skippedObjects}, failed=${summary.failedObjects}）\n`,
+    )
+  }
+  process.exitCode = report.exitCode
 }
 
 main()

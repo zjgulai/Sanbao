@@ -79,6 +79,7 @@ export function checkSkillLines({ repoRoot, home = homedir(), runOne } = {}) {
   if (!environmentPresent(home)) {
     return {
       passed: true,
+      skipped: true,
       violations: [],
       note: '本机没有 ~/.dsh/skills 与 ~/.dsh/.agent-presets —— 三条技能线尚未入库，本项无射程（不假绿也不假红）',
     }

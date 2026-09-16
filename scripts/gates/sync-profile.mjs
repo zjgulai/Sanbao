@@ -119,6 +119,14 @@ export function checkProfileFilesSync(pairs) {
 /** 可执行的 bundle 扩展名。 */
 const BUNDLE_EXT = /\.(?:js|mjs|cjs)$/
 
+/**
+ * 装载点 package.json 里**决定「应用怎么加载这个包」**的字段。
+ *
+ * 刻意不含 `files`（交付形态，由 `checkProfileFilesSync` 管）、
+ * 也不含 `scripts`/`devDependencies`（pnpm 可能剥掉，剥了不影响加载）。
+ */
+const LOADPOINT_MANIFEST_FIELDS = ['main', 'exports', 'dsh']
+
 /** 装载点不读、或 pnpm 必然重写的文件，一律不进断言面。 */
 function assertable(file) {
   if (file.includes('*') || file.includes('?')) return false // 通配条目无法逐文件对账
@@ -192,10 +200,52 @@ export function checkProfileBundleSync(pairs) {
   const violations = []
   for (const { name, sourceDir, targetDir, files } of pairs) {
     if (!existsSync(join(targetDir, 'package.json'))) continue
+    // 装载点 package.json 的**装载字段**也要对账。
+    //
+    // `loadPointFiles` 把整个 package.json 排除在断言面外，理由是「pnpm 在装载点重写它
+    // （剥掉 devDependencies / scripts）」——2026-09-15 实测该理由在本机**不成立**
+    // （装载点那份含 scripts 与 devDependencies，与仓库逐字节相同），于是「清单漂移」
+    // 在装载点一侧**没有任何仪器**：`dsh.client.inject` 那条假声明就是这样一路无阻地
+    // 活在运行时会读到的文件里（ADR-0088）。
+    //
+    // 这里**只比装载相关字段**而不是整文件：pnpm 若真去剥 scripts/devDependencies，
+    // 整文件比对会误红；而 main / exports / dsh（bundle.patch 与 client）是它不会动的，
+    // 也正是「应用按什么声明加载这个包」的全部内容。
+    const readField = (dir) => {
+      try {
+        return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+      } catch {
+        return null
+      }
+    }
+    const from = readField(sourceDir)
+    const to = readField(targetDir)
+    if (from !== null && to !== null) {
+      const drift = LOADPOINT_MANIFEST_FIELDS.filter(
+        (field) => JSON.stringify(from[field] ?? null) !== JSON.stringify(to[field] ?? null),
+      )
+      if (drift.length > 0) {
+        violations.push(
+          `${name}: 装载点 package.json 的装载字段（${drift.join('/')}）与仓库源不一致——`
+            + '应用会按旧声明加载这个包（用 tmp+mv 语义同步装载点，勿直接覆盖）',
+        )
+      }
+    }
     for (const file of loadPointFiles(sourceDir, files)) {
       const source = join(sourceDir, file)
       const target = join(targetDir, file)
-      if (!existsSync(source) || !existsSync(target)) continue
+      if (!existsSync(source)) continue
+      // 2026-09-15 实测：装载点缺文件曾被这里静默 continue，而「缺失」只由
+      // `checkProfileFilesSync` 管——它只对 package.json `files` 清单里的文件说话。
+      // `loadPointFiles` 的第一条规则（lib/ 顶层 bundle）不在那份清单里，于是
+      // `dsh-overseas-skills/lib/host-util.js` 缺失一路绿灯，直到宿主启动
+      // `ERR_MODULE_NOT_FOUND` 进恢复模式。缺失必须在**这里**判红，而不是被跳过。
+      if (!existsSync(target)) {
+        violations.push(
+          `${name}: 装载点缺少 ${file}（应用会因缺文件启动失败；用 tmp+mv 语义补齐，见 node scripts/sync-profile.mjs --apply --loadpoint）`,
+        )
+        continue
+      }
       if (!readFileSync(source).equals(readFileSync(target))) {
         violations.push(
           `${name}: 装载点的 ${file} 与仓库源字节不一致（应用会跑旧产物；用 tmp+mv 语义同步，见 node scripts/sync-profile.mjs --apply --loadpoint）`,

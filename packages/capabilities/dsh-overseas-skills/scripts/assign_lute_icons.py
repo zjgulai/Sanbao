@@ -101,18 +101,38 @@ def main():
             print(f"⚠️ 读不到上一轮 skill-icons.json，跳过沿用：{e}")
     json.dump(cat_icons, open(os.path.join(ROOT, "manifest", "category-icons.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     json.dump(skill_icons, open(os.path.join(ROOT, "manifest", "skill-icons.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-    # AI全栈（fs-*）：8 分类 + 29 技能
+    # AI全栈：14 个交付节点分组 + 行图标。
+    #
+    # 2026-09-16 改：分组轴由 8 个「做法类」（fs-clarify…fs-writing）换成 M00–M13 十四个
+    # **交付节点**，与 preset 的 persona 派活表、`agent.cordis.yml` 白名单注释同轴。
+    # 分组键因此变成 m00…m13，头像 id 也随之是 `fs-cat-m00`…（与既有 `fs-cat-fs-*` 同形）。
+    #
+    # 行图标只覆盖「有 `sk-fs-<name>` 头像的那部分」：全栈线现在是 138 行，其中 68 行是
+    # 2026-09-16 新入的第三方技能，品牌清单里还没有它们各自的头像。缺图**不报错也不编一个**，
+    # 而是让它回落到所属节点的分组头像（`build_preset_catalog.py` 的
+    # `skill_svg_fs.get(name) or fs_cat_icon.get(category)` 就是这个语义），
+    # 并把回落名单打出来 —— 静默回落正是「以为每行都有自己的图」的来源。
     fs_mapping = json.load(open(os.path.join(ROOT, "scripts", "fullstack-mapping.json"), encoding="utf-8"))
+    fs_extra = json.load(open(os.path.join(ROOT, "scripts", "fullstack-extra.json"), encoding="utf-8"))
     fs_cat_icons = {}
     for c in fs_mapping["categories"]:
         icon_id = f"fs-cat-{c['key']}"
-        if icon_id not in by_id: raise SystemExit(f"缺失头像：{icon_id}")
+        if icon_id not in by_id: raise SystemExit(f"缺失头像：{icon_id}（分组「{c['title']}」）")
         fs_cat_icons[c["key"]] = by_id[icon_id]
+    fs_names = [s["name"] for s in fs_mapping["skills"]] + \
+               [s.get("installAs", s["name"]) for s in fs_extra["skills"]]
     fs_skill_icons = {}
-    for s in fs_mapping["skills"]:
-        icon_id = f"sk-fs-{s['name']}"
-        if icon_id not in by_id: raise SystemExit(f"缺失头像：{icon_id}")
-        fs_skill_icons[s["name"]] = by_id[icon_id]
+    fellback = []
+    for name in fs_names:
+        icon_id = f"sk-fs-{name}"
+        if icon_id in by_id:
+            fs_skill_icons[name] = by_id[icon_id]
+        else:
+            fellback.append(name)
+    if fellback:
+        print(f"⚠️ AI全栈 {len(fellback)}/{len(fs_names)} 行无专属头像，回落到所属节点分组头像："
+              f"{', '.join(fellback[:6])}{' …' if len(fellback) > 6 else ''}"
+              f"（要它们各有其图，得先在 lute-brand-icons 的 catalog.js 里补 sk-fs-<name> 条目再重跑本脚本）")
     json.dump(fs_cat_icons, open(os.path.join(ROOT, "manifest", "category-icons-fs.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     json.dump(fs_skill_icons, open(os.path.join(ROOT, "manifest", "skill-icons-fs.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     # 通用线（gn-*）：8 分组 + N 技能。名单的事实源是 manifest/generic-skills.json（**不是**再抄一份映射表）。

@@ -82,7 +82,6 @@ test('路由表：七条路径全部注册（漏一条 = 页面上一个功能�
   }
   assert.equal(table.size, 7, `注册了 ${table.size} 条，期望 7 条：${[...table.keys()].join(', ')}`)
 })
-
 test('/org：非回环请求一律 401，方法不对一律 405', async () => {
   const handler = routes().get(BASE + '/org')
   assert.ok(handler, '/org 没注册')
@@ -218,4 +217,61 @@ test('/generic-list：不返回 scenarios（通用线不套出海场景）', asy
   const res = await call(routes().get(BASE + '/generic-list'), LOOPBACK)
   const body = JSON.parse(res.body)
   assert.deepEqual(body.scenarios, [], '通用线不该有 scenarios——给它硬派一个出海场景会让「通用」失去意义')
+})
+
+/**
+ * `/fullstack-list` —— AI 全栈技能线（第二条线）的负载契约。
+ *
+ * 这条线曾经**数据全对但页面全错**：14 个分组、138 行、每组的头像都取到了，可页面只画一个
+ * 折叠块。原因是这条路由顺手返回了 `buildScenarios(CATEGORIES, SKILLS_FS)`——拿出海的 8 大
+ * 场景坐标去套全栈的行。两条线行集互不相交（223 / 138，交集 0），本不该配出任何东西；能配出
+ * 1 个「H 组织与工具 · 70 项」是因为生成器用技能名去查海外分类表时**同名撞上**了。
+ *
+ * 而页面渲染是 scenarios 优先于 groups，于是这个幽灵场景把 14 个分组整片顶掉，不报错、不留空。
+ * 所以判据必须钉在**这条路由不得提供那一层**，而不是钉在「页面画了几组」——后者要靠读界面，
+ * 前者一条命令就能说「不」。`/generic-list` 早就有同一条用例；全栈线缺的不是结论，是判据。
+ */
+test('/fullstack-list：不返回 scenarios（全栈线不套出海场景）', async () => {
+  const res = await call(routes().get(BASE + '/fullstack-list'), LOOPBACK)
+  assert.equal(res.statusCode, 200, '回环 GET 应当 200，实际 ' + res.statusCode + '：' + res.body.slice(0, 200))
+  const body = JSON.parse(res.body)
+  assert.equal(body.ok, true)
+  assert.deepEqual(
+    body.scenarios,
+    [],
+    '全栈线不该有 scenarios：它会被页面优先渲染，把 14 个 M 分组整片顶掉（数据全对、页面全错）',
+  )
+})
+
+/** `/fullstack-list` 的 14 个分组：组 key/顺序/分组内行数与 manifest 对得上，且组头像齐全且互不相同。 */
+test('/fullstack-list：14 个分组各有行，组头像互不相同，行集合与 manifest 一致', async () => {
+  const handler = routes().get(BASE + '/fullstack-list')
+  assert.ok(handler, '/fullstack-list 没注册')
+
+  const res = await call(handler, LOOPBACK)
+  assert.equal(res.statusCode, 200, '回环 GET 应当 200，实际 ' + res.statusCode + '：' + res.body.slice(0, 200))
+  const body = JSON.parse(res.body)
+
+  const manifest = JSON.parse(readFileSync(join(HERE, '..', 'manifest', 'fullstack-skills.json'), 'utf8'))
+  const expectedKeys = manifest.categories.map((c) => c.key)
+  const expectedNames = manifest.skills.map((s) => s.name).sort()
+
+  assert.deepEqual(body.groups.map((g) => g.key), expectedKeys, '分组 key 或顺序与 manifest 不一致')
+  assert.equal(body.groups.length, 14, `全栈线应当是 14 个分组，实际 ${body.groups.length}`)
+  const rows = body.groups.flatMap((g) => g.items)
+  assert.deepEqual(rows.map((r) => r.name).sort(), expectedNames, '行集合与 manifest 不一致')
+
+  for (const g of body.groups) assert.ok(g.items.length > 0, `分组 ${g.key}（${g.title}）一行都没有`)
+
+  // 组头像必须齐全且**互不相同**：缺键时生成器会回落到出海线的分类头像，那不是空值，
+  // 所以「这一组有没有图」看不见它——14 个分组会一起顶同一张脸。
+  const icons = body.groups.map((g) => g.icon)
+  assert.ok(icons.every((i) => typeof i === 'string' && i.length > 0), '有分组缺头像')
+  assert.equal(new Set(icons).size, body.groups.length, '14 个分组头像必须互不相同（回落会造成同脸）')
+
+  for (const r of rows) {
+    assert.ok(r.title, `${r.name} 缺中文标题`)
+    assert.ok(r.icon, `${r.name} 没有头像（会退化成分组默认图或空白）`)
+    assert.equal(r.installed, true, `${r.name} 未安装`)
+  }
 })

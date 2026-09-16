@@ -47,6 +47,42 @@ const noCatIcon = CATEGORIES.filter((c) => !(c.icon || "").startsWith("data:imag
 if (noCatIcon.length) errors.push(`无头像分组: ${noCatIcon.map((c) => c.key).join(", ")}`);
 const noGnCatIcon = CATEGORIES_GN.filter((c) => !(c.icon || "").startsWith("data:image/svg+xml;base64,"));
 if (noGnCatIcon.length) errors.push(`通用线无头像分组: ${noGnCatIcon.map((c) => c.key).join(", ")}`);
+// ②b AI全栈线：分组轴 = M00–M13 十四个交付节点。
+//
+// 2026-09-16 之前这里**只**查了出海线与通用线的分组头像，全栈线一条判据都没有：
+// 全栈线那时是 8 个「做法类」分组，头像由 `assign_lute_icons.py` 从品牌清单直接取，
+// 没人觉得它会缺，于是它缺的时候也没人知道（`emptyIcon` 只在**行**没有回落时说话，
+// 而回落串是 `s.icon || catIcon.get(...)` —— 分组头像为空时它才顺带红，且报的是「无图标行」，
+// 指向的是行不是分组）。现在分组轴换成节点，分组数从 8 变 14、行数从 70 变 138，
+// 这条轴必须有自己的一条判据，否则「少一个节点」「多一个幽灵分组」都只能靠肉眼。
+{
+  const noFsCatIcon = CATEGORIES_FS.filter((c) => !(c.icon || "").startsWith("data:image/svg+xml;base64,"));
+  if (noFsCatIcon.length) errors.push(`全栈线无头像分组: ${noFsCatIcon.map((c) => c.key).join(", ")}`);
+  // 头像必须**互不相同**：`build_preset_catalog.py` 在 `category-icons-fs.json` 缺某个键时
+  // 会回落到 `cat_svg['agent-tools']` —— 那是出海线的「工具管家」头像，不是空值，
+  // 所以上面那条「是合法 data URI」的判据**看不见**这个回落，14 个节点会一起顶着同一张脸。
+  const fsIcons = CATEGORIES_FS.map((c) => c.icon || "");
+  if (new Set(fsIcons).size !== fsIcons.length) {
+    errors.push(`全栈线 ${fsIcons.length} 个分组只有 ${new Set(fsIcons).size} 张不同头像 —— 疑似回落到了同一个默认头像（category-icons-fs.json 缺键）`);
+  }
+  // 分组键与标题的事实源是派生器里的 NODES，行集的事实源是它归并出来的 138 行 ——
+  // 所以这里**不写任何数字**：数字写在这里就是第三个家，而第三个家只会靠人对齐。
+  const { NODES, mergeRows } = await import("./build-fullstack-catalog.mjs");
+  const want = NODES.map((n) => `${n.key}\u0000${n.title}`);
+  const got = CATEGORIES_FS.map((c) => `${c.key}\u0000${c.title}`);
+  if (want.join("|") !== got.join("|")) {
+    errors.push(`全栈线分组轴与事实源不符：期望 ${want.length} 组（M00–M13），实际 ${got.length} 组`
+      + `（缺 ${want.filter((w) => !got.includes(w)).length} / 多 ${got.filter((g) => !want.includes(g)).length}）`);
+  }
+  const { rows: wantRows, problems: wantProblems } = mergeRows();
+  if (wantProblems.length) errors.push(`全栈线事实源自身有问题: ${wantProblems.slice(0, 4).join(" / ")}`);
+  if (SKILLS_FS.length !== wantRows.length) {
+    errors.push(`全栈线行数 ${SKILLS_FS.length} ≠ 事实源 ${wantRows.length} —— 页面会静默多/少卡片`);
+  }
+  const nodeKeys = new Set(NODES.map((n) => n.key));
+  const stray = SKILLS_FS.filter((s) => !nodeKeys.has(s.category));
+  if (stray.length) errors.push(`全栈线挂在未知分组上的行: ${stray.map((s) => `${s.name}→${s.category}`).slice(0, 8).join(", ")}`);
+}
 const emptyIcon = [];
 for (const s of [...SKILLS, ...SKILLS_FS, ...SKILLS_GN]) {
   const icon = s.icon || catIcon.get(s.category) || "";

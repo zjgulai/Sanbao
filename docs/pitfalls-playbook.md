@@ -55,15 +55,35 @@
   核对表 ↔ 资产目录两向对照，且**资产的像素尺寸必须等于声明**——原来只核了目标那一侧，
   等于量错了对象）、
   `gate:patch-anchors`（**射程为空报 `skip`**，与「通过」在读数上分开——「没量到东西」被读成
-  「都合格」是本条最便宜的复发路径）
+  「都合格」是本条最便宜的复发路径）、
+  `gate:gate-result-selftest`（所有门禁统一记 `expected/discovered/checked/skipped/failed`，空射程 pass、
+  非守恒、checker throw 与 strict skip 都有负例）、`gate:live-presets` 与 `gate:live-presets-selftest`
+  （每条 preset row 有稳定身份与 checked/disabled/failed 结论，inventory 让“删一条、分母也缩一条”判红），
+  `gate:profile-metadata-sync`（**「比了 0 个包」必须与「都比过且一致」不同形**：归组重构后
+  vendor 路径写成了扁平的 `vendor/<包名>`，实际是 `vendor/packages/<组>/<包>`，25 个受管包
+  一个都没命中，于是该项与它自己开出的 remediation（`sync-profile.mjs --apply --only-metadata`，
+  同样的路径错法）**双双恒绿、从未比过任何字节**；现在两侧都断言「真的比过」，
+  阳性对照下必须变红。同类教训：护栏只挂在一条分支上时，它保护的只是自己那条）、
+  `gate:profile-bundle-sync`（**断言面留了个洞等于没断言**：`loadPointFiles` 把
+  `package.json` 整个排除在外，理由是「pnpm 在装载点重写它（剥 scripts/devDependencies）」——
+  实测该前提在本机**不成立**，于是清单漂移在装载点一侧**一台仪器都没有**；
+  现按装载字段子集 `main`/`exports`/`dsh` 对账，既补上洞又不会因 pnpm 真去剥那两个字段而误红）
 - **下一版默认动作**：写任何仪器先定「读不到时输出什么」——必须是**失败**或**显式的跳过**，
   不是通过；凡读状态一律「值 + 绑定身份」两项一起读；交付前做一次恒真桩突变，红不了就是没测。
   **清单里的命令也是仪器**：它会被人照着跑，所以一条返回空输出的命令比没有命令更坏——
   复核者会拿那个「空」当成结论（2026-09-13 实测：一条 `pgrep -f` 检查项在主进程确实在跑时
   返回 0 条，于是「没有实例在跑」成立，接着就是运行中替换 app bundle 与整屏白屏）。
   判据「读不出」与「读出来是零」必须是两个不同的退出码，且调用方对前者**中止**。
+  **另一面同样贵：仪器假红。** 判据在**已验收的产物**上报红时，那不是发现，是仪器坏了 ——
+  而它的长相与产品缺陷一模一样。2026-09-16 做品牌头像判据时实测四次同形：结构判据第一版把
+  **全部 324 枚已验收图标**判红（颜色白名单漏了渐变的一个 `rgba(255,255,255,0)` 停）；
+  改完范围仍用「组内全部数字」，把 `stroke-width="2"`、`r="2.9"` 当坐标，于是又全红；
+  栅格判据把 qlmanage 的不透明背景当成内容、又拿色板去卡线性渐变本就存在的插值色，
+  三枚图标给出**一模一样**的外溢数字。**「三枚数字完全一样」本身就是仪器坏了的读数** ——
+  真实缺陷不会这么整齐。所以改判据前的第一件事固定为：**先拿已验收的一批跑一遍，它必须静默**；
+  判红时先问「是不是我在量错了对象」，再问「产物是不是真坏了」。
 - **详见**：[ADR-0068](adr/ADR-0068.md)、[ADR-0063](adr/ADR-0063.md)、[ADR-0075](adr/ADR-0075.md)、
-  [ADR-0080](adr/ADR-0080.md)、[ADR-0081](adr/ADR-0081.md)
+  [ADR-0080](adr/ADR-0080.md)、[ADR-0081](adr/ADR-0081.md)、[ADR-0094](adr/ADR-0094.md)
 
 ## P-03 · 「知道」没有变成「拦住」
 
@@ -82,7 +102,12 @@
 - **症状**：判据、分支、错误报告路径都写好了，却从来没有真正执行过；出问题时它什么也不说。
 - **根因类**：没有读数的分支等于不存在，而「不存在」在报告里长得和「正常」一样。
   错误报告路径尤其危险——它自身一炸，反而把真实错误盖住。
-- **已落地机制**：`gate:setup-app-locator`、`script:packaging/scripts/setup-app-locate-test.sh`
+- **已落地机制**：`gate:setup-app-locator`、`script:packaging/scripts/setup-app-locate-test.sh`、
+  `script:scripts/acceptance/settings-shell-live.mjs`（**错误报告路径本身也要被跑过一次**：
+  python 段里那几处 `raise SystemExit` 逃出 `try` 之后哨兵行**从未打印**，调用方只看得见空
+  stdout，于是「AX 树只剩 AXApplication 一个节点」被误报成「harness 未回传报告」——
+  诊断指向了错误的仪器，而真正坏掉的是 AX 子树（CG 层窗口还在、renderer 还活）。
+  现由 `except SystemExit: pass` / `except Exception` 兜底，并把 AX 节点数写进报告）
 - **下一版默认动作**：交付前把每条分支都跑出一次真实输出（**含失败分支**）；
   `set -e` 下的条件分支用 `if` 写，不要用 `[ ... ] && cmd`——条件为假时它就是一次非零返回；
   验收时优先验**错误报告路径**，而不是主路径。
@@ -564,3 +589,171 @@
   另外，任何**硬编码的期望条数**都要改从事实源读：硬编码让「少了一条」与「改过清单」
   无法区分，而这两种情况要修的地方完全不同。
 - **详见**：`packages/capabilities/dsh-overseas-skills/docs/maintenance-sop.md` §12.12
+
+## P-22 · 打包占位符被写进预设行：换了个没有展开者的文件
+
+- **症状**：新建会话点不动、发送/resume 报
+  `agent-preset/invalid: preset "lute-cordis" failed to mount: row "compaction-basic" names a plugin that cannot be resolved: __DSH_HOME__/profiles/...`。
+  客户端把 `session/create` 的失败只打成 `console.warn`（不转发宿主日志），界面零反馈，
+  问题静默大半天（2026-09-14 实测）。
+- **根因类**：`__DSH_HOME__` 是打包面占位符，设计上只在 `cordis.patch.yml` 首启时被
+  main.js/install.sh 展开；把它写进 `agent.cordis.yml` 的插件行后，**没有任何读者会展开它**，
+  预设加载器按包名去解析这个字面量，必然失败。这是 P-05（隔着一层解释器写字面量）与
+  P-06（把平台行为当常量）的合体：占位符的展开面被当成全局属性用。写完后没有健康核验，
+  客户端又吞掉错误，三重静默叠加。
+- **已落地机制**：`gate:live-presets`（扫 `~/.dsh/.agent-presets/**/agent.cordis.yml`：
+  任何非注释行残留 `__DSH_HOME__` / `__LUTE_PROJECT_ROOT__` 判红并点到文件行号；每个插件行
+  按宿主 `classifyRowSpecifier` / `packageInstalled` 同构判据在当前解析面解析，解析不到判红）、
+  `gate:live-presets-selftest`（S1 占位符必须红、S2/S3 解析不到必须红、S4 disabled 行不误红、
+  S7 块标量内容不误判、M1 恒真桩突变证明红来自行解析）。
+- **下一版默认动作**：改完任何 `~/.dsh/.agent-presets/**` 立即跑 `pnpm run gate`（离线判据，
+  不用等应用重启）；记住占位符只有一个家：`cordis.patch.yml`，预设行只用
+  `cordis:` / 相对路径 / `file:` / 绝对路径 / 包名五种写法。
+
+## P-23 · 删除用户预设不跑引用面预检：会话恢复当场 not found
+
+- **症状**：预设下线后，既有会话 resume 报
+  `agent-preset/not-found (available: standard, ptc, minimal, cordis, agt-001, ...)`，
+  会话打不开、切换 preset 也走不通（2026-09-15 实测：`lute-cordis` 被整目录归档，
+  329 个会话引用它）。
+- **根因类**：P-03「『知道』没有变成『拦住』」。`scan-session-refs.mjs --would-remove`
+  早在 2026-09-11 的事故后写好，文件头明说删除类门禁是两条（①归档完整 ②无既有引用），
+  但删除动作本身没有强制入口——人只做了归档，预检那条被跳过，工具在而不拦。
+- **已落地机制**：`gate:destructive-preset-skill-transactions`（final-name/canonical containment、
+  session scanner fail-closed、全批 preflight、锁、SHA-256 archive/staging、fault rollback、硬退出恢复与
+  根外 canary 的统一反向自测）、`script:scripts/role-presets/remove-preset.mjs`（唯一删除入口：默认 dry-run，
+  `--apply` 前必须通过目标/引用面/逐树 digest；有已知引用仅 `--force` 可接受，扫描失败或零会话仍拒绝；
+  commit 是 rename 到 retained quarantine，不是递归删除）、
+  `script:scripts/role-presets/restore-presets.mjs`（只接受结构化 SHA-256 manifest）、
+  `script:scripts/role-presets/recover-preset-transaction.mjs`（显式 rollback；stale lock 还需 token/batch/PID
+  三项证明后 `--adopt-orphan-lock`）。
+- **下一版默认动作**：删除用户预设一律走
+  `node scripts/role-presets/remove-preset.mjs --ids a,b` 先读 dry-run，再经单独授权加 `--apply`；直接 `rm -rf` 视为违规。
+  被引用而必须下线时，先把会话切换/迁移到别的 preset，或 `--force` 并接受打印的影响面。
+  误删后按 `restore-presets.mjs --from <transaction-root> --ids ... --apply` 恢复；事务中断先用
+  `recover-preset-transaction.mjs --from <transaction-root> --rollback --apply`（无需重启宿主）。
+
+## P-24 · files 清单漏掉运行时被 import 的文件，而缺失被门禁当 note 跳过
+
+- **症状**：重启进恢复模式，`plugin tree failed to load … Cannot find module '<pkg>/lib/host-util.js' imported from <pkg>/lib/index.js`（ERR_MODULE_NOT_FOUND）。
+  2026-09-15 实测：`dsh-overseas-skills/lib/index.js` import `./host-util.js`，但
+  package.json 的 `files` 清单没有它，装载点按清单物化时把文件丢掉，宿主启动失败。
+- **根因类**：两道判据的射程并集漏掉了「lib 顶层 bundle 缺失」。① `files` 是交付白名单，
+  `index.js` 的 import 闭包不在任何校验里——这是 P-16（格式层的不变量没有读者）；
+  ② `checkProfileBundleSync` 对「源在、目标缺」静默 `continue`，把缺失检测推给
+  `profile-files-sync`，而后者只查 `files` 清单，清单外的 lib bundle 缺失两头都不管——
+  这是 P-02（仪器假绿）与 P-03（知道没有变成拦住）的合体。
+- **已落地机制**：`gate:profile-bundle-sync`（装载点缺文件**判红**，不再 continue；判据面 =
+  `loadPointFiles` 的 lib 顶层 bundle 规则 + files 清单）、
+  `script:scripts/sync-profile.mjs`（`--apply --loadpoint` 现在会**补齐**缺失文件，
+  之前只打印 note、remediation 空转）、
+  `spec:scripts/gates/sync-profile.test.mjs`（两条回归钉：缺失必须判红；判红靠 lib 顶层
+  规则而不是 files 清单——把 files 清单置空也必须红）。
+- **下一版默认动作**：给包新增一个会被 `lib/index.js` 运行时 import 的文件时，**同一次提交**
+  把它加进该包 package.json 的 `files`；改完跑 `pnpm run gate` 与
+  `node scripts/sync-profile.mjs --check --loadpoint`。缺文件时用 `--apply --loadpoint`
+  补齐，不要手抄路径（手抄会再制造一个「事实多个家」）。
+
+## P-25 · 判据的射程从没被验证：恒为同一个值，于是把「已达标」读成「未达标」
+
+- **症状**：`pnpm run accept:settings-shell` 在插件**已经正常工作**时报红
+  「L1：导航不是用户可滚的（滚动区域 0 个）」——而同一次读数里另外三条都说修好了：
+  `导轨动了=true 内容区也动了=false`（滚的是导航自己，不是面板）、
+  `滚到底末项 40.83 CSS px`（= 中位按钮 40 CSS px，全高）、`分组标题 5/5`。
+  一条判据与其余全部证据相反，而它是错的那个。
+- **根因类**：P-02（仪器假绿）的镜像——**假红**。根子是同一条：判据写了，但没人拿一个
+  「应该判红」的状态试过它，于是它的射程是空的。这条判据是「AX 树里出现滚动区域
+  （`AXScrollArea`）」，推理是「官方 nav 无 overflow → 不是滚动容器；本包给 nav 加了
+  `overflow-y:auto` → 应当出现滚动区域」。**前提错了**：AX 里 nav 落成
+  `AXGroup subrole="AXLandmarkNavigation"`（HTML nav 元素的语义映射），而 Chromium
+  每个节点只给**一个** role——它不会在 landmark 之外再叠一个滚动区域。实测整个设置
+  对话框里 role 含 Scroll 的节点为 **0 个**，官方那半（内容区同样可滚）也是 0，
+  即该判据无论修好没修好都恒为空集。同一份探针此前已经犯过两次同类错（`curl` 拿 404
+  当「实例里没装这个包」；「`AXScrollToVisible` 调用成功」——基线里它同样成功）。
+  **三次的共同点是「判据写了，却从没拿一个该判红的状态跑过它」。**
+- **已落地机制**：`gate:settings-shell-criteria-selftest`（探针自带 `--self-test`：把
+  5 个已知状态读数喂进纯函数 `judge()`，逐条断言该红该绿；并对 `l1Ok` / `l2Ok` /
+  `pluginLoaded` 分别做**恒真桩突变**，突变不红即判失败）、
+  `gate:dead-instrument`（「滚动区域当可滚性证据」已登记进
+  `scripts/gates/dead-instruments.json`，文档与脚本里再用它会被拦下）、
+  `script:scripts/acceptance/settings-shell-live.mjs`（L1 改用两条几何读数：导轨独立滚动 +
+  滚到底末项拿得到全高）。
+- **下一版默认动作**：新增或修改任何判据时，**先写下它的一对读数**——一个必须绿的状态、
+  一个必须红的状态；写不出「该红」的那个，就说明这条判据还没有射程，不要合入。
+  改完设置页探针跑 `node scripts/acceptance/settings-shell-live.mjs --self-test`
+  （离线、不需要应用在跑），再跑 `pnpm run accept:settings-shell` 拿实况读数。
+
+## P-26 · 把「读不到」直接归因成「设备坏了」：错误报告路径给出一个自信而错误的结论
+
+- **症状**：探针报「仪器自检失败 ax-alive：读不到 AXWindow（AX 树只有 1 个节点）……
+  应用进程在跑、窗口在 CG 层也存在，但它的 Accessibility 子树没有内容 —— 这是仪器不可用」，
+  并据此让用户**重启 DSH Desktop**。重启后**同一条读数原样复现**，一整轮工作挂在
+  「等你重启」上。
+- **根因类**：P-04（写了但从没跑到）。真实原因是**窗口不在前台**，与 Accessibility
+  无关：同一个进程、同一份代码实测两态——窗口在后台时 CG 层报 `on_screen:false`、AX 树
+  **1 个节点**（只剩 `AXApplication`，连 `AXWindow` 都没有）；执行
+  `set frontmost`（按 bundle id `ai.deepseek.dsh.desktop`）之后**同一进程** AX 树变
+  **1323 个节点**，窗口、导航、几何读数全部齐全。Chromium 的 Accessibility 子树是**懒建**的，
+  且只对**屏上**的窗口建。而探针当时把「读不到」这句话**替读者归因**成了「子树没有内容」，
+  于是一个一行 `set frontmost` 就能自愈的状态，被报成了需要人工重启的设备故障。
+- **已落地机制**：`script:scripts/acceptance/settings-shell-live.mjs`（`ensureOnScreen()`：
+  先 `set frontmost` + 轮询到「树里有 AXWindow 且拿得到触发器或对话框」为止，自愈不成才
+  报错，且报的是**具体那一条**「窗口拉不到前台」而不是断言仪器坏了；
+  「仪器坏没坏」的家是 `harness-alive` 那条判据即 `macos-harness doctor` 的
+  `permissions.accessibility`）、`gate:dead-instrument`（「AX 树节点数当仪器死活证据」
+  已登记进登记簿）、`gate:settings-shell-criteria-selftest`（自检里断言探针**不得**
+  在离线路径碰实况仪器）。
+- **下一版默认动作**：写仪器自检时，**先自愈再判**，自愈不成时报「走到了哪一步 +
+  手上有什么读数」，**不要在错误信息里替读者断言原因**——一个自信而错误的归因比
+  「我不知道为什么」更贵，因为它会让人去做一件确定没用的事（这里是重启应用）。
+  同一形态的另一半：探针遇到「设置页**已经开着**」时不该报 `settings-trigger-missing`
+  （模态会盖掉自己的触发器），那是可判定状态，不是仪器故障。
+
+## P-27 · 一条路由给出两层视图源，页面按顺序静默选中错的那一层
+
+- **症状**：AI全栈技能页「没有被分组」——不报错、不留空、不显示加载中，只是 14 个 M 分组
+  一个都没画出来，页面上只有一个折叠块「H 组织与工具 · 70 项」。而**数据全对**：
+  `curl /api/dsh-overseas-skills/fullstack-list` 返回 HTTP 200、14 个分组、138 行、
+  每行 `installed=true`、组头像齐全，计数与文档逐项一致。2026-09-16 实测。
+- **根因类**：P-02（仪器假绿）在**界面**上的形态。同一份负载里有 `scenarios` 与 `groups`
+  两层视图源，客户端分派是 `visibleScen && visibleScen.length > 0` **优先于** `visible`，
+  所以任何非空的 `scenarios` 都会把分组整片顶掉。而那层 `scenarios` 是错的来源：
+  `handleFullstackList` 用**出海**的 8 大场景坐标去套**全栈**的行，两条线行集互不相交
+  （223 / 138，交集 0），能配出 1 个场景纯粹是生成器 `tax_map.get(名字)` **同名撞上**。
+  两个坐标系统 + 一次名字撞车 + 一个静默的优先级，三者缺一不可，所以它在建立时就存在、
+  活了一整轮参数改造（取 git HEAD 重算同样产出 1 个非空场景，**不是改造引入的回归**）。
+  这也是 P-16（格式层的不变量没有读者）的近亲：**「一个页面只许有一个视图源」这条不变量，
+  此前没有任何判据在读它**。
+- **已落地机制**：`spec:packages/capabilities/dsh-overseas-skills/test/host-routes.spec.mjs`
+  （「/fullstack-list：不返回 scenarios」——与通用线早就有的同一条用例对齐；
+  另有「14 个分组各有行、组头像互不相同、行集合与 manifest 一致」；两条都由
+  `gate:skill-lines` 跑，11 个文件 / 74 项）。
+  判据钉在**路由不得提供那一层**，而不是「页面画了几组」：后者要读界面，前者一条命令能说「不」。
+  两条用例的分工本身就是证据：突变自测（把路由改回旧写法）时，「14 组各有行」**仍然绿**，
+  只有 scenarios 那条红——**只查分组的判据永远抓不到这个缺陷**。
+- **下一版默认动作**：给一条技能线/一个设置页加路由时，**先问「这个页面的一级视图源是哪一个」**，
+  只让路由返回那一层；要提供第二层（退化视图、增强视图）就必须同时说清它的**优先级**，
+  并给「另一层非空时页面仍走对的那一支」留一条判据。发现「数据全对但界面不对」时，
+  先读**页面拿到的完整负载**（`curl` 那条路由），不要读数据源——数据源是对的，
+  这一整类缺陷的症状就是「读完数据源会得出『没问题』」。
+  读负载时还要**先打印它的形状再断言**：字段名是负载的一部分，不是约定。
+  同一次诊断里我把分组行的键名当成 `rows`（真名是 `items`），探针在 14 个组上
+  全打印「0 行」，与真实的 138 行正好相反——**探针错了会伪装成第二个缺陷**，
+  它指向一个不存在的问题，比漏报更费时间。先 `print(sorted(obj.keys()))` 再写结论。
+
+## P-28 · 校验的是来源名，写盘用的却是另一个最终名；批处理在循环里边验边改
+
+- **症状**：skill installer 的 `name` 全部合法，但 `installAs="../outside"` 仍能组成根外目标；
+  `--only pm` 计划里夹带全部 existing 技能（旧实现实测 133，而不是 pm 的 63）。同一循环还会先重写前项，
+  最后一项才报错，留下半批目录；preset remover 的 `--ids ..` 是同一根因。
+- **根因类**：校验对象与副作用对象不是同一个值，加上“边循环边校验、边循环边 mutation”。
+  名字合法不等于 `installAs` 合法；单项复制成功不等于整批可提交；文件数/总字节相等也不等于内容相同。
+  这是 P-03（知道没有变成拦住）与 P-16（不变量没有真实读者）的组合。
+- **已落地机制**：`gate:destructive-preset-skill-transactions`（`name/installAs/--ids` 最终名统一校验，
+  batch 尾项非法/重复时 workspace、lock 与 live mutation 均为零；symlink/hard-link/NFD/case collision、
+  同尺寸篡改、copy/fsync/journal/rename/close fault、并发 owner 与硬退出 recovery 全部有反例）、
+  `script:packages/capabilities/dsh-overseas-skills/scripts/install-fullstack-skills.mjs`（默认 dry-run；
+  existing 用完整目录 swap；第三方 apply 在 SEC-RT-002 approval ledger 完成前整批拒绝）。
+- **下一版默认动作**：任何批处理先把“最终会交给 open/copy/rename 的名字”列成一张 immutable plan，
+  全批校验完才能拿锁；循环只消费已证明的 plan，不再做产品发现。若 mutation 需要多个固定目录，
+  明说是 journaled crash consistency，不把“每次 rename 原子”写成“整批原子”。

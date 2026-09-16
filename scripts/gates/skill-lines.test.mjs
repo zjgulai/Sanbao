@@ -56,6 +56,7 @@ test('S1 环境前提不在：跳过并写明跳过了什么，不静默通过',
   assert.equal(environmentPresent('/nonexistent-home-for-selftest'), false, '前提探测必须能说不')
   const r = checkSkillLines({ repoRoot, home: '/nonexistent-home-for-selftest' })
   assert.equal(r.passed, true, '环境不在时不该判红（不假红）')
+  assert.equal(r.skipped, true, '环境不在必须显式进入 skip，不能与 pass 同形')
   assert.equal(r.violations.length, 0)
   assert.match(r.note, /没有/, 'note 必须说清「本机没有 → 本项无射程」，否则跳过与通过分不开')
   assert.match(r.note, /不假绿也不假红/)

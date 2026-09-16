@@ -183,6 +183,82 @@ export function collectRepoDefinedTokens(repoRoot) {
 }
 
 /**
+ * 局部自有的自定义属性：**声明**它的文件与**引用**它的文件**同属一个包**。
+ *
+ * 为什么需要这一条（2026-09-15 实测）：`dsh-settings-shell-local/src/client/shell.css` 在
+ * `:root` 里声明 `--dsh-settings-shell-brand: #3d8a33`，并在同一文件用 `var()` 引用它。
+ * 它是**组件自有**的局部变量，不是平台供给的 token；但它的前缀撞上了平台命名空间
+ * `--dsh-`，于是被判成「从未被任何地方定义」。
+ *
+ * 判据错在**只认一种定义形态**：上面 `collectRepoDefinedTokens` 认的是主题插件的 JS 映射键
+ * `"--dsw-x": v`（引号包裹），而 CSS 里的声明是裸的 `--dsw-x: v`。同一件事的两种写法
+ * 只认一种，另一种就成了假红——与本文件开头「假阳性会训练人忽略输出」是同一课。
+ *
+ * **射程刻意收在同包内**：跨包引用一个只在别的包内部声明的名字仍然判红——那种情况下
+ * 「谁该供给它」确实没有答案，正是本项要拦的形状。也不把局部声明并进全局 `defined`
+ * 集：那会让某个包用 `--dsh-scrollbar-thumb` 这种平台名字定义局部变量后，**别的包**
+ * 写错这个名字也被放行。
+ *
+ * @param repoRoot 仓库根
+ * @param referenced token → 引用文件清单（仓库相对路径）
+ * @param deps 可注入的文件访问（测试用具；缺省读真实文件系统）
+ * @param deps.listFiles 列出某目录下的候选源文件，返回仓库相对路径
+ * @param deps.readText 读一个仓库相对路径的文本；读不到返回 null
+ * @returns {Set<string>} 局部自有、无需平台供给的 token
+ */
+export function collectLocallyScopedTokens(repoRoot, referenced, deps = {}) {
+  const listFiles = deps.listFiles ?? defaultListSourceFiles(repoRoot)
+  const readText = deps.readText ?? ((rel) => {
+    try {
+      return readFileSync(join(repoRoot, rel), 'utf8')
+    } catch {
+      return null
+    }
+  })
+
+  const local = new Set()
+  /** 包目录（`packages/<组>/<包>`）→ 该包 src 下声明的 token。 */
+  const declaredByPackage = new Map()
+  for (const [token, files] of referenced) {
+    for (const rel of files) {
+      const parts = rel.split('/')
+      // 只处理 `packages/<组>/<包>/src/…` 这一形状。
+      if (parts[0] !== 'packages' || parts.length < 5) continue
+      const packageDir = `${parts[0]}/${parts[1]}/${parts[2]}`
+      let declared = declaredByPackage.get(packageDir)
+      if (declared === undefined) {
+        declared = new Set()
+        for (const file of listFiles(packageDir)) {
+          const text = readText(file)
+          if (text === null) continue
+          // 裸声明 `--dsw-x: value`：要求出现在行首或 `{` / `;` / 空白之后，
+          // 这样 `var(--dsw-x)` 里的名字不会被当成声明。
+          const declaration = new RegExp(`(?:^|[\\s;{])(${NAMESPACE}[a-z0-9]+(?:-[a-z0-9]+)*)\\s*:`, 'g')
+          // 必须先剥注释：注释里的一句「别再用 --dsw-x」不是声明，
+          // 否则任何被文档提到过的 token 都会被放行（与文件开头那两类假红同源）。
+          for (const match of stripComments(text).matchAll(declaration)) declared.add(match[1])
+        }
+        declaredByPackage.set(packageDir, declared)
+      }
+      if (declared.has(token)) {
+        local.add(token)
+        break
+      }
+    }
+  }
+  return local
+}
+
+/**
+ * 缺省的文件枚举：某包 `src/` 下的候选源文件（仓库相对路径）。
+ * @param repoRoot 仓库根
+ * @returns {(packageDir: string) => string[]} 枚举函数
+ */
+function defaultListSourceFiles(repoRoot) {
+  return (packageDir) => walk(join(repoRoot, packageDir, 'src')).map((abs) => abs.slice(repoRoot.length + 1))
+}
+
+/**
  * 门禁校验项：引用的 token 必须真的被定义（官方主题包，或本仓库的主题插件）。
  * @param root0 依赖
  * @param root0.repoRoot 仓库根
@@ -213,8 +289,12 @@ export function checkThemeTokens({ repoRoot, appDir, baseline }) {
   const allowed = new Set(baseline.map((row) => row.token))
   const violations = []
 
+  // 组件自有的局部自定义属性不算违规：它的声明与引用在同一个包里，
+  // 「必须由平台供给」这个前提对它不成立（见 collectLocallyScopedTokens 的说明）。
+  const locallyScoped = collectLocallyScopedTokens(repoRoot, referenced)
+
   for (const [token, files] of [...referenced].sort()) {
-    if (defined.has(token) || allowed.has(token)) continue
+    if (defined.has(token) || allowed.has(token) || locallyScoped.has(token)) continue
     violations.push(
       `${token} 从未被任何地方定义（引用于 ${files.join('、')}）`
       + '——`var()` 会静默走字面兜底，该元素不随主题变化；改用真实 token 或登记进基线',
