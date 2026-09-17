@@ -311,3 +311,6 @@ repo 垃圾（.DS_Store / check-fragment.py[tracked 删除入释放提交] / lib
 
 ### 顺序修正（对用户指令「先 T-11 后发布」的物理依赖修正）
 T-11 装的是 payload；若先切换后 commit，装机 manifest 记 SOURCE_DIRTY=1 且 commit 不指向装机字节——与「版本尽可能一致」矛盾且 DMG 出来后需重装。修正顺序：修复→gate→释放提交（含 pin lute-sha→62c600f8e）→重装配 r6（SOURCE_DIRTY=0）→sign-and-dmg→**T-11 用该 DMG 换装**（停机窗口内先重打 pristine userData 快照）→验收（gate:full 期待 90/90、patch-anchors 由红转绿）→tag→push→GH Release。装机字节 = tag 字节。
+
+### r6→r7 与 DMG 记录（20:30–20:40）
+r6 中止于机器路径守卫（overseas 两 manifest 经 rsync 进 live→随内嵌 profile 入出货树）→ 源头占位化（__SKILL_INTAKE_SOURCE__ / __DSH_HOME__，引号损伤两轮后按三败止损行级重建）、amend 进释放提交 605a159。r7 全绿：SMOKE PASSED、14 产物 2.6G、SOURCE_DIRTY=0、出口 pyc 全域 0（含 profile/skills tar 解包树）、manifest/shasum/入口全在位、Info.plist=2.0.10-lute.2.5.0。标题栏残面=2 处死 CSS 类选择器（JS 组件零命中、无节点可挂），登记美容残留下轮清。DMG 652MB 落 release/2.5.0（uchg 锁定+仓库外归档）。**待办：T-11（pristine userData 快照→DMG 换装→验收 gate:full 90/90→OCR 标题栏现场证据）→ tag v2.5.0 → push 双远端 → GH Release。**
