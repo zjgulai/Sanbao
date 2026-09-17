@@ -1,0 +1,173 @@
+# 门禁的独立 runner 执行（QG-007）。
+#
+# ## 为什么这里只有两个 job，而不是「portable + macOS host」两档
+#
+# 卡面写的是「根据实际 gate 依赖拆 portable contract job 和 macOS host job」。实测
+# 之后发现**不需要 host job**：门禁跑的 86 项检查里，唯一提到 `codesign` 的地方是
+# `scripts/gate.mjs` 里的一段注释（说明 DMG 手册 §5.1 的路径为什么读不到），而真正
+# 依赖 macOS 工具（`hdiutil` / `pkgutil` / `security`）的是**打包 SOP 的手工步骤**，
+# 不是门禁。门禁对主机的要求只有：`node`、`git`、POSIX 工具（`tar` / `cp` / `mv` /
+# `grep` / `ps` / `sleep`）。
+#
+# 环境相关的那几项（`~/.dsh` 下的 profile 与技能线、挂载的交付卷）在干净 runner 上
+# **没有射程**，按 ADR-0094 / ADR-0102 走类型化 skip，并逐条在摘要里点名——这是
+# 「跳过」而不是「通过」，也不是「失败」。判据见 `scripts/gates/ci-workflow.mjs`。
+#
+# ## 为什么 PR 跑 quick、main 跑 full
+#
+# `quick` 覆盖 78 项，`full` 覆盖 86 项（多出 `scripts-runnable`、`patch-anchors`、
+# `staging-freshness`、`worktable-fence`、`theme-tokens*`、`release-published`、
+# `gate-concurrency-selftest`）。PR 上跑两种会浪费，只跑 quick 又会让「没跑的那 8 项」
+# 变成盲区——所以 main 上必须跑 full，这就是卡面说的「full 或等价 required matrix」。
+name: gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一分支上新的推送取消旧运行：门禁是「当前提交是否合格」的问题，不是审计流水。
+concurrency:
+  group: gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 最小权限：门禁只需要读仓库。它不写 issue、不评论、不访问任何 secret。
+permissions:
+  contents: read
+
+env:
+  # 与 `package.json` 的 `engines.node`（`^22.19.0 || >=24.0.0`）取交集后选 LTS 首版：
+  # 取 22.19.0 而不是 `22`，避免 runner 镜像更新时静默换到别的次版本。
+  NODE_VERSION: '22.19.0'
+  # 与开发机一致（观测值 11.8.0）。换版本要同时改这里与文档，不能只改一处。
+  # 已核对 npm registry：11.8.0 真实存在（11.x 线当前最新 11.26.0，全库 latest 12.4.2）。
+  PNPM_VERSION: '11.8.0'
+  # 让 `changed-packages` 在 PR 上有确定基线可用；push 到 main 时退化成 upstream/main。
+  DSH_GATE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+
+jobs:
+  quick:
+    name: gate (quick)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # `changed-packages` 要能解析基线；浅克隆里 `origin/main` 可能不可达（ADR-0102
+          # 的失败边界：基线不可解析一律判红，绝不退化成空射程）。
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # 用官方 action 而不是 `corepack enable`：corepack 是否随镜像提供是**平台行为**
+      # （本机就没有 `corepack` 这个命令，实测），把版本钉住这件事不能依赖它。
+      # 版本号取自上面的 `env.PNPM_VERSION`，一处事实一个家。
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 确认 pnpm 版本与钉住值一致
+        run: |
+          actual="$(pnpm --version)"
+          echo "pnpm ${actual}（钉住值 ${PNPM_VERSION}）"
+          test "${actual}" = "${PNPM_VERSION}" || {
+            echo "::error title=pnpm 版本漂移::期望 ${PNPM_VERSION}，实际 ${actual}"
+            exit 1
+          }
+
+      - name: 安装依赖（有锁文件则锁文件安装）
+        run: |
+          # `--frozen-lockfile`：锁文件与 package.json 不一致时**判红**，而不是默默改锁文件。
+          # 这个仓库的 `pnpm-lock.yaml` 被白名单式 .gitignore 忽略（ADR-0102 已记录），
+          # 所以 CI 上可能没有锁文件——那时必须如实说出来，不能假装做了锁文件安装。
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "::notice title=无锁文件::pnpm-lock.yaml 不在版本控制内（白名单式 .gitignore），本次为无锁安装；依赖可复现性由 deps-reproducible 门禁单独判定"
+          fi
+
+      - name: 门禁 quick
+        run: |
+          # `pipefail` 不是装饰：`node … | tee out.json` 的退出码来自 `tee`（永远 0），
+          # 于是门禁判红而步骤判绿。2026-09-17 首跑就是这样"全绿"的——同一份日志里
+          # gate-quick.json 写着 `"status": "fail", "failed": 6`。本仓库把这类缺陷叫做
+          # 「仪器假绿」，判据 `ci-workflow-contract` 现在会拦住没有 pipefail 的管道。
+          set -o pipefail
+          node scripts/gate.mjs --mode quick --json | tee gate-quick.json
+
+      - name: 见证：门禁没有改动被见证的仓库
+        run: |
+          set -o pipefail
+          node scripts/gate.mjs --attest scripts/gate.mjs --mode quick --json | tee attestation-quick.json
+
+      - name: 失败也留证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-quick-${{ github.sha }}
+          path: |
+            gate-quick.json
+            attestation-quick.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  full:
+    name: gate (full)
+    # PR 上不跑：full 比 quick 贵得多，而 PR 的价值在快速反馈。main 上必须跑，
+    # 否则 full-only 的那 8 项在 CI 里等于不存在（P-04 的形态）。
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 确认 pnpm 版本与钉住值一致
+        run: |
+          actual="$(pnpm --version)"
+          echo "pnpm ${actual}（钉住值 ${PNPM_VERSION}）"
+          test "${actual}" = "${PNPM_VERSION}" || {
+            echo "::error title=pnpm 版本漂移::期望 ${PNPM_VERSION}，实际 ${actual}"
+            exit 1
+          }
+
+      - name: 安装依赖（有锁文件则锁文件安装）
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "::notice title=无锁文件::pnpm-lock.yaml 不在版本控制内（白名单式 .gitignore），本次为无锁安装"
+          fi
+
+      - name: 门禁 full
+        run: |
+          set -o pipefail
+          node scripts/gate.mjs --mode full --json | tee gate-full.json
+
+      - name: 见证：门禁没有改动被见证的仓库
+        run: |
+          set -o pipefail
+          node scripts/gate.mjs --attest scripts/gate.mjs --mode full --json | tee attestation-full.json
+
+      - name: 失败也留证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-full-${{ github.sha }}
+          path: |
+            gate-full.json
+            attestation-full.json
+          if-no-files-found: warn
+          retention-days: 14

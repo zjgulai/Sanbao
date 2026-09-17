@@ -39,6 +39,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripComments } from '../lib/strip-comments.mjs'
+import { appNodeModules } from '../lib/app-resources.mjs'
 
 /**
  * 平台 token 的命名空间。
@@ -136,7 +137,8 @@ export function collectReferencedTokens(repoRoot) {
  * @returns {Set<string>} 已定义 token
  */
 export function collectDefinedTokens(appDir) {
-  const official = join(appDir, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules', '@deepseek-ai')
+  const modules = appNodeModules(appDir)
+  const official = modules === null ? '' : join(modules, '@deepseek-ai')
   if (!existsSync(official)) return new Set()
   let output = ''
   try {
@@ -267,7 +269,8 @@ function defaultListSourceFiles(repoRoot) {
  * @returns {{passed: boolean, violations: string[], note?: string}}
  */
 export function checkThemeTokens({ repoRoot, appDir, baseline }) {
-  const official = join(appDir, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules', '@deepseek-ai')
+  const modules = appNodeModules(appDir)
+  const official = modules === null ? '' : join(modules, '@deepseek-ai')
   if (!existsSync(official)) {
     // 与 patch-anchors 同一语义：环境不存在时**跳过**（`skipped`），不假绿也不假红。
     // 只报 `passed: true` 是不够的：空射程会被读成「全部合规」，而本项实际一个 token

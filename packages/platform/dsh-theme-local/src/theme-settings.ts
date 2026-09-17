@@ -85,18 +85,20 @@ export interface ThemeStudioSettings {
 }
 
 export const DEFAULT_THEME_STUDIO_SETTINGS: ThemeStudioSettings = {
-  lightAccent: "#0169CC",
-  lightBackground: "#FFFFFF",
-  lightForeground: "#0D0D0D",
-  lightSurface: "#F7F7F7",
-  lightInlineCode: "#F0F0F0",
-  lightSidebar: "#FFFFFF",
-  darkAccent: "#5AA7F2",
-  darkBackground: "#111111",
-  darkForeground: "#F4F4F4",
-  darkSurface: "#1A1A1A",
-  darkInlineCode: "#282828",
-  darkSidebar: "#111111",
+  // The light accent is the accessible brand variant used by the settings
+  // shell; the dark accent keeps the brighter LUTE green on charcoal.
+  lightAccent: "#347A2F",
+  lightBackground: "#F6F7F4",
+  lightForeground: "#1E221F",
+  lightSurface: "#FFFFFF",
+  lightInlineCode: "#EEF1EC",
+  lightSidebar: "#F1F4EF",
+  darkAccent: "#58B848",
+  darkBackground: "#171A17",
+  darkForeground: "#F1F4F0",
+  darkSurface: "#202420",
+  darkInlineCode: "#292D29",
+  darkSidebar: "#191C1A",
   uiFont: "system",
   codeFont: "sf-mono",
   uiFontSize: 14,

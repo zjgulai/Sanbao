@@ -4,7 +4,12 @@
  *
  * 契约：violations 为人类可读的中文字符串数组，顺序与输入条目顺序一致；
  * 空数组表示通过。调用方依赖 `passed === (violations.length === 0)`。
+ *
+ * 例外是 `checkChangedPackages`：它按 QG-001 返回**规范三态 + 对象级账目**
+ * （`expected/checked/skipped/failed`），因为「一个包都没改」必须与「已核对且
+ * 合规」分成两种读数，而老式 `{passed}` 做不到这件事。
  */
+import { CHANGE_SOURCES } from './changed-packages.mjs'
 
 /** luteOrigin 的封闭取值集合（ADR-0012）。 */
 const LUTE_ORIGINS = ['self', 'internalized', 'npm-pinned']
@@ -344,27 +349,119 @@ export function checkCatalogFresh({ current, regenerated }) {
 /**
  * 校验本次改动的包已具备 typecheck 与 test 脚本（ADR-0014 的「变更包立即纳入硬门槛」）。
  * 豁免登记中的包不参与校验；未改动的存量包由 exemptions-frozen 负责按期限收敛。
- * @param {{changed: string[], packages: Array<{relPath: string, manifest: Record<string, unknown>}>, exempted: string[]}} input
- * @returns {{passed: boolean, violations: string[]}}
+ *
+ * 结果按 QG-001 的规范三态给出**对象级**账目：每个改动包是一个对象，每个命中的
+ * 根治理规则也是一个对象。旧实现返回 `{passed, violations}`，于是「一个包都没改」
+ * 会被规范化成 `checked=1` 的老式 pass —— 那是把「没看」记成「看过且没问题」。
+ *
+ * @param {{
+ *   changed: string[],
+ *   packages: Array<{relPath: string, manifest: Record<string, unknown>}>,
+ *   exempted: string[],
+ *   scope?: {
+ *     base: {sha: string, source: string, ref: string}|null,
+ *     sources: Record<string, string[]>,
+ *     directPackages?: string[],
+ *     rules: string[],
+ *     otherRootPaths: string[],
+ *     expandAllPackages: boolean,
+ *   }|null,
+ * }} input
+ * @returns {{
+ *   status: 'pass'|'fail'|'skip', expected: number, discovered: number, checked: number,
+ *   skipped: number, failed: number, typedSkips: Array<{type: string, count: number, reason: string}>,
+ *   reason: string, note?: string, violations: string[],
+ * }}
  */
-export function checkChangedPackages({ changed, packages, exempted }) {
+export function checkChangedPackages({ changed, packages, exempted, scope = null }) {
   const exempt = new Set(exempted)
   const byPath = new Map(packages.map((entry) => [entry.relPath, entry]))
   const violations = []
+  const typedSkips = []
+  let checked = 0
+  let failed = 0
+  let skipped = 0
 
   for (const relPath of changed) {
-    if (exempt.has(relPath)) continue
-    const entry = byPath.get(relPath)
-    if (!entry) continue
-    const scripts = entry.manifest.scripts ?? {}
-    if (!scripts.typecheck) {
-      violations.push(`${relPath}: 改动了本包但缺少 typecheck 脚本（ADR-0014：变更包立即纳入硬门槛）`)
+    if (exempt.has(relPath)) {
+      skipped += 1
+      typedSkips.push({
+        type: 'adr-0014-exemption',
+        count: 1,
+        reason: `${relPath} 已登记在 scripts/gates/exemptions.json（ADR-0014：豁免只减不增）`,
+        objects: [relPath],
+      })
+      continue
     }
-    if (!scripts.test) {
-      violations.push(`${relPath}: 改动了本包但缺少 test 脚本（ADR-0014：变更包立即纳入硬门槛）`)
+    const entry = byPath.get(relPath)
+    if (!entry) {
+      // 射程里出现了一个不在受管包清单里的路径：这是**分类错误**，不是「没问题」。
+      failed += 1
+      violations.push(`${relPath}: 改动射程命中了这个路径，但它不在受管包清单里——射程解析与包收集器已经分叉`)
+      continue
+    }
+    const scripts = entry.manifest.scripts ?? {}
+    const missing = []
+    if (!scripts.typecheck) missing.push('typecheck')
+    if (!scripts.test) missing.push('test')
+    if (missing.length > 0) {
+      failed += 1
+      for (const script of missing) {
+        violations.push(`${relPath}: 改动了本包但缺少 ${script} 脚本（ADR-0014：变更包立即纳入硬门槛）`)
+      }
+      continue
+    }
+    checked += 1
+  }
+
+  const rules = scope?.rules ?? []
+  checked += rules.length
+  const expected = changed.length + rules.length
+
+  const noteParts = []
+  if (scope?.base) {
+    const sourceCounts = CHANGE_SOURCES.map((name) => `${name}=${scope.sources?.[name]?.length ?? 0}`).join(' ')
+    noteParts.push(`基线 ${scope.base.ref}@${scope.base.sha.slice(0, 8)}（${scope.base.source}）；来源 ${sourceCounts}`)
+    if (scope.expandAllPackages) {
+      noteParts.push(
+        `根治理文件（${rules.join('/') || '未命名'}）命中「工作区依赖图」，射程扩到全部 ${changed.length} 个包；`
+        + `直接命中的包是 ${(scope.directPackages ?? []).length} 个`,
+      )
+    } else if (scope.directPackages) {
+      noteParts.push(`直接命中的包 ${scope.directPackages.length} 个`)
+    }
+    if (rules.length > 0) noteParts.push(`命中的治理规则：${rules.join('、')}`)
+    if ((scope.otherRootPaths ?? []).length > 0) {
+      noteParts.push(`未登记治理规则的根级改动 ${scope.otherRootPaths.length} 个（读数，不判红）`)
     }
   }
-  return { passed: violations.length === 0, violations }
+  const note = noteParts.length > 0 ? noteParts.join('；') : undefined
+
+  if (failed > 0) {
+    return {
+      status: 'fail', expected, discovered: expected, checked, skipped, failed, typedSkips,
+      reason: `${failed} 个改动包缺少硬门槛脚本`, violations, ...(note ? { note } : {}),
+    }
+  }
+  if (checked === 0) {
+    // 「没改动」与「已核对且合规」必须是两种读数。旧实现把前者记成老式 pass
+    // （checked=1），于是射程为空这件事在任何报告里都看不见（P-02）。
+    return {
+      status: 'skip', expected: Math.max(expected, 1), discovered: 0, checked: 0, skipped: Math.max(skipped, 1), failed: 0,
+      typedSkips: skipped > 0 ? typedSkips : [{
+        type: 'no-changes-in-range',
+        count: 1,
+        reason: '改动射程为空——本项**未检查任何包**（射程基线可由 note 追溯）',
+      }],
+      reason: '改动射程为空',
+      violations: [],
+      ...(note ? { note } : {}),
+    }
+  }
+  return {
+    status: 'pass', expected, discovered: expected, checked, skipped, failed: 0, typedSkips,
+    reason: `${checked} 个改动包与治理规则已核对`, violations: [], ...(note ? { note } : {}),
+  }
 }
 
 /** 命令未找到的退出码（脚本存在但执行体缺失时 shell 返回）。 */
