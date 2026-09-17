@@ -177,6 +177,33 @@ test('突变控制：pluginLoaded 恒真桩会让「未生效」那一档失去�
   })
 })
 
+test('突变控制：设置入口规则退回「只认 title」，自检必须判红并点名该规则', async () => {
+  // 2026-09-18 实测：入口的可访问名住在 `AXDescription`（`AXTitle=""`）。旧写法只认 title，
+  // 于是在设置页**没开着**时（最常见状态）判 hasTrigger=false，`ensureOnScreen()` 抛
+  // `window-off-screen`「窗口拉不到前台」——窗口明明在屏上、树里 882 个节点可读。
+  // 这一条把「名字字段又缩回一个」变成机制能拦住的回归，而不是靠人记得（P-08）。
+  await withProbe({
+    from: "const SETTINGS_TRIGGER_NAME_FIELDS = ['title', 'description']",
+    to: "const SETTINGS_TRIGGER_NAME_FIELDS = ['title']",
+  }, async (probe, fixture) => {
+    const { code, out } = runProbe(probe, fixture, ['--self-test'])
+    assert.notEqual(code, 0, `只认 title 竟然通过——入口在 description 上时又会被报成「窗口拉不到前台」：\n${out}`)
+    assert.match(out, /设置入口规则/, `判红但没点名设置入口规则：\n${out}`)
+    assert.match(out, /没有射程/, `判红的原因不对：\n${out}`)
+  })
+})
+
+test('突变控制：角色集合缩成一个，自检必须判红（另一侧同源断言也要响）', async () => {
+  await withProbe({
+    from: "const SETTINGS_TRIGGER_ROLES = ['AXPopUpButton', 'AXButton']",
+    to: "const SETTINGS_TRIGGER_ROLES = ['AXPopUpButton']",
+  }, async (probe, fixture) => {
+    const { code, out } = runProbe(probe, fixture, ['--self-test'])
+    assert.notEqual(code, 0, `角色缩成一个竟然通过——AXButton 形态的入口会被漏判：\n${out}`)
+    assert.match(out, /没有覆盖角色|设置入口规则/, `判红但没点名角色覆盖：\n${out}`)
+  })
+})
+
 test('已证伪的仪器不得被捡回探针里（dead-instrument 的射程不含 .mjs）', () => {
   // dead-instrument 门禁的射程是 `*.md` / `*.sh` / `*.bash`——`.mjs` 不在里面。
   // 而 2026-09-15 删掉的那条零射程判据正是住在一个 `.mjs` 里。这里补上那个洞：

@@ -42,6 +42,11 @@
  *   （仪器不可用），不是 exit 1**：分不清「页面没打开」与「AX 看不见导航」，
  *   就不该把任何一个读成判决。设置页**已经开着**时会直接复用那个对话框
  *   （模态会盖掉自己的触发器，只认触发器会得到假红）。
+ * - `settings-entry-unreadable`：树里有窗口却没有设置入口、也没有已开的设置页时给出
+ *   **它自己的**分类，而不是并进 `window-off-screen`。2026-09-18 实测：入口的
+ *   可访问名挂在 `AXDescription` 上（`AXTitle=""`），旧写法只认 title，于是把
+ *   「窗口在屏上、882 个节点可读」报成「窗口拉不到前台」，又一次把人骗去重启（P-04）。
+ *   入口规则见 `SETTINGS_TRIGGER_NAME_FIELDS` 的注释，自检里有 8 个夹具与 4 条同源断言钉它。
  * - `calibration-alive`：188px nav 与 28×28px close 三个读数必须一致；缺失、比例冲突、
  *   取错窗口、非正尺寸或与目标按钮样本重叠都 typed unavailable，不产出判决。
  *
@@ -185,6 +190,73 @@ const GROUP_TITLES = ['通用', '智能体', '技能与能力', '扩展', '界�
  */
 const REACHABLE_RATIO_MIN = 0.8
 
+/**
+ * 「AX 子树建全了吗」的下界（节点数）。
+ *
+ * 2026-09-18 实测：Chromium 的 AX 子树是**增量**建的，同一个进程、同一份代码，
+ * 模态关掉之后连续三次 dump 读到 **32 → 262 → 599** 个节点，几分钟后稳定在 599
+ * （含侧栏页脚的设置入口）。实测的合法树规模：设置页盖住主界面 152~288，主界面 599~1344。
+ *
+ * 所以它只用来分「该继续重试」与「该报缺入口」，**不是判据**：
+ * 32 个节点时报「找不到设置入口」是把「树还没建全」说成了「入口不存在」——
+ * 与 `window-off-screen` 同型的错报（P-04）。
+ */
+const AX_TREE_FLOOR = 120
+
+/** 树没建全时多试几次：每次自愈 + 2s 轮询，10 次 ≈ 20s（够实测的建树过程走完）。 */
+const ENSURE_ON_SCREEN_ATTEMPTS = 10
+
+/**
+ * 「设置入口」的可访问名规则 —— 本探针两处读数（SIGHT / AX 程序）与自检的**唯一家**。
+ *
+ * ## 为什么名字要在两个字段里找
+ *
+ * 2026-09-18 实测（本机运行实例，pid 35597）：设置页**没开着**时，那个入口节点是
+ * `AXPopUpButton`，**`AXTitle=""`、`AXDescription="设置"`** —— 可访问名挂在
+ * `AXDescription` 上（就是 `mac.ax.dump` 节点里那个 `description` 字段）。
+ * 只认 `AXTitle` 的写法在这个状态判 `hasTrigger=false`，于是 `ensureOnScreen()` 连试 6 次
+ * 后抛 **`window-off-screen`「窗口拉不到前台」** —— 而当时窗口明明在屏上、AX 树里 882 个
+ * 节点可读。这是 P-04 那一类：错误报告路径把真实原因盖住，**并且会再把人骗去重启一次**
+ * （本文件 `ensureOnScreen` 的注释里已经记过一次同型的浪费）。
+ *
+ * ## 为什么不写成「按名字找按钮」就完事
+ *
+ * `AXTitle` 与 `AXDescription` 都是 ARIA 语义面（name-from-contents 与 aria-label），
+ * 不是类名解析；ADR-0087 要求的正是「锚点取 ARIA 语义」。**两个字段都要认**，因为
+ * 上游把名字放哪一个是实现细节：只认一个就是把「上游此刻的实现」当成了契约。
+ *
+ * ## 单一家的边界（诚实写清楚）
+ *
+ * AX 读数由内嵌的 python 程序产出，JS 侧拿不到那些节点，所以规则在两个语言里各有一个
+ * **求值器**：`isSettingsTrigger()`（JS，供自检）与 `pyTriggerPredicate()`（生成 python 片段）。
+ * 两者都只消费下面这组常量——**改规则只能改常量**，改完两侧同时变；
+ * 自检里有一条断言专门钉这件事（生成物必须覆盖每个字段与每个角色）。
+ */
+const SETTINGS_TRIGGER_NAME = '设置'
+const SETTINGS_TRIGGER_ROLES = ['AXPopUpButton', 'AXButton']
+const SETTINGS_TRIGGER_NAME_FIELDS = ['title', 'description']
+
+/** JS 侧求值器：只用于自检，不参与实况读数（实况走 python）。 */
+function isSettingsTrigger(node) {
+  if (node === null || typeof node !== 'object') return false
+  if (!SETTINGS_TRIGGER_ROLES.includes(node.role)) return false
+  return SETTINGS_TRIGGER_NAME_FIELDS.some(
+    (field) => String(node[field] ?? '').trim() === SETTINGS_TRIGGER_NAME,
+  )
+}
+
+/** python 侧求值器：由同一组常量生成，插进 SIGHT / AX 两个程序模板。 */
+function pyTriggerPredicate() {
+  const nameChecks = SETTINGS_TRIGGER_NAME_FIELDS
+    .map(
+      (field) =>
+        `str(n.get(${JSON.stringify(field)}) or "").strip() == ${JSON.stringify(SETTINGS_TRIGGER_NAME)}`,
+    )
+    .join('\n        or ')
+  const roles = SETTINGS_TRIGGER_ROLES.map((role) => JSON.stringify(role)).join(', ')
+  return `((${nameChecks})\n     and n.get("role") in (${roles},))`
+}
+
 const failures = []
 const notes = []
 
@@ -269,9 +341,7 @@ try:
         after = nodes
         rep["closed"] = False      # 用户开着的东西不替用户关
     else:
-        trig = next((n for n in nodes
-                     if (n.get("title") or "").strip() == "设置"
-                     and n.get("role") in ("AXPopUpButton", "AXButton")), None)
+        trig = next((n for n in nodes if ${pyTriggerPredicate()}), None)
         if trig is None:
             rep["errors"].append("settings-trigger-missing")
             raise SystemExit
@@ -466,8 +536,7 @@ else:
     rep["axNodeCount"] = len(ns)
     rep["hasWindow"] = any(n.get("role") == "AXWindow" for n in ns)
     rep["hasDialog"] = any((n.get("subrole") or "") == "AXApplicationDialog" for n in ns)
-    rep["hasTrigger"] = any((str(n.get("title") or "").strip() == "设置")
-                            and n.get("role") in ("AXPopUpButton", "AXButton") for n in ns)
+    rep["hasTrigger"] = any(${pyTriggerPredicate()} for n in ns)
 print(SENTINEL + json.dumps(rep, ensure_ascii=False))
 `
 
@@ -488,7 +557,7 @@ print(SENTINEL + json.dumps(rep, ensure_ascii=False))
  */
 async function ensureOnScreen(harnessBin) {
   let last = null
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < ENSURE_ON_SCREEN_ATTEMPTS; i += 1) {
     try {
       await execFileAsync('osascript', [
         '-e',
@@ -525,6 +594,29 @@ async function ensureOnScreen(harnessBin) {
   }
   if (last?.errors?.includes('app-not-running')) {
     throw unavailable('app-not-running', `仪器自检失败 app-alive：没有运行中的 DSH Desktop（bundle id ${BUNDLE_ID}）`)
+  }
+  // 窗口能读到、但既没有设置入口、也没有已开的设置页 —— 这**不是**「窗口不在前台」。
+  // 2026-09-18 之前这里两条并成一条报 `window-off-screen`，于是「入口的可访问名换了家」
+  // 被读成「台面上没有那张窗口」，把人骗去重启应用（P-04）。分界就是 hasWindow：
+  // off-screen 实测整棵树只有 1 个节点、连 AXWindow 都没有。
+  if (last?.hasWindow === true && (last?.axNodeCount ?? 0) < AX_TREE_FLOOR) {
+    throw unavailable('ax-tree-incomplete',
+      `仪器自检失败 ax-tree-incomplete：窗口在屏上，但 AX 子树只有 ${last?.axNodeCount ?? '?'} 个节点` +
+        `（< ${AX_TREE_FLOOR}，实测建全后 599~1344 量级）。Chromium 的 AX 子树是**增量**建的，` +
+        `本探针已经自愈 + 轮询 ${ENSURE_ON_SCREEN_ATTEMPTS} 次仍未建全。` +
+        '这既不是「窗口不在前台」，也不是「设置入口不存在」——重跑一次通常就好；' +
+        '若稳定停在很小的节点数，再去看 Chromium 的 AX 是否被别的 AT 客户端占用。',
+    )
+  }
+  if (last?.hasWindow === true) {
+    throw unavailable('settings-entry-unreadable',
+      `仪器自检失败 settings-entry-unreadable：窗口在屏上、AX 树可读（${last?.axNodeCount ?? '?'} 个节点，` +
+        'hasWindow=true），但既找不到设置入口（`' + SETTINGS_TRIGGER_NAME + '`，' +
+        `${SETTINGS_TRIGGER_ROLES.join(' / ')} 且 ${SETTINGS_TRIGGER_NAME_FIELDS.join(' 或 ')} 命中），` +
+        '也没有已打开的设置页（AXApplicationDialog）。' +
+        '这**不是**窗口不在前台，也**不是**插件没生效：先人工确认设置入口此刻是否真的存在，' +
+        '以及它的可访问名/角色是否被上游改了 —— 若改了，按 ADR-0087 用 ARIA 语义重锚，别猜、别删断言。',
+    )
   }
   throw unavailable('window-off-screen',
     `仪器自检失败 window-off-screen：窗口拉不到前台，AX 树停在 ${last?.axNodeCount ?? '?'} 个节点` +
@@ -952,6 +1044,43 @@ function selfTest() {
       }
     }
   }
+
+  // —— 「设置入口」可访问名规则的反向自检（2026-09-18 加的，因为这条规则刚红过一次）——
+  // 旧写法只认 `AXTitle`，于是设置页**没开着**时（最常见的状态）判 hasTrigger=false，
+  // 探针把「窗口在屏上、树可读」报成「窗口拉不到前台」。每个夹具都是一个真实形态。
+  const triggerFixtures = [
+    { name: '名字在 title 上（旧形态）', node: { role: 'AXPopUpButton', title: '设置' }, want: true },
+    { name: '名字在 description 上（2026-09-18 实测形态）', node: { role: 'AXPopUpButton', description: '设置' }, want: true },
+    { name: 'AXButton + description', node: { role: 'AXButton', description: '设置' }, want: true },
+    { name: '两侧都没有名字', node: { role: 'AXPopUpButton' }, want: false },
+    { name: '角色不对（静态文本）', node: { role: 'AXStaticText', description: '设置' }, want: false },
+    { name: '只是前缀相同（设置与更新）', node: { role: 'AXPopUpButton', description: '设置与更新' }, want: false },
+    { name: '名字是别的项（外观）', node: { role: 'AXPopUpButton', description: '外观' }, want: false },
+    { name: '只有空白不算名字', node: { role: 'AXPopUpButton', description: '   ' }, want: false },
+  ]
+  for (const fixture of triggerFixtures) {
+    assertions += 1
+    const got = isSettingsTrigger(fixture.node)
+    if (got !== fixture.want) {
+      problems.push(`设置入口规则「${fixture.name}」期望 ${fixture.want}、实得 ${got} —— 规则没有射程`)
+    }
+  }
+  // 生成物必须与 JS 求值器同源：漏认一个名字字段，等于把「上游此刻把名字放哪个字段」
+  // 当成了契约。这条同时钉住「改规则只能改常量」。
+  const predicate = pyTriggerPredicate()
+  for (const field of SETTINGS_TRIGGER_NAME_FIELDS) {
+    assertions += 1
+    if (!predicate.includes(`.get("${field}")`)) {
+      problems.push(`实况程序没有覆盖名字字段 ${field} —— 该字段上的名字会被漏判（两侧规则不同源）`)
+    }
+  }
+  for (const role of SETTINGS_TRIGGER_ROLES) {
+    assertions += 1
+    if (!predicate.includes(`"${role}"`)) {
+      problems.push(`实况程序没有覆盖角色 ${role} —— 该角色上的入口会被漏判（两侧规则不同源）`)
+    }
+  }
+
   assertions += 6
   if (unavailableExitCode(false) !== 2) problems.push('普通模式下 typed unavailable 必须是 exit 2')
   if (unavailableExitCode(true) !== 1) problems.push('--require-no-skip 必须把 typed unavailable 升为 exit 1')
@@ -967,7 +1096,7 @@ function selfTest() {
     return 1
   }
   console.log(`✓ 判据射程自检：${cases.length} 个状态、${assertions} 条断言，全部按预期红/绿/typed skip。`)
-  console.log('  （覆盖：独立校准 / target size / plugin loaded / L1 / L2 / 锚缺失与冲突 / 错窗 / permission / timeout）')
+  console.log('  （覆盖：独立校准 / target size / plugin loaded / L1 / L2 / 锚缺失与冲突 / 错窗 / permission / timeout / 设置入口可访问名）')
   return 0
 }
 
