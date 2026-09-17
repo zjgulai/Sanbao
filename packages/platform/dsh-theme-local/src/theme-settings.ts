@@ -26,6 +26,15 @@ const LEGACY_THEME_COLOR_FIELDS = [
   "darkSidebar",
 ] as const;
 
+export const THEME_CONTRAST_FIELDS = [
+  "lightContrast",
+  "darkContrast",
+] as const;
+
+export const CONTRAST_MIN = 0;
+export const CONTRAST_MAX = 100;
+export const CONTRAST_DEFAULT = 50;
+
 export const UI_FONT_IDS = [
   "system",
   "inter",
@@ -54,10 +63,12 @@ export const THEME_TYPOGRAPHY_FIELDS = [
 
 export const THEME_STUDIO_FIELDS = [
   ...THEME_COLOR_FIELDS,
+  ...THEME_CONTRAST_FIELDS,
   ...THEME_TYPOGRAPHY_FIELDS,
 ] as const;
 
 export type ThemeColorField = (typeof THEME_COLOR_FIELDS)[number];
+export type ThemeContrastField = (typeof THEME_CONTRAST_FIELDS)[number];
 export type ThemeTypographyField = (typeof THEME_TYPOGRAPHY_FIELDS)[number];
 export type ThemeStudioField = (typeof THEME_STUDIO_FIELDS)[number];
 export type UiFontId = (typeof UI_FONT_IDS)[number];
@@ -78,6 +89,10 @@ export interface ThemeStudioSettings {
   darkSurface: string;
   darkInlineCode: string;
   darkSidebar: string;
+  // Neutral-blend strength (0-100) per scheme; CONTRAST_DEFAULT keeps the
+  // derived tokens byte-identical to themes saved before the field existed.
+  lightContrast: number;
+  darkContrast: number;
   uiFont: UiFontId;
   codeFont: CodeFontId;
   uiFontSize: UiFontSize;
@@ -99,6 +114,8 @@ export const DEFAULT_THEME_STUDIO_SETTINGS: ThemeStudioSettings = {
   darkSurface: "#202420",
   darkInlineCode: "#292D29",
   darkSidebar: "#191C1A",
+  lightContrast: CONTRAST_DEFAULT,
+  darkContrast: CONTRAST_DEFAULT,
   uiFont: "system",
   codeFont: "sf-mono",
   uiFontSize: 14,
@@ -116,6 +133,18 @@ const LEGACY_EDITORIAL_SIGNATURE = {
 
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR.test(value);
+}
+
+// Contrast is a preference, not identity: a malformed value falls back to
+// the default for that field alone (the typography pattern) instead of
+// rejecting the whole record (the hard color pattern).
+function isContrast(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= CONTRAST_MIN &&
+    value <= CONTRAST_MAX
+  );
 }
 
 function isOneOf<const Value>(
@@ -197,6 +226,12 @@ export function decodeThemeStudioSettings(
 
   return {
     ...colors,
+    lightContrast: isContrast(record.lightContrast)
+      ? record.lightContrast
+      : CONTRAST_DEFAULT,
+    darkContrast: isContrast(record.darkContrast)
+      ? record.darkContrast
+      : CONTRAST_DEFAULT,
     uiFont: isOneOf(record.uiFont, UI_FONT_IDS)
       ? record.uiFont
       : DEFAULT_THEME_STUDIO_SETTINGS.uiFont,

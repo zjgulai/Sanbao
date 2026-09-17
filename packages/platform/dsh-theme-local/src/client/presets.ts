@@ -1,7 +1,8 @@
-import type {
-  ThemeColorField,
-  ThemeStudioSettings,
-  ThemeTypographyField,
+import {
+  CONTRAST_DEFAULT,
+  type ThemeColorField,
+  type ThemeStudioSettings,
+  type ThemeTypographyField,
 } from "../theme-settings.js";
 
 export const THEME_PRESET_IDS = [
@@ -391,14 +392,26 @@ export function getThemePreset(id: ThemePresetId): ThemePreset {
 
 export function themePresetSettings(id: ThemePresetId): ThemeStudioSettings {
   const preset = getThemePreset(id);
-  return { ...preset.palette, ...preset.typography };
+  // Presets ship the baseline contrast only; bending the slider (or any
+  // color/typography value) makes the theme custom via themePresetIdOf.
+  return {
+    lightContrast: CONTRAST_DEFAULT,
+    darkContrast: CONTRAST_DEFAULT,
+    ...preset.palette,
+    ...preset.typography,
+  };
 }
 
 export function themePresetIdOf(
   settings: ThemeStudioSettings,
 ): ThemePresetId | undefined {
   return THEME_PRESETS.find((preset) => {
-    const expected = { ...preset.palette, ...preset.typography };
+    const expected = {
+      lightContrast: CONTRAST_DEFAULT,
+      darkContrast: CONTRAST_DEFAULT,
+      ...preset.palette,
+      ...preset.typography,
+    };
     return Object.entries(expected).every(([field, value]) => {
       const actual = settings[field as keyof ThemeStudioSettings];
       return typeof value === "string" && value.startsWith("#")

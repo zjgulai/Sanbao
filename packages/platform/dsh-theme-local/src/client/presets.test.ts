@@ -53,6 +53,18 @@ describe("theme presets", () => {
     ).toBeUndefined();
   });
 
+  it("treats contrast edits as customization instead of mislabeling a preset", () => {
+    expect(
+      themePresetIdOf({
+        ...themePresetSettings("proof"),
+        darkContrast: 80,
+      }),
+    ).toBeUndefined();
+    expect(
+      themePresetIdOf(themePresetSettings("proof")),
+    ).toBe("proof");
+  });
+
   it("treats typography edits as customization instead of mislabeling a preset", () => {
     expect(
       themePresetIdOf({
