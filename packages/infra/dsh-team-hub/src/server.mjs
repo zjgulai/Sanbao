@@ -12,7 +12,7 @@ import { createAdminApi } from "./admin-api.mjs";
 import { createOwnership, guardMemberRequest, filterMemberResponse, learnWorkspace, learnSession } from "./policy.mjs";
 import { upstreamRpc } from "./upstream.mjs";
 import { findDshRoot, applySettingsPatch, settingsPatchStatus } from "./patch.mjs";
-import { withBridge, resetBridge } from "./browser-auth.mjs";
+import { withBridge, resetBridge, bridgeCookieFor } from "./browser-auth.mjs";
 import { transformSettingsHostMode, CACHE_BUST_PARAM } from "./settings-transform.mjs";
 import { filterMemberStreamItem, classifyMemberStreamOpen } from "./ws-filter.mjs";
 import { injectSpaShim } from "./spa-shim.mjs";
@@ -216,7 +216,7 @@ async function proxyRequest(config, req, res, { bodyOverride, injectShim = false
       redirect: "manual"
     });
   }
-  const outHeaders = {};
+  const outHeaders = /** @type {import("node:http").OutgoingHttpHeaders} */ ({});
   response.headers.forEach((value, key) => { if (!HOP_BY_HOP.has(key)) outHeaders[key] = value; });
   if (response.headers.has("location")) {
     const loc = response.headers.get("location") || "/";
@@ -266,7 +266,7 @@ function rpcError(res, id, code, message, status = 200) {
 }
 
 async function handleRpc(context, user, req, res) {
-  const parsed = await readBoundedJson(req, PASSTHROUGH_BODY);
+  const parsed = /** @type {Record<string, any>} */ (await readBoundedJson(req, PASSTHROUGH_BODY));
   const { id = null, method, args, payload } = parsed;
   const rpcPayload = payload ?? args ?? {};
 
@@ -285,7 +285,7 @@ async function handleRpc(context, user, req, res) {
     headers: withBridge({ "content-type": "application/json", host: upstream.host }, context.config),
     body: JSON.stringify(parsed)
   });
-  const data = await upstreamRes.json();
+  const data = /** @type {Record<string, any>} */ (await upstreamRes.json());
   const filtered = user.role === "member"
     ? filterMemberResponse({ ownership: context.ownership, user, method, value: data.result ?? data.value ?? data })
     : (data.result ?? data.value ?? data);
@@ -320,7 +320,7 @@ async function handleAdminApi(context, req, res, pathname, query) {
   }
   const statusMatch = pathname.match(/^\/users\/([^/]+)\/status$/);
   if (req.method === "POST" && statusMatch) {
-    const body = await readBoundedJson(req, ADMIN_BODY);
+    const body = /** @type {Record<string, any>} */ (await readBoundedJson(req, ADMIN_BODY));
     return send(res, 200, api.setUserStatus(decodeURIComponent(statusMatch[1]), body.status));
   }
   const resetMatch = pathname.match(/^\/users\/([^/]+)\/reset-password$/);
@@ -329,7 +329,7 @@ async function handleAdminApi(context, req, res, pathname, query) {
   }
   const nameMatch = pathname.match(/^\/users\/([^/]+)\/display-name$/);
   if (req.method === "POST" && nameMatch) {
-    const body = await readBoundedJson(req, ADMIN_BODY);
+    const body = /** @type {Record<string, any>} */ (await readBoundedJson(req, ADMIN_BODY));
     return send(res, 200, api.setDisplayName(decodeURIComponent(nameMatch[1]), body.displayName));
   }
   if (req.method === "GET" && pathname === "/workspaces") return send(res, 200, api.workspaces());
@@ -617,8 +617,11 @@ export async function startServer() {
       upstreamUrl.protocol = upstreamUrl.protocol === "https:" ? "wss:" : "ws:";
       upstreamUrl.pathname = url.pathname;
       const wsHeaders = { host: upstreamUrl.host };
-      const cookie = mintBrowserSessionCookie(undefined, upstreamUrl.host);
-      if (cookie) wsHeaders.cookie = `${cookie.name}=${cookie.value}`;
+      // bridgeCookieFor handles the no-credentials case (undefined header).
+      // The previous mintBrowserSessionCookie(undefined, …) call was both
+      // unimported (ReferenceError) and would throw on an undefined HMAC key.
+      const bridgeHeader = bridgeCookieFor(context.config);
+      if (bridgeHeader) wsHeaders.cookie = bridgeHeader;
       const upstream = new WebSocket(upstreamUrl.toString(), {
         headers: wsHeaders,
         rejectUnauthorized: false

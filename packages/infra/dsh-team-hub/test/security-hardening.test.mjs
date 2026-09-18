@@ -49,24 +49,24 @@ test("2. SEC-RT-009 受信代理与 HTTPS 判定：伪造头被忽略，真实�
   };
 
   // 不受信任的来源 IP 发送伪造 X-Forwarded-Proto / X-Forwarded-For
-  const untrustedReq = {
+  const untrustedReq = /** @type {import("node:http").IncomingMessage} */ (/** @type {unknown} */ ({
     socket: { remoteAddress: "192.168.1.100" },
     headers: {
       "x-forwarded-proto": "https",
       "x-forwarded-for": "1.2.3.4"
     }
-  };
+  }));
   assert.equal(isHttpsRequest(untrustedReq, config), false, "不受信任的 IP 伪造 x-forwarded-proto 必须无效");
   assert.equal(getClientIp(untrustedReq, config), "192.168.1.100", "不受信任的 IP 伪造 x-forwarded-for 必须无效");
 
   // 受信代理来源 IP 发送转发头
-  const trustedReq = {
+  const trustedReq = /** @type {import("node:http").IncomingMessage} */ (/** @type {unknown} */ ({
     socket: { remoteAddress: "10.0.0.1" },
     headers: {
       "x-forwarded-proto": "https",
       "x-forwarded-for": "1.2.3.4, 10.0.0.1"
     }
-  };
+  }));
   assert.equal(isHttpsRequest(trustedReq, config), true, "受信代理转发的 https 必须被识别");
   assert.equal(getClientIp(trustedReq, config), "1.2.3.4", "受信代理转发的原始 IP 必须生效");
 });
@@ -85,30 +85,30 @@ test("3. SEC-RT-009 Cookie 属性：HTTPS 环境必须包含 Secure; HttpOnly; S
 
 test("4. SEC-RT-009 CSRF 与跨 Origin 状态修改防御", () => {
   // 同源请求
-  const sameReq = {
+  const sameReq = /** @type {import("node:http").IncomingMessage} */ (/** @type {unknown} */ ({
     headers: {
       host: "teamhub.local:3090",
       origin: "http://teamhub.local:3090"
     }
-  };
+  }));
   assert.equal(verifySameOrigin(sameReq), true);
 
   // 跨源攻击
-  const evilReq = {
+  const evilReq = /** @type {import("node:http").IncomingMessage} */ (/** @type {unknown} */ ({
     headers: {
       host: "teamhub.local:3090",
       origin: "http://attacker.evil.com"
     }
-  };
+  }));
   assert.equal(verifySameOrigin(evilReq), false);
 
   // 跨源 Referer 伪造
-  const evilRefererReq = {
+  const evilRefererReq = /** @type {import("node:http").IncomingMessage} */ (/** @type {unknown} */ ({
     headers: {
       host: "teamhub.local:3090",
       referer: "http://attacker.evil.com/phishing"
     }
-  };
+  }));
   assert.equal(verifySameOrigin(evilRefererReq), false);
 });
 
@@ -137,8 +137,10 @@ test("5. SEC-RT-009 登录限速与指数退避（暴力破解拦截 429）", as
   });
 
   const server = http.createServer(handler);
-  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
-  const port = server.address().port;
+  await new Promise((resolve) => { server.listen(0, "127.0.0.1", () => resolve(undefined)); });
+  const address = server.address();
+  assert.ok(typeof address === "object" && address !== null);
+  const port = address.port;
 
   async function postLogin(user, pwd, origin = `http://127.0.0.1:${port}`) {
     const postData = `username=${encodeURIComponent(user)}&password=${encodeURIComponent(pwd)}`;

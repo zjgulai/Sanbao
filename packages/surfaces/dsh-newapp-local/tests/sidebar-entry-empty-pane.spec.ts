@@ -37,6 +37,20 @@ function stubRect(el: HTMLElement, width: number, height: number): void {
   }) as DOMRect
 }
 
+/**
+ * The shared core defers placement by one requestAnimationFrame (the livelock
+ * fix: observer storms coalesce into one tryPlace per frame), so a bare
+ * setTimeout(0) races the frame. Poll until the predicate holds; jsdom runs
+ * rAF off a ~16ms timer, so a one-second budget is ample.
+ */
+async function waitFor(predicate: () => boolean, budgetMs = 1000): Promise<void> {
+  const deadline = Date.now() + budgetMs
+  while (!predicate()) {
+    if (Date.now() > deadline) throw new Error('waitFor: predicate never held')
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
 describe('empty sidebar pane', () => {
   it('does not throw, and still places the row once the pane fills', async () => {
     const pane = document.createElement('div')
@@ -58,7 +72,7 @@ describe('empty sidebar pane', () => {
     stubRect(official, 240, 38)
     root.append(official)
     pane.append(root)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitFor(() => document.querySelector(ENTRY_SELECTOR) !== null)
 
     const entry = document.querySelector(ENTRY_SELECTOR)
     expect(entry).not.toBeNull()

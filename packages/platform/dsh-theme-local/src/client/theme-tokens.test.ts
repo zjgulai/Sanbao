@@ -286,12 +286,11 @@ describe("contrast scaling", () => {
         darkContrast: contrast,
       });
       for (const mode of ["light", "dark"] as const) {
-        const alphas = levels.map((level) =>
-          alphaOf(
-            tokens[`--dsw-alias-border-l${level}`][mode],
-            `${mode} l${level} at contrast ${contrast}`,
-          ),
-        );
+        const alphas = levels.map((level) => {
+          const border = tokens[`--dsw-alias-border-l${level}`];
+          if (border === undefined) throw new Error(`missing --dsw-alias-border-l${level}`);
+          return alphaOf(border[mode], `${mode} l${level} at contrast ${contrast}`);
+        });
         // Levels ascend, and the strongest one still stops at 0.25 — the old
         // opaque oklch blend reached an equivalent ~0.42 at contrast 100, which
         // is where a separator starts reading as structure. See the appearance

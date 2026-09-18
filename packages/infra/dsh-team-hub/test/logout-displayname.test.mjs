@@ -14,7 +14,7 @@ test("logout revokes only the current session token", () => {
   const b = issueSession(home, "lilei");
   assert.equal(revokeSession(home, a.token), true);
   assert.equal(resolveSession(home, a.token), null);
-  assert.equal(resolveSession(home, b.token).username, "lilei");
+  assert.equal(resolveSession(home, b.token)?.username, "lilei");
 });
 
 test("displayName is editable and exposed in public view", () => {

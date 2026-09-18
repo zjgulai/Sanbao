@@ -49,7 +49,7 @@ export function resetSessionStores(home) {
  */
 export function loadSessions(home) {
   const store = getSessionStore(home);
-  const out = {};
+  const out = /** @type {Record<string, { username: string, createdAt: string, expiresAt: string }>} */ ({});
   for (const [token, entry] of store._sessions.entries()) {
     out[token] = { ...entry };
   }
@@ -151,7 +151,7 @@ export function revokeSessionsForUser(home, username) {
  * @returns {Record<string, string>}
  */
 export function parseCookies(req) {
-  const out = {};
+  const out = /** @type {Record<string, string>} */ ({});
   for (const part of String(req.headers.cookie || "").split(";")) {
     const i = part.indexOf("=");
     if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());

@@ -62,8 +62,8 @@ test("sessions expire and can be revoked per user", () => {
   const home = tempHome();
   const first = issueSession(home, "alice", 1000);
   const second = issueSession(home, "bob", 1000);
-  assert.equal(resolveSession(home, first.token).username, "alice");
+  assert.equal(resolveSession(home, first.token)?.username, "alice");
   assert.equal(revokeSessionsForUser(home, "alice"), 1);
   assert.equal(resolveSession(home, first.token), null);
-  assert.equal(resolveSession(home, second.token).username, "bob");
+  assert.equal(resolveSession(home, second.token)?.username, "bob");
 });

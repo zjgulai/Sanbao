@@ -31,15 +31,16 @@ test("1. 内存查找与 0 磁盘 I/O 验证（100,000 次 lookup 统计 fs 调�
   // 监控 fs.readFileSync 与 fs.readFile
   let readCount = 0;
   const originalReadFileSync = fs.readFileSync;
-  fs.readFileSync = function (...args) {
+  fs.readFileSync = /** @type {typeof fs.readFileSync} */ (function (...args) {
     readCount++;
-    return originalReadFileSync.apply(this, args);
-  };
+    return originalReadFileSync.apply(this, /** @type {Parameters<typeof fs.readFileSync>} */ (args));
+  });
 
   try {
     const start = performance.now();
     for (let i = 0; i < 100000; i++) {
       const s = store.resolve(userSession.token);
+      assert.ok(s !== null);
       assert.equal(s.username, "alice");
     }
     const duration = performance.now() - start;
@@ -84,7 +85,7 @@ test("2. 并发 issue / revoke / revokeUser 状态与文件一致性", async () 
   assert.equal(storeRestarted.size, store.size);
   assert.equal(storeRestarted.resolve(issued[0].token), null); // user_a revoked
   assert.equal(storeRestarted.resolve(issued[1].token), null); // user_b revoked
-  assert.equal(storeRestarted.resolve(issued[5].token).username, "user_b"); // user_b retained
+  assert.equal(storeRestarted.resolve(issued[5].token)?.username, "user_b"); // user_b retained
 });
 
 test("3. 过期会话启动时与运行中自动清理", async () => {
@@ -112,7 +113,7 @@ test("3. 过期会话启动时与运行中自动清理", async () => {
   const storeNew = new SessionStore(home, { autoStartCleanup: false });
   // 过期项应在初始化时被剔除
   assert.equal(storeNew.resolve(tokenExpired), null);
-  assert.equal(storeNew.resolve(tokenValid).username, "bob");
+  assert.equal(storeNew.resolve(tokenValid)?.username, "bob");
   assert.equal(storeNew.size, 1);
 
   // 测试 resolve 时过期触发

@@ -13,7 +13,7 @@ export function defaultHome(env = process.env) {
  * 默认运行配置。
  * 遵循 SEC-RT-009：默认仅绑定 127.0.0.1 (loopback-only)。
  * @param {string} [home] 网关数据目录
- * @returns {{ listenHost: string, listenPort: number, upstream: string, mode: "single" | "lan", trustedProxies: string[], tls: { enabled: boolean, cert?: string, key?: string }, dshRoot: string | null, workspaceRoot: string, sharedRoot: string, users: any[] }} 配置对象
+ * @returns {{ listenHost: string, listenPort: number, upstream: string, mode: "single" | "lan", trustedProxies: string[], tls: { enabled: boolean, cert?: string | null, key?: string | null }, dshRoot: string | null, workspaceRoot: string, sharedRoot: string, users: any[] }} 配置对象
  */
 export function defaultConfig(home = defaultHome()) {
   return {
