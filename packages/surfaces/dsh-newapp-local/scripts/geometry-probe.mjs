@@ -1,14 +1,15 @@
 /**
- * Real-layout geometry probe for the split sidebar entry.
+ * Real-layout geometry probe for the stacked sidebar entry.
  *
  * ## Why this file exists
  *
  * The package's vitest suite runs in jsdom, which **performs no layout**: every
- * `getBoundingClientRect()` returns zeros, so those tests have to *supply* the
- * official button's box and can only check the core's arithmetic. The claim
- * that actually matters to the user — 「新会话」 and 「新应用」 end up on one line,
- * same height, with nothing below them moving — is a claim about the browser's
- * layout engine, and only a browser can settle it.
+ * `getBoundingClientRect()` returns zeros, so those tests can only check which
+ * marker attribute the core writes in which shell state. The claims that
+ * actually matter to the user — 「新建会话」and「新应用」read as two rows of one
+ * nav column, both sitting on the nav row axis, the launch band taking exactly
+ * two row advances, and unmounting restoring the shell — are claims about the
+ * browser's layout engine, and only a browser can settle them.
  *
  * So this probe drives **real Google Chrome** over the DevTools protocol and
  * measures real boxes. Two things keep it honest:
@@ -22,7 +23,7 @@
  *
  * It is deliberately NOT part of `pnpm test`: it needs a real browser and the
  * installed app, so it runs on demand as the acceptance artifact for the
- * sidebar-geometry contract.
+ * sidebar-row contract.
  *
  * Usage: `node scripts/geometry-probe.mjs`
  * @module dsh-newapp-local/scripts/geometry-probe
@@ -35,10 +36,22 @@ import { fileURLToPath } from 'node:url'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const APP_DIR = '/Applications/DSH Desktop.app'
-const SIDEBAR_BUNDLE = join(
-  APP_DIR, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules',
-  '@deepseek-ai', 'dsh-client-ui-sidebar', 'lib', 'client.js',
-)
+/**
+ * Where the shipped sidebar stylesheet may live.
+ *
+ * Two layouts are in the wild and both must be tried: the app used to ship the
+ * package **unpacked** beside `app.asar` (`Contents/Resources/app.asar.unpacked/
+ * node_modules/…`), the 2.0 build ships it under `Contents/Resources/app/
+ * node_modules/…`. Hard-coding one path made this probe un-runnable the moment
+ * the app was upgraded — it exited 2 with "找不到官方侧边栏 bundle", which is the
+ * honest failure, but a probe that cannot run is not an instrument.
+ */
+const SIDEBAR_BUNDLE_CANDIDATES = [
+  join(APP_DIR, 'Contents', 'Resources', 'app', 'node_modules', '@deepseek-ai',
+    'dsh-client-ui-sidebar', 'lib', 'client.js'),
+  join(APP_DIR, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules',
+    '@deepseek-ai', 'dsh-client-ui-sidebar', 'lib', 'client.js'),
+]
 
 /** Fail with a reason instead of reporting a green result on a missing precondition. */
 function require_(condition, message) {
@@ -48,7 +61,9 @@ function require_(condition, message) {
   }
 }
 
-require_(existsSync(SIDEBAR_BUNDLE), `找不到官方侧边栏 bundle：${SIDEBAR_BUNDLE}（DSH Desktop 未安装？）`)
+const SIDEBAR_BUNDLE = SIDEBAR_BUNDLE_CANDIDATES.find((candidate) => existsSync(candidate))
+require_(SIDEBAR_BUNDLE !== undefined,
+  `找不到官方侧边栏 bundle，已试：${SIDEBAR_BUNDLE_CANDIDATES.join('、')}（DSH Desktop 未安装，或包布局又变了）`)
 
 /** Pull the shell's own CSS-module text and class map out of the shipped bundle. */
 function readShellStyles() {
@@ -56,12 +71,31 @@ function readShellStyles() {
   // The bundle embeds the compiled CSS module as `{ "hash_local": "hash_local", … }`
   // next to the stylesheet string. The stylesheet is the long string containing
   // the `_root{` rule; find it rather than guessing an offset.
-  const match = /"(\.x-[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
+  // Class-hash prefixes ship in both `x-xxxx` and bare `xxxx` shapes (2.0
+  // rebuild dropped the `x-`); take either rather than pinning one.
+  const match = /"(\.(?:x-)?[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
   require_(match !== null, '在官方 bundle 里定位不到侧边栏样式表（提取方式已失效）')
   const css = match[1].replace(/\\"/g, '"')
-  const prefixMatch = /(x-[A-Za-z0-9_-]+)_root\s*\{/.exec(css)
+  const prefixMatch = /((?:x-)?[A-Za-z0-9_-]+)_root\s*\{/.exec(css)
   require_(prefixMatch !== null, '解析不出类名前缀（样式表形状已变，提取方式需更新）')
   const prefix = prefixMatch[1]
+  // The row form leans on the shell's token layer for its type; a fixture that
+  // leaves `--dsw-font-xs-13` undefined would silently measure the browser's
+  // default font instead of the row's own and report a passing "looks fine".
+  // The token's home is the **theme** bundle (Law 1: only names the official
+  // theme bundle declares are safe); the 2.0 sidebar bundle no longer carries
+  // the font layer at all, so checking `source` here would be checking the
+  // wrong file.
+  const themeCandidates = [
+    join(APP_DIR, 'Contents', 'Resources', 'app', 'node_modules', '@deepseek-ai',
+      'dsh-client-ui-theme', 'lib', 'client.js'),
+    join(APP_DIR, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules',
+      '@deepseek-ai', 'dsh-client-ui-theme', 'lib', 'client.js'),
+  ].find((candidate) => existsSync(candidate))
+  require_(themeCandidates !== undefined, '找不到官方主题 bundle（DSH Desktop 未安装，或包布局又变了）')
+  const themeSource = readFileSync(themeCandidates, 'utf8')
+  require_(themeSource.includes('--dsw-font-xs-13'),
+    '官方主题 bundle 里没有 --dsw-font-xs-13 —— 行高/字号这套 token 已改名，夹具会量到错字号')
   return { css, prefix }
 }
 
@@ -95,13 +129,21 @@ const entryCss = readFileSync(join(PACKAGE_ROOT, 'src', 'client', 'newapp.module
 /**
  * The fixture reproduces the shell's sidebar skeleton from the real bundle's
  * class names: column > root > [logoRow, newSession, regionArea].
+ *
+ * The official button carries an icon like the real shell does (`IconNewChat
+ * Outline16`, rendered at 14px when expanded) — the row rule widens it to the
+ * sibling rows' 24px icon box, and that only becomes measurable if the icon is
+ * actually there.
  * @returns {string} the fixture HTML
  */
 function fixture() {
   return `<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <style>
   html,body{margin:0;height:100%}
-  body{display:flex;height:100vh;--dsw-alias-label-primary:#111;--dsw-alias-label-secondary:#666;
+  body{display:flex;height:100vh;--dsw-font-family:system-ui;--dsw-font-xs-13:13px/20px system-ui;
+       --lute-brand:#58b848;--lute-brand-deep:#3e9b33;--lute-brand-tint:rgba(88,184,72,.08);
+       --lute-brand-line:rgba(88,184,72,.45);--lute-brand-line-strong:rgba(88,184,72,.7);
+       --dsw-alias-label-primary:#111;--dsw-alias-label-secondary:#666;
        --dsw-alias-border-l3:rgba(0,0,0,.14);--dsw-alias-button-elevated-fill:rgba(0,0,0,.03);
        --dsw-alias-button-floating-hover:rgba(0,0,0,.06);--dsw-alias-interactive-bg-hover:rgba(0,0,0,.05);
        --dsw-alias-state-business-primary:#3e9b33;--dsw-alias-bg-layer-1:#fff;--dsw-alias-bg-layer-2:#f4f4f4;
@@ -111,6 +153,12 @@ function fixture() {
   ${shellCss}
   /* ── this package's entry styles ── */
   ${entryCss}
+  /* Motion is not under test here — and transition:background 180ms on the
+     row rules would make the *computed* background at measurement time a
+     mid-flight interpolation of the pre-mount fill, i.e. a race against 180ms.
+     Freeze it so the probe measures the settled style, not a stopwatch.
+     (No backticks in this comment: it lives inside a template literal.) */
+  *,*::before,*::after{transition:none !important;animation:none !important}
   #column{width:280px;display:flex;flex-direction:column}
 </style></head>
 <body>
@@ -118,7 +166,8 @@ function fixture() {
     <div class="${P}_root">
       <div class="${P}_logoRow"></div>
       <button type="button" class="${P}_newSession">
-        <span class="${P}_newSessionLabel">新会话</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M8 3v10M3 8h10"/></svg>
+        <span class="${P}_newSessionLabel">新建会话</span>
       </button>
       <div class="${P}_regionArea"><div style="height:400px">工作区</div></div>
       <div class="${P}_footArea"></div>
@@ -144,11 +193,15 @@ async function loadPlaywright() {
   require_(false, `playwright 存在于 ${candidates.join('、')} 但都导入失败`)
 }
 
-/** Measure one element's box in the page. */
+/** Measure one element's box and the style facts the row contract names. */
 const BOX = `(sel) => { const el = document.querySelector(sel); if (!el) return null;
   const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
   return { x:r.x, y:r.y, width:r.width, height:r.height, right:r.right, bottom:r.bottom,
-           radius:cs.borderRadius, fontSize:cs.fontSize, marginBottom:cs.marginBottom } }`
+           radius:cs.borderRadius, fontSize:cs.fontSize, fontWeight:cs.fontWeight,
+           marginTop:parseFloat(cs.marginTop)||0, marginBottom:parseFloat(cs.marginBottom)||0,
+           marginLeft:parseFloat(cs.marginLeft)||0, paddingLeft:parseFloat(cs.paddingLeft)||0,
+           borderStyle:cs.borderTopStyle, borderWidth:parseFloat(cs.borderTopWidth)||0,
+           background:cs.backgroundColor, justifyContent:cs.justifyContent } }`
 
 const results = []
 /** Record one assertion. */
@@ -159,17 +212,28 @@ function check(name, ok, detail) {
 const pw = await loadPlaywright()
 const browser = await pw.chromium.launch({ channel: 'chrome', headless: true })
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } })
-await page.setContent(fixture(), { waitUntil: 'load' })
+require_(await page.setContent(fixture(), { waitUntil: 'load' }).then(() => true).catch(() => false),
+  '夹具未能载入 Chrome')
 
 const OFFICIAL = `button[class*="newSession"]`
 const ENTRY = `[data-dsh-newapp-entry]`
+const OFFICIAL_LABEL = `[class*="newSessionLabel"]`
+const ENTRY_LABEL = `[class*="entryLabel"]`
 
-// ── Baseline: the shell before we touch it ────────────────────────────────────
+// ── Baseline: the shell's own launch button, before we touch it ───────────────
 const before = await page.evaluate(({ box, official }) => {
   const root = document.querySelector('[class*="_root"]')
   const region = document.querySelector('[class*="_regionArea"]')
-  return { rootH: root.getBoundingClientRect().height, regionTop: region.getBoundingClientRect().top,
-           official: eval(box)(official) }
+  const rs = getComputedStyle(root)
+  const rootRect = root.getBoundingClientRect()
+  return {
+    rootH: rootRect.height,
+    rootContentLeft: rootRect.left + parseFloat(rs.paddingLeft),
+    rootContentW: rootRect.width - parseFloat(rs.paddingLeft) - parseFloat(rs.paddingRight),
+    regionTop: region.getBoundingClientRect().top,
+    regionH: region.getBoundingClientRect().height,
+    official: eval(box)(official),
+  }
 }, { box: BOX, official: OFFICIAL })
 
 // ── Mount through the real core ───────────────────────────────────────────────
@@ -182,7 +246,7 @@ const mounted = await page.evaluate(({ official, entry }) => {
     css: { entry: 'entry', entryIcon: 'entryIcon', entryLabel: 'entryLabel' },
     label: () => '新应用',
     onToggle: () => {},
-    position: 'split',
+    position: 'stacked',
     familySelectors: ['[data-dsh-newapp-entry]'],
   })
   window.__dispose = dispose
@@ -191,65 +255,119 @@ const mounted = await page.evaluate(({ official, entry }) => {
 
 check('入口已挂载', mounted, mounted ? '' : '核心未插入入口行')
 
-const after = await page.evaluate(({ box, official, entry }) => {
+const after = await page.evaluate(({ box, official, entry, officialLabel, entryLabel }) => {
   const root = document.querySelector('[class*="_root"]')
   const region = document.querySelector('[class*="_regionArea"]')
   const entryEl = document.querySelector(entry)
-  const rootCs = getComputedStyle(root)
+  const officialEl = document.querySelector(official)
+  const rs = getComputedStyle(root)
+  const rootRect = root.getBoundingClientRect()
   return {
-    rootH: root.getBoundingClientRect().height,
-    rootContentW: root.getBoundingClientRect().width
-      - parseFloat(rootCs.paddingLeft) - parseFloat(rootCs.paddingRight),
+    rootH: rootRect.height,
+    rootContentLeft: rootRect.left + parseFloat(rs.paddingLeft),
+    rootContentW: rootRect.width - parseFloat(rs.paddingLeft) - parseFloat(rs.paddingRight),
     regionTop: region.getBoundingClientRect().top,
+    regionH: region.getBoundingClientRect().height,
     official: eval(box)(official),
     entry: eval(box)(entry),
-    prevIsOfficial: entryEl.previousElementSibling === document.querySelector(official),
+    officialIcon: eval(box)(`${official} svg`),
+    prevIsOfficial: entryEl.previousElementSibling === officialEl,
+    marker: officialEl.hasAttribute('data-lute-navrow'),
     split: entryEl.dataset.split,
     plugin: entryEl.getAttribute('data-dsh-plugin'),
     text: entryEl.textContent,
+    officialLabelX: document.querySelector(officialLabel).getBoundingClientRect().x,
+    entryLabelX: document.querySelector(entryLabel).getBoundingClientRect().x,
   }
-}, { box: BOX, official: OFFICIAL, entry: ENTRY })
+}, { box: BOX, official: OFFICIAL, entry: ENTRY, officialLabel: OFFICIAL_LABEL, entryLabel: ENTRY_LABEL })
 
 // ── The contract the user actually asked for ──────────────────────────────────
-const sameRow = Math.abs(after.official.y - after.entry.y) < 0.6
-check('两键在同一行（top 相同）', sameRow,
-  `官方 top=${after.official.y} 自建 top=${after.entry.y}（差 ${(after.entry.y - after.official.y).toFixed(2)}px）`)
+// D2 (locked 2026-09-19): 「新建会话」and「新应用」are two plain nav rows of one
+// column, not two capsules sharing a band.
 
-const sameHeight = Math.abs(after.official.height - after.entry.height) < 0.6
-check('两键等高（38px）', sameHeight && Math.abs(after.entry.height - 38) < 0.6,
-  `官方 ${after.official.height}px 自建 ${after.entry.height}px`)
+check('入口是官方按钮的紧邻下一兄弟（同一列，中间无别人）', after.prevIsOfficial,
+  after.prevIsOfficial ? '' : '中间夹了别的节点')
 
-const halfEach = Math.abs(after.official.width - after.entry.width) < 0.6
-check('两键等宽（各占一半）', halfEach,
-  `官方 ${after.official.width.toFixed(2)}px 自建 ${after.entry.width.toFixed(2)}px`)
+check('官方按钮被标记为 nav 行（data-lute-navrow 是行样式表的唯一锚）', after.marker,
+  after.marker ? '' : '核心没写标记，行样式表一条也不会生效')
 
-// Column geometry: each button carries 2px side margins, and 2 + W + 2 | 2 + W + 2
-// must fill the root's content box exactly. Measured against the root's real
-// content box, not against a re-derivation of W (which is how the first draft of
-// this assertion managed to compare a width against two widths and fail).
-const gap = after.entry.x - after.official.right
-check('两键之间恰好是各自 2px 外边距（4px）', Math.abs(gap - 4) < 0.6, `实测间距 ${gap.toFixed(2)}px`)
-const span = (after.entry.right + 2) - (after.official.x - 2)
-check('半宽公式 W = 50% - 4px 成立（两键连同外边距正好填满 root 内容宽）',
-  Math.abs(span - after.rootContentW) < 1,
-  `2+W+2+2+W+2 = ${span.toFixed(2)}px vs root 内容宽 ${after.rootContentW.toFixed(2)}px`)
+const stacked = after.entry.y >= after.official.bottom - 0.6 && after.entry.y > after.official.y + 1
+check('两行上下堆叠（官方在上，自建在下）', stacked,
+  `官方 top=${after.official.y.toFixed(1)} bottom=${after.official.bottom.toFixed(1)}，自建 top=${after.entry.y.toFixed(1)}`)
 
-const noShift = Math.abs(after.regionTop - before.regionTop) < 0.6
-check('下方工作区零位移', noShift,
-  `regionArea top ${before.regionTop} → ${after.regionTop}`)
+// The two rows are adjacent: the 4px between the boxes is the rows' own 2px+2px
+// vertical margins (the native nav row rhythm), not leftover button chrome.
+const rowGap = after.entry.y - after.official.bottom
+check('两行相邻间距 = 两行各自 2px 上下边距（原生行节奏）', Math.abs(rowGap - 4) < 0.6,
+  `实测 ${rowGap.toFixed(2)}px（期望 4px）`)
 
-const sameRootH = Math.abs(after.rootH - before.rootH) < 0.6
-check('容器总高不变', sameRootH, `root 高 ${before.rootH} → ${after.rootH}`)
+check('两行等高 36px（与岗位矩阵 / 技能中心同一行高）',
+  Math.abs(after.official.height - 36) < 0.6 && Math.abs(after.entry.height - 36) < 0.6,
+  `官方 ${after.official.height.toFixed(1)}px 自建 ${after.entry.height.toFixed(1)}px`)
 
-check('入口是官方按钮的紧邻下一兄弟', after.prevIsOfficial, after.prevIsOfficial ? '' : '中间夹了别的节点')
+// The nav row axis (ADR-0079, gate sidebar-row-axis): every row in the nav column
+// spans the root's content box — margin-inline 0, width 100%, border-box.
+check('两行同宽 = root 内容宽（行轴：margin-inline 0 + width 100%）',
+  Math.abs(after.official.width - after.rootContentW) < 0.6
+  && Math.abs(after.entry.width - after.rootContentW) < 0.6,
+  `官方 ${after.official.width.toFixed(2)}px 自建 ${after.entry.width.toFixed(2)}px vs root 内容宽 ${after.rootContentW.toFixed(2)}px`)
 
-// ── Visual parity: the pair must look like one control, not two ───────────────
-check('圆角与官方一致（12px）', after.entry.radius === after.official.radius,
-  `官方 ${after.official.radius} vs 自建 ${after.entry.radius}`)
-check('字号与官方一致', after.entry.fontSize === after.official.fontSize,
-  `官方 ${after.official.fontSize} vs 自建 ${after.entry.fontSize}`)
+check('两行左缘对齐 root 内容左缘',
+  Math.abs(after.official.x - after.rootContentLeft) < 0.6
+  && Math.abs(after.entry.x - after.rootContentLeft) < 0.6,
+  `官方 x=${after.official.x.toFixed(2)} 自建 x=${after.entry.x.toFixed(2)} vs ${after.rootContentLeft.toFixed(2)}`)
 
-// ── Collapsed rail: must stack, and must not clip the icon ────────────────────
+// De-button-ification (D2): the launch row must stop looking like a filled control.
+check('官方按钮已去外壳：无边框 / 透明底 / 8px 圆角',
+  after.official.borderStyle === 'none' && after.official.background === 'rgba(0, 0, 0, 0)'
+  && after.official.radius === '8px',
+  `border=${after.official.borderStyle} bg=${after.official.background} radius=${after.official.radius}`)
+
+check('官方按钮改为左对齐文本行（justify-content: flex-start）',
+  after.official.justifyContent === 'flex-start', `justify-content=${after.official.justifyContent}`)
+
+check('自建行同样是去壳文本行',
+  after.entry.borderStyle === 'none' && after.entry.background === 'rgba(0, 0, 0, 0)'
+  && after.entry.radius === '8px',
+  `border=${after.entry.borderStyle} bg=${after.entry.background} radius=${after.entry.radius}`)
+
+check('两行字号一致（同一 token：13px）',
+  after.official.fontSize === '13px' && after.entry.fontSize === '13px',
+  `官方 ${after.official.fontSize} 自建 ${after.entry.fontSize}`)
+
+check('官方图标被规范到 24px 图标盒（否则标签与自建行错位）',
+  Math.abs(after.officialIcon.width - 24) < 0.6 && Math.abs(after.officialIcon.height - 24) < 0.6,
+  `图标 ${after.officialIcon.width.toFixed(1)}×${after.officialIcon.height.toFixed(1)}`)
+
+const labelDelta = Math.abs((after.officialLabelX - after.official.x) - (after.entryLabelX - after.entry.x))
+check('两行标签同一 x（padding 10 + 图标盒 24 + gap 8）', labelDelta < 0.6,
+  `官方标签偏 ${(after.officialLabelX - after.official.x).toFixed(2)}px，自建 ${(after.entryLabelX - after.entry.x).toFixed(2)}px`)
+
+// ── The band's vertical cost, derived rather than hard-coded ──────────────────
+// Before mounting, the shell's own button advances the column by height 38 +
+// margin-bottom 8. After mounting, the band advances by two nav rows (h 36 +
+// marg 2+2 each). The region below must therefore move down by exactly the
+// difference — the number is computed from the two measurements, so a change in
+// the shell's own metrics shows up here instead of being absorbed.
+const advance = (b) => b.height + b.marginTop + b.marginBottom
+const bandAfter = advance(after.official) + advance(after.entry)
+const bandBefore = advance(before.official)
+const shift = after.regionTop - before.regionTop
+check('启动带 = 两行各自的行进量（36+2+2 各一）', Math.abs(bandAfter - 80) < 0.6,
+  `${advance(after.official).toFixed(1)} + ${advance(after.entry).toFixed(1)} = ${bandAfter.toFixed(1)}px`)
+check('下方工作区正好下移「启动带 − 原按钮行进量」',
+  Math.abs(shift - (bandAfter - bandBefore)) < 0.6,
+  `下移 ${shift.toFixed(2)}px（期望 ${(bandAfter - bandBefore).toFixed(2)}px = ${bandAfter.toFixed(1)} − ${bandBefore.toFixed(1)}）`)
+// The 2.0 shell pins the sidebar root to `height: 100%`, so the band can no
+// longer grow the column — the shift is absorbed by the flexible region
+// (`regionArea { flex: 1; min-height: 0 }` shrinks by exactly the shift).
+// Asserting root growth here would be asserting against a stylesheet premise
+// that no longer exists.
+check('工作区正好吸收下移量（root 固定高，flex:1 的 region 等高收缩）',
+  Math.abs((before.regionH - after.regionH) - shift) < 0.6,
+  `region 高 ${before.regionH.toFixed(1)} → ${after.regionH.toFixed(1)}（吸收 ${(before.regionH - after.regionH).toFixed(2)}px，应 ${shift.toFixed(2)}px）`)
+
+// ── Collapsed rail: the row form must yield to the shell's icon rail ──────────
 const collapsed = await page.evaluate(({ box, official, entry, rootCls, collapsedCls }) => {
   const root = document.querySelector('.' + rootCls)
   if (root === null) throw new Error('找不到侧边栏 root：' + rootCls)
@@ -262,42 +380,57 @@ const collapsed = await page.evaluate(({ box, official, entry, rootCls, collapse
   // Two frames: one for the ResizeObserver callback, one for the resulting layout.
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => {
     const entryEl = document.querySelector(entry)
+    const officialEl = document.querySelector(official)
     const icon = entryEl.querySelector('[class*="entryIcon"]')
     resolve({
       official: eval(box)(official), entry: eval(box)(entry),
       icon: icon === null ? null : eval(box)('[data-dsh-newapp-entry] [class*="entryIcon"]'),
       split: entryEl.dataset.split,
+      marker: officialEl.hasAttribute('data-lute-navrow'),
       labelVisible: getComputedStyle(entryEl.querySelector('[class*="entryLabel"]')).display !== 'none',
     })
   })))
 }, { box: BOX, official: OFFICIAL, entry: ENTRY, rootCls: `${P}_root`, collapsedCls: `${P}_collapsed` })
 
 check('收起态转 data-split="collapsed"', collapsed.split === 'collapsed', `dataset.split=${collapsed.split}`)
-check('收起态堆叠而非硬分（自建键在官方键下方）', collapsed.entry.y > collapsed.official.y + 1,
-  `官方 top=${collapsed.official.y} 自建 top=${collapsed.entry.y}`)
-check('收起态自建键为 36×36（沿用官方 rail 度量）',
+check('收起态撤掉官方按钮的 nav 行标记（行样式表整体让位）', !collapsed.marker,
+  collapsed.marker ? '标记还在，官方 rail 图标键会被行样式表改坏' : '')
+check('收起态官方按钮回到自己的 rail 形态（36×36，边框由官方样式表管）',
+  Math.abs(collapsed.official.width - 36) < 0.6 && Math.abs(collapsed.official.height - 36) < 0.6,
+  `${collapsed.official.width.toFixed(1)}×${collapsed.official.height.toFixed(1)}`)
+check('收起态自建行 36×36（沿用官方 rail 度量）',
   Math.abs(collapsed.entry.width - 36) < 0.6 && Math.abs(collapsed.entry.height - 36) < 0.6,
-  `${collapsed.entry.width}×${collapsed.entry.height}`)
+  `${collapsed.entry.width.toFixed(1)}×${collapsed.entry.height.toFixed(1)}`)
+check('收起态自建行在官方按钮下方（rail 里两个图标上下排列）',
+  collapsed.entry.y > collapsed.official.y + 1,
+  `官方 top=${collapsed.official.y.toFixed(1)} 自建 top=${collapsed.entry.y.toFixed(1)}`)
 const iconFits = collapsed.icon === null ? false
   : collapsed.icon.width <= collapsed.entry.width + 0.6 && collapsed.icon.height <= collapsed.entry.height + 0.6
-check('收起态图标不被切（这是不硬分的理由）', iconFits,
-  collapsed.icon === null ? '找不到图标' : `图标 ${collapsed.icon.width}×${collapsed.icon.height} ⊂ 键 ${collapsed.entry.width}×${collapsed.entry.height}`)
+check('收起态图标不被切', iconFits,
+  collapsed.icon === null ? '找不到图标' : `图标 ${collapsed.icon.width.toFixed(1)}×${collapsed.icon.height.toFixed(1)} ⊂ 行 ${collapsed.entry.width.toFixed(1)}×${collapsed.entry.height.toFixed(1)}`)
 check('收起态隐藏文案（36px 放不下「新应用」）', !collapsed.labelVisible, '')
 
 // ── Unmount restores the shell exactly ────────────────────────────────────────
 const restored = await page.evaluate(({ box, official, rootCls, collapsedCls }) => {
   // Return the shell to its expanded layout first: measuring the disposer while
-  // the shell is still collapsed would report the collapsed width as a failure
-  // of unmounting.
+  // the shell is still collapsed would report the collapsed box as a failure of
+  // unmounting.
   document.getElementById('column').style.width = '280px'
   document.querySelector('.' + rootCls).classList.remove(collapsedCls)
   window.__dispose()
-  return { official: eval(box)(official), entry: document.querySelector('[data-dsh-newapp-entry]') }
+  const officialEl = document.querySelector(official)
+  return { official: eval(box)(official), marker: officialEl.hasAttribute('data-lute-navrow'),
+           entry: document.querySelector('[data-dsh-newapp-entry]') }
 }, { box: BOX, official: OFFICIAL, rootCls: `${P}_root`, collapsedCls: `${P}_collapsed` })
-check('卸载后官方按钮宽度还原', Math.abs(restored.official.width - before.official.width) < 0.6,
-  `${before.official.width} → ${restored.official.width}`)
-check('卸载后入口行已移除', restored.entry === null, '')
 
+check('卸载后官方按钮的 nav 行标记已删除', !restored.marker, '')
+check('卸载后官方按钮尺寸/边框/底色/圆角全部还原',
+  Math.abs(restored.official.height - before.official.height) < 0.6
+  && Math.abs(restored.official.borderWidth - before.official.borderWidth) < 0.01
+  && restored.official.background === before.official.background
+  && restored.official.radius === before.official.radius,
+  `高 ${before.official.height} → ${restored.official.height}，边框 ${before.official.borderWidth} → ${restored.official.borderWidth}，底 ${before.official.background} → ${restored.official.background}，圆角 ${before.official.radius} → ${restored.official.radius}`)
+check('卸载后入口行已移除', restored.entry === null, '')
 
 /* ── The product matrix: the grid's real column count (M3) ────────────────────
  *

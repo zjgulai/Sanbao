@@ -23,7 +23,7 @@
  * them. This file makes no claim about pixels; it produces the page that the
  * screenshot is a picture of.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { act } from 'react-dom/test-utils'
@@ -41,9 +41,17 @@ export const PREVIEW_DIR = join(tmpdir(), 'dsh-newapp-design')
 
 /** The installed shell's theme stylesheet, read verbatim (never re-typed). */
 function shellThemeCss(): string {
-  const bundle =
+  // The app used to ship packages unpacked beside app.asar; the 2.0 build ships
+  // them under Contents/Resources/app/node_modules. Try both, fail loudly.
+  const bundle = [
+    '/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/' +
+      '@deepseek-ai/dsh-client-ui-theme/lib/client.js',
     '/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked/node_modules/' +
-    '@deepseek-ai/dsh-client-ui-theme/lib/client.js'
+      '@deepseek-ai/dsh-client-ui-theme/lib/client.js',
+  ].find((candidate) => existsSync(candidate))
+  if (bundle === undefined) {
+    throw new Error('找不到官方主题 bundle（DSH Desktop 未安装，或包布局又变了），无法继续取证')
+  }
   const source = readFileSync(bundle, 'utf8')
   const marker = 'design_platform_css_default = "'
   const at = source.indexOf(marker)

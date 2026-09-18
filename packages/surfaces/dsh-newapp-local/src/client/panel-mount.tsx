@@ -1,17 +1,17 @@
 /**
- * New App drawer mounting (browser half).
+ * New App full-screen dashboard mounting (browser half).
  *
- * The drawer is rendered with its own React root appended to document.body (the
- * sidebar shell exposes no slot an external plugin can register into). Opening
- * mounts the tree; closing unmounts and removes the container. The injected
- * sidebar row toggles it through the returned controller.
+ * Mounts the Applications dashboard into the main content area (center column)
+ * while preserving the native sidebar intact and visible. Supports global
+ * view-router switching (dsh:view-change) so that switching views or clicking
+ * a chat session smoothly shows/hides the dashboard.
  */
 import { createRoot, type Root } from 'react-dom/client'
 import type { NewAppApi } from './api.ts'
 import type { AppLauncher } from './launcher.ts'
 import { NewAppPanel } from './NewAppPanel.tsx'
 
-/** Mounted drawer controller: toggle/open/close plus the disposer. */
+/** Mounted dashboard controller: toggle/open/close plus the disposer. */
 export interface NewAppMount {
   toggle: () => void
   open: () => void
@@ -22,7 +22,22 @@ export interface NewAppMount {
 }
 
 /**
- * Mount the New App overlay drawer.
+ * Find the center content column of the DSH shell, or fallback to body.
+ */
+function findCenterHost(): HTMLElement {
+  if (typeof document === 'undefined') return {} as HTMLElement
+  const centerCol = document.querySelector<HTMLElement>('[class*="centerCol"]')
+  if (centerCol !== null) {
+    if (window.getComputedStyle(centerCol).position === 'static') {
+      centerCol.style.position = 'relative'
+    }
+    return centerCol
+  }
+  return document.body
+}
+
+/**
+ * Mount the New App full-screen dashboard workspace.
  * @param api - the read-only source reader.
  * @param launcher - the two actions a card can take.
  * @returns controller (toggle/open/close/subscribe) and the disposer.
@@ -45,21 +60,55 @@ export function mountPanel(api: NewAppApi, launcher: AppLauncher): NewAppMount {
 
   const open = (): void => {
     if (root !== undefined) return
+    const host = findCenterHost()
     container = document.createElement('div')
-    // Root class + L2 semantic attributes: this overlay is its own CSS surface,
-    // so the plugin root class has to travel with the mount node.
     container.className = 'dsh-newapp-root'
     container.dataset.dshPlugin = 'newapp-local'
     container.dataset.dshPart = 'panel'
-    document.body.appendChild(container)
+    host.appendChild(container)
     root = createRoot(container)
-    root.render(<NewAppPanel api={api} launcher={launcher} onClose={close} />)
+    root.render(
+      <NewAppPanel
+        api={api}
+        launcher={launcher}
+        onClose={() => {
+          close()
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
+          }
+        }}
+      />
+    )
     notify()
   }
 
   const toggle = (): void => {
-    if (root !== undefined) close()
-    else open()
+    if (root !== undefined) {
+      close()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'applications' } }))
+      }
+      open()
+    }
+  }
+
+  // Subscribe to the global view change event
+  let cleanupViewListener: (() => void) | undefined
+  if (typeof window !== 'undefined') {
+    const handleGlobalView = (e: Event): void => {
+      const customEvent = e as CustomEvent<{ view?: string }>
+      if (customEvent.detail?.view === 'applications') {
+        open()
+      } else if (customEvent.detail?.view !== undefined && root !== undefined) {
+        close()
+      }
+    }
+    window.addEventListener('dsh:view-change', handleGlobalView)
+    cleanupViewListener = () => window.removeEventListener('dsh:view-change', handleGlobalView)
   }
 
   return {
@@ -72,6 +121,7 @@ export function mountPanel(api: NewAppApi, launcher: AppLauncher): NewAppMount {
       return () => { listeners.delete(listener) }
     },
     dispose: () => {
+      cleanupViewListener?.()
       close()
       listeners.clear()
     },

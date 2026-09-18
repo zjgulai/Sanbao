@@ -320,6 +320,15 @@ export function NewAppPanel({ api, launcher, onClose }: NewAppPanelProps): JSX.E
       <div className={css['panel'] ?? ''}>
         <div className={css['header'] ?? ''}>
           <div className={css['titleRow'] ?? ''}>
+            <button
+              type="button"
+              className={css['backButton'] ?? ''}
+              onClick={onClose}
+              aria-label="返回会话"
+              data-dsh-part="back-to-chat"
+            >
+              ← 返回会话
+            </button>
             <span className={css['mark'] ?? ''} aria-hidden="true"><IconApps /></span>
             <div className={css['heading'] ?? ''}>
               <h2 className={css['title'] ?? ''}>{tt('panel.title')}</h2>

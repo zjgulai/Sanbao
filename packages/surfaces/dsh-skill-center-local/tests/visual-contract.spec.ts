@@ -5,10 +5,9 @@ import { describe, expect, it } from 'vitest'
 const css = readFileSync(new URL('../src/client/skill-panel.module.css', import.meta.url), 'utf8')
 
 describe('skill center Codex visual contract', () => {
-  it('keeps the narrow drawer in the shared responsive family', () => {
-    expect(css).toContain('width: min(720px, 92vw)')
-    expect(css).toContain('max-width: calc(100vw - 16px)')
-    expect(css).toContain('background: var(--dsw-alias-bg-layer-1')
+  it('keeps the responsive panel in the shared responsive family', () => {
+    expect(css).toContain('max-width: 100%')
+    expect(css).toContain('background: var(--dsw-alias-bg-base')
     expect(css).toContain('border-left: 1px solid var(--dsw-alias-border-l2')
   })
 

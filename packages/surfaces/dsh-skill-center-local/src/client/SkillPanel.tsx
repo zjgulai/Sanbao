@@ -94,13 +94,43 @@ function useCardActions(skill: SkillEntry, api: SkillApi, onChanged: () => void)
   return { busy, error, toggle: () => { void toggle() }, remove: () => { void remove() } }
 }
 
-/** One business-view skill card: Chinese title first, human summary, guided try line. */
+/** Trigger skill execution by dispatching to the view router or populating chat */
+function executeSkillPrompt(skill: SkillEntry, customPrompt?: string): void {
+  const prompt = customPrompt && customPrompt.trim() !== ''
+    ? customPrompt.trim()
+    : (skill.userTry && skill.userTry.trim() !== '' ? skill.userTry.trim() : `使用技能 /${skill.name}`)
+
+  // Switch back to chat view
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
+    // Send event or copy text so user gets seamless continuation
+    try {
+      window.dispatchEvent(new CustomEvent('dsh:skill-execute', { detail: { skill: skill.name, prompt } }))
+    } catch {
+      // safe fallback
+    }
+    // Also copy to clipboard for convenience
+    if (navigator?.clipboard?.writeText) {
+      void navigator.clipboard.writeText(prompt)
+    }
+  }
+}
+
+/** One business-view skill card: Chinese title first, human summary, guided try line, direct execution input. */
 function BusinessCard({ skill, api, onChanged }: { skill: SkillEntry; api: SkillApi; onChanged: () => void }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const [runInput, setRunInput] = useState('')
+  const [ranNotice, setRanNotice] = useState(false)
   const actions = useCardActions(skill, api, onChanged)
   const displayName = skill.title !== undefined && skill.title.trim() !== '' ? skill.title : skill.name
   const summary = cardSummary(skill)
   const showNameSub = skill.title !== undefined && skill.title.trim() !== '' && skill.title !== skill.name
+
+  const handleRun = (): void => {
+    executeSkillPrompt(skill, runInput)
+    setRanNotice(true)
+    setTimeout(() => { setRanNotice(false) }, 2500)
+  }
 
   return (
     <article
@@ -147,6 +177,33 @@ function BusinessCard({ skill, api, onChanged }: { skill: SkillEntry; api: Skill
           <span className={css.metaMarks}>{tt('list.invokable', { marks: invokableMarks(skill) })}</span>
         )}
       </div>
+
+      <div className={css.skillRunRow} onClick={(e) => { e.stopPropagation() }}>
+        <div className={css.skillRunInputRow}>
+          <input
+            type="text"
+            className={css.skillRunInput}
+            placeholder={tt('card.runParamPlaceholder')}
+            value={runInput}
+            onChange={(e) => { setRunInput(e.target.value) }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleRun()
+              }
+            }}
+          />
+          <button
+            type="button"
+            className={css.skillRunBtn}
+            onClick={handleRun}
+          >
+            {tt('card.run')}
+          </button>
+        </div>
+        {ranNotice && <div className={css.skillRunSuccess}>{tt('card.runSuccess')}</div>}
+      </div>
+
       {actions.error !== undefined && <p className={css.feedback}>{actions.error}</p>}
     </article>
   )
@@ -476,8 +533,133 @@ function CreateTab({ api, cwd }: { api: SkillApi; cwd: string | undefined }): Re
   )
 }
 
+type HubTab = 'skills' | 'mcp' | 'apps'
+
+interface McpServerItem {
+  id: string
+  name: string
+  description?: string
+  status?: string
+  enabled?: boolean
+  tools?: Array<{ name: string; description?: string }>
+}
+
+/** MCP tab view: list and toggle MCP servers */
+function McpTab(): React.JSX.Element {
+  const [servers, setServers] = useState<McpServerItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchMcp = async (): Promise<void> => {
+      try {
+        const res = await fetch('/api/dsh-wanzh-hulian/mcp-servers')
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json() as { ok: boolean; servers?: McpServerItem[] }
+        if (!cancelled && data.ok && Array.isArray(data.servers)) {
+          setServers(data.servers)
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void fetchMcp()
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading) return <div className={css.status}>{tt('list.loading')}</div>
+  if (error && servers.length === 0) {
+    return (
+      <div className={css.browse}>
+        <div className={css.status}>{tt('list.loadFailed', { error })}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={css.browse}>
+      <div className={css.totalCount}>{tt('list.count', { count: String(servers.length) })}</div>
+      {servers.length === 0 ? (
+        <div className={css.status}>{tt('search.empty')}</div>
+      ) : (
+        <div className={css.grid}>
+          {servers.map((s) => (
+            <article key={s.id} className={css.skill} data-dsh-part="skill-row">
+              <header className={css.skillHeader}>
+                <span className={css.skillName}>{s.name}</span>
+                {s.status && <span className={`${css.badge} ${s.status === 'connected' ? css.badgeInvokable : ''}`}>{s.status}</span>}
+              </header>
+              {s.description && <p className={css.skillDesc}>{s.description}</p>}
+              {Array.isArray(s.tools) && s.tools.length > 0 && (
+                <div className={css.skillMeta}>
+                  <span>工具 ({s.tools.length}): {s.tools.map(t => t.name).slice(0, 3).join(', ')}{s.tools.length > 3 ? '…' : ''}</span>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Apps tab view: list registered desktop applications */
+function AppsTab(): React.JSX.Element {
+  return (
+    <div className={css.browse}>
+      <div className={css.totalCount}>已集成桌面应用 (2 个)</div>
+      <div className={css.grid}>
+        <article className={css.skill} data-dsh-part="skill-row">
+          <header className={css.skillHeader}>
+            <span className={css.skillName}>KOL-Hunter 海外红人挖掘</span>
+            <span className={`${css.badge} ${css.badgeInvokable}`}>已集成</span>
+          </header>
+          <p className={css.skillDesc}>海外红人多维度搜索、建联与履约管理独立应用面板。</p>
+          <div className={css.skillRunRow}>
+            <button
+              type="button"
+              className={css.skillRunBtn}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'applications' } }))
+                }
+              }}
+            >
+              打开应用
+            </button>
+          </div>
+        </article>
+        <article className={css.skill} data-dsh-part="skill-row">
+          <header className={css.skillHeader}>
+            <span className={css.skillName}>新应用工作台</span>
+            <span className={`${css.badge} ${css.badgeInvokable}`}>系统内置</span>
+          </header>
+          <p className={css.skillDesc}>管理与运行各类业务独立插件与扩展容器。</p>
+          <div className={css.skillRunRow}>
+            <button
+              type="button"
+              className={css.skillRunBtn}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'applications' } }))
+                }
+              }}
+            >
+              打开工作台
+            </button>
+          </div>
+        </article>
+      </div>
+    </div>
+  )
+}
+
 /** The skill center drawer panel. */
 export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element {
+  const [hubTab, setHubTab] = useState<HubTab>('skills')
   const [devMode, setDevMode] = useState(false)
   const [cwd, setCwd] = useState<string | undefined>(undefined)
   const [refreshTick, setRefreshTick] = useState(0)
@@ -504,6 +686,15 @@ export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element
     >
       <aside className={css.drawer} data-dsh-part="drawer" role="dialog" aria-modal="true" aria-label={tt('panel.title')}>
         <header className={css.head} data-dsh-part="head">
+          <button
+            type="button"
+            className={css.backBtn}
+            onClick={onClose}
+            aria-label="返回会话"
+            data-dsh-part="back-to-chat"
+          >
+            ← 返回会话
+          </button>
           <div className={css.headText}>
             <h2 className={css.headTitle}>{tt('panel.title')}</h2>
             <p className={css.headSubtitle}>{tt('panel.subtitle')}</p>
@@ -521,11 +712,51 @@ export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element
           </button>
           <button type="button" className={css.headButton} onClick={onClose}>{tt('close')}</button>
         </header>
+
+        {/* Three Technology Form Tabs */}
+        {!devMode && (
+          <div className={`${css.tabs} ${css.hubTabs}`} role="tablist" aria-label="扩展类型">
+            <button
+              type="button"
+              role="tab"
+              className={`${css.tab} ${hubTab === 'skills' ? css.tabActive : ''}`}
+              aria-selected={hubTab === 'skills'}
+              onClick={() => { setHubTab('skills') }}
+            >
+              {tt('tab.skills')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={`${css.tab} ${hubTab === 'mcp' ? css.tabActive : ''}`}
+              aria-selected={hubTab === 'mcp'}
+              onClick={() => { setHubTab('mcp') }}
+            >
+              {tt('tab.mcp')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={`${css.tab} ${hubTab === 'apps' ? css.tabActive : ''}`}
+              aria-selected={hubTab === 'apps'}
+              onClick={() => { setHubTab('apps') }}
+            >
+              {tt('tab.apps')}
+            </button>
+          </div>
+        )}
+
         {devMode && <p className={css.devHint}>{tt('devMode.hint')}</p>}
         <div className={css.body}>
-          {devMode
-            ? <DevTab api={api} refreshTick={refreshTick} onCwd={setCwd} />
-            : <BrowseTab api={api} refreshTick={refreshTick} />}
+          {devMode ? (
+            <DevTab api={api} refreshTick={refreshTick} onCwd={setCwd} />
+          ) : (
+            <>
+              {hubTab === 'skills' && <BrowseTab api={api} refreshTick={refreshTick} />}
+              {hubTab === 'mcp' && <McpTab />}
+              {hubTab === 'apps' && <AppsTab />}
+            </>
+          )}
         </div>
         {typeof cwd === 'string' && cwd !== '' && devMode && (
           <footer className={css.foot}>{tt('cwd', { cwd })}</footer>

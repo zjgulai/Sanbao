@@ -52,7 +52,7 @@ export type { NewAppApi } from './api.ts'
 const PLACEMENT_DEADLINE_MS = 3000
 
 /**
- * Publish (or clear) the split-degradation flag on the document element.
+ * Publish (or clear) the entry-degradation flag on the document element.
  *
  * This is the one piece of ADR-0019 compliance that cannot live in the shared
  * core: the core knows *how* to place a row, only the consumer knows *whether
@@ -79,7 +79,7 @@ function watchPlacement(getDisposed: () => boolean): () => void {
   const timer = window.setTimeout(() => {
     if (getDisposed()) return
     if (document.querySelector(ENTRY_SELECTOR) === null) {
-      reportDegraded('split-unavailable')
+      reportDegraded('entry-unavailable')
       console.warn(
         '[newapp-local] the sidebar New Session button was not found; the launcher row was not placed.'
         + ' This shell generation may have restructured the sidebar — the plugin does not pin class hashes (ADR-0019), so it degrades instead of guessing.',

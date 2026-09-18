@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * React-reconciliation probe for the split sidebar entry.
+ * React-reconciliation probe for the stacked sidebar entry.
  *
  * ## The gap this file closes
  *
@@ -29,10 +29,11 @@
  *
  *  1. `Tooltip` returns `jsxs(Fragment, { children: [cloneElement(children), pos
  *     !== null && jsx("span", …)] })` — **no DOM wrapper**. That is what makes
- *     the official button a *direct* child of `root` (so the split geometry's
- *     negative-margin trick has nothing to straddle) and it is also what makes
- *     the tooltip bubble a **transient sibling wedged between the button and
- *     our entry** every time the user hovers.
+ *     the official button a *direct* child of `root` (so the injected row really
+ *     is the button's sibling in that flex column, and re-inserting it is a
+ *     matter of `button.after()`) and it is also what makes the tooltip bubble a
+ *     **transient sibling wedged between the button and our entry** every time
+ *     the user hovers.
  *  2. React owns `root`'s children and inserts new nodes with `insertBefore`
  *     against its *own* next host sibling — which is never our entry. Whether a
  *     React insertion lands before or after the entry is therefore a real
@@ -65,13 +66,24 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const APP_UNPACKED = '/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked'
-const SIDEBAR_BUNDLE = join(
-  APP_UNPACKED, 'node_modules', '@deepseek-ai', 'dsh-client-ui-sidebar', 'lib', 'client.js',
-)
-const PRIMITIVES_BUNDLE = join(
-  APP_UNPACKED, 'node_modules', '@deepseek-ai', 'dsh-client-ui-primitives', 'lib', 'index.js',
-)
+/*
+ * The app used to ship packages **unpacked** beside `app.asar`; the 2.0 build
+ * ships them under `Contents/Resources/app/node_modules`. Try both, fail loudly
+ * (same candidate pair as geometry-probe — the two must move together).
+ */
+const APP_RESOURCES = '/Applications/DSH Desktop.app/Contents/Resources'
+const SIDEBAR_BUNDLE = [
+  join(APP_RESOURCES, 'app', 'node_modules', '@deepseek-ai',
+    'dsh-client-ui-sidebar', 'lib', 'client.js'),
+  join(APP_RESOURCES, 'app.asar.unpacked', 'node_modules', '@deepseek-ai',
+    'dsh-client-ui-sidebar', 'lib', 'client.js'),
+].find((candidate) => existsSync(candidate))
+const PRIMITIVES_BUNDLE = [
+  join(APP_RESOURCES, 'app', 'node_modules', '@deepseek-ai',
+    'dsh-client-ui-primitives', 'lib', 'index.js'),
+  join(APP_RESOURCES, 'app.asar.unpacked', 'node_modules', '@deepseek-ai',
+    'dsh-client-ui-primitives', 'lib', 'index.js'),
+].find((candidate) => existsSync(candidate))
 
 const nodeRequire = createRequire(import.meta.url)
 
@@ -83,7 +95,7 @@ function require_(condition, message) {
   }
 }
 
-require_(existsSync(SIDEBAR_BUNDLE), `找不到官方侧边栏 bundle：${SIDEBAR_BUNDLE}（DSH Desktop 未安装？）`)
+require_(SIDEBAR_BUNDLE !== undefined, `找不到官方侧边栏 bundle（${APP_RESOURCES} 的两种布局下都没有；DSH Desktop 未安装，或包布局又变了）`)
 
 /* ── Facts read out of the shipped bundles ─────────────────────────────────── */
 
@@ -93,9 +105,9 @@ require_(existsSync(SIDEBAR_BUNDLE), `找不到官方侧边栏 bundle：${SIDEBA
  */
 function readShellPrefix() {
   const source = readFileSync(SIDEBAR_BUNDLE, 'utf8')
-  const match = /"(\.x-[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
+  const match = /"(\.(?:x-)?[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
   require_(match !== null, '在官方 bundle 里定位不到侧边栏样式表（提取方式已失效）')
-  const prefixMatch = /(x-[A-Za-z0-9_-]+)_root\s*\{/.exec(match[1].replace(/\\"/g, '"'))
+  const prefixMatch = /((?:x-)?[A-Za-z0-9_-]+)_root\s*\{/.exec(match[1].replace(/\\"/g, '"'))
   require_(prefixMatch !== null, '解析不出类名前缀（样式表形状已变，提取方式需更新）')
   return prefixMatch[1]
 }
@@ -120,7 +132,7 @@ function assertBundleShape() {
   require_(
     tooltipReturn !== null,
     'Tooltip 的返回式不再是「Fragment + cloneElement」——它可能已经加了 DOM 包装层，'
-    + '那会改变官方按钮的父节点，split 几何的前提需重新取证',
+    + '那会改变官方按钮的父节点，本行「紧邻按钮的同一列兄弟」这一落点前提需重新取证',
   )
   require_(
     /pos !== null && jsx\("span"/.test(primitives),
@@ -158,7 +170,7 @@ const { JSDOM } = nodeRequire(jsdomPath)
 
 const shellCss = (() => {
   const source = readFileSync(SIDEBAR_BUNDLE, 'utf8')
-  const match = /"(\.x-[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
+  const match = /"(\.(?:x-)?[A-Za-z0-9_-]+_root\{[^"]*)"/.exec(source)
   return match[1].replace(/\\"/g, '"')
 })()
 
@@ -211,8 +223,9 @@ installGlobal('cancelAnimationFrame', window.cancelAnimationFrame.bind(window))
 installGlobal('IS_REACT_ACT_ENVIRONMENT', false)
 
 /**
- * jsdom performs no layout, and the core's split geometry keys on the official
- * button's rendered width. Supply the two widths the shell actually produces
+ * jsdom performs no layout, and the core's collapsed-rail decision keys on the
+ * official button's rendered width. Supply the two widths the shell actually
+ * produces
  * (252px expanded — measured in real Chrome by geometry-probe — and 36px on the
  * collapsed rail) so the core takes its real branches. Only the width/height
  * the core reads is faked; DOM ordering, which is what this probe is about, is
@@ -329,7 +342,7 @@ const ENTRY_OPTIONS = {
   css: { entry: 'entry', entryIcon: 'entryIcon', entryLabel: 'entryLabel' },
   label: () => '新应用',
   onToggle: () => {},
-  position: 'split',
+  position: 'stacked',
   familySelectors: ['[data-dsh-newapp-entry]'],
 }
 
@@ -423,7 +436,8 @@ try {
     adjacent() ? '没有发生位移——自愈断言将是空转' : `入口前一个兄弟 = ${entryEl()?.previousElementSibling?.className}`)
   await settle()
   check('S3 自愈后入口重新紧贴**新**按钮', adjacent() && entryEl().previousElementSibling === afterButton, '')
-  check('S3 新按钮上的内联宽度已重新施加', afterButton.style.width !== '', `width="${afterButton.style.width}"`)
+  check('S3 新按钮上的 nav 行标记已重新施加', afterButton.hasAttribute('data-lute-navrow'),
+    afterButton.hasAttribute('data-lute-navrow') ? '' : '标记丢了：新按钮会退回官方按钮外壳')
 
   /* ── S4 · React inserts a brand-new slot ahead of regionArea ───────────────── */
 
@@ -447,14 +461,16 @@ try {
   check('S5 收起态 data-split="collapsed"', entryEl()?.dataset.split === 'collapsed',
     `dataset.split=${entryEl()?.dataset.split}`)
   check('S5 收起态入口仍紧贴官方按钮', adjacent(), '')
-  check('S5 收起态官方按钮的内联宽度已撤回', buttonEl().style.width === '',
-    `width="${buttonEl().style.width}"`)
+  check('S5 收起态官方按钮的 nav 行标记已撤回', !buttonEl().hasAttribute('data-lute-navrow'),
+    buttonEl().hasAttribute('data-lute-navrow') ? '标记还在，官方 rail 图标会被行样式表改坏' : '')
 
   render({ collapsed: false })
   for (const callback of resizeCallbacks) callback([], {})
   await settle()
   check('S5 展开回来 data-split="expanded"', entryEl()?.dataset.split === 'expanded',
     `dataset.split=${entryEl()?.dataset.split}`)
+  check('S5 展开回来官方按钮的 nav 行标记回来了', buttonEl().hasAttribute('data-lute-navrow'),
+    buttonEl().hasAttribute('data-lute-navrow') ? '' : '展开后标记没回来，两行会退成一按钮一行')
 
   /* ── S6 · whole-tree teardown and remount ──────────────────────────────────── */
 
@@ -473,8 +489,10 @@ try {
 
   const finalButton = buttonEl()
   dispose()
-  check('S7 卸载后官方按钮的内联宽度已还原', finalButton.style.width === '',
-    `width="${finalButton.style.width}"`)
+  check('S7 卸载后官方按钮的 nav 行标记已删除', !finalButton.hasAttribute('data-lute-navrow'),
+    finalButton.hasAttribute('data-lute-navrow') ? '标记残留：官方按钮仍会顶着插件样式' : '')
+  check('S7 卸载后官方按钮没有残留内联样式', finalButton.style.cssText === '',
+    `cssText="${finalButton.style.cssText}"`)
   check('S7 卸载后入口行已移除', entryEl() === null, '')
 
   await new Promise((resolve) => setTimeout(resolve, 0))

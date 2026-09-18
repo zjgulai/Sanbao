@@ -16,10 +16,13 @@
  *     `font-size` + `line-height`: the pairing *is* the design decision, and
  *     the shell already made it.
  *
- * The sidebar *entry* row has no geometry rule here: its geometry is imposed
- * inline at runtime by the shared entry core, because inline wins over the
- * shell's stylesheet (measured: zero `!important` in the shipped bundle) and
- * because a stylesheet rule is what the shell's next rebuild invalidates.
+ * The two launch rows (「新建会话」and「新应用」) are plain nav rows of one
+ * column (locked decision D2, 2026-09-19): the core marks the official button
+ * with `data-lute-navrow`, and the rules near the bottom of this file restyle
+ * it plus the injected row onto the native nav row axis (ADR-0079, gate
+ * `sidebar-row-axis`, column `nav-band`). Nothing here writes geometry inline,
+ * and nothing needs `!important` (measured: zero `!important` in the shipped
+ * shell bundle, so an ordinary attribute-scoped rule reaches the button).
  *
  * ─── The three token laws ───────────────────────────────────────────────────
  *
@@ -87,23 +90,22 @@
 /* ── Drawer shell ─────────────────────────────────────────────────────────── */
 
 .root {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  /* Full-viewport transparent modal box: the dimmed area is ::backdrop, this
-     element only owns the right-aligned panel inside it. */
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
   margin: 0;
   padding: 0;
   border: 0;
-  background: transparent;
+  background: var(--dsw-alias-bg-layer-1, #fff);
   color: inherit;
   overflow: hidden;
   display: flex;
   align-items: stretch;
-  justify-content: flex-end;
+  justify-content: stretch;
+  z-index: 10;
 }
 
 /* A closed <dialog> is display:none by default; the flex reset above would
@@ -113,22 +115,20 @@
 }
 
 .root::backdrop {
-  background: var(--dsw-alias-bg-mask-2, rgba(0, 0, 0, 0.12));
-  animation: na-backdrop-in 180ms ease-out both;
+  display: none;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  width: min(880px, 94vw);
-  max-width: calc(100vw - 16px);
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   background: var(--dsw-alias-bg-layer-1, #fff);
-  border-left: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.1));
+  border-left: 0;
   color: var(--dsw-alias-label-primary, #0f1115);
-  box-shadow: -8px 0 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.12));
-  animation: na-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  box-shadow: none;
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
@@ -383,10 +383,32 @@
    stretching to fill. Measured — not asserted — in real Chrome by
    `scripts/geometry-probe.mjs` against a synthetic fixture, because jsdom
    performs no layout and a test there would be measuring zero (M3). */
+.backButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.1));
+  background: var(--dsw-alias-bg-module-platform, #f5f6f7);
+  color: var(--dsw-alias-label-secondary, #61666b);
+  font: var(--dsw-font-xs-13);
+  cursor: pointer;
+  transition: background 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.backButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(38, 49, 72, 0.06));
+  color: var(--dsw-alias-label-primary, #0f1115);
+  border-color: var(--dsw-alias-border-l3, rgba(0, 0, 0, 0.15));
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -401,12 +423,18 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
-  padding: 14px;
-  min-height: 168px;
-  border-radius: 10px;
-  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.04));
+  gap: 10px;
+  padding: 18px 20px;
+  min-height: 200px;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.1));
   background: var(--dsw-alias-bg-module-platform, #f5f6f7);
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--lute-brand-soft);
 }
 
 .cardHead {
@@ -552,79 +580,67 @@
   text-align: right;
 }
 
-/* ── Sidebar entry row (split mode) ───────────────────────────────────────── */
+/* ── Sidebar entry row (stacked nav form) ─────────────────────────────────── */
 
 /*
- * This row is styled as a **peer of the official New Session button**, not as
- * one of the stacked nav rows: the shared core puts it in the same band and
- * gives both boxes `calc(50% - 4px)`. Every metric below is copied from the
- * shell's own `.newSession` rule, read verbatim out of
- * `@deepseek-ai/dsh-client-ui-sidebar/lib/client.js`:
+ * 2026-09-19: this row was a **peer of the official New Session button** —
+ * two 38px capsules side by side, each `calc(50% - 4px)`, each carrying the
+ * official button's chrome (`border-l3` + `button-elevated-fill` + 500 weight).
+ * Measured against four reference products (Codex/Qoder/MiniMax Design/Accio,
+ * evidence in .scratch/sidebar-research/NOTES.md), **none of them gives the
+ * start action button chrome**: their「新对话」/「新的任务」/「开始创作」are plain
+ * nav rows, same size and weight as the rows below them, told apart only by
+ * position. Doubling the chrome also doubled the cost of the two mistakes the
+ * pair already had: the official half followed neutral button tokens while this
+ * half followed LUTE brand tokens, so one control rendered under two colour
+ * systems — the concrete reading of「颜色也不怎么搭」.
  *
- *   border:.5px solid var(--dsw-alias-border-l3);
- *   background:var(--dsw-alias-button-elevated-fill); height:38px;
- *   border-radius:12px; flex:none; gap:6px; margin:0 2px 8px;
- *   padding:8px 16px; font-size:14px; font-weight:500; line-height:22px
+ * The row is therefore a plain nav row, on the **native sidebar row axis**
+ * shared with the sibling injected rows (role-matrix / skill-center:
+ * `border-box` + `width:100%` + `margin-inline:0` + `padding-inline:10px`, the
+ * axis ADR-0079 declares for the nav column). The official button is restyled
+ * onto the same axis by the rule further down, keyed on the marker attribute the
+ * shared core writes — so the whole nav column finally sits on one axis instead
+ * of the launch band being an island of button chrome above four text rows.
  *
- * A first draft of this rule used an 8px radius and a transparent background —
- * plausible-looking values that would have made the pair read as two unrelated
- * controls sharing a line. Copying the four tokens the official button itself
- * uses (`border-l3` / `button-elevated-fill`, plus `button-floating-hover` on
- * hover) is what makes them read as one control with two choices, and it makes
- * the pair theme together for free. Its type is now the official shorthand for
- * the same metrics `--dsw-font-s-strong-14` = 500 14px/22px.
+ * `height: 36px` is not a free choice: it is the height both sibling rows
+ * declare, and the row form only reads as the same species if the trio matches.
+ * `margin: 2px 0` likewise follows them.
  *
- * Only the geometry that must vary at runtime (width, align-self, the negative
- * top margin that lifts this row into the official button's band) is imposed
- * inline by the core; everything visual stays here, where a theme can reach it.
- *
- * The `margin-bottom: 8px` is load-bearing and was **wrong in the first draft**,
- * which set it to 0 with a comment confidently claiming the opposite ("a bottom
- * margin of its own would double the advance"). It does not double anything — it
- * is what cancels the lift. Flex column arithmetic, and the reason the first
- * draft was measurable rather than merely arguable:
- *
- *   official contributes  height 38 + margin-bottom 8          = 46
- *   entry    contributes  margin-top -46 + height 38 + bottom B = B - 8
- *
- * With B = 0 the pair advances the flow by 8px *less* than the shell's own
- * layout, so the workspace region starts 8px higher and silently grows by 8px.
- * Measured in real Chrome (scripts/geometry-probe.mjs): regionArea top 120 → 112.
- * With B = 8 the contribution is exactly 46 and nothing below the pair moves.
- *
- * jsdom cannot catch this: it performs no layout at all. This is why the
- * geometry probe drives a real browser.
+ * Brand green survives in exactly two places (colour discipline, same date):
+ * the active-state indicator bar below, and `:focus-visible`. The row itself
+ * never takes a brand fill — an open drawer is state, and state on a nav row is
+ * a leading bar plus a lighter label, not a repainted row.
  */
 .entry {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
-  height: 38px;
-  margin: 0 2px 8px;
-  padding: 8px 16px;
-  border: 0.5px solid var(--dsw-alias-border-l3, rgba(0, 0, 0, 0.12));
-  border-radius: 12px;
-  background: var(--dsw-alias-button-elevated-fill, #fff);
-  color: var(--dsw-alias-label-primary, #0f1115);
+  width: 100%;
+  height: 36px;
+  margin: 2px 0;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #666);
   cursor: pointer;
-  font: var(--dsw-font-s-strong-14);
+  font: var(--dsw-font-xs-13);
+  text-align: left;
   overflow: hidden;
-  transition: background 180ms ease-out, color 180ms ease-out, border-color 180ms ease-out;
+  transition: background 180ms ease, color 180ms ease;
 }
 
 .entry:hover {
-  background: var(--dsw-alias-button-floating-hover, #f1f3f5);
+  background: var(--dsw-alias-interactive-bg-hover, rgba(38, 49, 72, 0.06));
+  color: var(--dsw-alias-label-primary);
 }
 
-/* Open state: the brand green layered on the official button's own base, so the
-   row still reads as the same control while showing the drawer is up. This one
-   *is* brand rather than state — it says "the LUTE drawer is open". */
+/* Open state: the brand green as a 3px leading bar (never a row fill). */
 .entry[data-active] {
-  border-color: var(--lute-brand-line-strong);
-  color: var(--lute-brand-deep);
-  background: var(--lute-brand-tint);
+  box-shadow: inset 3px 0 0 0 var(--lute-brand);
+  color: var(--dsw-alias-label-primary);
 }
 
 .entry:focus-visible {
@@ -632,11 +648,15 @@
   outline-offset: -2px;
 }
 
+/* 24px box holding an 18px glyph — the same icon box the sibling rows use, so
+   all three labels start at the same x (padding 10 + 24 + gap 8). */
 .entryIcon {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   color: inherit;
 }
 
@@ -646,6 +666,7 @@
 }
 
 .entryLabel {
+  flex: 1;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -653,16 +674,60 @@
 }
 
 /*
- * Collapsed rail. The core drops the split (36px of content against an 18px
- * glyph would clip the icon) and stacks this row under the official button at
- * the rail's own metric, so the row becomes an icon-only square in that state —
- * matching the official button's own collapsed rule verbatim
- * (`.collapsed .newSession { background:0 0; border-color:#0000; gap:0;
- * width:36px; height:36px; margin:0 0 12px; padding:0 }`).
+ * The official「新建会话」button, restyled into the same nav row.
  *
- * The label is removed from the layout rather than merely shrunk: a 36px box
- * cannot hold 「新应用」 at any legible size, and the tooltip plus aria-label
- * still carry the name.
+ * The anchor is `button[class*="newSession"]` — a substring match on the CSS
+ * module's stable local name, never the hashed class (ADR-0019 forbids pinning
+ * hashes; the shared core already depends on the same substring, read out of
+ * `@deepseek-ai/dsh-client-ui-sidebar/lib/client.js`). The second part of the
+ * selector is the marker the shared core writes and deletes
+ * (`applyStackedGeometry`): with the marker absent this stylesheet has no effect
+ * at all on the shell, so the collapsed rail keeps the shell's own icon-button
+ * style and an unloaded plugin restores the button exactly.
+ *
+ * The svg is forced to the same 24px box as the sibling rows' icons (the shell
+ * renders it at 14px when expanded), so the three labels align on one x.
+ */
+button[class*="newSession"][data-lute-navrow] {
+  box-sizing: border-box;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  margin: 2px 0;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #666);
+  font: var(--dsw-font-xs-13);
+  text-align: left;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+button[class*="newSession"][data-lute-navrow]:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(38, 49, 72, 0.06));
+  color: var(--dsw-alias-label-primary);
+}
+
+button[class*="newSession"][data-lute-navrow] svg {
+  box-sizing: border-box;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+}
+
+/*
+ * Collapsed rail. The core drops the marker and switches this row to the rail
+ * metric — a 36px icon-only square matching the official button's own collapsed
+ * rule (`.collapsed .newSession { background:0 0; gap:0; width:36px;
+ * height:36px; margin:0 0 12px; padding:0 }`), so the two icons stack in the
+ * rail at the same size.
+ *
+ * The label leaves the layout rather than shrinking: a 36px box cannot hold
+ * 「新应用」 legibly, and the tooltip plus aria-label still carry the name.
  */
 .entry[data-split='collapsed'] {
   width: 36px;
@@ -670,8 +735,7 @@
   margin: 0 0 12px;
   padding: 0;
   gap: 0;
-  border-color: transparent;
-  background: transparent;
+  justify-content: center;
 }
 
 .entry[data-split='collapsed']:hover {

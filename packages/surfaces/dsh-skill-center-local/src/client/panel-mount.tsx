@@ -1,10 +1,10 @@
 /**
- * Skill center panel mounting (browser half).
+ * Extensions Hub (formerly Skill Center) panel mounting (browser half).
  *
- * The panel is an overlay modal rendered with its own React root appended to
- * document.body (no slot exists for external plugins). Opening mounts the
- * tree; closing unmounts and removes the container. The entry row toggles it
- * through the returned controller.
+ * Mounts the Extensions Hub into the main content area (center column)
+ * while preserving the native sidebar intact and visible. Supports global
+ * view-router switching (dsh:view-change) so that switching views or clicking
+ * a chat session smoothly shows/hides the dashboard.
  */
 import { createRoot, type Root } from 'react-dom/client'
 import type { SkillApi } from './api.ts'
@@ -15,17 +15,37 @@ export interface SkillPanelMount {
   toggle: () => void
   open: () => void
   close: () => void
+  isOpen: () => boolean
+  subscribe: (listener: () => void) => () => void
   dispose: () => void
 }
 
 /**
- * Mount the skill center overlay panel.
+ * Find the center content column of the DSH shell, or fallback to body.
+ */
+function findCenterHost(): HTMLElement {
+  if (typeof document === 'undefined') return {} as HTMLElement
+  const centerCol = document.querySelector<HTMLElement>('[class*="centerCol"]')
+  if (centerCol !== null) {
+    if (window.getComputedStyle(centerCol).position === 'static') {
+      centerCol.style.position = 'relative'
+    }
+    return centerCol
+  }
+  return document.body
+}
+
+/**
+ * Mount the Extensions Hub full-screen dashboard workspace.
  * @param api - the skill center API client.
- * @returns controller (toggle/open/close) and the disposer.
+ * @returns controller (toggle/open/close/subscribe) and the disposer.
  */
 export function mountPanel(api: SkillApi): SkillPanelMount {
   let root: Root | undefined
   let container: HTMLDivElement | undefined
+  const listeners = new Set<() => void>()
+
+  const notify = (): void => { for (const listener of [...listeners]) listener() }
 
   const close = (): void => {
     if (root === undefined) return
@@ -33,24 +53,75 @@ export function mountPanel(api: SkillApi): SkillPanelMount {
     root = undefined
     container?.remove()
     container = undefined
+    notify()
   }
 
   const open = (): void => {
     if (root !== undefined) return
+    const host = findCenterHost()
     container = document.createElement('div')
+    container.className = 'dsh-skill-center-root'
     container.dataset.dshSkillCenterView = ''
-    // L2 semantic attributes: the plugin id lets skins anchor this
-    // drawer root; see contracts/semantic-attrs-v1.md.
     container.dataset.dshPlugin = 'skill-center-local'
-    document.body.appendChild(container)
+    container.dataset.dshPart = 'panel'
+    host.appendChild(container)
     root = createRoot(container)
-    root.render(<SkillPanel api={api} onClose={close} />)
+    root.render(
+      <SkillPanel
+        api={api}
+        onClose={() => {
+          close()
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
+          }
+        }}
+      />
+    )
+    notify()
   }
 
   const toggle = (): void => {
-    if (root !== undefined) close()
-    else open()
+    if (root !== undefined) {
+      close()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'extensions' } }))
+      }
+      open()
+    }
   }
 
-  return { toggle, open, close, dispose: close }
+  // Subscribe to the global view change event
+  let cleanupViewListener: (() => void) | undefined
+  if (typeof window !== 'undefined') {
+    const handleGlobalView = (e: Event): void => {
+      const customEvent = e as CustomEvent<{ view?: string }>
+      if (customEvent.detail?.view === 'extensions') {
+        open()
+      } else if (customEvent.detail?.view !== undefined && root !== undefined) {
+        close()
+      }
+    }
+    window.addEventListener('dsh:view-change', handleGlobalView)
+    cleanupViewListener = () => window.removeEventListener('dsh:view-change', handleGlobalView)
+  }
+
+  return {
+    toggle,
+    open,
+    close,
+    isOpen: () => root !== undefined,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+    dispose: () => {
+      cleanupViewListener?.()
+      close()
+      listeners.clear()
+    },
+  }
 }

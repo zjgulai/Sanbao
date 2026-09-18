@@ -61,7 +61,7 @@ describe('SkillPanel header', () => {
     const mount_ = mount(api, () => {})
     await flush()
     const head = mount_.container.querySelector('header')
-    expect(head?.textContent).toContain('技能中心')
+    expect(head?.textContent).toContain('扩展中心')
     expect(head?.textContent).not.toContain('cwd:')
     mount_.dispose()
   })

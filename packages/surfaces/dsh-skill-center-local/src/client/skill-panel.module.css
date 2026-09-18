@@ -91,26 +91,26 @@
 
 .overlay {
   --dsh-skill-center-overlay-layer: 2147482000;
-  position: fixed;
+  position: absolute;
   inset: 0;
-  background: var(--dsw-alias-bg-mask-2, rgba(8, 10, 16, 0.45));
+  background: var(--dsw-alias-bg-base, #f7f8fa);
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   z-index: var(--dsh-skill-center-overlay-layer);
   font-family: var(--dsw-font-family, system-ui, -apple-system, 'Segoe UI', sans-serif);
 }
 
-/* Right-side drawer: 720px, full height, slides in from the right. */
+/* Right-side drawer: 720px, full height, slides in from the right. (kept for layout compatibility and responsive full-screen width) */
 .drawer {
-  width: min(720px, 92vw);
-  max-width: calc(100vw - 16px);
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-layer-1, #fdfdfd);
+  background: var(--dsw-alias-bg-base, #f7f8fa);
   color: var(--dsw-alias-label-primary, #1c1e26);
   border-left: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
-  box-shadow: -8px 0 24px var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.12));
+  box-shadow: none;
   animation: skillCenterSlideIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -145,6 +145,29 @@
   border-bottom: 1px solid var(--dsw-alias-border-l1, #e5e7eb);
   background: var(--dsw-alias-bg-layer-1, #fff);
   flex: none;
+}
+
+.backBtn {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid var(--dsw-alias-border-l2, #d7dae0);
+  background: var(--dsw-alias-bg-base, #f7f8fa);
+  color: var(--dsw-alias-label-primary, #3a3f4b);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: var(--dsw-font-xxs-12, 600 12px/18px var(--dsw-font-family, system-ui, sans-serif));
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.backBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover, #f2f3f5);
+  border-color: var(--dsw-alias-state-business-primary, #347a2f);
 }
 
 .headText {
@@ -226,6 +249,12 @@
   padding: 8px 20px 0;
   border-bottom: 1px solid var(--dsw-alias-border-l1, #e5e7eb);
   background: var(--dsw-alias-bg-layer-2, #f7f8fa);
+}
+
+.hubTabs {
+  background: var(--dsw-alias-bg-layer-1, #fff);
+  padding: 6px 20px 0;
+  gap: 8px;
 }
 
 .tab {
@@ -776,6 +805,74 @@ body[data-ds-dark-theme]:not([data-dsh-skin]) .deleteButton:hover {
 
 .collapseToggle:hover {
   background: var(--dsw-alias-state-business-tertiary, #e7f2e3);
+}
+
+/* Run interactive section in skill cards */
+.skillRunRow {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--dsw-alias-border-l1, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skillRunInputRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.skillRunInput {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  background: var(--dsw-alias-bg-base, #f7f8fa);
+  color: var(--dsw-alias-label-primary, #1c1e26);
+  border: 1px solid var(--dsw-alias-border-l1, #d7dae0);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: var(--dsw-font-xxxs-11, 400 11px/16px var(--dsw-font-family, system-ui, sans-serif));
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.skillRunInput:focus {
+  outline: none;
+  border-color: var(--dsw-alias-state-business-primary, #347a2f);
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary, rgba(52, 122, 47, 0.16));
+}
+
+.skillRunBtn {
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  border: 1px solid var(--dsw-alias-state-business-primary, #347a2f);
+  background: var(--dsw-alias-state-business-primary, #347a2f);
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: var(--dsw-font-xxxs-11, 600 11px/16px var(--dsw-font-family, system-ui, sans-serif));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background 180ms ease, opacity 180ms ease;
+}
+
+.skillRunBtn:hover {
+  opacity: 0.9;
+}
+
+.skillRunBtn:active {
+  opacity: 0.8;
+}
+
+.skillRunSuccess {
+  font: var(--dsw-font-xxxs-11, 500 11px/16px var(--dsw-font-family, system-ui, sans-serif));
+  color: var(--dsw-alias-state-success-primary, #0f7a50);
 }
 
 @media (max-width: 720px) {

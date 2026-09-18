@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 /**
- * Package-level wiring for the split sidebar entry, plus the degradation
+ * Package-level wiring for the stacked sidebar entry, plus the degradation
  * self-report.
  *
  * This is deliberately **not** a copy of the shared core's geometry suite (that
  * contract is pinned once, by the core's own consumer test — duplicating it per
  * package is how a shared layer starts to look like three independent
  * implementations). What is under test here is the part that is genuinely this
- * package's: that its wrapper really reaches the core in `split` mode with this
+ * package's: that its wrapper really reaches the core in `stacked` mode with this
  * package's identity attributes, and that a shell which does not render the
  * expected button is *reported* rather than silently unserved.
  */
@@ -76,8 +76,8 @@ afterEach(() => {
   reportDegraded(undefined)
 })
 
-describe('split entry wiring', () => {
-  it('mounts the row in split mode with this package\u2019s identity attributes', () => {
+describe('stacked entry wiring', () => {
+  it('mounts the row in stacked mode with this package’s identity attributes', () => {
     const { root, official } = buildShell()
     stubRect(official, 240, 38)
 
@@ -85,13 +85,12 @@ describe('split entry wiring', () => {
     const entry = document.querySelector<HTMLButtonElement>(ENTRY_SELECTOR)
 
     expect(entry).not.toBeNull()
-    // Placement: the split mode's defining property — the row is the official
+    // Placement: the stacked mode's defining property — the row is the official
     // button's immediate next sibling, not a member of the family block.
     expect(entry!.previousElementSibling).toBe(official)
     expect(entry!.parentElement).toBe(root)
-    // Geometry actually applied (the lift is the core's; that it ran is ours).
-    expect(official.style.width).toBe('calc(50% - 4px)')
-    expect(entry!.style.width).toBe('calc(50% - 4px)')
+    // Geometry/marker applied: official gets marker, entry takes expanded state.
+    expect(official.dataset.luteNavrow).toBe('')
     expect(entry!.dataset.split).toBe('expanded')
     // Identity: L2 semantic attributes + the localized label this package owns.
     expect(entry!.getAttribute('data-dsh-plugin')).toBe('newapp-local')
@@ -128,16 +127,16 @@ describe('split entry wiring', () => {
     dispose()
   })
 
-  it('restores the official button\u2019s own width on unmount', () => {
+  it('restores the official button’s own marker on unmount', () => {
     const { official } = buildShell()
     stubRect(official, 240, 38)
 
     const dispose = mountSidebarEntry(() => {}, { isOpen: () => false, subscribe: () => () => {} })
-    expect(official.style.width).toBe('calc(50% - 4px)')
+    expect(official.dataset.luteNavrow).toBe('')
 
     dispose()
 
-    expect(official.style.width).toBe('')
+    expect(official.dataset.luteNavrow).toBeUndefined()
     expect(document.querySelector(ENTRY_SELECTOR)).toBeNull()
   })
 
@@ -157,8 +156,8 @@ describe('split entry wiring', () => {
 describe('degradation self-report', () => {
   it('publishes and clears the flag on the document element', () => {
     expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
-    reportDegraded('split-unavailable')
-    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('split-unavailable')
+    reportDegraded('entry-unavailable')
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('entry-unavailable')
     reportDegraded(undefined)
     expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
   })
@@ -181,7 +180,7 @@ describe('client apply failure policy', () => {
     // Past the placement deadline with no sidebar at all, the plugin says so
     // instead of being silently absent.
     vi.advanceTimersByTime(4000)
-    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('split-unavailable')
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('entry-unavailable')
   })
 
   it('clears the flag when the shell does render the expected row', () => {
@@ -209,4 +208,3 @@ describe('client apply failure policy', () => {
     expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
   })
 })
-

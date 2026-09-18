@@ -1,18 +1,23 @@
 /**
  * Sidebar entry injection — package-specific wiring over the shared core.
  *
- * This is the first consumer to use `position: 'split'`: the row sits **beside**
- * the official New Session button, each taking half the row, instead of
- * stacking after it in the plugin family block. The DOM injection, geometry,
- * self-healing and idempotency all live in the shared
+ * The row uses `position: 'stacked'`: it sits **directly under** the official
+ * New Session button as a second row of the same launch band, and the core marks
+ * that button so this package's stylesheet restyles it into the matching nav row
+ * (`newapp.module.css` owns both halves of the band — see its comment for the
+ * evidence and the colour discipline). The DOM injection, the marker, the
+ * self-healing and the idempotency all live in the shared
  * sidebar-entry-core.ts (synced copy) — this wrapper supplies only this
  * package's glyph, copy, CSS module, placement, and the drawer toggle.
  *
- * Why the split rather than a fifth stacked row: 「新会话」 and 「新应用」 are the
- * two ways to *start*, and the shell gives starting exactly one band. Adding a
- * second row would push the workspace browser down and imply the two are
- * sequential (pick a session type, then pick an app) when they are alternatives.
- * Sharing the band states the relationship in the layout itself.
+ * Why a second row rather than the previous 50/50 split: 「新会话」 and 「新应用」
+ * are two ways to *start*, and the earlier design stated that by sharing one band
+ * with two equal capsules. Measured against the reference products, the capsule
+ * chrome was the outlier — none of them gives the start action button styling —
+ * and doubling it also doubled a pre-existing mismatch (the official half
+ * followed neutral button tokens, this half followed brand tokens). Two plain
+ * nav rows sitting together in the launch band state the same relationship
+ * without the chrome, and put the whole nav column on one axis.
  */
 import { tt } from './panel-helpers.ts'
 import css from './newapp.module.css'
@@ -50,11 +55,11 @@ export function mountSidebarEntry(onClick: () => void, signals: SidebarEntrySign
     label: () => tt('entry.label'),
     tooltip: () => tt('entry.tooltip'),
     onToggle: onClick,
-    position: 'split',
-    // Carried for the shared core's family-block path (and for the collapsed
-    // rail fallback, which stacks rather than splitting): the split mode places
-    // against the official button itself, but a downgrade must still land in
-    // the same relative order as the sibling plugin rows.
+    position: 'stacked',
+    view: 'applications',
+    // Used by the shared core's family-block path and by the collapsed-rail
+    // fallback: stacked mode places against the official button itself, but the
+    // entry must still keep the same relative order as the sibling plugin rows.
     familySelectors: [
       '[data-dsh-taskboard-entry]',
       '[data-dsh-ssh-entry]',
