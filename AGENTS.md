@@ -13,7 +13,8 @@
 - **一条命令给证据**：`pnpm run gate`（提交前）与 `pnpm run gate:full`（推送前）；退出码即契约，门禁契约表见 [docs/architecture.md](docs/architecture.md) 第 0 节。
 - **门禁是硬门槛**：契约级校验一律阻塞；存量未达标的包登记在 `scripts/gates/exemptions.json`，该文件**只减不增、到期即拒绝**（[ADR-0014](docs/adr/ADR-0014.md)）。
 - **不接受口头验收**：改动必须给出真实命令输出（Red/Green、构建、浏览器验收），未跑就写「未运行」。
-- **开工前先读复发故障总账**：[docs/pitfalls-playbook.md](docs/pitfalls-playbook.md) 按**根因**列出会复发的故障（未验证的事实被钉进出货面、仪器假绿、「知道」没有变成「拦住」、写了但从没跑到、隔着解释器写字面量、把平台行为当常量、一条事实多个家、用纪律守只有机制能守住的东西）。每条点名了拦它的**门禁名**，由门禁 `pitfalls-playbook` 守着，不会腐烂；改完一类缺陷就往里加一条。
+- **开工前先读复发故障总账**：[docs/pitfalls-playbook.md](docs/pitfalls-playbook.md) 按**根因**列出会复发的故障（未验证的事实被钉进出货面、仪器假绿、「知道」没有变成「拦住」、写了但从没跑到、隔着解释器写字面量、把平台行为当常量、一条事实多个家、用纪律守只有机制能守住的东西、挂死主线程的观测悖论——所有仪器都要过故障现场，症状层修复被当成根除〔P-52，2026-09 黑屏事故〕）。每条点名了拦它的**门禁名**，由门禁 `pitfalls-playbook` 守着，不会腐烂；改完一类缺陷就往里加一条。
+- **挂死/卡死类故障先建旁路再排查**：CPU 100%+、inspector 超时、console 零输出、rAF 不跑四签名同时成立 = 渲染主线程被微任务级联饿死——禁止跳到 JIT/CLI/版本玄学；旁路取证手册在 `~/.agents/skills/dsh-desktop-diagnostics/SKILL.md`（铸 cookie + 独立 Chrome + 预启用 Debugger 的 pause 中断）。改共享层 `shared/client/sidebar-entry-core.ts` 的 observer 时必须维持不变量：**对被观察子树的写操作，移动一次后不得再满足移动条件**。
 
 ## 决策与文档
 

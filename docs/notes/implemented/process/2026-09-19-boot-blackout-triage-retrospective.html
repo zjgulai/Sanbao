@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSH Desktop「插件加载中→黑屏」事故深度复盘 · 2026-09-19</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1d212b; --line: #2a2f3c;
+    --fg: #e6e9f0; --dim: #9aa3b5; --accent: #5b9dff; --ok: #4ade80;
+    --warn: #fbbf24; --bad: #f87171; --code: #141821;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.75 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 40px 16px 80px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { border: 1px solid var(--line); border-radius: 14px; padding: 28px 32px; background: linear-gradient(135deg, var(--panel), var(--panel2)); margin-bottom: 28px; }
+  header h1 { font-size: 25px; letter-spacing: .5px; margin-bottom: 10px; }
+  header .sub { color: var(--dim); font-size: 13.5px; }
+  header .verdict { margin-top: 16px; padding: 14px 18px; border-left: 3px solid var(--bad); background: rgba(248,113,113,.06); border-radius: 0 8px 8px 0; font-size: 14px; }
+  h2 { font-size: 19px; margin: 40px 0 14px; padding-left: 12px; border-left: 4px solid var(--accent); }
+  h3 { font-size: 15.5px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 8px 0; color: #cdd4e0; }
+  ul, ol { margin: 8px 0 8px 22px; color: #cdd4e0; }
+  li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th { text-align: left; padding: 9px 12px; background: var(--panel2); color: var(--dim); font-weight: 600; border: 1px solid var(--line); }
+  td { padding: 9px 12px; border: 1px solid var(--line); vertical-align: top; color: #cdd4e0; }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  code { background: var(--code); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; color: #9ecbff; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 12px 0; font-size: 12.5px; line-height: 1.6; color: #b6c2d9; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; background: var(--panel); margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .who { font-size: 12px; letter-spacing: 1px; color: var(--dim); text-transform: uppercase; margin-bottom: 6px; }
+  .dc { border-top: 3px solid #7c8cff; }
+  .oc { border-top: 3px solid #ffb45e; }
+  .qd { border-top: 3px solid #4ade80; }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; margin-right: 6px; border: 1px solid var(--line); }
+  .tag.ok { color: var(--ok); border-color: rgba(74,222,128,.4); }
+  .tag.warn { color: var(--warn); border-color: rgba(251,191,36,.4); }
+  .tag.bad { color: var(--bad); border-color: rgba(248,113,113,.4); }
+  .quote { border-left: 3px solid var(--line); padding: 6px 14px; color: var(--dim); margin: 10px 0; font-size: 13.5px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+  .flow .node { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; }
+  .flow .arr { color: var(--dim); }
+  .loop { border: 1px dashed var(--bad); border-radius: 10px; padding: 14px 18px; margin: 12px 0; background: rgba(248,113,113,.04); }
+  .loop .title { color: var(--bad); font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+  footer { margin-top: 48px; color: var(--dim); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 18px; }
+  .num { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>DSH Desktop「插件加载中 → 黑屏」事故深度复盘</h1>
+  <div class="sub">2026-09-17 ~ 09-19 · 横跨 deepcode（DeepSeek V4 Pro）· opencode（Claude Sonnet 4.6）· Qoder（GLM-5.3）三方 · 约 40 小时 · 29+ 次重启</div>
+  <div class="verdict">
+    <b>根因一句话：</b>三个本地插件共享的侧边栏注入核心（<code>shared/client/sidebar-entry-core.ts</code>）存在挂载竞态——两个包都在侧边栏渲染<b>之前</b>挂载同名"工作台"折叠组，单例守卫双双通过，于是<b>两个容器同时插入</b>；此后 <code>adoptMembers</code> 互相把对方容器里的成员行抢过来（<code>appendChild</code> 即移动）→ 每次移动触发对方 MutationObserver → 对方再抢回去 → <b>微任务级无限乒乓</b>，渲染主线程被彻底饿死：健康上报 30 秒发不出、看门狗判无响应、最终黑屏。
+  </div>
+</header>
+
+<h2>0 · 一页结论</h2>
+<table>
+  <tr><th style="width:180px">问题</th><th>答案</th></tr>
+  <tr><td>故障是什么</td><td>渲染主线程被 MutationObserver 微任务乒乓饿死 → 健康上报超时 → 看门狗杀页 → 黑屏</td></tr>
+  <tr><td>根因在哪</td><td>单例守卫在<b>挂载时</b>（侧边栏还不存在）求值而非<b>插入时</b>；<code>adoptMembers</code> 判据允许从<b>对方容器</b>抢行</td></tr>
+  <tr><td>为什么三方前两方修不干净</td><td>deepcode 修上报层（retry 掩盖饿死的间歇性）；opencode 修级联层（rAF 防抖只压单向自触发，没断跨容器互抢）——都摸到大象的不同部位，都没拿到死循环热栈</td></tr>
+  <tr><td>Qoder 靠什么破局</td><td>① 鉴权 cookie + 独立 Chrome + <b>预启用 Debugger 的 pause 中断</b>拿到热栈顶帧 <code>schedulePlace</code>；② 摘包二分反向确认；③ 识别"挂载时 vs 插入时"守卫时序缺陷，一次修三处</td></tr>
+  <tr><td>此类问题为什么难</td><td>死循环使一切常规观测（CDP / console / 断点）失效——<b>观测本身也要过被饿死的主线程</b>；唯一逃逸通道是先于挂死建立的旁路</td></tr>
+</table>
+
+<h2>1 · 故障机理（本页唯一的因果链）</h2>
+<div class="flow">
+  <span class="node">14:35 三包构建同步进 profile</span><span class="arr">→</span>
+  <span class="node">双包各挂载"工作台"组（守卫时双双通过）</span><span class="arr">→</span>
+  <span class="node">侧边栏出现，两个容器同时插入</span>
+</div>
+<div class="loop">
+  <div class="title">∞ 微任务级乒乓（每步无 await，事件循环永不轮转）</div>
+  <pre>容器 A 的 rootObserver: adoptMembers → 把行从容器 B 抢进 A（appendChild = 移动 = root 子树 childList 变更）
+  ↓ 触发
+容器 B 的 rootObserver: adoptMembers → 把行从容器 A 抢回 B
+  ↓ 触发
+容器 A …… </pre>
+</div>
+<div class="flow">
+  <span class="node">微任务队列永不清空</span><span class="arr">→</span>
+  <span class="node">setTimeout(0) 不跑 / fetch 不 settle / load 不触发</span><span class="arr">→</span>
+  <span class="node">健康上报 30s 发不出</span><span class="arr">→</span>
+  <span class="node">看门狗判无响应</span><span class="arr">→</span>
+  <span class="node">黑屏</span>
+</div>
+<p>CPU 常驻 100–185% 是微任务循环的签名；而 <code>renderer boot failed (plugins: Unknown client plugin)</code> 的"Unknown"只是 <code>plugins.length === 0</code> 时的占位串——上报从未发出。</p>
+
+<h2>2 · 三方轨迹总览（真实会话记录提取）</h2>
+<table>
+  <tr><th style="width:110px">时刻（本地）</th><th>事件</th><th style="width:90px">责任方</th></tr>
+  <tr><td>09-17 20:26</td><td>DSH Desktop 2.0.10（Electron 43）安装，旧进程沿用未重启</td><td>—</td></tr>
+  <tr><td>09-18 01:33–12:30</td><td>先修复 2 个独立真缺陷（P0-8 路径悬空、v0 会话迁移拒绝）——与黑屏无关的平行故障</td><td>deepcode</td></tr>
+  <tr><td>09-18 12:30</td><td>第一次重启，故障首次暴露</td><td>—</td></tr>
+  <tr><td>09-18 13:11–17:58</td><td>主攻黑屏：五轮假设五轮排除，定位"上报 vs 路由就绪竞态"，打 boot-health-retry 补丁</td><td>deepcode</td></tr>
+  <tr><td>09-18 17:07</td><td>三包（含引入竞态的新代码）构建同步到 profile</td><td>—</td></tr>
+  <tr><td>09-18 17:27 起</td><td>二分定位 <code>dsh-role-matrix-local</code>；识别 observer 级联；打 rAF 防抖等三层修复</td><td>opencode</td></tr>
+  <tr><td>09-18 19:00 起</td><td>短暂好转后<b>复发</b>；继续加层修复 + deadline 放宽（10s→120s 止痛贴）</td><td>opencode</td></tr>
+  <tr><td>09-19 00:38–00:57</td><td>连续失败重启 8 次</td><td>—</td></tr>
+  <tr><td>09-19 01:00–02:30</td><td>取证 → 热栈 → 二分确认 → 三处协同修复 → 严格裁判下三次冷启动 healthy</td><td>Qoder</td></tr>
+</table>
+
+<h2>3 · 问题定义：同一个现象，三种"看见"</h2>
+<div class="grid2">
+  <div class="card dc">
+    <div class="who">deepcode 定义的问题</div>
+    <p>"host-boot 完成、渲染器 <code>boot.started</code> → 30s timeout。主进程健康，卡的是渲染器那半边。"</p>
+    <p><b>→ 问题 = 健康上报链路为什么走不通。</b>全部火力对准上报链：注册点、inject 依赖链、端点可达性、<code>loader.await()</code>、readyState、combo 体量。最终用"+6s 404 / +10s 401 / 同配置两次启动结果相反"定性为<b>上报 vs 路由就绪的竞态</b>。</p>
+  </div>
+  <div class="card oc">
+    <div class="who">opencode 定义的问题</div>
+    <p>"sample 采样 2489/2489 全在 V8 JIT 代码里，CPU 107–114% 持续 10+ 分钟"</p>
+    <p><b>→ 先定义为 V8 JIT 死锁</b>（Electron 43 升级触发 JIT 回归）；二分定位到 <code>dsh-role-matrix-local</code> 后修正为 <b>MutationObserver 回调风暴</b>（boot 期 React 批量渲染 × observer 同步改 DOM）。</p>
+  </div>
+</div>
+<div class="card qd">
+  <div class="who">Qoder 定义的问题</div>
+  <p>表象与 opencode 相同（CPU 100%+、inspector 超时），但多问了一句：<b>"观测手段全部失效"本身是什么信号？</b>——<code>Runtime.enable</code> 超时、<code>Debugger.enable</code> 超时、console 零输出、rAF 不跑、<code>setTimeout(0)</code> 不跑（deepcode 实测过），五者同时成立只有一个机制能解释：<b>微任务队列永不清空，事件循环被饿死</b>。问题被定义为"谁在同步级联"，而不是"谁在慢"。</p>
+</div>
+<blockquote class="quote">方法论要点：故障定义阶段的差异直接决定排查方向。deepcode 把"上报超时"当问题本体（它是症状）；opencode 把"CPU 高"当问题本体（它是结果）；只有把"一切异步机制停摆"当问题本体，才会去找"永不停止的微任务源"。</blockquote>
+
+<h2>4 · 排查还原：各家的关键一步与失误点</h2>
+
+<h3>4.1 deepcode —— 教科书级排除法，止步于症状层</h3>
+<table>
+  <tr><th>假设</th><th>排除手段</th><th>结果</th></tr>
+  <tr><td>插件 inject 服务缺失</td><td>动态探针</td><td><code>entries=83 未激活=0</code> 全 ACTIVE</td></tr>
+  <tr><td>上报器插件没激活</td><td>entry state</td><td><code>state=2</code> ACTIVE</td></tr>
+  <tr><td>上报端点不可达</td><td>探针同路径 POST</td><td>HTTP 204 成功</td></tr>
+  <tr><td>主线程被 12MB combo 同步占住</td><td><code>/usr/bin/sample</code> ×3479</td><td>99.7% 在 <code>mach_msg2_trap</code> 空闲等待</td></tr>
+  <tr><td>JIT 编译太慢</td><td>同上 + 机制论证</td><td>"JIT 在后台线程编译，不阻塞事件循环"；并纠正 opencode 把 73<b>毫秒</b>读成 73 秒</td></tr>
+  <tr><td>页面 load 生命周期</td><td>探针等 window load</td><td>40s 仍 <code>interactive</code>；资源请求 7/7 已完成</td></tr>
+  <tr><td><code>setTimeout(0)</code> 能否执行</td><td>探针</td><td><b>不跑 ← 离真相最近的一刻</b></td></tr>
+  <tr><td>同配置连续启动</td><td>对照实验</td><td>一次 healthy 一次 timeout → 定性为竞态</td></tr>
+</table>
+<p><b>为什么止步：</b>retry 补丁确实让症状消失（重试 40 次总有一次挤过微任务间隙）——<b>症状消失被当成了问题解决</b>。它没有追问更根本的问题：<i>为什么渲染器会有"间歇性喘息窗口"？</i> 健康页面的 <code>setTimeout(0)</code> 永远在 1ms 内执行，"偶尔能挤过去"本身就是病征。</p>
+
+<h3>4.2 opencode —— 拿对了地图，画错了疆界</h3>
+<ul>
+  <li><span class="tag ok">贡献</span>最早摸到涉事代码：二分法定位 <code>dsh-role-matrix-local</code>；从"JIT 死锁"修正为"observer 级联"；打了三层修复层层逼近。</li>
+  <li><span class="tag bad">失误</span>没有拿到死循环的真实形态。它的模型是"boot 期 React 大量渲染 × observer 同步改 DOM = <b>一次性风暴</b>"；真实形态是<b>双容器永久互抢</b>。rAF 防抖对乒乓无效：乒乓的每一步发生在 rAF 回调<b>之前</b>的微任务阶段，防抖只合并"自触发"，压不住"互触发"。</li>
+  <li><span class="tag warn">关键缺失证据</span>从未确认 DOM 里到底有几个 <code>[data-dsh-workbench-container]</code>。一个 <code>querySelectorAll(...).length === 2</code> 就能暴露"同名单例出现两次"——但"级联风暴"的模型锁死了注意力，"修复后复发"这个模型解释不了的现象被继续在旧模型内加层消化，而不是推翻重来。</li>
+</ul>
+
+<h3>4.3 Qoder —— 七步闭环</h3>
+<ol>
+  <li><b>判读签名</b>：CPU 100–185% + Runtime.enable 超时 + Debugger.enable 超时 + console 零输出 = 微任务饿死（不是慢，是永远轮不到）。</li>
+  <li><b>否决"看门狗受害者理论"</b>：日志里的 Network/GPU killed 是<b>果</b>（主进程杀子进程做恢复），LAN HTTPS 证书是独立噪音。清雾。</li>
+  <li><b>时间线钉桩</b>：从日志 run 边界推出"14:33 健康 → 17:45 首败"，嫌疑窗口缩到 14:35–17:45——三包构建同步恰在其中。</li>
+  <li><b>旁路观测（破局点）</b>：Electron 渲染端 CDP 不可用（inspector 消息也过主线程）。铸鉴权 cookie（读 <code>~/.dsh/.credentials.yaml</code> secret，base64url 解码 32B 作 HMAC key）→ 独立 Chrome 复现页面（cookie 须 Lax、导航不带 query 否则 403）→ <b>在空白页先 Debugger.enable、导航、挂死后 Debugger.pause</b>——V8 栈守卫中断不经 JS 事件循环，能打断忙循环。热栈顶帧：<code>schedulePlace</code>。</li>
+  <li><b>反向确认</b>：恢复完整 profile、只摘三个含 <code>schedulePlace</code> 的包 → 渲染端复活；加回 → 再挂死。因果闭环。</li>
+  <li><b>修复（识别 opencode 未见的第三层）</b>：读源码发现 opencode 的修复注释就在旁边，但有一处它没修的致命细节——单例守卫在<b>挂载时</b>求值。三处协同：①单例改<b>插入时</b>裁决（后到者 retire）；②<code>adoptMembers</code> 判据改 <code>member.parentElement === root</code>（容器间不可能互抢）；③geometry 重锚加父节点守卫。修复不变量：<b>observer 对所观察子树的写操作，必须"移动一次后不再满足移动条件"。</b></li>
+  <li><b>验证不妥协</b>：三次冷启动 healthy（其中一次特意在<b>还原看门狗 10s 严格时限</b>后——不用放宽过的裁判自证清白）；DOM 断言 group=1/container=1（修复前 2/2）；20 连击折叠风暴主线程仍即时响应；60s CPU 浸泡 0–0.5%；门禁全绿。</li>
+</ol>
+
+<h2>5 · 为什么此类问题如此难以发现</h2>
+<ol>
+  <li><b>观测者悖论</b>：诊断挂死主线程的所有常规工具本身依赖主线程存活。工具失效 ≠ 无法诊断，而是需要<b>先于挂死建立</b>的旁路通道——这个反直觉推论三方中只有 Qoder 走到（deepcode 的代码内探针同样受饿死影响：40 秒里探针 setTimeout 一次都没跑）。</li>
+  <li><b>症状层修复的迷惑性</b>：retry 让系统"看起来好了"。症状消失 ≠ 根因消除。判据：修复后日志若出现 <code>renderer boot health accepted on attempt N</code> 且 N&gt;1，说明主线程仍在喘息，没修干净。</li>
+  <li><b>部分正确模型的锁定效应</b>：opencode 的"级联风暴"模型 80% 正确——恰恰是这 80% 阻止了它检查剩下 20%。当一个模型能解释大部分现象时，要主动找<b>它解释不了的现象</b>；"修复后复发"就是最响的警报。</li>
+  <li><b>多因叠加的归因陷阱</b>：同期真实存在其他故障（P0-8 路径悬空、v0 迁移拒绝、loopx 缺件、LAN HTTPS 噪音、MCP 重连风暴）构成浓雾。日志里相邻 ≠ 因果。先画时间线钉桩，再对齐窗口内改动，比逐个追报错快一个量级。</li>
+  <li><b>竞态故障的非确定性</b>：同配置一次 healthy 一次 timeout 天然诱导"竞态"结论。竞态是真的，但<b>位置判断错了</b>——不在"上报 vs 路由"，在"双容器插入的先后"。</li>
+  <li><b>共享代码的分布式责任</b>：bug 在共享源，但暴露条件要求<b>两个消费者同时存在且先后挂载</b>——单包测试永远测不出。这是"一处事实多处副本"架构的固有代价。</li>
+</ol>
+
+<h2>6 · 三方方法论对照</h2>
+<table>
+  <tr><th>维度</th><th>deepcode</th><th>opencode</th><th>Qoder</th></tr>
+  <tr><td>问题定义</td><td>上报链路为何超时（症状层）</td><td>JIT → 修正为 observer 风暴（机制层）</td><td>一切异步停摆 → 微任务饿死（本体层）</td></tr>
+  <tr><td>核心手段</td><td>代码内探针 + 对照实验</td><td>sample 采样 + 摘包二分</td><td><b>旁路观测</b>（cookie+Chrome+预启用 Debugger）+ 二分 + 源码时序分析</td></tr>
+  <tr><td>最接近真相的时刻</td><td><code>setTimeout(0)</code> 不跑</td><td>定位到 role-matrix 包</td><td>热栈 <code>schedulePlace</code></td></tr>
+  <tr><td>为什么没走完</td><td>症状消失（retry 生效）后停手</td><td>80% 正确的模型锁定，未验证 DOM 实际形态</td><td>—</td></tr>
+  <tr><td>修复位置</td><td>上报层（缓解）</td><td>观察者节流（缓解）</td><td>状态机本体（根除）</td></tr>
+  <tr><td>修复后表现</td><td>healthy 但 attempt N&gt;1</td><td>复发</td><td>严格裁判下三次冷启动全 healthy</td></tr>
+  <tr><td>不可抹杀的贡献</td><td>排除法铺垫、JIT 谣言粉碎、loopx 缺件修复、补丁登记纪律</td><td>二分定位涉事包、机制类别识别、部分防御层</td><td>完成因果闭环</td></tr>
+</table>
+<blockquote class="quote">"为什么只有 Qoder 解决了"的最小化答案：不是模型智力差距，是<b>时机 + 纪律</b>的组合——① 接手最晚，前两方的修复与登记构成了可读的战场地图；② 抓住"观测失效"这个反常信号并愿意为它搭建成本最高的旁路通道；③ 拿到热栈后没有停在"找到函数"，而是继续追问"它为什么会永续运行"直到发现双容器竞态。</blockquote>
+
+<h2>7 · 防复发机制</h2>
+<h3>已沉淀</h3>
+<table>
+  <tr><th>机制</th><th>位置</th><th>拦什么</th></tr>
+  <tr><td>修复不变量</td><td><code>shared/client/sidebar-entry-core.ts</code> 注释</td><td>共享层新增 observer 时，写操作必须"移动一次后不再满足移动条件"</td></tr>
+  <tr><td>热栈取证法</td><td><code>~/.agents/skills/dsh-desktop-diagnostics/SKILL.md</code></td><td>挂死渲染端的完整操作手册（铸 cookie → 独立 Chrome → 预启用 Debugger → pause）</td></tr>
+  <tr><td>第三种白屏根因登记</td><td>同上技能 + 决策 Note</td><td>"插件加载中"永不结束的三个根因家族：root 槽竞态 / combo rev / observer 乒乓</td></tr>
+  <tr><td>决策记录</td><td><code>docs/notes/implemented/surface/2026-09-19-workbench-group-livelock-boot-blackout.md</code></td><td>完整因果链、方案权衡、验证证据</td></tr>
+  <tr><td>补丁重放纪律</td><td><code>dsh-patches/boot-health-retry/</code>、<code>dsh-patches/runtime-guards/</code></td><td>升级后重放，不手工重打</td></tr>
+</table>
+<h3>诊断签名卡（挂死渲染端三步定性，禁止跳到 JIT / CLI / 版本玄学）</h3>
+<table>
+  <tr><th>步</th><th>检查</th><th>判定</th></tr>
+  <tr><td><span class="num">1</span></td><td>渲染进程 CPU 是否常驻 100%+</td><td>是 → 忙循环类；否 → 等待类（另查）</td></tr>
+  <tr><td><span class="num">2</span></td><td>CDP <code>Runtime.enable</code> 是否超时</td><td>是 → 主线程饿死（微任务级联签名成立）</td></tr>
+  <tr><td><span class="num">3</span></td><td>热栈顶帧是谁</td><td>函数名即凶手；若涉 observer 改 DOM → <code>querySelectorAll</code> 数单例是否重复</td></tr>
+</table>
+<h3>流程级教训</h3>
+<ol>
+  <li><b>症状消失先自证清白再庆祝</b>：修复后必查 attempt N（N&gt;1 = 仍在喘息）、watchdog 零告警、CPU 归零。</li>
+  <li><b>模型解释力检查</b>：每轮修复后问"还有什么现象是这个模型解释不了的"。</li>
+  <li><b>多故障并发先画时间线钉桩</b>（健康→故障边界时刻），对齐窗口内文件改动。</li>
+  <li><b>诊断止痛贴（放宽阈值）必须显式登记或还原</b>——本次 <code>120e3</code> 若不清除，未来真挂死要 2 分钟才报警。</li>
+  <li><b>观测通道要在挂死前建立</b>：排查卡死类问题，第一步就想"我还有什么不经过故障现场的观测手段"。</li>
+</ol>
+
+<footer>
+  本复盘与 <code>docs/notes/implemented/process/2026-09-19-boot-blackout-triage-retrospective.md</code>（MD 版）内容一致 · 技术细节唯一家：<code>docs/notes/implemented/surface/2026-09-19-workbench-group-livelock-boot-blackout.md</code> · 未提交，待审阅入库
+</footer>
+</div>
+</body>
+</html>
