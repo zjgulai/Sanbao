@@ -89,6 +89,7 @@ import {
   PACKAGING_CHANGELOG_REL_PATH,
   ROOT_CHANGELOG_REL_PATH,
 } from './gates/changelog-release-sections.mjs'
+import { GUARD_BUNDLE_GLOB, checkUpdateGuard } from './gates/update-guard.mjs'
 import { runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectManagedManifests, collectPackages } from './gates/package-collect.mjs'
@@ -1352,6 +1353,87 @@ const CHECKS = [
       '跑 node --test scripts/gates/patch-anchor-scope.test.mjs 看红在哪条：扫描集判据必须能说「不」——已打 tag 的树必须退出扫描、未打 tag 的（含同号重制的新树）必须纳入、射程为空必须报空而不是报通过。重点是恒真桩突变：把过滤换成「无条件纳入」或把空射程恒置 false，用例必须失效；测不出来的判据等于没有判据（P-02 / P-11）',
     run() {
       return runNodeTestFile('scripts/gates/patch-anchor-scope.test.mjs', '补丁锚点扫描集判据的反向自测失败')
+    },
+  },
+  {
+    name: 'update-guard',
+    remediation:
+      '本项量的是**更新安装闸的行为结构**（不是「文件里有没有那句话」）：`downloadAndOpenUpdate()` 里必须 ① 用 `DSH_DISABLE_UPDATE_INSTALL` 与 `0` 比较；② 判完紧跟 `throw`；③ 排在 `downloadDesktopUpdate(` / `shell.openPath(` 之前；④ 方法仍有调用点。报「闸排在副作用之后」= 下载已发生才判，按报错把语句移回方法首句（消息串仍在文件里，所以 `packaging/verify-patches-v2.sh` 的 `ck` 看不见这一形态）；报「找不到定义 / 找不到任何已知副作用」= 上游改了名或换了调用形态，**重锚到新的承载面**，不要为了让门禁变绿而删判据；报「读不到 / 方法体不可解析」是**仪器问题**（含文件 mode 000 导致 EACCES），先修读取面，不要读成「补丁丢了」。⚠️ 不要把它与 `patch-anchors` 合并：那条管补丁在不在（含消息串），这条只管它在行为上还成不成立。反向自测：`node --test scripts/gates/update-guard.test.mjs`',
+    run() {
+      // 射程与 patch-anchors 同一把尺（ADR-0075）：本机 /Applications ∪ **未打 tag** 的 staging 树。
+      // 射程规则的唯一家是 gates/patch-anchor-scope.mjs——这里只是它的磁盘读取面，不另立一份判据。
+      const appDir = join('/', 'Applications', 'DSH Desktop.app')
+      const appInstalled = appResourcesRoot(appDir) !== null
+      const stagingRoot = join(repoRoot, 'packaging', 'staging')
+      const stagingVersions = existsSync(stagingRoot)
+        ? readdirSync(stagingRoot).filter((version) =>
+            appResourcesRoot(join(stagingRoot, version, 'app', 'DSH Desktop.app')) !== null,
+          )
+        : []
+      const scope = selectAnchorTargets({
+        stagingVersions,
+        taggedVersions: releasedVersions(),
+        appInstalled,
+      })
+      if (scope.vacuous) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `${scope.note}——本项本次**未校验任何 app 树**（不是「闸都在」）`,
+        }
+      }
+      const targets = [
+        ...(scope.checkInstalledApp ? [appDir] : []),
+        ...scope.scanStaging.map((version) => join(stagingRoot, version, 'app', 'DSH Desktop.app')),
+      ]
+      const violations = []
+      let unverifiable = 0
+      for (const tree of targets) {
+        const label = relative(repoRoot, tree)
+        const resources = appResourcesRoot(tree)
+        const libDir = resources === null ? null : join(resources, 'lib')
+        const bundle = libDir !== null && existsSync(libDir)
+          ? readdirSync(libDir).find((name) => /^electron-runtime-.*\.js$/.test(name) && !name.endsWith('.map'))
+          : undefined
+        if (bundle === undefined) {
+          violations.push(`${label}: 找不到 ${GUARD_BUNDLE_GLOB}——更新器 bundle 不在，闸无从判定`)
+          continue
+        }
+        let text
+        try {
+          text = readFileSync(join(libDir, bundle), 'utf8')
+        } catch (cause) {
+          // 读不到**不是**「闸不在」：权限或文件被移走必须在读数里分得开。2026-09-18 实测
+          // 写入路径把文件落成 mode 000 时 node 直接 EACCES——把它读成「补丁丢了」，
+          // 会把人送去重锚一个根本没坏的东西（仪器假红）。
+          violations.push(
+            `${label}: 读不到 ${bundle}（${cause instanceof Error ? cause.message : String(cause)}）`
+              + '——这是**仪器问题**，不是补丁丢失',
+          )
+          unverifiable += 1
+          continue
+        }
+        const result = checkUpdateGuard(text)
+        if (result.unverifiable) unverifiable += 1
+        violations.push(...result.violations.map((violation) => `${label}: ${violation}`))
+      }
+      // 「判定失败」与「判定为红」不是同一件事，但**都不能算通过**（判据的默认错误方向选「多量」）。
+      if (unverifiable > 0) {
+        violations.push(
+          `${unverifiable} 棵树的闸**无法判定**（读不到或方法体不可解析）——本项不得据此判绿`,
+        )
+      }
+      const note = `${scope.note}；受检 ${targets.length} 棵，判定成功 ${targets.length - unverifiable}`
+      return { passed: violations.length === 0, violations, note }
+    },
+  },
+  {
+    name: 'update-guard-selftest',
+    remediation:
+      '跑 node --test scripts/gates/update-guard.test.mjs 看红在哪条：闸判据必须能说「不」——装机真实字节的那段结构必须判绿，而**闸被挪到副作用之后**（消息串仍在文件里）与**闸的条件被抽成 `if (false)`** 这两种形态必须判红，且必须证明按串判的天真实现会在它们身上判绿（这正是本项存在的理由）；定义改名、闸整句移除、只有定义无调用点、已知副作用全不见了都必须判红；读不到正文必须判红而不是跳过；花括号不闭合必须报 unverifiable（判定失败）而不是通过。重点：字符串里带花括号不得让方法体配对错位（那是假红与假绿共用的入口）',
+    run() {
+      return runNodeTestFile('scripts/gates/update-guard.test.mjs', '更新安装闸判据的反向自测失败')
     },
   },
   {

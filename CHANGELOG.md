@@ -4,6 +4,46 @@
 
 ## [Unreleased] - 2026-09-14
 
+## [2.5.0] - 2026-09-18（DSH 基座 2.0.5→2.0.10 / runtime 0.1.5-rc.2 迁移）
+
+### 基座迁移
+
+- **38 个补丁锚点全量重锚**（`packaging/verify-patches-v2.sh` 38 锚 ALL VERIFIED）：上游这一跳同时改了
+  打包形态与运行时层，锚点行号全变。P0-2v2 改挂 `profile-channel-admission`（2.0.10 把它从 `main.ts`
+  拆了出来）；锚集 v3 把**内容哈希文件名** glob 化——原先钉哈希的锚点在上游改一次构建后即静默失配，
+  这类空转被消除。权威登记簿为 [`dsh-patches/patches-manifest-v3.md`](dsh-patches/patches-manifest-v3.md)。
+- **打包形态从 ASAR 改为目录**（上游 #973 全平台 no-ASAR）：补丁面由「事后改写 `app.asar.unpacked`」
+  变成「源码直接编译产出」。路径常量收敛到唯一家 `scripts/lib/app-resources.mjs`——no-ASAR ⇄ ASAR
+  双形态探测，**形态缺失时中止而不是静默跳过**（静默跳过就是假绿），11 处运行时引用接到它
+  （[ADR-0073](docs/adr/ADR-0073.md)）。
+- **运行时 0.1.5-rc.2 物化 270/270**。过程中证伪一条路：`npm pack` 重打包的字节 ≠ git blob，
+  hash 校验 184 全败——正解是走 git promisor 惰性拉取。源码构建五步全绿，dist 面补丁由编译直接产出。
+- **上游换名的三个消费面**（[ADR-0116](docs/adr/ADR-0116.md)）：`@deepseek-ai/dsh-persona` 的配置键
+  `text` → `prefix`（必填）。后果不是「人格没生效」而是**整棵 preset 树载入失败**。新增门禁
+  `preset-config-schema`，按**插件自己的 `Config`** 判——只调一次会漏「旧键还在、新键有默认值」，
+  故另加**键集判据**（实测 schemastery 并不拒未知键）；两个 legacy 生成器同批改掉，否则重跑会把
+  已修好的预设再写坏。
+- **官方 UI 锚改按关系定位**：2.0.10 的 hero 标题没有类名（`headlineText` 已移除），插件里那条隐藏
+  规则根本没生成，而**没有任何判据在读**它。改为在角标父容器里认「唯一的有文字叶子兄弟」；
+  0 或 ≥2 候选**不猜**，报 `degraded:<code>`。声明文件 `ui-anchors.json` 成为唯一家，插件与门禁
+  双向断言（记录见 [13 号计划](docs/research/13-upgrade-2.0.10-execution-plan.md) §18）。
+- 标题栏摘除 `v2.0.5` 版本串；beta 变体 30 文件三方对齐，机器判定 `181 shared source files are aligned`。
+
+### 出货面
+
+- **技能面不携带 `__pycache__`**（[ADR-0112](docs/adr/ADR-0112.md)）：`.pyc` 的 `co_filename` 里钉着
+  构建机绝对路径，是**文本守卫读不到的二进制载体**。改为拷贝 filter + 校验判据双机制：修复前
+  `--check` 判红 26 条目，修复后 0；出口树 `find -name '*.pyc'` 为 0。
+- 出货架构声明 **arm64**。x64 缺口单列：`fs-ext` 的 darwin-x64 prebuild 不在场，补齐需
+  `MACOS_UNIVERSAL_NATIVE_ENTRIES` 与 `--dir --universal` 适配，**不阻塞本版**，登记下轮。
+- 读数：`DSH_BASELINE=2.0.10` / `DSH_RUNTIME=0.1.5-rc.2` / `ARCH=arm64` / `SOURCE_DIRTY=0`
+  （`packaging/release/2.5.0/VERSION`；该目录按 `.gitignore` 不入库）。
+
+### 文档与研究
+
+- `docs/research/11-13`：上游 2.0.10 差异剖析 / 插件升级与重复矩阵 / 升级执行方案与执行记录（§7–§18）。
+- ADR-0097–0116 为本次升级的决策链。
+
 ## [2.4.1] - 2026-09-14（出货预设的行级闭合：修掉 2.4.0 带出去的那条本机装配行）
 
 本版是**缺陷修复版**：2.4.0 装完后打开 DSH，「结伴 · 达人与联盟合作」这个 preset 加载失败——
