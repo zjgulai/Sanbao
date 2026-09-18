@@ -38,7 +38,7 @@ describe('BrowseTab other-group collapse', () => {
     document.body.appendChild(container)
     await act(async () => {
       root = createRoot(container)
-      root.render(<SkillPanel api={api} onClose={() => {}} />)
+      root.render(<SkillPanel api={api} onExit={() => {}} runSkill={async () => ({ ok: true, via: 'draft' })} />)
     })
     // Business domain cards render.
     expect(container.textContent).toContain('选品洞察')

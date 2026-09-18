@@ -73,6 +73,37 @@ function manifestFor(opts: {
   }
 }
 
+/** A manifest shaped like the MGT-branch ones `scripts/role-presets/generate.mjs`
+ *  writes (management plane, ADR-0129): record lives under `management_catalog`,
+ *  and `x_lute.management` replaces `x_lute.squad`. */
+function mgtManifestFor(opts: {
+  id: string; alias: string; title: string; artifact: string
+}): Record<string, unknown> {
+  return {
+    format: 'dsh-preset',
+    version: 2,
+    x_lute: {
+      plane: { id: 'PLN-EXC', name: '决策权平面', purpose: '' },
+      domain: { id: 'DOM-EXC', name: '管理层' },
+      lifecycle: { status: 'draft', production_authorized: false, authorization_status: 'evaluation_carrier_not_shadow_authorized' },
+      management: { case_role_participation: 'none', squad: null },
+      skills: {
+        subset: ['weighted-scoring'],
+        gaps: ['战略停止评估'],
+        material_skill_names: ['全局组合排序'],
+      },
+    },
+    material: {
+      management_catalog: {
+        record: {
+          id: opts.id, alias: opts.alias, title: opts.title, artifact: opts.artifact,
+          metrics: ['全局组合偏差'], collaborates_with: ['MGT-002', 'MGT-003'],
+        },
+      },
+    },
+  }
+}
+
 afterAll(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -124,6 +155,44 @@ describe('collectRoleMatrix', () => {
     expect(ops.domains.map((domain) => domain.id)).toEqual(['DOM-02', 'DOM-05'])
     // Roles inside a domain sort by the official roster order.
     expect(ops.domains[0]!.roles.map((card) => card.id)).toEqual(['agt-006', 'agt-007'])
+  })
+
+  it('places the management projection plane (PLN-EXC) first and reads the MGT record', () => {
+    const root = makeRoot()
+    writeRole(root, 'agt-001', { name: '衡远 · 经营目标与资源统筹', description: 'd', order: 1101 },
+      manifestFor({ planeId: 'PLN-MGT', planeName: '经营管理', domainId: 'DOM-01', domainName: '经营与组织', agt: 'AGT-001', alias: '衡远', title: '经营目标与资源统筹', artifact: '目标与资源决策包' }))
+    writeRole(root, 'mgt-001', { name: '持衡 · 首席执行官 CEO', description: 'd〔管理层·评估载体·未授权Shadow〕', order: 101 },
+      mgtManifestFor({ id: 'MGT-001', alias: '持衡', title: '首席执行官 CEO', artifact: '全局组合决策包' }))
+
+    const payload = collectRoleMatrix(root)
+
+    expect(payload.totals.roles).toBe(2)
+    expect(payload.totals.degraded).toBe(0)
+    // PLN-EXC renders above the execution planes (ADR-0129 D2, order base 0).
+    expect(payload.planes.map((plane) => plane.id)).toEqual(['PLN-EXC', 'PLN-MGT'])
+    const exc = payload.planes[0]!
+    expect(exc.domains.map((domain) => domain.id)).toEqual(['DOM-EXC'])
+    const card = exc.domains[0]!.roles[0]!
+    expect(card.agt).toBe('MGT-001')
+    expect(card.alias).toBe('持衡')
+    expect(card.title).toBe('首席执行官 CEO')
+    expect(card.artifact).toBe('全局组合决策包')
+    expect(card.collaboratesWith).toEqual(['MGT-002', 'MGT-003'])
+    expect(card.gaps).toEqual(['战略停止评估'])
+    // The management plane has no squad contract — flows stay empty, not degraded.
+    expect(card.flows).toEqual([])
+  })
+
+  it('derives the material id namespace for a degraded mgt card', () => {
+    const root = makeRoot()
+    writeRole(root, 'mgt-002', { name: '驭浪 · 首席增长官', description: 'd', order: 102 }, undefined)
+
+    const payload = collectRoleMatrix(root)
+
+    const card = payload.planes[0]!.domains[0]!.roles[0]!
+    expect(card.id).toBe('mgt-002')
+    expect(card.agt).toBe('MGT-002')
+    expect(card.degraded).toContain('manifest.json 缺失')
   })
 
   it('carries the classification, artifact and skill inventory onto the card', () => {

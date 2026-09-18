@@ -1,23 +1,30 @@
 #!/usr/bin/env node
 /**
- * 50 岗位 preset 的**全量保真校验器**（「信息不要少了」的机器契约）
+ * 50 岗位 + 3 管理岗位 preset 的**全量保真校验器**（「信息不要少了」的机器契约）
  *
  * 它回答的不是「文件在不在」，而是：材料里关于某个岗位的**每一条信息**，
- * 是否都逐字进了该岗位的 preset。校验分 12 层，任一层失败即非零退出：
+ * 是否都逐字进了该岗位的 preset。校验分 12 层（AGT）+ MGT 层（ADR-0129 D6③），
+ * 任一层失败即非零退出：
  *
- *   L1 覆盖   材料里的 50 个岗位与产物目录一一对应，不多不少
+ *   L1 覆盖   材料里的 50 个 AGT 岗位 + 3 个 MGT 管理岗位与产物目录一一对应，不多不少
  *   L2 归档   岗位卡全文（逐字）归档在 manifest，persona 只保留身份与 Soul 摘要
- *   L3 小节   岗位卡 7 个 ## 小节逐个逐字出现在 manifest（合计 350 节，0 缺失）
+ *   L3 小节   岗位卡 7 个 ## 小节逐个逐字出现在 manifest（合计 53 × 7 = 371 节，0 缺失）
  *   L4 字段   role-catalog 的 20 个字段逐个 deepEqual，且**反向**无丢字段
  *   L5 归集   org / mgmt / lifecycle / collab / flow-catalog / playbooks / roster 七项来源
  *            逐条 deepEqual（含该岗位涉及的边）
  *   L6 哈希   记录在 manifest 里的 sha256 与源文件当前实际哈希一致（证明快照可追溯）
- *   L7 官方   产物通过平台自己的 preset lint（组合词汇合法）
- *   L8 技能   skill-subset 引用的每一个技能都真实存在（0 悬空）
- *   L9 编队   squad 契约与材料选路规则逐条一致，且零/多匹配一律 WAIT
- *   L10 头像  preset.yml 的 icon 存在、与图标库同一字符串、50 枚互不重样
+ *   L7 官方   产物通过平台自己的 preset lint（组合词汇合法；AGT 与 MGT 同判）
+ *   L8 技能   skill-subset 引用的每一个技能都真实存在（0 悬空；AGT 与 MGT 同判）
+ *   L9 编队   squad 契约与材料选路规则逐条一致，且零/多匹配一律 WAIT；
+ *            **MGT 显式跳编队**——管理层不担任 Lead/Worker（x_lute.squad 必须为 null，
+ *            case_role_participation 必须为 'none'）
+ *   L10 头像  preset.yml 的 icon 存在、与图标库同一字符串、53 枚互不重样
  *   L11 角色资产  Soul / Role Playbook / Blueprint / Skill descriptor / Bundle 引用闭合
  *   L12 快照  source revision、generator revision、索引哈希和设计期运行边界可重算
+ *   MGT 层   management-catalog 记录/子块 deepEqual；四份共享设计文档逐字归档且哈希一致；
+ *            decision_rights 与 not_granted 归档闭合；persona 状态披露块存在且逐字携带
+ *            SHADOW-VERIFICATION 状态行；T0 定制子集（剔除 meeting-minutes/xindaya-translator/
+ *            kami）在 cordis 真实字节上核对；评估载体授权姿态（未授权 Shadow/生产）闭合
  *
  * 用法：
  *   node scripts/role-presets/verify-lossless.mjs                 # 校验默认输出根
@@ -69,6 +76,53 @@ const ROLE_ASSET_FILES = {
   soul: (id) => `05-agents/roles/souls/${id}.soul.md`,
   rolePlaybook: (id) => `06-playbooks/role-playbooks/${id}.md`,
   presetBlueprint: (id) => `10-platform/deepseek-harness/preset-blueprints/${id}.json`,
+}
+
+// ── 管理层（MGT）来源与期望值（ADR-0129 D6③）─────────────────────────────────
+// 这里的 MGT_T0_EXCLUDED / MGT_SOUL_SECTIONS 与 generate.mjs 同名常量是**有意的双份**：
+// 校验器的天职是独立重算（AGT 侧 expectedSoulSummary 同理），两边漂移即红灯。
+const MGT_SOURCE_FILES = {
+  managementCatalog: '04-organization/management/management-catalog.json',
+  managementLayer: '04-organization/MANAGEMENT-LAYER.md',
+  decisionRights: '04-organization/management/DECISION-RIGHTS.md',
+  enforcement: '04-organization/management/ENFORCEMENT.md',
+  shadowVerification: '04-organization/management/SHADOW-VERIFICATION.md',
+  blueprintManifest: '04-organization/management/preset-blueprints/manifest.json',
+  roleCard: (id) => `04-organization/management/roles/${id}.md`,
+  soul: (id) => `04-organization/management/souls/${id}.soul.md`,
+  rolePlaybook: (id) => `04-organization/management/playbooks/${id}.md`,
+  presetBlueprint: (id) => `04-organization/management/preset-blueprints/${id}.json`,
+}
+const MGT_SHARED_KEYS = ['managementCatalog', 'managementLayer', 'decisionRights', 'enforcement', 'shadowVerification']
+const MGT_T0_EXCLUDED = ['meeting-minutes', 'xindaya-translator', 'kami']
+const MGT_SOUL_SECTIONS = [
+  '我是谁',
+  '我的灵魂原则',
+  '我的第一条灵魂原则',
+  '我的第二条原则（v2新增）',
+  '我的第二条灵魂原则（v2新增，本岗位的承重原则）',
+  '我的第三条灵魂原则（v2新增）',
+  '我绝不做什么',
+  '我的协作姿态',
+  '我的停止信号',
+]
+const MGT_SOUL_REQUIRED = ['我是谁', '我绝不做什么', '我的停止信号']
+const GENERIC_MANIFEST =
+  process.env.ROLE_GENERIC_MANIFEST ||
+  join(fileURLToPath(new URL('../../packages/capabilities/dsh-overseas-skills/manifest/generic-skills.json', import.meta.url)))
+
+function expectedMgtSoulSummary(soulText, soulPath, soulSha) {
+  const present = MGT_SOUL_SECTIONS.filter((h) => soulText.split('\n').some((l) => l.trim() === `## ${h}`))
+  for (const h of MGT_SOUL_REQUIRED) if (!present.includes(h)) return null
+  if (!present.some((h) => h.includes('原则'))) return null
+  return [
+    '── Soul Contract 摘要（身份 / 灵魂 / 硬边界 / 协作姿态 / 停止信号）────────',
+    '',
+    `来源：${soulPath}；sha256 ${soulSha}`,
+    '以下摘要是常驻身份约束；完整 Soul Contract 与 Role Playbook 只在 manifest 的角色资产区按需寻址。',
+    '',
+    ...present.flatMap((heading) => [soulSection(soulText, heading), '']),
+  ].join('\n').replace(/\n+$/, '')
 }
 
 function soulSection(soulText, heading) {
@@ -146,6 +200,9 @@ function main() {
   }
   for (const rel of [ROLE_ASSET_FILES.rolePlaybookIndex, ROLE_ASSET_FILES.presetBlueprintManifest]) {
     if (!existsSync(join(DOCS, rel))) fail('L0', `角色资产索引缺失：${rel}`)
+  }
+  for (const rel of Object.values(MGT_SOURCE_FILES)) {
+    if (typeof rel === 'string' && !existsSync(join(DOCS, rel))) fail('L0', `MGT 源文件缺失：${rel}`)
   }
   if (failures.length) return report()
 
@@ -229,12 +286,58 @@ function main() {
   const generatePath = fileURLToPath(new URL('./generate.mjs', import.meta.url))
   const expectedGeneratorRevision = process.env.ROLE_GENERATOR_REVISION || sha256(readFileSync(generatePath, 'utf8'))
 
-  // ── L1 覆盖 ──
+  // ── MGT 侧期望值独立重算（与生成器同一算法、独立实现）──
+  const mgtCatalog = JSON.parse(raw(MGT_SOURCE_FILES.managementCatalog))
+  const mgtBlueprintManifestText = raw(MGT_SOURCE_FILES.blueprintManifest)
+  const mgtSourceHashes = Object.fromEntries(
+    MGT_SHARED_KEYS.map((k) => [k, sha256(raw(MGT_SOURCE_FILES[k]))]),
+  )
+  const mgtAssetIndexHashes = { mgtBlueprintManifest: sha256(mgtBlueprintManifestText) }
+  const mgtAssetSource = new Map()
+  for (const mrole of mgtCatalog.roles) {
+    const profileText = raw(MGT_SOURCE_FILES.roleCard(mrole.id))
+    const soulText = raw(MGT_SOURCE_FILES.soul(mrole.id))
+    const rolePlaybookText = raw(MGT_SOURCE_FILES.rolePlaybook(mrole.id))
+    const presetBlueprintText = raw(MGT_SOURCE_FILES.presetBlueprint(mrole.id))
+    mgtAssetSource.set(mrole.id, {
+      profileText, soulText, rolePlaybookText, presetBlueprintText,
+      blueprint: JSON.parse(presetBlueprintText),
+      hashes: {
+        roleCard: sha256(profileText),
+        soul: sha256(soulText),
+        rolePlaybook: sha256(rolePlaybookText),
+        presetBlueprint: sha256(presetBlueprintText),
+      },
+    })
+  }
+  const mgtRevisionPayload = {
+    shared: mgtSourceHashes,
+    indexes: mgtAssetIndexHashes,
+    roles: [...mgtAssetSource.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, a]) => ({
+      id, roleCard: a.hashes.roleCard, soul: a.hashes.soul,
+      rolePlaybook: a.hashes.rolePlaybook, presetBlueprint: a.hashes.presetBlueprint,
+    })),
+  }
+  const expectedMgtSourceRevision = process.env.ROLE_MGT_SOURCE_REVISION || `source-hash:${sha256(canonicalJson(mgtRevisionPayload))}`
+  const mgtShadowText = raw(MGT_SOURCE_FILES.shadowVerification)
+  const expectedEvalStatusLine = /^状态：.*$/m.exec(mgtShadowText)?.[0] || null
+  const genericSkills = existsSync(GENERIC_MANIFEST)
+    ? JSON.parse(readFileSync(GENERIC_MANIFEST, 'utf8')).skills || []
+    : null
+  if (genericSkills === null) fail('L0', `通用技能线清单读不到：${GENERIC_MANIFEST}（MGT T0 子集核对依赖它）`)
+  const allT0 = (genericSkills || []).filter((s) => s.tier === 'T0').map((s) => s.name).sort()
+  const expectedMgtT0 = allT0.filter((s) => !MGT_T0_EXCLUDED.includes(s))
+
+  // ── L1 覆盖（双命名空间：50 AGT + 3 MGT）──
   const expectedIds = roleCatalog.roles.map((r) => r.id).sort()
+  const mgtIds = mgtCatalog.roles.map((r) => r.id).sort()
   const presentDirs = existsSync(OUT_ROOT)
-    ? readdirSync(OUT_ROOT).filter((d) => /^agt-\d{3}$/.test(d)).sort()
+    ? readdirSync(OUT_ROOT).filter((d) => /^(agt|mgt)-\d{3}$/.test(d)).sort()
     : []
-  const expectedDirs = expectedIds.map((id) => `agt-${id.slice(4)}`)
+  const expectedDirs = [
+    ...expectedIds.map((id) => `agt-${id.slice(4)}`),
+    ...mgtIds.map((id) => `mgt-${id.slice(4)}`),
+  ].sort()
   if (!isDeepStrictEqual(expectedDirs, presentDirs)) {
     const missing = expectedDirs.filter((d) => !presentDirs.includes(d))
     const extra = presentDirs.filter((d) => !expectedDirs.includes(d))
@@ -462,6 +565,234 @@ function main() {
     } else ok()
   }
 
+  // ── MGT 层（ADR-0129 D6③）：管理岗位 preset 的独立校验 ─────────────────────
+  let mgtSectionTotal = 0
+  for (const mrole of mgtCatalog.roles) {
+    const id = mrole.id
+    const dirId = `mgt-${id.slice(4)}`
+    const dir = join(OUT_ROOT, dirId)
+    if (!existsSync(dir)) continue // L1 已报缺失
+    const compPath = join(dir, 'agent.cordis.yml')
+    const manPath = join(dir, 'manifest.json')
+    if (!existsSync(compPath) || !existsSync(manPath)) {
+      fail('M1', `${dirId}: 缺 agent.cordis.yml 或 manifest.json`)
+      continue
+    }
+    const composition = readFileSync(compPath, 'utf8')
+    const manifest = JSON.parse(readFileSync(manPath, 'utf8'))
+    const srcAsset = mgtAssetSource.get(id)
+    const cardText = srcAsset.profileText
+
+    // ── M2 归档与状态披露（D1：评估载体姿态必须写在模型看得见的地方）──
+    const persona = extractPersonaText(composition)
+    const card = cardText.replace(/\s+$/, '')
+    if (persona === null) {
+      fail('M2', `${dirId}: 找不到 persona 字面块`)
+    } else {
+      if (persona.includes(card)) fail('M2', `${dirId}: 完整管理岗位卡不应常驻 persona`)
+      else if (!persona.includes(`岗位 ${id} ${mrole.title}`)) fail('M2', `${dirId}: persona 缺少岗位身份摘要`)
+      else if (!manifest.material.role_card.text.includes(card)) fail('M2', `${dirId}: manifest 未逐字归档管理岗位卡全文`)
+      else ok()
+      if (!persona.includes('── 状态披露')) fail('M2', `${dirId}: persona 缺状态披露块`)
+      else ok()
+      if (!persona.includes(mgtCatalog.dsh_integration.authorization_status)) fail('M2', `${dirId}: 状态披露缺 authorization_status`)
+      else ok()
+      if (expectedEvalStatusLine === null || !persona.includes(expectedEvalStatusLine)) {
+        fail('M2', `${dirId}: 状态披露未逐字携带 SHADOW-VERIFICATION 当前状态行——披露已过期，必须重生成`)
+      } else ok()
+      if (!persona.includes('不构成服务端权限控制')) fail('M2', `${dirId}: 状态披露缺 Prompt 层边界声明`)
+      else ok()
+    }
+
+    // ── M3 小节（逐节逐字）──
+    const mSections = cardSections(cardText)
+    if (mSections.length !== 7) fail('M3', `${dirId}: 管理岗位卡小节数 ${mSections.length}，期望 7`)
+    for (const sec of mSections) {
+      mgtSectionTotal++
+      if (!manifest.material.role_card.sections.some((s) => s.body === sec)) {
+        fail('M3', `${dirId}: manifest 未收录该小节 → ${sec.split('\n')[0]}`)
+      } else ok()
+    }
+
+    // ── M4 catalog 记录（正向 deepEqual + 反向无丢字段）──
+    const outRec = manifest.material.management_catalog.record
+    if (!isDeepStrictEqual(outRec, mrole)) fail('M4', `${dirId}: management_catalog.record 与源不一致`)
+    else ok()
+    for (const k of Object.keys(mrole)) {
+      if (!(k in (outRec || {}))) fail('M4', `${dirId}: 字段丢失 → ${k}`)
+      else ok()
+    }
+
+    // ── M5 共享设计文档逐字归档 + catalog 子块归集 ──
+    const md = manifest.material.management_design || {}
+    for (const [key, rel] of [
+      ['management_layer', MGT_SOURCE_FILES.managementLayer],
+      ['decision_rights', MGT_SOURCE_FILES.decisionRights],
+      ['enforcement', MGT_SOURCE_FILES.enforcement],
+      ['shadow_verification', MGT_SOURCE_FILES.shadowVerification],
+    ]) {
+      const doc = md[key]
+      const srcText = raw(rel)
+      if (doc?.text !== srcText || doc?.sha256 !== sha256(srcText) || doc?.path !== rel) {
+        fail('M5', `${dirId}: management_design.${key} 未逐字闭合`)
+      } else ok()
+    }
+    if (md.shadow_verification?.status_line !== expectedEvalStatusLine) {
+      fail('M5', `${dirId}: shadow_verification.status_line 与源不一致`)
+    } else ok()
+    const mc = manifest.material.management_catalog
+    for (const [key, value] of Object.entries({
+      layout: mgtCatalog.layout,
+      coverage_verification: mgtCatalog.coverage_verification,
+      runtime_model: mgtCatalog.runtime_model,
+      operating_model: mgtCatalog.operating_model,
+      semantics: mgtCatalog.semantics,
+      structure_history: mgtCatalog.structure_history,
+      dsh_integration: mgtCatalog.dsh_integration,
+    })) {
+      if (!isDeepStrictEqual(mc[key], value)) fail('M5', `${dirId}: management_catalog.${key} 与源不一致`)
+      else ok()
+    }
+
+    // ── M6 哈希 ──
+    if (!isDeepStrictEqual(manifest.material.source_hashes, mgtSourceHashes)) {
+      fail('M6', `${dirId}: 记录的 MGT 共享源哈希与当前源文件不一致`)
+    } else ok()
+    if (manifest.material.role_card.sha256 !== sha256(cardText)) {
+      fail('M6', `${dirId}: 管理岗位卡 sha256 不符`)
+    } else ok()
+
+    // ── M11 角色资产闭合 ──
+    const assets = manifest.role_assets
+    if (!assets || assets.role_id !== id || assets.preset_id !== dirId) {
+      fail('M11', `${dirId}: role_assets 缺失或 role_id/preset_id 不一致`)
+    } else ok()
+    const mSoulPath = MGT_SOURCE_FILES.soul(id)
+    const soul = assets?.soul
+    if (soul?.ref !== `docs/${mSoulPath}` || soul?.sha256 !== srcAsset.hashes.soul || soul?.text !== srcAsset.soulText) {
+      fail('M11', `${dirId}: Soul 资产未逐字闭合`)
+    } else ok()
+    const mSummary = expectedMgtSoulSummary(srcAsset.soulText, `docs/${mSoulPath}`, srcAsset.hashes.soul)
+    if (!mSummary || soul?.persona_summary_sha256 !== sha256(mSummary) || persona === null || !persona.includes(mSummary)) {
+      fail('M11', `${dirId}: persona 未包含可重算的 Soul 摘要`)
+    } else ok()
+    const rp = assets?.role_playbook
+    if (rp?.ref !== `docs/${MGT_SOURCE_FILES.rolePlaybook(id)}` ||
+        rp?.sha256 !== srcAsset.hashes.rolePlaybook ||
+        rp?.body_sha256 !== srcAsset.hashes.rolePlaybook ||
+        rp?.text !== srcAsset.rolePlaybookText ||
+        rp?.skill_id !== `role-playbook-${dirId}` ||
+        rp?.user_invocable !== false || rp?.installed !== false ||
+        rp?.loader !== 'target-host-to-be-verified') {
+      fail('M11', `${dirId}: Role Playbook descriptor 或正文不一致`)
+    } else ok()
+    const bpAsset = assets?.preset_blueprint
+    if (bpAsset?.ref !== `docs/${MGT_SOURCE_FILES.presetBlueprint(id)}` ||
+        bpAsset?.sha256 !== srcAsset.hashes.presetBlueprint ||
+        !isDeepStrictEqual(bpAsset?.record, srcAsset.blueprint)) {
+      fail('M11', `${dirId}: Blueprint 资产未逐字闭合`)
+    } else ok()
+    const mBundleInput = {
+      role_id: id,
+      preset_id: dirId,
+      version: srcAsset.blueprint.version,
+      role_card_sha256: srcAsset.hashes.roleCard,
+      soul_contract_sha256: srcAsset.hashes.soul,
+      role_playbook_sha256: srcAsset.hashes.rolePlaybook,
+      preset_blueprint_sha256: srcAsset.hashes.presetBlueprint,
+      production_authorized: false,
+    }
+    const mBundle = assets?.role_release_bundle_ref
+    if (mBundle?.bundle_id !== `RRB-${id}` || mBundle?.version !== srcAsset.blueprint.version ||
+        mBundle?.content_hash !== `sha256:${sha256(canonicalJson(mBundleInput))}` ||
+        mBundle?.status !== 'blueprint_only_not_importable') {
+      fail('M11', `${dirId}: RRB 引用不可重算或状态不正确`)
+    } else ok()
+
+    // ── M12 快照可重算 + 运行边界 + 授权姿态 ──
+    const snapshot = manifest.source_snapshot
+    if (!snapshot || snapshot.schema_version !== 'rp-m2-mgt' ||
+        snapshot.source_revision !== expectedMgtSourceRevision ||
+        snapshot.generator_revision !== expectedGeneratorRevision ||
+        snapshot.generator_rules_revision !== expectedGeneratorRevision ||
+        !isDeepStrictEqual(snapshot.shared_source_hashes, mgtSourceHashes) ||
+        !isDeepStrictEqual(snapshot.asset_index_hashes, mgtAssetIndexHashes) ||
+        !isDeepStrictEqual(snapshot.source_hashes, {
+          role_card: srcAsset.hashes.roleCard,
+          soul_contract: srcAsset.hashes.soul,
+          role_playbook: srcAsset.hashes.rolePlaybook,
+          preset_blueprint: srcAsset.hashes.presetBlueprint,
+        })) {
+      fail('M12', `${dirId}: source_snapshot 无法按当前 MGT 输入快照重算`)
+    } else ok()
+    const rt = assets?.runtime_contract
+    if (rt?.status !== 'blueprint_only_not_importable' || rt?.production_authorized !== false ||
+        rt?.authorization_status !== mgtCatalog.dsh_integration.authorization_status ||
+        rt?.case_role_participation !== 'none' || rt?.peer_chat !== false || rt?.re_delegation !== false ||
+        rt?.can_execute_assets !== false || rt?.can_emit_action_intent !== false ||
+        rt?.composition_owner !== 'external_case_control' || rt?.visibility !== 'read_only_aggregate_view') {
+      fail('M12', `${dirId}: runtime_contract 不符合决策权平面契约（无 Action Intent / 零会话 / 只读聚合）`)
+    } else ok()
+    if (manifest.x_lute?.lifecycle?.production_authorized !== false ||
+        manifest.x_lute?.lifecycle?.authorization_status !== 'evaluation_carrier_not_shadow_authorized') {
+      fail('M12', `${dirId}: x_lute.lifecycle 授权姿态不符（须为 evaluation_carrier_not_shadow_authorized）`)
+    } else ok()
+
+    // ── M-D 决策权与覆盖归档闭合 ──
+    const mgmt = manifest.x_lute?.management
+    if (!isDeepStrictEqual(mgmt?.decision_rights, mrole.decision_rights)) fail('M-D', `${dirId}: decision_rights 归档与材料不一致`)
+    else ok()
+    if (!isDeepStrictEqual(mgmt?.decision_rights_explicitly_not_granted, mrole.decision_rights_explicitly_not_granted)) fail('M-D', `${dirId}: not_granted 归档与材料不一致`)
+    else ok()
+    if (!isDeepStrictEqual(mgmt?.owned_role_ids, mrole.owned_role_ids)) fail('M-D', `${dirId}: owned_role_ids 归档与材料不一致`)
+    else ok()
+    if (mgmt?.squad !== null || mgmt?.case_role_participation !== 'none' || mgmt?.standalone_only !== true) {
+      fail('M-D', `${dirId}: 管理层不得编队（squad 须为 null、case_role_participation 须为 none、standalone_only 须为 true）`)
+    } else ok()
+    if (persona !== null) {
+      for (const r of mrole.decision_rights) {
+        if (!persona.includes(r)) fail('M-D', `${dirId}: persona 未逐条列出决策权 → ${r}`)
+        else ok()
+      }
+      for (const r of mrole.decision_rights_explicitly_not_granted) {
+        if (!persona.includes(r)) fail('M-D', `${dirId}: persona 未逐条列出不授予项 → ${r}`)
+        else ok()
+      }
+    }
+
+    // ── M-T0 定制子集（cordis 真实字节上核对，D5）──
+    const mLine = composition.split('\n').find((l) => l.trim().startsWith('skills: ['))
+    const mInComp = mLine ? [...mLine.matchAll(/'([^']+)'/g)].map((m) => m[1]) : []
+    for (const bad of MGT_T0_EXCLUDED) {
+      if (mInComp.includes(bad)) fail('M-T0', `${dirId}: T0 剔除项出现在 skill-subset → ${bad}`)
+      else ok()
+    }
+    for (const s of expectedMgtT0) {
+      if (!mInComp.includes(s)) fail('M-T0', `${dirId}: T0 定制子集缺 ${s}`)
+      else ok()
+    }
+    if (!isDeepStrictEqual([...(manifest.x_lute?.skills?.generic_t0 || [])].sort(), expectedMgtT0)) {
+      fail('M-T0', `${dirId}: manifest generic_t0 与期望子集不一致`)
+    } else ok()
+    const exclKeys = Object.keys(manifest.x_lute?.skills?.generic_t0_excluded || {}).sort()
+    if (!isDeepStrictEqual(exclKeys, [...MGT_T0_EXCLUDED].sort())) {
+      fail('M-T0', `${dirId}: manifest generic_t0_excluded 与期望剔除清单不一致`)
+    } else ok()
+
+    // ── M-O order 与出货标记 ──
+    const expectedOrder = mgtCatalog.dsh_integration.projection_plane.orders?.[id]
+    if (manifest.x_lute?.order !== expectedOrder) fail('M-O', `${dirId}: manifest order ${manifest.x_lute?.order} ≠ 材料 ${expectedOrder}`)
+    else ok()
+    const yml = readFileSync(join(dir, 'preset.yml'), 'utf8')
+    if (!yml.includes(`order: ${expectedOrder}`)) fail('M-O', `${dirId}: preset.yml order 不符`)
+    else ok()
+    if (!yml.includes('评估载体')) fail('M-O', `${dirId}: preset.yml description 缺「评估载体」标记`)
+    else ok()
+  }
+  if (mgtSectionTotal !== mgtIds.length * 7) {
+    fail('M3', `管理岗位卡小节总数 ${mgtSectionTotal}，期望 ${mgtIds.length * 7}`)
+  } else ok()
+
   // ── L8 技能引用真实性（skill-subset 的每个 id 必须在技能库真实存在）──
   const installedSkills = new Set(
     readdirSync(SKILLS_ROOT, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name),
@@ -519,6 +850,8 @@ function main() {
   const contributionById = new Map(collab.role_contributions.map((c) => [c.role_id, c]))
 
   for (const dir of presentDirs) {
+    // 管理层不进编队契约：MGT 的 squad=null 由 M-D 层专查，这里跳过以免误判「缺 squad」。
+    if (/^mgt-/.test(dir)) continue
     const manPath = join(OUT_ROOT, dir, 'manifest.json')
     if (!existsSync(manPath)) continue
     const man = JSON.parse(readFileSync(manPath, 'utf8'))
@@ -617,8 +950,8 @@ function main() {
 
   console.log(`材料根：${MATERIAL_ROOT}`)
   console.log(`产物根：${OUT_ROOT}`)
-  console.log(`岗位数：${expectedIds.length} → 目录 ${presentDirs.length}`)
-  console.log(`岗位卡小节：${sectionTotal}（期望 ${expectedIds.length * 7}）`)
+  console.log(`岗位数：AGT ${expectedIds.length} + MGT ${mgtIds.length} → 目录 ${presentDirs.length}`)
+  console.log(`岗位卡小节：AGT ${sectionTotal}（期望 ${expectedIds.length * 7}）+ MGT ${mgtSectionTotal}（期望 ${mgtIds.length * 7}）`)
   console.log(`岗位卡字节：${cardBytesTotal}`)
   console.log(`断言通过：${checks}`)
   return report()
@@ -626,7 +959,7 @@ function main() {
 
 function report() {
   if (failures.length === 0) {
-    console.log('\n★ 全量保真校验通过：L1 覆盖 / L2 归档与摘要 / L3 小节 / L4 字段 / L5 归集 / L6 哈希 / L7 官方lint / L8 技能引用 / L9 编队契约 / L10 头像 / L11 角色资产 / L12 输入快照 全部闭合')
+    console.log('\n★ 全量保真校验通过：L1 覆盖 / L2 归档与摘要 / L3 小节 / L4 字段 / L5 归集 / L6 哈希 / L7 官方lint / L8 技能引用 / L9 编队契约 / L10 头像 / L11 角色资产 / L12 输入快照（AGT 50）+ M1~M12/M-D/M-T0/M-O（MGT 3）全部闭合')
     process.exit(0)
   }
   console.log(`\n✗ 全量保真校验失败：${failures.length} 条`)

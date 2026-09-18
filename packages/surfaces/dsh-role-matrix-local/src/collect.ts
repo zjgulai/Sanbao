@@ -23,9 +23,9 @@ import { join } from 'node:path'
 
 /** One role card as the panel renders it. */
 export interface RoleCard {
-  /** Preset id / directory name, e.g. `agt-007`. */
+  /** Preset id / directory name, e.g. `agt-007` or `mgt-001`. */
   id: string
-  /** Material role id, e.g. `AGT-007`. */
+  /** Material role id, e.g. `AGT-007` (execution plane) or `MGT-001` (management plane). */
   agt: string
   /** Role alias (the persona's stable work-style handle), e.g. `望野`. */
   alias: string
@@ -111,17 +111,21 @@ export interface MatrixPayload {
 
 /**
  * The official preset id pattern (`@deepseek-ai/dsh-agent-presets` `PRESET_ID`):
- * the id becomes a path segment, so this is a containment boundary. Only role
- * presets (`agt-NNN`) are listed by this surface; the shipped set and any other
- * local preset stay owned by the official picker.
+ * the id becomes a path segment, so this is a containment boundary. This
+ * surface lists the role presets — execution plane `agt-NNN` plus the
+ * management plane `mgt-NNN` (decision-rights plane, evaluation-carrier
+ * posture; ADR-0129). The shipped set and any other local preset stay owned
+ * by the official picker.
  */
-export const ROLE_PRESET_ID = /^agt-(\d{3})$/
+export const ROLE_PRESET_ID = /^(?:agt|mgt)-(\d{3})$/
 
-/** Plane display order, matching the material's `planes[]` order. */
-const PLANE_ORDER: Record<string, number> = { 'PLN-MGT': 1, 'PLN-OPS': 2, 'PLN-CTL': 3, 'PLN-PLT': 4 }
+/** Plane display order, matching the material's `planes[]` order. PLN-EXC (management
+ *  projection plane, ADR-0129 D2) renders above the four execution planes. */
+const PLANE_ORDER: Record<string, number> = { 'PLN-EXC': 0, 'PLN-MGT': 1, 'PLN-OPS': 2, 'PLN-CTL': 3, 'PLN-PLT': 4 }
 
 /** Domain display order, matching the material's `domain_views[]` order. */
 const DOMAIN_ORDER: Record<string, number> = {
+  'DOM-EXC': 0,
   'DOM-01': 1, 'DOM-02': 2, 'DOM-03': 3, 'DOM-04': 4,
   'DOM-05': 5, 'DOM-06': 6, 'DOM-07': 7, 'DOM-08': 8,
 }
@@ -169,7 +173,10 @@ function readManifest(raw: unknown): {
   const x = root['x_lute']
   if (x === null || typeof x !== 'object') return undefined
   const material = (root['material'] ?? {}) as Record<string, any>
-  const catalog = (material['role_catalog'] ?? {}) as Record<string, any>
+  // AGT presets archive the structured record under role_catalog; MGT presets
+  // (management plane, ADR-0129) under management_catalog. Same record role,
+  // two namespaces — the fallback keeps one reader for both.
+  const catalog = (material['role_catalog'] ?? material['management_catalog'] ?? {}) as Record<string, any>
   const record = (catalog['record'] ?? {}) as Record<string, any>
   const skills = (x['skills'] ?? {}) as Record<string, any>
   const squad = (x['squad'] ?? {}) as Record<string, any>
@@ -289,7 +296,7 @@ export function collectRoleMatrix(root: string): MatrixPayload {
     // an explicit "unclassified" bucket instead of dropping the row.
     cards.push({
       id: dir,
-      agt: `AGT-${dir.slice(4)}`,
+      agt: `${dir.slice(0, 3).toUpperCase()}-${dir.slice(4)}`,
       alias: '',
       title: name,
       name,

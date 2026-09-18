@@ -260,7 +260,9 @@ function readManifest(raw: unknown): {
   const domain = obj(xl['domain'])
   const skills = obj(xl['skills'])
   const material = obj(root['material'])
-  const catalog = obj(material['role_catalog'])
+  // AGT presets archive under role_catalog; MGT presets (management plane,
+  // ADR-0129) under management_catalog — same record role, two namespaces.
+  const catalog = obj(material['role_catalog'] ?? material['management_catalog'])
   const record = obj(catalog['record'])
 
   const rawMapping = skills['mapping']

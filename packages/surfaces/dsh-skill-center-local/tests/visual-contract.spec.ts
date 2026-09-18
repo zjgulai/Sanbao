@@ -6,9 +6,8 @@ const css = readFileSync(new URL('../src/client/skill-panel.module.css', import.
 
 describe('skill center Codex visual contract', () => {
   it('keeps the responsive panel in the shared responsive family', () => {
-    expect(css).toContain('max-width: 100%')
+    expect(css).toContain('.panelPage {')
     expect(css).toContain('background: var(--dsw-alias-bg-base')
-    expect(css).toContain('border-left: 1px solid var(--dsw-alias-border-l2')
   })
 
   it('uses semantic business accents instead of the former blue visual language', () => {
@@ -22,12 +21,12 @@ describe('skill center Codex visual contract', () => {
   it('keeps motion within the shared duration and reduced-motion contract', () => {
     expect(css).toContain('180ms')
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/)
-    expect(css).toContain('.drawer {\n    animation: none;')
+    expect(css).toContain('.panelPage *')
   })
 
   it('gives the content panel one control and state language', () => {
     expect(css).toContain('height: 32px')
-    expect(css).toContain('.drawer button:disabled')
+    expect(css).toContain('.panelPage button:disabled')
     expect(css).toContain('.formInput:focus')
     expect(css).toContain('.feedbackOk')
     expect(css).toContain('var(--dsw-alias-state-error-secondary')
@@ -41,9 +40,14 @@ describe('skill center Codex visual contract', () => {
     expect(css).not.toContain('box-shadow: 0 2px 10px')
   })
 
-  it('uses a semantic overlay layer below the Settings shell', () => {
-    expect(css).toContain('--dsh-skill-center-overlay-layer: 2147482000')
-    expect(css).toMatch(/z-index:\s*var\(--dsh-skill-center-overlay-layer\)/)
-    expect(css).not.toMatch(/z-index:\s*9999\b/)
+  // S3（2026-09-19）：面板从抽屉/浮层迁到 main keyed slot 的中心列视图。
+  // 新契约是「零层叠」：本包不声明任何层号，显隐与层叠归 slot 管（D4）。
+  // `position: absolute` 不在此列——它只用于局部装饰（图标角上的徽标、开关滑块），
+  // 不建立浮层；判据钉的是**层号声明**，不是定位方式。
+  it('carries no stacking layer of its own (center-column view, not an overlay)', () => {
+    expect(css).not.toMatch(/z-index\s*:/)
+    expect(css).not.toMatch(/position:\s*fixed/)
+    expect(css).not.toContain('--dsh-skill-center-overlay-layer')
+    expect(css).not.toContain('@keyframes')
   })
 })

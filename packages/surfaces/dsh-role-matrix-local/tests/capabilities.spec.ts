@@ -138,6 +138,35 @@ describe('readCapabilities', () => {
     expect(readCapabilities(root, root, 'agt-027')).toBeUndefined()
   })
 
+  it('reads the MGT record from management_catalog (management plane, ADR-0129)', () => {
+    const root = scratch()
+    preset(root, 'mgt-001', {
+      x_lute: {
+        plane: { id: 'PLN-EXC', name: '决策权平面' },
+        domain: { id: 'DOM-EXC', name: '管理层' },
+        skills: { mapping: [{ name: '全局组合排序', kind: 'partial', note: '加权评分支持排序计算', supply: ['weighted-scoring'] }] },
+      },
+      material: {
+        management_catalog: { record: { id: 'MGT-001', alias: '持衡', title: '首席执行官 CEO', artifact: '全局组合决策包' } },
+      },
+    }, "name: '持衡 · 首席执行官 CEO'\n")
+
+    const payload = readCapabilities(root, root, 'mgt-001')
+    expect(payload).toBeDefined()
+    expect(payload!.agt).toBe('MGT-001')
+    expect(payload!.planeName).toBe('决策权平面')
+    expect(payload!.domainName).toBe('管理层')
+    expect(payload!.artifact).toBe('全局组合决策包')
+    expect(payload!.groups).toEqual([{
+      name: '全局组合排序',
+      kind: 'partial',
+      note: '加权评分支持排序计算',
+      // supplies are enriched to {id,label,summary}; with no skills root installed
+      // the label falls back to the id — same behaviour as the AGT projections.
+      supplies: [{ id: 'weighted-scoring', label: 'weighted-scoring', summary: '' }],
+    }])
+  })
+
   it('projects identity, groups and manuals', () => {
     const root = scratch()
     const skills = join(root, 'skills')

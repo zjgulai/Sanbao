@@ -1,8 +1,8 @@
 /**
- * Skill center panel (browser half): a right-side drawer with a
- * business-domain browsing view (search + domain chips + human-readable
- * cards) and a collapsed developer mode holding the original source-grouped
- * management list plus the create form.
+ * Skill center panel (browser half): a center-column view (the shell's `main`
+ * keyed slot, not an overlay) with a business-domain browsing view (search +
+ * domain chips + human-readable cards) and a collapsed developer mode holding
+ * the original source-grouped management list plus the create form.
  *
  * Talks to the host route family through SkillApi.
  */
@@ -12,12 +12,19 @@ import { SkillApi, type ListPayload, type SkillEntry } from './api.ts'
 import { DOMAIN_OTHER, DOMAINS, domainOf } from './business-domains.ts'
 import { zh } from './locales.ts'
 import { tt } from './panel-helpers.ts'
+import type { PromptDelivery } from './prefill-draft.ts'
 import css from './skill-panel.module.css'
 
 /** Panel props: the API client and the close callback. */
 export interface SkillPanelProps {
   api: SkillApi
-  onClose: () => void
+  /** 离开本视图（回到会话）。S3 起本面板是中心列视图而非浮层，没有「关闭」只有「离开」。 */
+  onExit: () => void
+  /**
+   * 把提示词交付给用户（草稿优先、剪贴板兜底），由 apply 用共享 `deliverPrompt` 供给。
+   * 面板自己不知道通道细节——它只报告成败。
+   */
+  runSkill: (prompt: string) => Promise<PromptDelivery>
 }
 
 type Tab = 'list' | 'create'
@@ -94,30 +101,37 @@ function useCardActions(skill: SkillEntry, api: SkillApi, onChanged: () => void)
   return { busy, error, toggle: () => { void toggle() }, remove: () => { void remove() } }
 }
 
-/** Trigger skill execution by dispatching to the view router or populating chat */
-function executeSkillPrompt(skill: SkillEntry, customPrompt?: string): void {
+/**
+ * 触发技能执行：离开面板，再把提示词交给共享交付通道。
+ *
+ * 两处旧机制在这轮一起退役：
+ * - `dsh:view-change`(chat)：它的听者是注入形态本身（S3 起本面板由 `activePanelId`
+ *   决定显隐），照旧广播的话提示词交付了、面板还盖着中心列。离开只能走 onExit。
+ * - `dsh:skill-execute`：2026-09-19 实测**全仓 + 基座零听者**，删掉（能力中枢的
+ *   dispatcher 里那处广播同批删除）。交付事实由 `deliverPrompt` 的返回值承载。
+ */
+async function executeSkillPrompt(
+  skill: SkillEntry,
+  customPrompt: string | undefined,
+  onExit: () => void,
+  runSkill: (prompt: string) => Promise<PromptDelivery>,
+): Promise<PromptDelivery> {
   const prompt = customPrompt && customPrompt.trim() !== ''
     ? customPrompt.trim()
     : (skill.userTry && skill.userTry.trim() !== '' ? skill.userTry.trim() : `使用技能 /${skill.name}`)
 
-  // Switch back to chat view
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('dsh:view-change', { detail: { view: 'chat' } }))
-    // Send event or copy text so user gets seamless continuation
-    try {
-      window.dispatchEvent(new CustomEvent('dsh:skill-execute', { detail: { skill: skill.name, prompt } }))
-    } catch {
-      // safe fallback
-    }
-    // Also copy to clipboard for convenience
-    if (navigator?.clipboard?.writeText) {
-      void navigator.clipboard.writeText(prompt)
-    }
+  onExit()
+  const outcome = await runSkill(prompt)
+  if (!outcome.ok) {
+    // 两级通道都失败时 deliverPrompt 只返回原因；面板此刻已卸载，界面上没有位置能
+    // 报告，所以至少让日志出声（家族纪律：永不静默）。
+    console.warn(`[skill-center-local] 执行「${skill.name}」未能交付提示词：${outcome.reason}`)
   }
+  return outcome
 }
 
 /** One business-view skill card: Chinese title first, human summary, guided try line, direct execution input. */
-function BusinessCard({ skill, api, onChanged }: { skill: SkillEntry; api: SkillApi; onChanged: () => void }): React.JSX.Element {
+function BusinessCard({ skill, api, onChanged, onExit, runSkill }: { skill: SkillEntry; api: SkillApi; onChanged: () => void; onExit: () => void; runSkill: (prompt: string) => Promise<PromptDelivery> }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const [runInput, setRunInput] = useState('')
   const [ranNotice, setRanNotice] = useState(false)
@@ -127,9 +141,13 @@ function BusinessCard({ skill, api, onChanged }: { skill: SkillEntry; api: Skill
   const showNameSub = skill.title !== undefined && skill.title.trim() !== '' && skill.title !== skill.name
 
   const handleRun = (): void => {
-    executeSkillPrompt(skill, runInput)
-    setRanNotice(true)
-    setTimeout(() => { setRanNotice(false) }, 2500)
+    void (async () => {
+      const outcome = await executeSkillPrompt(skill, runInput, onExit, runSkill)
+      // 「已发送到会话！」只在真的交付成功时才成立——两级通道都失败时说这句话是撒谎。
+      if (!outcome.ok) return
+      setRanNotice(true)
+      setTimeout(() => { setRanNotice(false) }, 2500)
+    })()
   }
 
   return (
@@ -258,7 +276,7 @@ function flattenSkills(payload: ListPayload): SkillEntry[] {
 }
 
 /** The business browsing view (default). */
-function BrowseTab({ api, refreshTick }: { api: SkillApi; refreshTick: number }): React.JSX.Element {
+function BrowseTab({ api, refreshTick, onExit, runSkill }: { api: SkillApi; refreshTick: number; onExit: () => void; runSkill: (prompt: string) => Promise<PromptDelivery> }): React.JSX.Element {
   const [payload, setPayload] = useState<ListPayload | undefined>(undefined)
   const [error, setError] = useState<string | undefined>(undefined)
   const [query, setQuery] = useState('')
@@ -377,7 +395,7 @@ function BrowseTab({ api, refreshTick }: { api: SkillApi; refreshTick: number })
               {!collapsed && (
                 <div className={css.grid}>
                   {group.skills.map((skill) => (
-                    <BusinessCard key={skill.name} skill={skill} api={api} onChanged={() => { void load() }} />
+                    <BusinessCard key={skill.name} skill={skill} api={api} onChanged={() => { void load() }} onExit={onExit} runSkill={runSkill} />
                   ))}
                 </div>
               )}
@@ -657,8 +675,8 @@ function AppsTab(): React.JSX.Element {
   )
 }
 
-/** The skill center drawer panel. */
-export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element {
+/** The extensions hub as a center-column page (main keyed slot). */
+export function SkillPanel({ api, onExit, runSkill }: SkillPanelProps): React.JSX.Element {
   const [hubTab, setHubTab] = useState<HubTab>('skills')
   const [devMode, setDevMode] = useState(false)
   const [cwd, setCwd] = useState<string | undefined>(undefined)
@@ -667,51 +685,44 @@ export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
-      // Typing in the create form must not close the panel: Escape there is
-      // an editing gesture, not a dismiss gesture.
+      // Typing in the create form must not leave the view: Escape there is
+      // an editing gesture, not a navigation gesture.
       const target = event.target as HTMLElement | null
       if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
-      onClose()
+      onExit()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onExit])
 
   return (
-    <div
-      className={css.overlay}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
-      <aside className={css.drawer} data-dsh-part="drawer" role="dialog" aria-modal="true" aria-label={tt('panel.title')}>
-        <header className={css.head} data-dsh-part="head">
-          <button
-            type="button"
-            className={css.backBtn}
-            onClick={onClose}
-            aria-label="返回会话"
-            data-dsh-part="back-to-chat"
-          >
-            ← 返回会话
-          </button>
-          <div className={css.headText}>
-            <h2 className={css.headTitle}>{tt('panel.title')}</h2>
-            <p className={css.headSubtitle}>{tt('panel.subtitle')}</p>
-          </div>
-          <button
-            type="button"
-            className={`${css.headButton} ${devMode ? css.headButtonActive : ''}`}
-            title={tt('devMode.hint')}
-            onClick={() => { setDevMode((value) => !value) }}
-          >
-            {tt('devMode.label')}
-          </button>
-          <button type="button" className={css.headButton} onClick={() => { setRefreshTick((tick) => tick + 1) }}>
-            {tt('refresh')}
-          </button>
-          <button type="button" className={css.headButton} onClick={onClose}>{tt('close')}</button>
-        </header>
+    <section className={css.panelPage} data-dsh-part="panel-page" aria-label={tt('panel.title')}>
+      <header className={css.head} data-dsh-part="head">
+        <button
+          type="button"
+          className={css.backBtn}
+          onClick={onExit}
+          aria-label="返回会话"
+          data-dsh-part="back-to-chat"
+        >
+          ← 返回会话
+        </button>
+        <div className={css.headText}>
+          <h2 className={css.headTitle}>{tt('panel.title')}</h2>
+          <p className={css.headSubtitle}>{tt('panel.subtitle')}</p>
+        </div>
+        <button
+          type="button"
+          className={`${css.headButton} ${devMode ? css.headButtonActive : ''}`}
+          title={tt('devMode.hint')}
+          onClick={() => { setDevMode((value) => !value) }}
+        >
+          {tt('devMode.label')}
+        </button>
+        <button type="button" className={css.headButton} onClick={() => { setRefreshTick((tick) => tick + 1) }}>
+          {tt('refresh')}
+        </button>
+      </header>
 
         {/* Three Technology Form Tabs */}
         {!devMode && (
@@ -752,16 +763,15 @@ export function SkillPanel({ api, onClose }: SkillPanelProps): React.JSX.Element
             <DevTab api={api} refreshTick={refreshTick} onCwd={setCwd} />
           ) : (
             <>
-              {hubTab === 'skills' && <BrowseTab api={api} refreshTick={refreshTick} />}
+              {hubTab === 'skills' && <BrowseTab api={api} refreshTick={refreshTick} onExit={onExit} runSkill={runSkill} />}
               {hubTab === 'mcp' && <McpTab />}
               {hubTab === 'apps' && <AppsTab />}
             </>
           )}
         </div>
-        {typeof cwd === 'string' && cwd !== '' && devMode && (
-          <footer className={css.foot}>{tt('cwd', { cwd })}</footer>
-        )}
-      </aside>
-    </div>
+      {typeof cwd === 'string' && cwd !== '' && devMode && (
+        <footer className={css.foot}>{tt('cwd', { cwd })}</footer>
+      )}
+    </section>
   )
 }

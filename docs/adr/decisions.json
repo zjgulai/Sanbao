@@ -1291,6 +1291,205 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0128",
+      "title": "ADR-0128 · 能力目录只读聚合，调度面挂 shell.overlay",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "能力目录聚合层永远只读：只对既有 loopback 路由发 GET，不落第二份存储、不缓存到磁盘、不写任何切片的数据；路由 404 记为空切片（missing）而不是错误。",
+          "constraints": [
+            "路由清单的单一事实源是 catalog.ts 的 CAPABILITY_ROUTES，不得在别处再抄一份",
+            "每条被消费路由的响应形状必须有 mapper 单测冻结（样本取自 handler 构造代码）",
+            "单切片取数失败只记它自己的 error，不得拖垮整个目录"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "能力调度面挂 shell.overlay（帧级 additive 官方座位），模态一律 <dialog showModal()>，不得自管 z-index。",
+          "constraints": [
+            "不挂 conversation.input.overlay：那是会话作用域的 composer 内浮层，是 / 命令源的家",
+            "面板文件内 z-index 出现次数为 0"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "能力动作是判别联合（execute-skill / prefill-draft / open-panel / open-system），执行只走既有通道，不发明新机制、不压成字符串。",
+          "constraints": [
+            "open-system 只发 slug，从不发地址（该路由自己校验词表，不是 URL 开启器）",
+            "预填不可用时降级剪贴板并上报原因，绝不静默",
+            "预填永不调用 send：点击能力卡后发送权留在用户手上"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "间距与圆角走自建 --lute-* 命名空间（平台命名空间归官方主题包所有），由 shared/client/lute-tokens.ts 在 apply 期幂等注入。",
+          "constraints": [
+            "消费一律写 var(--lute-*, <字面量>)，注入缺失时视觉不塌",
+            "注入判据是 style 标签的 data 锚，不是文本比对（写一次后不再满足写条件）",
+            "消费方不得在 dispose 时移除该标签：它可能是兄弟插件注入的"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "prefillDraft 的实现在 shared/client/prefill-draft.ts；消费方持生成副本，岗位矩阵的 prefill.ts 改为 re-export 并只保留自己拥有的 prefillPrompt。",
+          "constraints": [
+            "改共享层只改 shared/ 源，再跑 node scripts/sync-shared.mjs --write",
+            "第二个消费方出现时不得复制实现（ADR-0009）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0129",
+      "title": "ADR-0129 · 管理层（MGT）Preset 以评估载体身份整合，不进出货面",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "MGT preset 的授权姿态是评估载体 + 本机装配：生成为 profile 可加载 preset，用途限定 MGT-EVAL 载体与人在环决策演练；shipped-presets.json 走 exclude 档登记；进出货面前置 = EVAL-A/B 通过 + R0 对照臂结论 + 另立 ADR。",
+          "constraints": [
+            "persona 与 manifest 必须携带状态披露块：未授权 Shadow/生产、EVAL-B 未通过（带时点）、Prompt 层边界不构成服务端权限控制、三条承重机制需模型外构件而本 preset 不提供",
+            "exclude 登记不可省：未登记目录 = 装配中止（ADR-0073）",
+            "MGT-003 的三条承重机制无模型外构件时，不得宣称其进入 Shadow（材料仓 ADR-0014 红线）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "采用 mgt-NNN 独立命名空间（材料侧 MGT-Q1 关闭）；UI/manifest 分组用 PLN-EXC 投影平面，order 基座 0，域内 101/102/103；PLN-EXC 显示事实家在 management-catalog.json 的 dsh_integration 块 + generate.mjs PLANE_BASE，不是材料侧第五组织平面。",
+          "constraints": [
+            "AGT-001~050 编号不变；不生成第 51 个 AGT 岗位",
+            "organization-graph.json 不得新增平面（shared hashes 传染存量 50）",
+            "presetId 派生必须命名空间感知，修掉 slice(4) 的 MGT-001→agt-001 撞号路径"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "生成器形态是 generate.mjs 双装载分支：MGT 分支读 management-catalog + 每岗 4 件 + 管理层设计文档（含 eval 状态），复用原子写/事务恢复/unmanaged-rows/persona 骨架/skill-subset；无 squad、无 lead 规则、无产品行。",
+          "constraints": [
+            "MGT 共享源与 AGT 共享源在 manifest 快照中相互独立",
+            "材料侧 eval 状态变化必须触发 MGT preset 重生成（状态文件入共享哈希）",
+            "manifest 记 case_role_participation: none（standalone-only，ADR-0020 语义不扩）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "MGT↔AGT 覆盖与协作事实以 management-catalog.json 为家，只归档进 MGT manifest；不写入任何 AGT 共享源文件，存量 50 preset 字节零扰动。",
+          "constraints": [
+            "role-matrix 展示覆盖关系时从 MGT manifest 反查，不在共享图补边",
+            "未来若把覆盖关系并入共享图，必须先明示 53 个全量重生成 + 账本重算代价并另立决策"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "MGT 技能供给 = 定制 T0 子集（16 项剔除 meeting-minutes/xindaya-translator/kami，余 13 项）+ 16 个管理技能名进 skill-map（可辩护的 partial，其余如实 gap），persona 技能供给实况逐条披露。",
+          "constraints": [
+            "每项 T0 剔除必须带理由登记（中继语义冲突/租户专属）",
+            "gap 不得为好看而虚报 partial（ADR-0021）",
+            "skill-map 条目带映射理由，遵循既有 authoring 约定"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "账本与门禁：shipped-presets exclude +3；pattern ^agt-\\d{3}$ 与 expectPatternCount=50 不动；live-presets.expected presetCount 53→56 并重算行账；verify-lossless 双覆盖 + MGT 层校验；数量断言改为从材料 catalog role_count 派生。",
+          "constraints": [
+            "pattern 语义保持纯粹 = 执行面岗位必发且数量相符",
+            "verify-lossless 新增层：decision_rights 归档、状态披露块、T0 剔除项不在、eval 哈希一致",
+            "门禁账本更新与产物生成同一提交（ADR-0094 记账纪律）"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "collaborates_with 声明为有向边（声明方 = 协作发起方）：材料侧 DECISIONS.md（D-066）落声明，门禁只校验悬空引用不校验对称；66 处既有非对称（集中于控制类枢纽）是设计意图不是缺陷。",
+          "constraints": [
+            "声明不得落 role-catalog.json 或 ROSTER.md（两者都在 AGT 共享快照内，改动传染存量 50 全量重生成，与 D4 冲突）；机器可读语义须另立决策并接受重生成代价",
+            "不得以对称化为名改动 role-catalog 数据（违背枢纽语义）",
+            "collaboration-graph.json 是 Case 编排图、角色间协作事实唯一住在 role-catalog——材料侧须一并说明（发现 F）"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "材料侧待决 closure：MGT-Q1 随 D2 关闭（命名空间采用）、MGT-Q2 关闭为采纳（MDC/GOC 第六契约）、MGT-Q3 关闭为维持不授予；三条登记材料仓 DECISIONS.md；G8/G9/Q5 保持待决并记录依赖（Q5 未授权 = D1 出货前置未满足）。",
+          "constraints": [
+            "材料仓改动（P0）先于生成器改动（P1）",
+            "本仓文档引用材料仓 ADR 时须写「材料仓 ADR-0014」以区别本仓同号 ADR"
+          ]
+        },
+        {
+          "id": "D9",
+          "text": "审计其余处置：B（T0 租户工具挂 50 岗）登记独立债务、本期只在 MGT 剔除；D（域与平面两轴正交）材料侧补纯文档说明；E（AGT-002 第 4 技能）材料侧登记例外理由。",
+          "constraints": [
+            "债务登记进债务账本（docs/research/10-debt-solution.md 体系），不得只留在会话记录",
+            "D/E 的材料侧说明不得改动任何共享源的结构化字段（纯文档段落）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0130",
+      "title": "ADR-0130 · LUTE 面改乘基座官方 slot：`main` keyed 面板 + `sidebar.panellist` 官方行，DOM 注入行退役",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "LUTE 的中心列面板挂基座 main keyed slot，侧栏行挂 sidebar.panellist，两者共用同一个 id/key；不再 DOM 注入侧栏行、不再自造显隐事件总线。",
+          "constraints": [
+            "sidebar.panellist 的 id 必须逐字等于 main 的 key，否则官方行点击会因 selectPanel 未注册而抛错",
+            "label 写成函数（locale 切换由基座重算），不得写死字符串",
+            "图标组件只吃官方 owner props（size / active），不得自己读 layout 状态"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "迁移后的面不得自带层叠：面板 CSS 里 z-index 声明数、position: fixed、@keyframes 均为 0，自管层号变量删除。",
+          "constraints": [
+            "判据钉层号声明而不是定位方式：position: absolute 仍可用于局部装饰（徽标、开关滑块）",
+            "显隐一律由 activePanelId === key 决定，插件不得自己控制可见性"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "「离开视图」只走官方 layout.selectPanel(null)；面板没有关闭语义只有离开语义，onExit 由 apply 闭包供给。",
+          "constraints": [
+            "面板内每一条退出路径（返回按钮、Escape、卡片执行后跳转）都必须走 onExit",
+            "layout 服务缺席时回退旧事件总线并出声，不得静默",
+            "退出后必须实测会话 composer 的几何与进入前一致"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "sidebar-row-axis 门禁只登记仍走 DOM 注入的行；每迁走一个面就摘一行，并在同一次提交里同步它的反向自测 fixture。",
+          "constraints": [
+            "fixture 树必须与 REGISTRY 同形，否则退役的行会被判成未登记注入行，把红指向错误位置",
+            "最后一个注入行退役时本门禁必须整体退役或改判，不得留成恒绿",
+            "射程读数（登记行数 / 列数 / 断言轴的行数）照实写进 note"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "迁移顺序：技能中心先走作为模式验证，岗位矩阵与新应用随后重复同一配方。",
+          "constraints": [
+            "不得三个面同时换承载后一次性验收（出问题无法归因）",
+            "每个面迁完必须给出实机三件套读数：启动 attempt=1 / 看门狗零告警 / CPU 归零"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "自造事件总线随迁移逐条退役：零听者的 dsh:skill-execute 两处广播一起删；提示词交付只有 shared/client/prefill-draft.ts 的 deliverPrompt 一份实现；open-panel 的迁移判据与基座同源（slots.entries('main')），回退旧广播时必须出声。",
+          "constraints": [
+            "删死事件必须两处一起删，只删一半等于让「这条通道存在」的说法在另一半里继续活着",
+            "任何交付提示词的动作，交付前必须先取消 keyed 面板选中（面板盖着 composer）",
+            "不得抄一份「哪些面已迁移」的清单——每迁一个面就腐烂一次（ADR-0009）",
+            "回退到旧广播时 console.warn 点名目标 view：静默的死点击比报错难查",
+            "交付失败时界面不得声称成功（「已发送到会话」只在真的交付成功后出现）"
+          ]
+        }
+      ]
     }
   ]
 }

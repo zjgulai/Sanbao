@@ -30,7 +30,14 @@ const payload = (names: string[]): ListPayload => ({
   })) }],
 })
 
-function mount(api: ReturnType<typeof fakeApi>, onClose: () => void): { container: HTMLDivElement; dispose: () => void } {
+/** 交付通道桩：默认成功（走草稿）。要测失败路径的用例自己传。 */
+const okRun = async (): Promise<{ ok: true; via: 'draft' }> => ({ ok: true, via: 'draft' })
+
+function mount(
+  api: ReturnType<typeof fakeApi>,
+  onExit: () => void,
+  runSkill: (prompt: string) => Promise<{ ok: true; via: 'draft' | 'clipboard' } | { ok: false; reason: string }> = okRun,
+): { container: HTMLDivElement; dispose: () => void } {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -38,7 +45,7 @@ function mount(api: ReturnType<typeof fakeApi>, onClose: () => void): { containe
   // keydown listener) are drained synchronously; an unwrapped render rides
   // the Scheduler and can lose the race on slow CI runners.
   act(() => {
-    root.render(<SkillPanel api={api as never} onClose={onClose} />)
+    root.render(<SkillPanel api={api as never} onExit={onExit} runSkill={runSkill} />)
   })
   return {
     container,
@@ -195,6 +202,57 @@ describe('SkillPanel mutation identity', () => {
     })
     await flush()
     expect(remove).toHaveBeenCalledWith('demo-skill', '/work/demo-skill/SKILL.md')
+    mount_.dispose()
+  })
+})
+
+/**
+ * S3（2026-09-19）：本面板成了 `main` keyed slot 的中心列视图，「离开」只剩
+ * onExit（= 官方 `selectPanel(null)`）一条路；提示词交付走共享 `deliverPrompt`。
+ * 这组用例钉住三条退役事实：不再广播 `dsh:view-change`(chat)（听者随注入形态退役）、
+ * 不再广播 `dsh:skill-execute`（全仓+基座零听者）、交付失败时不谎报成功。
+ */
+describe('SkillPanel run path exit channel', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    try { window.localStorage.removeItem('dsh-skill-center:other-expanded') } catch { /* ignore */ }
+  })
+
+  it('「执行」leaves through onExit, delivers via the shared channel, broadcasts nothing', async () => {
+    expandOtherGroup()
+    const api = fakeApi([async () => payload(['demo-skill'])])
+    let exits = 0
+    const prompts: string[] = []
+    const seen: string[] = []
+    const onEvent = (event: Event): void => { seen.push(event.type) }
+    window.addEventListener('dsh:view-change', onEvent)
+    window.addEventListener('dsh:skill-execute', onEvent)
+    const mount_ = mount(api, () => { exits += 1 }, async (prompt) => { prompts.push(prompt); return { ok: true, via: 'draft' } })
+    await flush()
+    const run = Array.from(mount_.container.querySelectorAll('button')).find((b) => b.textContent?.trim() === '执行')
+    expect(run).toBeDefined()
+    await act(async () => { run?.click() })
+    await flush()
+    window.removeEventListener('dsh:view-change', onEvent)
+    window.removeEventListener('dsh:skill-execute', onEvent)
+    expect(exits).toBe(1)
+    expect(prompts).toEqual(['使用技能 /demo-skill'])
+    expect(seen).toEqual([])
+    mount_.dispose()
+  })
+
+  it('两级通道都失败时出声，且不显示「已发送到会话！」（那句话会是撒谎）', async () => {
+    expandOtherGroup()
+    const api = fakeApi([async () => payload(['demo-skill'])])
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const mount_ = mount(api, () => {}, async () => ({ ok: false, reason: '草稿通道不可用，且这个环境没有剪贴板 API' }))
+    await flush()
+    const run = Array.from(mount_.container.querySelectorAll('button')).find((b) => b.textContent?.trim() === '执行')
+    await act(async () => { run?.click() })
+    await flush()
+    expect(warn.mock.calls.flat().join(' ')).toContain('未能交付提示词')
+    expect(mount_.container.textContent).not.toContain('已发送到会话')
+    warn.mockRestore()
     mount_.dispose()
   })
 })

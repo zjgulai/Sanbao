@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 /**
- * 50 岗位 AI 分身 Preset 生成器（全量保真 / lossless）
+ * 50 岗位 AI 分身 + 3 管理岗位 Preset 生成器（全量保真 / lossless，双命名空间）
  *
- * 目标：把《AI组织变革》材料里散落在 12 个来源的**每一个岗位**的全部信息，
+ * 目标：把《AI组织变革》材料里散落在多个来源的**每一个岗位**的全部信息，
  * 逐字落成一个可挂载的 DSH preset，不摘要、不改名、不丢字段。
  *
- * 每个岗位信息的 12 个来源：
+ * 两个命名空间（ADR-0129 D2/D3）：
+ *   · AGT-001~050 → agt-NNN（执行面，4 组织平面 × 8 责任域）
+ *   · MGT-001~003 → mgt-NNN（管理层决策权平面，投影平面 PLN-EXC；评估载体姿态，
+ *     未授权 Shadow/生产，出货面走 exclude 档——状态披露块随 persona/manifest 落地）
+ *   MGT 分支只读管理层自有材料（04-organization/management/ 等），**不触碰任何 AGT
+ *   共享源**（role-catalog/organization-graph/collaboration-graph…），保证存量 50 个
+ *   preset 的 cordis/preset.yml 字节零扰动（ADR-0129 D4）。
+ *
+ * 每个 AGT 岗位信息的 12 个来源：
  *   1. docs/05-agents/roles/AGT-NNN.md          岗位卡全文（7 个 ## 小节）
  *   2. docs/05-agents/role-catalog.json         该岗位 20 字段结构化记录
  *   3. docs/04-organization/organization-graph.json   平面/责任域归属 + 组织边
@@ -19,8 +27,19 @@
  *  11. docs/06-playbooks/role-playbooks/AGT-NNN.md    独立 Role Playbook
  *  12. docs/10-platform/deepseek-harness/preset-blueprints/AGT-NNN.json  Preset Blueprint
  *
+ * 每个 MGT 管理岗位信息的 9 个来源（ADR-0129 D3）：
+ *   1. docs/04-organization/management/management-catalog.json  结构化记录（共享）
+ *   2. docs/04-organization/MANAGEMENT-LAYER.md                 管理层主设计（共享）
+ *   3. docs/04-organization/management/DECISION-RIGHTS.md       决策权阶梯（共享）
+ *   4. docs/04-organization/management/ENFORCEMENT.md           生效机制（共享）
+ *   5. docs/04-organization/management/SHADOW-VERIFICATION.md   验证状态（共享；状态变化传染重生成）
+ *   6. docs/04-organization/management/roles/MGT-NNN.md         管理岗位档案
+ *   7. docs/04-organization/management/souls/MGT-NNN.soul.md    Soul Contract
+ *   8. docs/04-organization/management/playbooks/MGT-NNN.md     Role Playbook
+ *   9. docs/04-organization/management/preset-blueprints/MGT-NNN.json  Preset Blueprint
+ *
  * 落点（DSH preset 目录）：
- *   ~/.dsh/.agent-presets/agt-001/
+ *   ~/.dsh/.agent-presets/agt-001/  （mgt-001/ 同构）
  *     preset.yml        官方显示字段 name/description/order + icon（官方卡片把它渲染成头像）
  *     manifest.json     material 命名空间逐字归档旧来源 + role_assets / source_snapshot + x_lute
  *     agent.cordis.yml  以 shipped standard 行集为基座，persona 注入身份与 Soul 摘要
@@ -53,7 +72,7 @@ const SKILL_MAP_PATH = join(HERE, 'skill-map.json')
  *   只能是「每个岗位各挂一份名单里同样的那几条」。
  *
  * 为什么名单读文件而不是在本文件里写一个常量数组：
- *   同一份 15 条还要被设置页（显示 tier）、图标分配、`verify_static`（三线名单防漂移）
+ *   同一份清单还要被设置页（显示 tier）、图标分配、`verify_static`（三线名单防漂移）
  *   和运行时前提门禁读。常量放这里就等于有第二个家，而第二个家只能靠人对齐。
  *   本文件读的是发布副本 `manifest/generic-skills.json`；**「哪几条算 T0」这个人工判断的家**
  *   是派生器 `packages/capabilities/dsh-overseas-skills/scripts/build-generic-manifest.mjs`
@@ -87,7 +106,58 @@ const SOURCE_DSH_VERSION = '2.0.5'
 const DRY_RUN = process.argv.includes('--dry-run')
 
 /** 平面 → order 千位基座。平面内再按「首次出现的责任域」分百位段，故扁平列表里平面与责任域都成块。 */
-const PLANE_BASE = { 'PLN-MGT': 1000, 'PLN-OPS': 2000, 'PLN-CTL': 3000, 'PLN-PLT': 4000 }
+const PLANE_BASE = { 'PLN-MGT': 1000, 'PLN-OPS': 2000, 'PLN-CTL': 3000, 'PLN-PLT': 4000, 'PLN-EXC': 0 }
+
+// ── 管理层（MGT）分支常量（ADR-0129）──────────────────────────────────────────
+/** MGT 材料快照日期：管理层 v2 资产于 2026-09-18 定型、整合决策于 2026-09-19 批准。 */
+const MGT_SNAPSHOT_DATE = '2026-09-19'
+const MGT_SOURCE_FILES = {
+  managementCatalog: '04-organization/management/management-catalog.json',
+  managementLayer: '04-organization/MANAGEMENT-LAYER.md',
+  decisionRights: '04-organization/management/DECISION-RIGHTS.md',
+  enforcement: '04-organization/management/ENFORCEMENT.md',
+  shadowVerification: '04-organization/management/SHADOW-VERIFICATION.md',
+  blueprintManifest: '04-organization/management/preset-blueprints/manifest.json',
+  roleCard: (id) => `04-organization/management/roles/${id}.md`,
+  soul: (id) => `04-organization/management/souls/${id}.soul.md`,
+  rolePlaybook: (id) => `04-organization/management/playbooks/${id}.md`,
+  presetBlueprint: (id) => `04-organization/management/preset-blueprints/${id}.json`,
+}
+/**
+ * MGT 的 T0 定制子集 = 全量 T0 减去下列三项（ADR-0129 D5）。
+ * 这里是「MGT 不挂哪几条」的家；T0 全量名单的家仍在 build-generic-manifest.mjs 的 T0_NAMES。
+ * 每项必须带理由——无理由的剔除与无理由的挂载同样不可审计。
+ */
+const MGT_T0_EXCLUDED = {
+  'meeting-minutes': '纪要/转述语义与管理层「禁止信息中继」（材料 MANAGEMENT-LAYER §2）直接冲突',
+  'xindaya-translator': '租户专属工具，T0 判据「任何岗位都用得上」不成立',
+  'kami': '租户专属工具，T0 判据「任何岗位都用得上」不成立',
+}
+/**
+ * MGT Soul 摘要的候选章节（按此顺序抽取存在者）。
+ * 三个岗位的灵魂章节标题不同构（MGT-001/002 是「我的灵魂原则+第二条原则」，
+ * MGT-003 是三条灵魂原则），故按候选表抽取而不是钉死四个标题；
+ * 「我是谁/我绝不做什么/我的停止信号」三节必须存在，缺一即抛（不许静默降级）。
+ */
+const MGT_SOUL_SECTIONS = [
+  '我是谁',
+  '我的灵魂原则',
+  '我的第一条灵魂原则',
+  '我的第二条原则（v2新增）',
+  '我的第二条灵魂原则（v2新增，本岗位的承重原则）',
+  '我的第三条灵魂原则（v2新增）',
+  '我绝不做什么',
+  '我的协作姿态',
+  '我的停止信号',
+]
+const MGT_SOUL_REQUIRED = ['我是谁', '我绝不做什么', '我的停止信号']
+
+/** preset id 派生（命名空间感知，ADR-0129 D2）：AGT-001→agt-001，MGT-001→mgt-001。 */
+function presetIdFor(id) {
+  const m = /^(AGT|MGT)-(\d{3})$/.exec(id)
+  if (!m) throw new Error(`无法识别的岗位 ID 命名空间：${id}`)
+  return `${m[1].toLowerCase()}-${m[2]}`
+}
 
 // ── S12 消费口闸门（Q5）：白名单生成条件加「且该卡已被契约引用」 ─────────────────
 //
@@ -135,7 +205,7 @@ const contractGateRemoved = new Set()
  * 通用线 T0：常挂全部岗位 preset 的通用底座。
  *
  * 读不到清单就**不许**继续（与契约闸门同一取舍）：静默降级成「没有通用技能」会生成
- * 50 个看起来正常的 preset，而模型从此看不见这 15 条——没有任何一处会报错。
+ * 50 个看起来正常的 preset，而模型从此看不见这批通用技能——没有任何一处会报错。
  */
 let T0_SKILLS = []
 /** 通用线清单里非 T0 的成员：接线口径不同（T1 按岗位族挂），收尾必须显式说明它们**没被挂**。 */
@@ -257,9 +327,10 @@ function cardSections(cardText) {
  * 逐条可核对的清单，并明确「优先于上文材料声明的能力名」，让缺口从"模型不知道"变成"模型会主动说"。
  * @param {Array<{name: string, kind: string, supply: string[]}>} skillMapping - 材料技能名 → 平台供给。
  * @param {string[]} playbookIds - 本岗位参与的共享手册技能 id（如 PB-002）。
+ * @param {string[]} [t0NoteLines] - 追加在段尾的通用线说明行（MGT 定制 T0 子集用它披露剔除项与理由）。
  * @returns {string} 供给实况段落。
  */
-function renderSupplyStatus(skillMapping, playbookIds) {
+function renderSupplyStatus(skillMapping, playbookIds, t0NoteLines = []) {
   const gaps = skillMapping.filter((m) => m.kind === 'gap').map((m) => m.name)
   const lines = [
     '── 你的技能供给实况 ──────────────────────────────────────────',
@@ -287,6 +358,10 @@ function renderSupplyStatus(skillMapping, playbookIds) {
     lines.push('')
     lines.push(`另装配了你参与手册的共享技能 ${playbookIds.length} 本：` +
       `${playbookIds.map((p) => p.toLowerCase()).join('、')}（正文即手册全文，按需读取）。`)
+  }
+  if (t0NoteLines.length > 0) {
+    lines.push('')
+    lines.push(...t0NoteLines)
   }
   return lines.join('\n')
 }
@@ -657,6 +732,270 @@ function computeOrders(orgGraph) {
   return orders
 }
 
+// ── 管理层（MGT）装载与渲染（ADR-0129 D1~D5）────────────────────────────────
+
+/**
+ * 载入管理层材料：5 个共享源 + 每岗 4 件资产，并做入口校验。
+ *
+ * 校验原则与 AGT 分支一致：身份字段、preset_id、运行边界凡与材料设计不符即抛，
+ * 不许「先生成出来再说」。特别地：
+ *   · `dsh_integration` 块必须存在且 status/authorization_status 与 D1/D2 批准值一致
+ *     ——该块是投影平面与 preset id 映射的机器可读之家（材料侧 D-065）；
+ *   · SHADOW-VERIFICATION.md 的状态行必须能定位——persona 的状态披露**逐字引用**它，
+ *     而不是在生成器里复写一份评估结论（一份事实一个家；材料改状态 → 哈希变 →
+ *     重生成 → 披露自动更新）。
+ */
+function loadMgtSources() {
+  const sharedFiles = {
+    managementCatalog: MGT_SOURCE_FILES.managementCatalog,
+    managementLayer: MGT_SOURCE_FILES.managementLayer,
+    decisionRights: MGT_SOURCE_FILES.decisionRights,
+    enforcement: MGT_SOURCE_FILES.enforcement,
+    shadowVerification: MGT_SOURCE_FILES.shadowVerification,
+  }
+  const text = {}
+  const hashes = {}
+  for (const [key, rel] of Object.entries(sharedFiles)) {
+    text[key] = raw(rel)
+    hashes[key] = sha256(text[key])
+  }
+  const catalog = JSON.parse(text.managementCatalog)
+  if (catalog.namespace !== 'MGT') throw new Error(`management-catalog namespace 应为 MGT，实为 ${catalog.namespace}`)
+  if (!Array.isArray(catalog.roles) || catalog.roles.length !== catalog.role_count) {
+    throw new Error(`management-catalog roles(${catalog.roles?.length}) 与 role_count(${catalog.role_count}) 不一致`)
+  }
+  if (catalog.runtime_model?.production_authorized !== false) {
+    throw new Error('management-catalog runtime_model.production_authorized 必须为 false')
+  }
+  const dsh = catalog.dsh_integration
+  if (!dsh || dsh.status !== 'approved_2026_09_19' ||
+      dsh.authorization_status !== 'evaluation_carrier_not_shadow_authorized' ||
+      dsh.preset_namespace !== 'mgt' || !dsh.projection_plane || !dsh.projection_domain) {
+    throw new Error('management-catalog 缺少有效的 dsh_integration 块（材料侧 D-065 的机器可读之家）')
+  }
+
+  // 状态披露引用的验证状态行：逐字取自材料，不在生成器里复写结论。
+  const statusLine = /^状态：.*$/m.exec(text.shadowVerification)?.[0]
+  if (!statusLine || !statusLine.includes('MGT-EVAL-B')) {
+    throw new Error('SHADOW-VERIFICATION.md 定位不到含 MGT-EVAL-B 的状态行——状态披露块拒绝生成（不许静默过期）')
+  }
+
+  const blueprintManifestText = raw(MGT_SOURCE_FILES.blueprintManifest)
+  const blueprintManifest = JSON.parse(blueprintManifestText)
+  const assetIndexHashes = { mgtBlueprintManifest: sha256(blueprintManifestText) }
+  const blueprintsByRole = new Map((blueprintManifest.blueprints || []).map((e) => [e.role_id, e]))
+
+  const mgtAssets = new Map()
+  for (const role of catalog.roles) {
+    const id = role.id
+    if (!/^MGT-\d{3}$/.test(id)) throw new Error(`management-catalog 出现非 MGT 命名空间 id：${id}`)
+    const roleCardPath = MGT_SOURCE_FILES.roleCard(id)
+    const soulPath = MGT_SOURCE_FILES.soul(id)
+    const rolePlaybookPath = MGT_SOURCE_FILES.rolePlaybook(id)
+    const presetBlueprintPath = MGT_SOURCE_FILES.presetBlueprint(id)
+    const profileText = raw(roleCardPath)
+    const soulText = raw(soulPath)
+    const rolePlaybookText = raw(rolePlaybookPath)
+    const presetBlueprintText = raw(presetBlueprintPath)
+    const blueprint = JSON.parse(presetBlueprintText)
+    const blueprintIndexEntry = blueprintsByRole.get(id)
+    const expectedPresetId = `dsh.mgt.${id.slice(4)}.v1`
+
+    if (!blueprintIndexEntry) throw new Error(`${id}: MGT blueprint manifest 缺少角色引用`)
+    if (blueprintIndexEntry.preset_id !== expectedPresetId ||
+        blueprintIndexEntry.blueprint_ref !== `docs/${presetBlueprintPath}` ||
+        blueprintIndexEntry.soul_ref !== `docs/${soulPath}` ||
+        blueprintIndexEntry.role_playbook_ref !== `docs/${rolePlaybookPath}`) {
+      throw new Error(`${id}: MGT blueprint manifest 引用与源路径或 preset_id 不一致`)
+    }
+    if (blueprint.role_id !== id || blueprint.preset_id !== expectedPresetId ||
+        blueprint.role_profile_ref !== `docs/${roleCardPath}` ||
+        blueprint.soul_ref !== `docs/${soulPath}` ||
+        blueprint.role_playbook_ref !== `docs/${rolePlaybookPath}` ||
+        blueprint.decision_rights_ref !== `docs/${MGT_SOURCE_FILES.decisionRights}`) {
+      throw new Error(`${id}: MGT Blueprint 角色 ID、preset_id 或引用路径不一致`)
+    }
+    for (const [field, value] of Object.entries({
+      alias: role.alias,
+      title: role.title,
+      mission: role.mission,
+      personality: role.personality,
+      soul_principle: role.principle,
+    })) {
+      if (blueprint.identity?.[field] !== value) throw new Error(`${id}: MGT Blueprint identity.${field} 与 management-catalog 不一致`)
+    }
+    if (blueprint.status !== 'blueprint_only_not_importable' ||
+        blueprint.assurance?.production_authorized !== false ||
+        blueprint.assurance?.self_acceptance_allowed !== false ||
+        blueprint.modes?.standalone?.can_emit_action_intent !== false ||
+        blueprint.modes?.standalone?.can_execute_assets !== false ||
+        blueprint.modes?.composition?.case_role_participation !== 'none' ||
+        blueprint.modes?.composition?.lead_or_worker !== false ||
+        blueprint.modes?.composition?.peer_chat !== false ||
+        blueprint.modes?.composition?.re_delegation !== false ||
+        blueprint.modes?.composition?.orchestration_owner !== 'external_case_control' ||
+        blueprint.tools?.credentials !== 'never_visible_to_model' ||
+        blueprint.access?.default_decision !== 'deny' ||
+        blueprint.access?.service_identity_holder !== 'none') {
+      throw new Error(`${id}: MGT Blueprint 运行边界不符合决策权平面契约（无 Action Intent / 无资产执行 / 零会话 / 只读聚合 / deny 默认）`)
+    }
+    if (role.autonomy?.profile_loadable !== true || role.autonomy?.case_role_participation !== false ||
+        role.production_authorized !== false) {
+      throw new Error(`${id}: management-catalog autonomy/production_authorized 与评估载体姿态不符`)
+    }
+    if (dsh.preset_ids?.[id] !== presetIdFor(id)) {
+      throw new Error(`${id}: dsh_integration.preset_ids 映射与命名空间派生不一致（期望 ${presetIdFor(id)}）`)
+    }
+
+    mgtAssets.set(id, {
+      roleProfile: { path: roleCardPath, text: profileText, sha256: sha256(profileText) },
+      soul: { path: soulPath, text: soulText, sha256: sha256(soulText) },
+      rolePlaybook: { path: rolePlaybookPath, text: rolePlaybookText, sha256: sha256(rolePlaybookText) },
+      presetBlueprint: { path: presetBlueprintPath, text: presetBlueprintText, sha256: sha256(presetBlueprintText), record: blueprint },
+      blueprintIndexEntry,
+    })
+  }
+
+  const revisionPayload = {
+    shared: hashes,
+    indexes: assetIndexHashes,
+    roles: [...mgtAssets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, assets]) => ({
+      id,
+      roleCard: assets.roleProfile.sha256,
+      soul: assets.soul.sha256,
+      rolePlaybook: assets.rolePlaybook.sha256,
+      presetBlueprint: assets.presetBlueprint.sha256,
+    })),
+  }
+  const sourceRevision = process.env.ROLE_MGT_SOURCE_REVISION || `source-hash:${sha256(canonicalJson(revisionPayload))}`
+
+  return { text, hashes, catalog, dsh, blueprintManifest, assetIndexHashes, mgtAssets, sourceRevision, evalStatusLine: statusLine }
+}
+
+/** MGT order：按 PLANE_BASE['PLN-EXC'] 与单域序号计算，并与材料 dsh_integration.orders 交叉核对（两处必须一致）。 */
+function computeMgtOrders(catalog, dsh) {
+  const base = PLANE_BASE[dsh.projection_plane.id]
+  if (base === undefined) throw new Error(`PLANE_BASE 缺少投影平面 ${dsh.projection_plane.id}`)
+  if (dsh.projection_plane.order_base !== base) {
+    throw new Error(`dsh_integration.projection_plane.order_base(${dsh.projection_plane.order_base}) 与生成器 PLANE_BASE(${base}) 不一致`)
+  }
+  const orders = new Map()
+  const sorted = [...catalog.roles].sort((a, b) => a.id.localeCompare(b.id))
+  sorted.forEach((r, i) => orders.set(r.id, base + 1 * 100 + (i + 1)))
+  for (const [id, order] of orders) {
+    if (dsh.projection_plane.orders?.[id] !== order) {
+      throw new Error(`${id}: dsh_integration.orders(${dsh.projection_plane.orders?.[id]}) 与生成器计算值(${order}) 不一致——两个家必须说同一句话`)
+    }
+  }
+  return orders
+}
+
+/** MGT Soul 摘要：按候选章节表抽取存在者；必备节缺失即抛。 */
+function renderMgtSoulSummary(soulText, soulPath, soulSha, roleId) {
+  const present = MGT_SOUL_SECTIONS.filter((h) => soulText.split('\n').some((l) => l.trim() === `## ${h}`))
+  for (const h of MGT_SOUL_REQUIRED) {
+    if (!present.includes(h)) throw new Error(`${roleId}: Soul Contract 缺少必备章节「${h}」`)
+  }
+  if (!present.some((h) => h.includes('原则'))) throw new Error(`${roleId}: Soul Contract 缺少任何灵魂原则章节`)
+  return [
+    '── Soul Contract 摘要（身份 / 灵魂 / 硬边界 / 协作姿态 / 停止信号）────────',
+    '',
+    `来源：${soulPath}；sha256 ${soulSha}`,
+    '以下摘要是常驻身份约束；完整 Soul Contract 与 Role Playbook 只在 manifest 的角色资产区按需寻址。',
+    '',
+    ...present.flatMap((heading) => [soulSection(soulText, heading), '']),
+  ].join('\n').replace(/\n+$/, '')
+}
+
+/**
+ * 渲染管理岗位 persona（七段，ADR-0129 D1/D5）：
+ * 身份句 → 状态披露块 → 材料归档声明 → Soul 摘要 → 决策权与阶梯 → 承重机制 → 协作接口（零会话声明）
+ * （技能供给实况由调用方拼在 footer，与 AGT 分支同构）。
+ */
+function renderMgtPersona(mrole, ctx) {
+  const { dsh, planeName, domainName, cardPath, cardSha, sourceRevision, soulSummary, evalStatusLine, svSha, catalog } = ctx
+  const cadenceNames = { daily: '日', weekly: '周', monthly: '月', quarterly: '季' }
+  const myCadences = Object.entries(catalog.operating_model.cadence)
+    .filter(([, roles]) => roles.includes(mrole.id))
+    .map(([k]) => cadenceNames[k] || k)
+  const queueKey = Object.entries(catalog.operating_model.daily_queue_dispatch)
+    .find(([, owner]) => owner === mrole.id)?.[0]
+  const queueLabel = { demand_side_execution_exceptions: '经营执行异常', control_and_resource_exceptions: '控制与资源异常' }[queueKey]
+  const mitigations = catalog.structure_history?.v2?.mitigation || []
+  const mitigationNote = catalog.structure_history?.v2?.mitigation_is_evidence_based || ''
+
+  const header = [
+    `你是 {{model}} 驱动的 AI 管理岗位分身「${mrole.alias}」，岗位 ${mrole.id} ${mrole.title}，` +
+      `管理域「${mrole.management_domain}」，位于 DSH 投影平面「${planeName}」（${dsh.projection_plane.id}）、` +
+      `分组「${domainName}」。投影平面只是界面展示分组，不是材料侧的组织平面。你的工作目录是 {{cwd}}。`,
+    '',
+    '── 状态披露（先于任何自我介绍）──────────────────────────────',
+    '',
+    `本 preset 是**评估载体与人在环决策演练**用途（authorization_status: ${dsh.authorization_status}）：`,
+    '- 未授权 Shadow 与生产（production_authorized=false）；不接入真实经营账本，不参与任何 Case 执行。',
+    `- 验证状态（逐字引自材料 SHADOW-VERIFICATION.md 状态行，sha256 ${svSha}）：${evalStatusLine}`,
+    '- 本 persona 的全部边界是 Prompt 层表达，**不构成服务端权限控制**。材料要求的三条承重机制' +
+      '（口径冻结签署方机械校验、复核线只读通道、强制追溯记录旁路直达）需要模型外构件，本 preset 不提供。',
+    '- 会话中的一切「聚合指标 / 异常队列 / 资源冲突清单」输入都由用户人工提供；不得声称已读取任何运行数据。',
+    '',
+    `你的完整管理岗位档案已逐字归档在 manifest.material.role_card；管理层四份共享设计文档` +
+      `（主设计/决策权阶梯/生效机制/影子验证）逐字归档在 manifest.material.management_design` +
+      `（材料快照 ${MGT_SNAPSHOT_DATE}；source revision ${sourceRevision}；源文件 ${cardPath}；sha256 ${cardSha}）。`,
+    '',
+    soulSummary,
+    '',
+  ].join('\n')
+
+  const rights = [
+    '── 决策权与阶梯 ──────────────────────────────────────────────',
+    '',
+    '决策权按六级阶梯行使：L0 自动化 / L1-G 增长域 / L1-V 治理域 / L2 跨域（CEO）/ ' +
+      'L2b 自涉争议（真人所有者专属）/ L3 呈报 / L4 真人所有者专属。完整阶梯与升降级规则' +
+      '逐字归档在 manifest.material.management_design.decision_rights。没有归属的事项视为未授权，默认 HOLD；' +
+      '沉默、超时与「没反对」均不构成批准。',
+    '',
+    '你持有的决策权（逐字取自材料 management-catalog）：',
+    ...mrole.decision_rights.map((r) => `- ${r}`),
+    '',
+    '明确**不授予**你的（逐字）：',
+    ...mrole.decision_rights_explicitly_not_granted.map((r) => `- ${r}`),
+    '',
+    `岗位硬边界（逐字）：${mrole.boundary}`,
+    '',
+  ].join('\n')
+
+  const loadBearing = [
+    '── 承重机制（v2 三岗结构引入，缺一不可）────────────────────────',
+    '',
+    '把 8 个 CXO 合并为 2 个二级负责人制造了「治理官同时是评估尺子的作者、维护者与被评估者」的失效模式。三条处置（逐字取自材料）：',
+    ...mitigations.map((m) => `- ${m}`),
+    ...(mitigationNote ? [`依据声明：${mitigationNote}`] : []),
+    ...(mrole.second_principle ? [`你的第二条原则（逐字）：「${mrole.second_principle}」`] : []),
+    ...(mrole.id === 'MGT-003'
+      ? ['红线（材料 ENFORCEMENT §5A）：只要上述三条机制还只能以 Prompt 表达，本岗位不得进入 Shadow 阶段——提示词中的约束不构成服务端权限控制。']
+      : []),
+    '',
+  ].join('\n')
+
+  const collab = [
+    '── 协作接口（零会话声明）────────────────────────────────────',
+    '',
+    '- 你不与任何执行面岗位会话、不下发指令、不作为 Lead 或 Worker 参与任何 Case；' +
+      '你的结论只能通过版本化契约（MDC/GOC）与资源配额记录生效，由模型外 Case Control 与 Policy Gate 查表执行。',
+    `- 横向只与 ${mrole.collaborates_with.join('、')} 交换管理决策包（management_decision_package），` +
+      '不要求也不产出叙述性汇报；信息缺口的正确处理方式是要求补数据，不是要求讲故事。',
+    `- 覆盖：${mrole.owned_role_count} 个岗位（${mrole.owned_role_ids.join('、')}）。覆盖关系以材料 management-catalog 为家，不在协作图里加边。`,
+    `- 节拍：${myCadences.join('、')}。${queueLabel ? `日节拍队列：${queueLabel}（按异常单类型机械分派，类型无归属时 HOLD 并记自治异常，不自行认领）。` : ''}` +
+      `${catalog.operating_model.cadence_scheduler === mrole.id ? '你常设承担管理节拍运行与决策队列维护（该排程权刻意排除增长官兼任）；超期未决事项自动上升，你无权让其滞留队列。' : ''}` +
+      ' 节拍之外不得介入单张 Case；唯一例外是阈值触发的模型外升级，此时你只作为接收者出现。',
+    `- 升级与冻结：无法处理的异常一律 ${mrole.autonomy.unhandled_exception}；` +
+      '涉真人所有者的四类终审（资本与预算、组织与人事、法律与对外承诺、最终停止）只呈报、不代批。',
+    '',
+  ].join('\n')
+
+  return `${header}${rights}\n${loadBearing}\n${collab}${ctx.supplyStatus}`
+}
+
 // ── 主流程 ──────────────────────────────────────────────────────────────────
 
 function main() {
@@ -727,8 +1066,8 @@ function main() {
     return off
   }
 
-  /** 解析一个岗位的 skill-subset：映射供给并集 + 参与的 Playbook 技能 + 通用线 T0；返回映射明细供 manifest 存档。 */
-  function resolveSkills(role, playbookIds) {
+  /** 解析一个岗位的 skill-subset：映射供给并集 + 参与的 Playbook 技能 + 通用线 T0（可传定制子集）；返回映射明细供 manifest 存档。 */
+  function resolveSkills(role, playbookIds, t0List = T0_SKILLS) {
     const mapping = (role.skills || []).map((name) => {
       const entry = skillMap[name]
       if (!entry) throw new Error(`${role.id}: 业务技能名未入映射表 → ${name}`)
@@ -766,11 +1105,14 @@ function main() {
     // 通用技能不是 p2s 卡、没有契约可挂。放闸门之前它们会被算成 pending；一旦把
     // P2S_CONTRACT_GATE 切到 enforce，T0 就会被**静默删掉**——一条与计量模式无关的
     // 接线，不该跟着另一个开关的档位改变生死。
-    for (const s of T0_SKILLS) {
+    //
+    // t0List 参数化（ADR-0129 D5）：AGT 传全量 T0；MGT 传定制子集（全量减去
+    // MGT_T0_EXCLUDED 三项：meeting-minutes/xindaya-translator/kami，理由见常量注释）。
+    for (const s of t0List) {
       ids.add(s)
       if (!installedSkills.has(s)) danglingRefs.add(`${role.id} → ${s}（通用线 T0）`)
     }
-    for (const s of T0_SKILLS) t0Wired.add(s)
+    for (const s of t0List) t0Wired.add(s)
     return { ids: [...ids].sort(), mapping, contractGate: gate }
   }
 
@@ -841,7 +1183,7 @@ function main() {
       sourceRevision: src.sourceRevision,
     }, soulSummary, renderSupplyStatus(skillMapping, playbookIds))
 
-    const presetId = `agt-${id.slice(4)}`
+    const presetId = presetIdFor(id)
     const compositionRaw = renderComposition(persona, skillIds, presetId)
     // 本生成器只认自己产出的行；既有文件里其余行块（手插的本机装配）**原样带过、插回原位**。
     // 不这么做的话，「本机产品卡点了打不开」会以「生成器静默删行」的方式再次发生。
@@ -1051,7 +1393,7 @@ function main() {
       },
     }
 
-    const dirId = `agt-${id.slice(4)}`
+    const dirId = presetIdFor(id)
     const dir = join(OUT_ROOT, dirId)
     rows.push({
       id,
@@ -1068,16 +1410,318 @@ function main() {
       squadSkills: (role.skills || []).length,
       subsetSkills: skillIds.length,
       t0Skills: T0_SKILLS.filter((s) => skillIds.includes(s)).length,
+      t0Expected: T0_SKILLS.length,
       gaps: skillMapping.filter((d) => d.kind === 'gap').length,
       collab: (role.collaborates_with || []).length,
     })
 
     if (DRY_RUN) continue
-    pendingWrites.push({ dir, dirId, presetYml, manifest, composition })
+    pendingWrites.push({ dir, dirId, presetYml, manifest, composition, t0List: T0_SKILLS })
   }
 
-  // 只有 50 个岗位全部完成内存构建后才进入派生输出写盘阶段。
-  for (const { dir, dirId, presetYml, manifest, composition } of pendingWrites) {
+  // ── 管理层（MGT）分支（ADR-0129 D1~D5）───────────────────────────────────────
+  //
+  // 只读管理层自有材料，不触碰上面已装载的任何 AGT 共享源——存量 50 个 preset 的
+  // cordis/preset.yml 字节零扰动是硬验收判据（manifest 仅 generator_revision 随本文件变）。
+  const msrc = loadMgtSources()
+  const mgtOrders = computeMgtOrders(msrc.catalog, msrc.dsh)
+  // 覆盖闭合交叉校验：两个管理域的 AGT 覆盖并集 = 全集、零双线；层内覆盖（CEO→两位负责人）单独核。
+  {
+    const agtIds = new Set(src.roleCatalog.roles.map((r) => r.id))
+    const covered = new Map()
+    for (const mrole of msrc.catalog.roles) {
+      for (const o of mrole.owned_role_ids || []) {
+        if (o.startsWith('MGT-')) {
+          if (!msrc.catalog.roles.some((x) => x.id === o)) throw new Error(`${mrole.id}: owned ${o} 不在管理层内`)
+          continue
+        }
+        if (!agtIds.has(o)) throw new Error(`${mrole.id}: owned ${o} 不在 AGT 集合`)
+        if (covered.has(o)) throw new Error(`AGT 岗位 ${o} 双线归属：${covered.get(o)} 与 ${mrole.id}`)
+        covered.set(o, mrole.id)
+      }
+    }
+    for (const a of agtIds) {
+      if (!covered.has(a)) throw new Error(`${a} 无管理域覆盖——两域并集必须等于 AGT 全集（材料 coverage_verification.union_equals_full_set）`)
+    }
+    const cv = msrc.catalog.coverage_verification
+    if (cv?.union_equals_full_set !== true || cv?.overlap_count !== 0 || cv?.union_size !== agtIds.size) {
+      throw new Error('management-catalog coverage_verification 与实际覆盖核验不一致')
+    }
+  }
+  const mgtT0 = T0_SKILLS.filter((s) => !MGT_T0_EXCLUDED[s])
+  const mgtPlane = msrc.dsh.projection_plane
+  const mgtDomain = msrc.dsh.projection_domain
+
+  for (const mrole of msrc.catalog.roles) {
+    const id = mrole.id
+    const presetId = presetIdFor(id) // loader 已与 dsh_integration.preset_ids 交叉核对
+    const assets = msrc.mgtAssets.get(id)
+    const cardText = assets.roleProfile.text
+    const cardSha = assets.roleProfile.sha256
+    const cardPath = MGT_SOURCE_FILES.roleCard(id)
+    const sections = cardSections(cardText)
+    if (sections.length !== 7) throw new Error(`${id}: 管理岗位卡应为 7 个 ## 小节，实为 ${sections.length}`)
+    const soulSummary = renderMgtSoulSummary(assets.soul.text, `docs/${assets.soul.path}`, assets.soul.sha256, id)
+    const soulSummarySha = sha256(soulSummary)
+
+    const { ids: skillIds, mapping: skillMapping, contractGate: roleContractGate } = resolveSkills(mrole, [], mgtT0)
+    const supplyStatus = renderSupplyStatus(skillMapping, [], [
+      `通用线 T0 在本管理岗位只挂定制子集 ${mgtT0.length}/${T0_SKILLS.length} 条（ADR-0129 D5），未挂项与理由：`,
+      ...Object.entries(MGT_T0_EXCLUDED).map(([name, why]) => `- ${name}：${why}`),
+    ])
+    const persona = renderMgtPersona(mrole, {
+      dsh: msrc.dsh,
+      planeName: mgtPlane.name,
+      domainName: mgtDomain.name,
+      cardPath: join(MATERIAL_ROOT, 'docs', cardPath),
+      cardSha,
+      sourceRevision: msrc.sourceRevision,
+      soulSummary,
+      supplyStatus,
+      evalStatusLine: msrc.evalStatusLine,
+      svSha: msrc.hashes.shadowVerification,
+      catalog: msrc.catalog,
+    })
+
+    const compositionRaw = renderComposition(persona, skillIds, presetId)
+    const existingPath = join(OUT_ROOT, presetId, 'agent.cordis.yml')
+    const managedIds = new Set([...compositionRaw.matchAll(/^- id: (\S+)\s*$/gm)].map((m) => m[1]))
+    const carried = unmanagedRowBlocks(existsSync(existingPath) ? readFileSync(existingPath, 'utf8') : '', managedIds)
+    const reinstated = reinstateRows(compositionRaw, carried)
+    const composition = reinstated.text
+    for (const bid of reinstated.repositioned) carriedRows.push(`${presetId} → ${bid}（原位）`)
+    for (const bid of reinstated.appended) carriedRows.push(`${presetId} → ${bid}（⚠️ 前驱行不存在，追加到末尾，位置已变）`)
+
+    const order = mgtOrders.get(id)
+    const name = `${mrole.alias} · ${mrole.title}`
+    const description =
+      `【${mgtPlane.name}·${mgtDomain.name}】${mrole.mission}（标准产物：${mrole.artifact}）〔管理层·评估载体·未授权Shadow〕`
+    const icon = iconIndex.get(presetId)
+    if (!icon) {
+      throw new Error(
+        `管理岗位 ${presetId}（${name}）在图标库里没有对应头像。\n` +
+          `  期望 ${ICON_MANIFEST} 里存在 id="${presetId}" 的条目。\n` +
+          '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js',
+      )
+    }
+    const presetYml = renderPresetYml(name, description, order, icon)
+
+    const blueprint = assets.presetBlueprint.record
+    const bundleInput = {
+      role_id: id,
+      preset_id: presetId,
+      version: blueprint.version,
+      role_card_sha256: cardSha,
+      soul_contract_sha256: assets.soul.sha256,
+      role_playbook_sha256: assets.rolePlaybook.sha256,
+      preset_blueprint_sha256: assets.presetBlueprint.sha256,
+      production_authorized: false,
+    }
+    const rolePlaybookSkillId = `role-playbook-${presetId}`
+    const myCadences = Object.entries(msrc.catalog.operating_model.cadence)
+      .filter(([, roles]) => roles.includes(id))
+      .map(([k]) => k)
+
+    const manifest = {
+      format: 'dsh-preset',
+      version: 2,
+      id: presetId,
+      name,
+      description,
+      sourceDshVersion: SOURCE_DSH_VERSION,
+      icon,
+      source_snapshot: {
+        schema_version: 'rp-m2-mgt',
+        snapshot_date: MGT_SNAPSHOT_DATE,
+        source_root: MATERIAL_ROOT,
+        source_revision: msrc.sourceRevision,
+        generator_revision: GENERATOR_REVISION,
+        generator_rules_revision: GENERATOR_REVISION,
+        dependency_versions: { dsh: SOURCE_DSH_VERSION, node: process.version },
+        // MGT 共享源与 AGT 共享源相互独立（ADR-0129 D3）：材料侧更新验证状态只重生成 3 个 MGT。
+        shared_source_hashes: msrc.hashes,
+        asset_index_hashes: msrc.assetIndexHashes,
+        source_hashes: {
+          role_card: cardSha,
+          soul_contract: assets.soul.sha256,
+          role_playbook: assets.rolePlaybook.sha256,
+          preset_blueprint: assets.presetBlueprint.sha256,
+        },
+      },
+      role_assets: {
+        role_id: id,
+        preset_id: presetId,
+        role_profile: {
+          ref: `docs/${assets.roleProfile.path}`,
+          sha256: cardSha,
+        },
+        soul: {
+          ref: `docs/${assets.soul.path}`,
+          sha256: assets.soul.sha256,
+          persona_summary_sha256: soulSummarySha,
+          text: assets.soul.text,
+        },
+        role_playbook: {
+          ref: `docs/${assets.rolePlaybook.path}`,
+          sha256: assets.rolePlaybook.sha256,
+          skill_id: rolePlaybookSkillId,
+          loader: 'target-host-to-be-verified',
+          source: `ai-org-material:${assets.rolePlaybook.path}`,
+          body_sha256: assets.rolePlaybook.sha256,
+          user_invocable: false,
+          installed: false,
+          text: assets.rolePlaybook.text,
+        },
+        preset_blueprint: {
+          ref: `docs/${assets.presetBlueprint.path}`,
+          sha256: assets.presetBlueprint.sha256,
+          version: blueprint.version,
+          record: blueprint,
+        },
+        runtime_contract: {
+          status: blueprint.status,
+          production_authorized: false,
+          authorization_status: msrc.dsh.authorization_status,
+          composition_owner: blueprint.modes?.composition?.orchestration_owner,
+          case_role_participation: blueprint.modes?.composition?.case_role_participation,
+          peer_chat: blueprint.modes?.composition?.peer_chat,
+          re_delegation: blueprint.modes?.composition?.re_delegation,
+          can_execute_assets: blueprint.modes?.standalone?.can_execute_assets,
+          can_emit_action_intent: blueprint.modes?.standalone?.can_emit_action_intent,
+          action_boundary: blueprint.tools?.action_boundary,
+          visibility: 'read_only_aggregate_view',
+          credentials: blueprint.tools?.credentials,
+        },
+        role_release_bundle_ref: {
+          bundle_id: `RRB-${id}`,
+          version: blueprint.version,
+          content_hash: `sha256:${sha256(canonicalJson(bundleInput))}`,
+          status: blueprint.status,
+        },
+      },
+      material: {
+        snapshot_date: MGT_SNAPSHOT_DATE,
+        source_root: MATERIAL_ROOT,
+        source_hashes: msrc.hashes,
+        role_card: { path: cardPath, sha256: cardSha, text: cardText, sections },
+        management_catalog: {
+          path: MGT_SOURCE_FILES.managementCatalog,
+          sha256: msrc.hashes.managementCatalog,
+          record: mrole,
+          layout: msrc.catalog.layout,
+          coverage_verification: msrc.catalog.coverage_verification,
+          runtime_model: msrc.catalog.runtime_model,
+          operating_model: msrc.catalog.operating_model,
+          evidence_base: msrc.catalog.evidence_base,
+          semantics: msrc.catalog.semantics,
+          structure_history: msrc.catalog.structure_history,
+          dsh_integration: msrc.dsh,
+        },
+        // 四份共享设计文档**逐字**归档（全量保真范式）；SHADOW-VERIFICATION 状态变化 →
+        // 共享哈希变 → 3 个 MGT preset 重生成 → persona 披露块自动更新（状态不腐烂）。
+        management_design: {
+          management_layer: {
+            path: MGT_SOURCE_FILES.managementLayer,
+            sha256: msrc.hashes.managementLayer,
+            text: msrc.text.managementLayer,
+          },
+          decision_rights: {
+            path: MGT_SOURCE_FILES.decisionRights,
+            sha256: msrc.hashes.decisionRights,
+            text: msrc.text.decisionRights,
+          },
+          enforcement: {
+            path: MGT_SOURCE_FILES.enforcement,
+            sha256: msrc.hashes.enforcement,
+            text: msrc.text.enforcement,
+          },
+          shadow_verification: {
+            path: MGT_SOURCE_FILES.shadowVerification,
+            sha256: msrc.hashes.shadowVerification,
+            text: msrc.text.shadowVerification,
+            status_line: msrc.evalStatusLine,
+          },
+        },
+      },
+      x_lute: {
+        plane: { id: mgtPlane.id, name: mgtPlane.name, purpose: mgtPlane.purpose },
+        domain: { id: mgtDomain.id, name: mgtDomain.name },
+        order,
+        lifecycle: {
+          status: 'draft',
+          production_authorized: false,
+          authorization_status: msrc.dsh.authorization_status,
+          note: '管理层评估载体：限 MGT-EVAL 与人在环决策演练；Prompt 层边界不构成服务端权限控制；不构成 Shadow 或生产授权（ADR-0129 D1）。',
+        },
+        management: {
+          layer: mrole.layer,
+          case_role_participation: 'none',
+          standalone_only: true,
+          squad: null, // 管理层不编队、不担任 Lead/Worker（ADR-0020 语义不扩）
+          decision_rights: mrole.decision_rights,
+          decision_rights_explicitly_not_granted: mrole.decision_rights_explicitly_not_granted,
+          owned_role_ids: mrole.owned_role_ids,
+          owned_role_count: mrole.owned_role_count,
+          collaborates_with: mrole.collaborates_with,
+          artifact: mrole.artifact,
+          metrics: mrole.metrics,
+          skills: mrole.skills,
+          boundary: mrole.boundary,
+          second_principle: mrole.second_principle || null,
+          domain_tension: mrole.domain_tension,
+          cadences: myCadences,
+          daily_queue: Object.entries(msrc.catalog.operating_model.daily_queue_dispatch)
+            .find(([, owner]) => owner === id)?.[0] ?? null,
+          cadence_scheduler: msrc.catalog.operating_model.cadence_scheduler,
+          ladder_ref: `docs/${MGT_SOURCE_FILES.decisionRights}`,
+          mdc_goc_schema_ref: `docs/${MGT_SOURCE_FILES.enforcement}`,
+        },
+        skills: {
+          mapping_source: 'scripts/role-presets/skill-map.json',
+          subset: skillIds,
+          material_skill_names: mrole.skills || [],
+          mapping: skillMapping,
+          gaps: skillMapping.filter((d) => d.kind === 'gap').map((d) => d.name),
+          shared_playbook_skills: [],
+          generic_t0: mgtT0,
+          generic_t0_excluded: MGT_T0_EXCLUDED,
+          generic_t0_source: 'packages/capabilities/dsh-overseas-skills/manifest/generic-skills.json',
+          contract_gate: {
+            mode: roleContractGate.mode,
+            bound: roleContractGate.bound,
+            pending: roleContractGate.pending,
+            ...(roleContractGate.note ? { note: roleContractGate.note } : {}),
+          },
+        },
+      },
+    }
+
+    rows.push({
+      id,
+      dirId: presetId,
+      order,
+      plane: mgtPlane.name,
+      domain: mgtDomain.name,
+      name,
+      sections: sections.length,
+      cardBytes: cardText.length,
+      flows: (mrole.flows || []).length,
+      playbooks: 0,
+      scenarios: 0,
+      squadSkills: (mrole.skills || []).length,
+      subsetSkills: skillIds.length,
+      t0Skills: mgtT0.filter((s) => skillIds.includes(s)).length,
+      t0Expected: mgtT0.length,
+      gaps: skillMapping.filter((d) => d.kind === 'gap').length,
+      collab: (mrole.collaborates_with || []).length,
+    })
+
+    if (DRY_RUN) continue
+    pendingWrites.push({ dir: join(OUT_ROOT, presetId), dirId: presetId, presetYml, manifest, composition, t0List: mgtT0 })
+  }
+
+  // 只有全部岗位（AGT + MGT）完成内存构建后才进入派生输出写盘阶段。
+  for (const { dir, dirId, presetYml, manifest, composition, t0List } of pendingWrites) {
     mkdirSync(dir, { recursive: true })
     for (const stale of ['preset.yml', 'manifest.json', 'agent.cordis.yml']) {
       const p = join(dir, stale)
@@ -1089,10 +1733,11 @@ function main() {
     written++
     // 写盘之后**按真实字节**核对 T0 是否真的落进了这一行，而不是相信上面的意图。
     // 「写了但从没跑到」这一类缺陷只有在读回落盘产物时才拦得住（P-17）。
+    // t0List 是该 preset 的期望集：AGT=全量 15；MGT=定制子集 12（ADR-0129 D5）。
     const back = readFileSync(join(dir, 'agent.cordis.yml'), 'utf8')
     const m = /id:\s*skill-subset[\s\S]{0,600}?skills:\s*\[([^\]]*)\]/.exec(back)
     const inFile = new Set((m?.[1] ?? '').split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean))
-    const miss = T0_SKILLS.filter((s) => !inFile.has(s))
+    const miss = t0List.filter((s) => !inFile.has(s))
     if (miss.length) t0MissingInFile.push(`${dirId} 缺 ${miss.join(', ')}`)
     t0RolesChecked++
   }
@@ -1129,12 +1774,31 @@ function main() {
   console.log()
   const totalSections = rows.reduce((a, r) => a + r.sections, 0)
   const totalCardBytes = rows.reduce((a, r) => a + r.cardBytes, 0)
-  console.log(`岗位数：${rows.length}（期望 50）`)
-  console.log(`岗位卡小节总数：${totalSections}（期望 50 × 7 = 350）`)
+  // 数量断言从材料 role_count 派生（ADR-0129 D6④，审计发现 C 的最小改）：
+  // 「50/3」不再写死在这里，材料增减岗位时断言跟随，硬编码只剩显式对照常量。
+  const expectedAgt = src.roleCatalog.role_count
+  const expectedMgt = msrc.catalog.role_count
+  const EXPECTED_AGT_CONSTANT = 50
+  const EXPECTED_MGT_CONSTANT = 3
+  if (expectedAgt !== EXPECTED_AGT_CONSTANT || expectedMgt !== EXPECTED_MGT_CONSTANT) {
+    console.error(`✗ 材料 role_count（AGT ${expectedAgt} / MGT ${expectedMgt}）与本文件显式常量（${EXPECTED_AGT_CONSTANT}/${EXPECTED_MGT_CONSTANT}）不一致——`)
+    console.error('  岗位增减是基线变更：先改常量并核对 shipped-presets/门禁账本/verify-lossless，再生成。')
+    process.exit(1)
+  }
+  if (src.roleCatalog.roles.length !== expectedAgt || msrc.catalog.roles.length !== expectedMgt) {
+    console.error('✗ 材料 role_count 与 roles[] 实际条数不一致')
+    process.exit(1)
+  }
+  console.log(`岗位数：${rows.length}（期望 ${expectedAgt} AGT + ${expectedMgt} MGT = ${expectedAgt + expectedMgt}）`)
+  if (rows.length !== expectedAgt + expectedMgt) {
+    console.error(`✗ 实际构建 ${rows.length} 行 ≠ 期望 ${expectedAgt + expectedMgt}`)
+    process.exit(1)
+  }
+  console.log(`岗位卡小节总数：${totalSections}（期望 (${expectedAgt} + ${expectedMgt}) × 7 = ${(expectedAgt + expectedMgt) * 7}）`)
   console.log(`岗位卡字节总数：${totalCardBytes}`)
   const byPlane = {}
   for (const r of rows) byPlane[r.plane] = (byPlane[r.plane] || 0) + 1
-  console.log(`平面分布：${JSON.stringify(byPlane)}（期望 经营管理 5 / 业务运营 35 / 独立控制 5 / 数据与Agent平台 5）`)
+  console.log(`平面分布：${JSON.stringify(byPlane)}（期望 经营管理 5 / 业务运营 35 / 独立控制 5 / 数据与Agent平台 5 / ${mgtPlane.name} ${expectedMgt}）`)
   const totalSubset = rows.reduce((a, r) => a + r.subsetSkills, 0)
   const totalGaps = rows.reduce((a, r) => a + r.gaps, 0)
   console.log(`skill-subset 引用总条目：${totalSubset}（跨岗位去重后 ${new Set(rows.map((r) => r.subsetSkills)).size} 种规模）`)
@@ -1164,10 +1828,10 @@ function main() {
 
   // ── 通用线 T0：接线读数必须落到真实字节上 ────────────────────────────────────
   //
-  // 只报「T0 名单有 15 条」是自述，不是读数：那 15 条有没有真的进每个 preset 的
+  // 只报「T0 名单有 N 条」是自述，不是读数：那些条目有没有真的进每个 preset 的
   // skill-subset，只有回读落盘文件才算数。故此处报的是**回读结果**。
   console.log('')
-  console.log(`通用线 T0：${T0_SKILLS.length} 条 · 回读 ${t0RolesChecked} 个 agent.cordis.yml 核对`)
+  console.log(`通用线 T0：${T0_SKILLS.length} 条（AGT 全量挂载）· MGT 定制子集 ${mgtT0.length} 条（剔除 ${Object.keys(MGT_T0_EXCLUDED).join('、')}，理由家在 MGT_T0_EXCLUDED / ADR-0129 D5）· 回读 ${t0RolesChecked} 个 agent.cordis.yml 核对`)
   if (GENERIC_NON_T0.length > 0) {
     console.log(`  通用线非 T0（${GENERIC_NON_T0.length} 条，按岗位族挂，本次**未接**）：${GENERIC_NON_T0.join(', ')}`)
   }
@@ -1183,13 +1847,13 @@ function main() {
   if (DRY_RUN) {
     // dry-run 没有落盘可回读，但「意图」这一层仍要判：否则 dry-run 会给出一个
     // 比真实运行更宽松的绿，而人正是拿它来决定要不要真实运行。
-    const short = rows.filter((r) => r.t0Skills !== T0_SKILLS.length)
+    const short = rows.filter((r) => r.t0Skills !== r.t0Expected)
     if (short.length) {
-      console.error(`\n✗ 通用线 T0 未进入 ${short.length} 个岗位的待写名单（应为每岗 ${T0_SKILLS.length} 条）：`)
-      for (const r of short.slice(0, 20)) console.error(`  ${r.dirId} 只有 ${r.t0Skills} 条`)
+      console.error(`\n✗ 通用线 T0 未进入 ${short.length} 个岗位的待写名单（AGT 应为每岗 ${T0_SKILLS.length} 条，MGT 应为每岗 ${mgtT0.length} 条）：`)
+      for (const r of short.slice(0, 20)) console.error(`  ${r.dirId} 只有 ${r.t0Skills} 条（期望 ${r.t0Expected}）`)
       process.exit(1)
     }
-    console.log(`★ [dry-run] T0 ${T0_SKILLS.length} 条在 ${rows.length}/${rows.length} 个岗位的待写名单里齐备（尚未回读，真实运行才回读）`)
+    console.log(`★ [dry-run] T0 在 ${rows.length}/${rows.length} 个岗位的待写名单里按各自期望集齐备（AGT ${T0_SKILLS.length} / MGT ${mgtT0.length}；尚未回读，真实运行才回读）`)
   }
   if (!DRY_RUN) {
     if (t0Wired.size !== T0_SKILLS.length) {

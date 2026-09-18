@@ -1,9 +1,9 @@
 {
   "_meta": {
-    "purpose": "把材料《AI组织变革》50 个岗位的 151 个中文业务技能名，映射到 ~/.dsh/skills 现有 264 项技能的英文 id，供 50 个岗位 preset 的 skill-subset 使用。",
-    "source": "docs/05-agents/role-catalog.json 的 roles[].skills（151 个去重名，每岗 3 个）",
-    "target": "~/.dsh/skills 下 264 项技能的 name 字段（英文 kebab）",
-    "authoring": "人工语义映射，非程序生成。",
+    "purpose": "把材料《AI组织变革》50 个执行岗位的 151 个中文业务技能名 + 3 个管理岗位（MGT，ADR-0129）的 16 个管理技能名，映射到 ~/.dsh/skills 现有技能的英文 id，供 53 个岗位 preset 的 skill-subset 使用。",
+    "source": "AGT：docs/05-agents/role-catalog.json 的 roles[].skills（151 个去重名，每岗 3 个，AGT-002 为 4 个属登记例外）；MGT：docs/04-organization/management/management-catalog.json 的 roles[].skills（16 个去重名）",
+    "target": "~/.dsh/skills 下技能的 name 字段（英文 kebab）",
+    "authoring": "人工语义映射，非程序生成。MGT 条目以 gap 为主是**诚实结果**：管理技能（口径冻结、队列分派、L2b 识别等）在材料设计里本就要求模型外机制承载，不应有 Prompt 层工具供给（详见各条 note 与 ADR-0129 D5）。",
     "kinds": {
       "direct": "平台有语义直接对应的技能，可直接进 skill-subset",
       "partial": "平台只覆盖该业务技能的一部分，映射的是最接近的供给，已在 note 说明缺口",
@@ -1106,6 +1106,101 @@
         "p2s-ato-spatio-temporal-graph"
       ],
       "note": "由论文技能库补充供给（5 项）：p2s-ato-spatio-temporal-graph、p2s-agent-payment-security-red-team、p2s-competitor-negative-campaign-detection、p2s-cross-border-payment-fraud-detection、p2s-crypto-anomaly-review-fraud"
+    },
+    "全局组合排序": {
+      "kind": "partial",
+      "supply": [
+        "weighted-scoring"
+      ],
+      "note": "MGT-001：加权评分支持组合排序的计算与呈现；取舍判断、放弃项与代价承担者的确定无工具供给，由决策权阶梯（L2）流程承担"
+    },
+    "跨域资源再分配": {
+      "kind": "partial",
+      "supply": [
+        "market-scenario-modeler"
+      ],
+      "note": "MGT-001：what-if 情景建模支持再分配方案比较；配额记录与 GOC 版本化生效机制属模型外未实现构件（材料 ENFORCEMENT §3），非技能供给"
+    },
+    "战略停止评估": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-001：停止经战略停止权与既有异常冻结通道生效（材料 D-061 不允许抢占），平台无对应供给"
+    },
+    "自涉争议识别与回避": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-001：L2b 识别是决策权阶梯判断；材料要求独立性由模型外机制保障（ENFORCEMENT §5A），不应也不会由工具供给"
+    },
+    "增长组合设计": {
+      "kind": "partial",
+      "supply": [
+        "ecommerce-quarterly-strategy"
+      ],
+      "note": "MGT-002：季度策略结构化支持组合设计；增量杠杆识别与组合级归因判断本身无工具供给"
+    },
+    "增量归因与反事实构造": {
+      "kind": "partial",
+      "supply": [
+        "attribution",
+        "p2s-automated-causal-discovery"
+      ],
+      "note": "MGT-002：GMV 归因与自动因果发现支持反事实分析；域级增量口径的定义与冻结走指标口径独立冻结机制（AGT-005+外部复核）"
+    },
+    "促销与内容组合优化": {
+      "kind": "partial",
+      "supply": [
+        "discount-promotion-engine"
+      ],
+      "note": "MGT-002：促销侧有供给；内容组合优化无对应平台技能（该判断在需求侧由 AGT-029~035 承担，管理岗只做组合取舍）"
+    },
+    "异常队列类型分派": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-002：材料明确该分派是**机械可判**的（异常单自带类型字段入队，MANAGEMENT-LAYER §6），属模型外规则，不应有模型侧工具供给"
+    },
+    "规则下沉判定": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-002：判断某决定能否降为 L0 确定性规则属治理域标准事务（DECISION-RIGHTS §2），平台无供给"
+    },
+    "结算与对账差异分析": {
+      "kind": "partial",
+      "supply": [
+        "ecommerce-financial-dashboard"
+      ],
+      "note": "MGT-003：财务看板支持结算/对账数据分析；差异定性与边界判定链条（约束记录→Policy Gate）属未实现构件"
+    },
+    "现金与资源约束建模": {
+      "kind": "partial",
+      "supply": [
+        "market-scenario-modeler"
+      ],
+      "note": "MGT-003：情景建模支持约束推演；现金裁决、预留与配额记录机制属模型外构件（ENFORCEMENT §3.3）"
+    },
+    "约束记录与边界判定": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-003：constraint_refs 记录与 Policy Gate 读取为未实现构件；材料红线要求该机制必须在模型外，Prompt 层工具不构成供给"
+    },
+    "质量与账号事件状态管理": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-003：v2 已取消横切事件状态权——结果责任在 AGT-018/027，治理官仅做边界判定与队列归属（MANAGEMENT-LAYER §4.1），无也不应有状态权工具"
+    },
+    "能力供给与运行审计": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-003：平台无能力供给审计技能；既有审计类卡（合规 ML/偏差审计）对象是业务模型而非 Agent 平台能力供给，不算 partial"
+    },
+    "管理节拍运行": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-003：节拍日历与决策队列是交付物，依赖模型外队列构件（未实现，MGT-EVAL-C 前置）；无工具供给"
+    },
+    "利益相关性筛查与回避": {
+      "kind": "gap",
+      "supply": [],
+      "note": "MGT-003：材料要求以模型外机制保障（冻结记录签署方机械校验/复核线只读通道，ENFORCEMENT §5A 三个可核对形态），Prompt 层工具不构成供给"
     }
   }
 }

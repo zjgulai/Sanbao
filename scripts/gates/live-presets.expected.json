@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "identity": "stableId\u0000name\u0000kind",
-  "presetCount": 53,
-  "rowCount": 1692,
+  "presetCount": 56,
+  "rowCount": 1788,
   "presets": [
     {
       "presetId": "agent-fullstack",
@@ -268,6 +268,21 @@
       "presetId": "lute-cordis",
       "rowCount": 31,
       "rowIdentitySha256": "5f072a3944abae5a89b02ba8d0ec6c024918c68f4899e737161ca78db837f140"
+    },
+    {
+      "presetId": "mgt-001",
+      "rowCount": 32,
+      "rowIdentitySha256": "c45be5e34a0c22e32980379d233c84b3c1d507811345213758196d3b4657b170"
+    },
+    {
+      "presetId": "mgt-002",
+      "rowCount": 32,
+      "rowIdentitySha256": "73b942205332a2a2fcb2ad623902fc7e42651e2b76536af2aa28ad83514023ba"
+    },
+    {
+      "presetId": "mgt-003",
+      "rowCount": 32,
+      "rowIdentitySha256": "ca0a4a7de0fe3f90e29cf2482776eca924ef41acf2046de1910bf0c25cc2605e"
     }
   ]
 }

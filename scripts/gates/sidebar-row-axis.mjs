@@ -72,14 +72,8 @@ const REGISTRY = [
     css: 'packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css',
     selector: '.entry',
   },
-  {
-    plugin: 'skill-center-local',
-    entry: 'packages/surfaces/dsh-skill-center-local/src/client/sidebar-entry.ts',
-    position: 'after',
-    column: 'sidebar-nav',
-    css: 'packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css',
-    selector: '.entry',
-  },
+  // skill-center-local 于 S3（2026-09-19）迁到 sidebar.panellist 官方行，
+  // 注入行退役，故从本清单移除（门禁只登记仍走 DOM 注入的行）。
   {
     plugin: 'newapp-local',
     entry: 'packages/surfaces/dsh-newapp-local/src/client/sidebar-entry.ts',
@@ -134,7 +128,7 @@ const COLUMNS = {
       marginInline: '0',
       paddingInline: '10px',
     },
-    why: '原生侧边栏行轴（实测 64…320）；水平 padding 一致才能让两行标签 x 都为 106',
+    why: '原生侧边栏行轴（实测 64…320）；与官方行同一水平 padding，标签 x 才同为 106',
   },
   'nav-band': {
     axis: {

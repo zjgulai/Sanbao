@@ -48,7 +48,7 @@ export type { MatrixApi } from './api.ts'
  * capability tests hold both copies to the same behaviour, and the host stays
  * the one that enforces it — this copy only decides whether to *ask*.
  */
-const ROLE_PRESET_ID = /^agt-\d{3}$/
+const ROLE_PRESET_ID = /^(?:agt|mgt)-\d{3}$/
 
 /** One session summary, narrowed to the two shipped projections this surface reads. */
 interface SessionSummaryLike {

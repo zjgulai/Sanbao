@@ -1,0 +1,128 @@
+/**
+ * Composer 预填——把一句话放进当前会话的草稿，仅此而已。
+ *
+ * 点击能力卡后用户必须仍掌握发送权（R7），所以本函数永不调用 `send`。
+ *
+ * ## 通道，以及为什么这样够到它
+ *
+ * 官方 conversation 插件发布每会话的 **provide-channel action face**——
+ * `actions.setDraft(text)`——输入框自己绑的就是它；写这个通道意味着编辑器自身的
+ * 状态、撤销历史、光标位置都与用户手打时完全一致。够到它的路径：
+ *
+ *   `conversation`（服务）→ `.input`（会话输入枢纽）→ `.shell(id)`
+ *
+ * 该枢纽的文档面是 `for(ctx)`——*「为会话作用域 ctx 解析门面」*——而 DOM 挂载的
+ * 行没有会话作用域 ctx 可交给它，所以直接用 `shell(id)`。这是在文档面**之内**
+ * 一步：`for()` 实现为 `shell(this.sessions().scopeOf(actx))`，方法与会话 id 参数
+ * 结构上必需，但未被宣传。因此这是一次**对可移动形状的读**，并按可移动形状对待：
+ *
+ *  - 每一层都探测（`typeof … === 'function'`）而非假设；
+ *  - 通道缺失时带原因上报，绝不吞掉；
+ *  - 不向 shell 的栈上抛。
+ *
+ * 刻意**不做 DOM 兜底**：输入框是 Lexical contenteditable，文本归编辑器实例所有；
+ * 改 `textContent` 会让编辑器模型与像素不一致，用户发送时才发现消息里没有自己看见
+ * 的内容。上报「预填不可用」才是诚实的降级。
+ *
+ * 经 `scripts/sync-shared.mjs` 分发（副本首行带生成标记）；改这里后跑
+ * `node scripts/sync-shared.mjs --write`。
+ */
+
+/** 预填结果。 */
+export type PrefillOutcome = { ok: true } | { ok: false; reason: string }
+
+/** `conversation.input.shell(id)` 结果，收窄到需要的部分。 */
+interface SessionInputLike {
+  actions?: { setDraft?: (text: string) => void }
+}
+
+/** `conversation` 服务，收窄到需要的部分。 */
+interface ConversationLike {
+  input?: { shell?: (sessionId: string) => SessionInputLike | undefined }
+}
+
+/**
+ * 把 `text` 写进某个会话的草稿。
+ * @param conversation - `conversation` 服务（经查找读到）。
+ * @param sessionId - 目标会话。
+ * @param text - 要放进输入框的提示词。
+ * @returns 草稿是否已写入；未写入时给出原因。
+ */
+export function prefillDraft(conversation: unknown, sessionId: string, text: string): PrefillOutcome {
+  if (sessionId === '') return { ok: false, reason: '没有当前会话 id' }
+  if (text === '') return { ok: false, reason: '没有可预填的文本' }
+
+  const service = conversation as ConversationLike | undefined
+  const shell = service?.input?.shell
+  if (typeof shell !== 'function') {
+    return { ok: false, reason: 'conversation.input.shell 不可用（官方会话插件的输入面已变）' }
+  }
+
+  let facade: SessionInputLike | undefined
+  try {
+    facade = shell.call(service?.input, sessionId)
+  } catch (error) {
+    return { ok: false, reason: `conversation.input.shell 抛出：${error instanceof Error ? error.message : String(error)}` }
+  }
+  const setDraft = facade?.actions?.setDraft
+  if (typeof setDraft !== 'function') {
+    return { ok: false, reason: '该会话没有 actions.setDraft（草稿通道未挂载）' }
+  }
+  try {
+    setDraft.call(facade?.actions, text)
+  } catch (error) {
+    return { ok: false, reason: `setDraft 抛出：${error instanceof Error ? error.message : String(error)}` }
+  }
+  return { ok: true }
+}
+
+/** `deliverPrompt` 的依赖：会话 id 与 `conversation` 服务都由调用方供给（各自的 ctx 窄面不同）。 */
+export interface PromptDeliveryDeps {
+  /** 当前会话 id；无会话时 undefined。 */
+  sessionId(): string | undefined
+  /** `conversation` 服务（经查找读到；可缺）。 */
+  conversation(): unknown
+  /** 日志前缀（各包自己的名字），让告警能归因到出处。 */
+  label: string
+}
+
+/** 交付结果：`via` 说明提示词最终走了哪条通道——两级降级的证据必须留在读数里。 */
+export type PromptDelivery =
+  | { ok: true; via: 'draft' | 'clipboard' }
+  | { ok: false; reason: string }
+
+/**
+ * 把一句话交付给用户：草稿通道优先，不可用时降级剪贴板。
+ *
+ * 两级降级都**必须出声**，且剪贴板的成败要如实反映在返回值里：浏览器验收实测到过
+ * 「没有当前会话 → 静默走剪贴板 → `writeText` 的 promise 被拒（无权限/无用户激活）→
+ * 函数却返回 ok」这条链，结果是点击毫无可见效果而日志一片干净——仪器假绿。
+ *
+ * 这条降级链原本住在能力中枢的 dispatcher 里；技能卡的「执行」成为第二个消费方后
+ * 提到共享源（ADR-0128 D5：第二个消费方出现即意味着两个家）。
+ * @param deps - 交付依赖。
+ * @param text - 要交付的提示词。
+ * @returns 交付结果；两级都失败时 ok=false 并给出原因。
+ */
+export async function deliverPrompt(deps: PromptDeliveryDeps, text: string): Promise<PromptDelivery> {
+  const sessionId = deps.sessionId()
+  if (sessionId !== undefined) {
+    const outcome = prefillDraft(deps.conversation(), sessionId, text)
+    if (outcome.ok) return { ok: true, via: 'draft' }
+    console.warn(`[${deps.label}] ${outcome.reason}——降级为复制到剪贴板`)
+  } else {
+    console.warn(`[${deps.label}] 没有当前会话 id（sessions 服务未就绪或没有选中会话）——预填降级为复制到剪贴板`)
+  }
+  if (typeof navigator === 'undefined' || navigator.clipboard?.writeText === undefined) {
+    return { ok: false, reason: '草稿通道不可用，且这个环境没有剪贴板 API' }
+  }
+  try {
+    await navigator.clipboard.writeText(text)
+    return { ok: true, via: 'clipboard' }
+  } catch (error) {
+    return {
+      ok: false,
+      reason: `草稿通道不可用，剪贴板写入也失败：${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+}

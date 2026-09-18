@@ -1,6 +1,6 @@
 {
   "source": "https://lute-tlz-dddd.top/systems.html",
-  "probedOn": "2026-09-13",
+  "probedOn": "2026-09-18",
   "summary": {
     "total": 31,
     "reachable": 31,
@@ -13,7 +13,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Momcozy DataPilot",
-      "ms": 250,
+      "ms": 306,
       "error": ""
     },
     "asset": {
@@ -22,7 +22,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "BrandOS — 10个母婴品牌的AI大脑，315个SKU的决策智能",
-      "ms": 198,
+      "ms": 231,
       "error": ""
     },
     "audit": {
@@ -31,7 +31,7 @@
       "loginRequired": false,
       "passwordField": true,
       "title": "AI审计一体化协作平台",
-      "ms": 140,
+      "ms": 221,
       "error": ""
     },
     "bos": {
@@ -40,7 +40,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "BOS AI品牌经营工作台",
-      "ms": 157,
+      "ms": 266,
       "error": ""
     },
     "brand": {
@@ -49,7 +49,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "路特星链 — 让每一个业务问题上链解决",
-      "ms": 408,
+      "ms": 501,
       "error": ""
     },
     "business": {
@@ -58,7 +58,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "NurtureLink - Rethinking Maternal-Infant AI",
-      "ms": 276,
+      "ms": 285,
       "error": ""
     },
     "flowise": {
@@ -67,7 +67,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Flowise - AI 流程编排平台",
-      "ms": 275,
+      "ms": 315,
       "error": ""
     },
     "kb": {
@@ -76,7 +76,7 @@
       "loginRequired": false,
       "passwordField": true,
       "title": "经营决策与咨询交付工作台",
-      "ms": 279,
+      "ms": 467,
       "error": ""
     },
     "kg": {
@@ -85,7 +85,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "灵词 PromptForge",
-      "ms": 275,
+      "ms": 465,
       "error": ""
     },
     "kgraph": {
@@ -94,7 +94,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Knowledge Product Workspace",
-      "ms": 339,
+      "ms": 544,
       "error": ""
     },
     "label": {
@@ -103,7 +103,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "VOC 标签治理工作台 v1",
-      "ms": 173,
+      "ms": 285,
       "error": ""
     },
     "llm": {
@@ -112,7 +112,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "LLM Models Hub — 大模型选型指南",
-      "ms": 166,
+      "ms": 284,
       "error": ""
     },
     "mas": {
@@ -121,7 +121,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "VOA · 科学经营决策与执行闭环平台",
-      "ms": 118,
+      "ms": 257,
       "error": ""
     },
     "melwater": {
@@ -130,7 +130,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Melwater VOC 决策工作台",
-      "ms": 139,
+      "ms": 1282,
       "error": ""
     },
     "mkt": {
@@ -139,7 +139,7 @@
       "loginRequired": true,
       "passwordField": true,
       "title": "登录 LUTE AI Native Builder Lab",
-      "ms": 329,
+      "ms": 525,
       "error": ""
     },
     "person": {
@@ -148,7 +148,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "AI数字员工租赁平台",
-      "ms": 132,
+      "ms": 278,
       "error": ""
     },
     "platform-shopify": {
@@ -157,7 +157,7 @@
       "loginRequired": false,
       "passwordField": true,
       "title": "ABI 智能化独立站 · Shopify AI 经营知识库",
-      "ms": 197,
+      "ms": 200,
       "error": ""
     },
     "plugin": {
@@ -166,7 +166,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "VOC Hub",
-      "ms": 1869,
+      "ms": 1215,
       "error": ""
     },
     "present": {
@@ -175,7 +175,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "HTML Anything — 中文产品发布资产工厂",
-      "ms": 213,
+      "ms": 216,
       "error": ""
     },
     "product": {
@@ -184,7 +184,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "路特全球智能选品中心",
-      "ms": 166,
+      "ms": 184,
       "error": ""
     },
     "redbook": {
@@ -193,7 +193,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "喵溺AI｜五种写法，每一种都有章法。",
-      "ms": 232,
+      "ms": 251,
       "error": ""
     },
     "reddit": {
@@ -202,7 +202,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Momcozy & Reddit 舆情工作台",
-      "ms": 184,
+      "ms": 248,
       "error": ""
     },
     "report": {
@@ -211,7 +211,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Momcozy 喂养电器 · E2E洞察报告库",
-      "ms": 212,
+      "ms": 228,
       "error": ""
     },
     "scm": {
@@ -220,7 +220,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "供应链数据开发治理工作台",
-      "ms": 161,
+      "ms": 232,
       "error": ""
     },
     "scrapy": {
@@ -229,7 +229,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "采集控制台 - Data Intelligence Hub",
-      "ms": 406,
+      "ms": 404,
       "error": ""
     },
     "shopify": {
@@ -238,7 +238,7 @@
       "loginRequired": true,
       "passwordField": true,
       "title": "登录 LUTE AI Native Builder Lab",
-      "ms": 252,
+      "ms": 305,
       "error": ""
     },
     "skills": {
@@ -247,7 +247,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "证据型业务诊断 · paper2skills",
-      "ms": 206,
+      "ms": 277,
       "error": ""
     },
     "video": {
@@ -256,7 +256,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "Short Video Factory — AI Multi-platform Distribution",
-      "ms": 162,
+      "ms": 254,
       "error": ""
     },
     "voc": {
@@ -265,7 +265,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "路特 VOC 自助分析平台",
-      "ms": 509,
+      "ms": 496,
       "error": ""
     },
     "wct": {
@@ -274,7 +274,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "",
-      "ms": 218,
+      "ms": 254,
       "error": ""
     },
     "xmind": {
@@ -283,7 +283,7 @@
       "loginRequired": false,
       "passwordField": false,
       "title": "前车之鉴-思维制胜",
-      "ms": 209,
+      "ms": 316,
       "error": ""
     }
   }

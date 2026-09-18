@@ -31,7 +31,9 @@ import {
 const ROOT = new URL('../../', import.meta.url).pathname
 
 /**
- * 三行的最小 fixture。入口文件只保留本项真正读的两处声明（`rowAttribute` / `position`）。
+ * 两行的最小 fixture（与 REGISTRY 同步：技能中心的注入行已于 S3 迁到官方
+ * `sidebar.panellist`，2026-09-19 退役，故 fixture 里也不再有它）。入口文件只保留
+ * 本项真正读的两处声明（`rowAttribute` / `position`）。
  * `body` 是各自的 `.entry` 声明块，默认值取自 2026-09-13 修复后的真实树。
  */
 const ROWS = [
@@ -41,13 +43,6 @@ const ROWS = [
     pos: 'after',
     css: 'packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css',
     body: 'box-sizing: border-box; display: flex; width: 100%; height: 36px; margin: 2px 0; padding: 0 10px;',
-  },
-  {
-    entry: 'packages/surfaces/dsh-skill-center-local/src/client/sidebar-entry.ts',
-    attr: 'data-dsh-skill-center-entry',
-    pos: 'after',
-    css: 'packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css',
-    body: 'box-sizing: border-box; display: flex; width: 100%; height: 36px; padding: 0 10px;',
   },
   {
     entry: 'packages/surfaces/dsh-newapp-local/src/client/sidebar-entry.ts',
@@ -63,7 +58,7 @@ const ROWS = [
  * 否则本项对它的轴断言会因为「找不到规则」而判红——正常 fixture 必须过。
  */
 const RESTYLED = {
-  css: ROWS[2].css,
+  css: ROWS[1].css,
   selector: 'button[class*="newSession"][data-lute-navrow]',
   body: 'box-sizing: border-box; width: 100%; margin: 2px 0; padding: 0 10px;',
 }
@@ -72,8 +67,7 @@ const CORE_TEXT = "const official = {}\nofficial.dataset.luteNavrow = ''\n"
 
 
 const RM = ROWS[0].entry
-const SC = ROWS[1].entry
-const NA = ROWS[2].entry
+const NA = ROWS[1].entry
 
 const temps = []
 afterEach(() => {
@@ -124,21 +118,20 @@ test('真实仓库通过，并把射程写进 note（登记行数 / 列数 / 断
   assert.deepEqual(result.violations, [])
   assert.equal(result.passed, true)
   // 射程必须落在 note 里，否则「量了几个」无从判断（ADR-0075）。
-  assert.match(result.note, /已登记 3 个注入行、2 列/)
-  assert.match(result.note, /其中 3 行断言了行轴/)
+  assert.match(result.note, /已登记 2 个注入行、2 列/)
+  assert.match(result.note, /其中 2 行断言了行轴/)
   assert.match(result.note, /另断言 1 条被插件改写的官方行同轴/)
 })
 
-test('真实仓库里两行行轴逐字段相同，且等于声明出来的原生轴', () => {
+test('真实仓库里 sidebar-nav 注入行的行轴逐字段等于声明出来的原生轴', () => {
+  // 技能中心迁走后本列只剩一行，判据的对照物是**声明**（COLUMNS），不是另一行。
   const rm = horizontalAxis(ruleBody(entryCss(ROWS[0].css), '.entry'))
-  const sc = horizontalAxis(ruleBody(entryCss(ROWS[1].css), '.entry'))
-  assert.deepEqual(rm, sc)
   assert.deepEqual(rm, COLUMNS['sidebar-nav'].axis)
 })
 
 test('真实仓库里启动带三行（新应用行 + 被改写的官方行）同在一条原生轴上', () => {
-  const na = horizontalAxis(ruleBody(entryCss(ROWS[2].css), '.entry'))
-  const official = horizontalAxis(ruleBody(entryCss(ROWS[2].css), RESTYLED.selector))
+  const na = horizontalAxis(ruleBody(entryCss(ROWS[1].css), '.entry'))
+  const official = horizontalAxis(ruleBody(entryCss(ROWS[1].css), RESTYLED.selector))
   assert.deepEqual(na, COLUMNS['nav-band'].axis)
   assert.deepEqual(official, COLUMNS['nav-band'].axis)
 })
@@ -155,9 +148,9 @@ test('① 岗位矩阵退回自带宽度约定（width: calc(100% - 8px) + margi
   assert.match(result.violations.join('\n'), /width='calc\(100% - 8px\)'/)
 })
 
-test('② 技能中心丢掉 box-sizing 必须判红（content-box 下 width:100% 还要再加 padding）', () => {
+test('② 注入行丢掉 box-sizing 必须判红（content-box 下 width:100% 还要再加 padding）', () => {
   const root = fixture({
-    bodies: { [SC]: 'display: flex; width: 100%; height: 36px; padding: 0 10px;' },
+    bodies: { [RM]: 'display: flex; width: 100%; height: 36px; padding: 0 10px;' },
   })
   const result = checkSidebarRowAxis({ repoRoot: root })
   assert.equal(result.passed, false)
@@ -290,7 +283,7 @@ test('⑭ 改写规则消失（选择器改了名）必须判红，而不是静�
   )
   // 顺手把 CSS 里的改写规则写成选择器改名版——规则块还在，但锚名变了。
   const cssAbs = join(root, ...RESTYLED.css.split('/'))
-  writeFileSync(cssAbs, `.entry {\n  ${ROWS[2].body}\n}\nbutton[class*="newSession"][data-renamed-anchor] {\n  ${RESTYLED.body}\n}\n`)
+  writeFileSync(cssAbs, `.entry {\n  ${ROWS[1].body}\n}\nbutton[class*="newSession"][data-renamed-anchor] {\n  ${RESTYLED.body}\n}\n`)
   const result = checkSidebarRowAxis({ repoRoot: root })
   assert.equal(result.passed, false)
   assert.match(result.violations.join('\n'), /找不到规则 `button\[class\*="newSession"\]\[data-lute-navrow\] \{`/)

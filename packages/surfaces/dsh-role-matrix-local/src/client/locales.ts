@@ -26,7 +26,7 @@ export const zh = {
 
   'list.loading': '正在读取预设…',
   'list.loadFailed': '读取失败：{error}',
-  'list.empty': '没有找到岗位 preset。请确认 {root} 下有 agt-NNN 目录。',
+  'list.empty': '没有找到岗位 preset。请确认 {root} 下有 agt-NNN / mgt-NNN 目录。',
   'list.degraded': '{count} 个岗位的 manifest 不完整，已归入「未分类」。',
 
   'card.artifact': '标准产物',
@@ -88,7 +88,7 @@ export const en: Record<RoleMatrixKey, string> = {
 
   'list.loading': 'Reading presets…',
   'list.loadFailed': 'Load failed: {error}',
-  'list.empty': 'No role preset found. Check that {root} holds agt-NNN directories.',
+  'list.empty': 'No role preset found. Check that {root} holds agt-NNN / mgt-NNN directories.',
   'list.degraded': '{count} role(s) have an incomplete manifest and are grouped under “Unclassified”.',
 
   'card.artifact': 'Artifact',

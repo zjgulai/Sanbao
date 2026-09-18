@@ -8,7 +8,9 @@ skills into a recoverable trash.
 
 ## What it does
 
-- **Sidebar entry** "Skill Center" opens a panel with two tabs.
+- **Sidebar nav row** "Extensions Hub" (扩展中心), registered into the shell's
+  official `sidebar.panellist` slot, opens the center-column view: three hub
+  tabs (skills / MCP / apps) plus a collapsed developer mode.
 - **Skills tab**: skills grouped by source (system bundled / project
   `.dsh/skills` / project `.agents/skills` / custom directories / user
   `~/.dsh/skills` / user `~/.agents/skills` / runtime registered), each card
@@ -42,8 +44,9 @@ pnpm -r build
 dsh plugin --profile web add link:$(pwd)/packages/dsh-skill-explorer
 ```
 
-Restart `dsh web` after installing; the "Skill Center" entry appears in the
-sidebar.
+Restart `dsh web` after installing; the "Extensions Hub" row appears in the
+sidebar's panel list and the view opens in the center column (the shell owns
+which panel is active — this package paints no overlay of its own).
 
 ## Routes
 
