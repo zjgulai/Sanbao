@@ -28,7 +28,7 @@
  * 后半句只有实况探针能回答。两者谁也冒充不了谁。
  */
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'
@@ -88,7 +88,19 @@ test('自检本身必须是绿的：现存判据覆盖独立校准、目标尺�
   })
 })
 
-test('QG-012：独立锚与 pinned upstream 一致，Shell 自己不得改写 nav 校准宽度', () => {
+test(
+  'QG-012：独立锚与 pinned upstream 一致，Shell 自己不得改写 nav 校准宽度',
+  {
+    // CI 里没有 vendor/dsh-desktop：它是嵌套仓库，源码不入库（.gitignore 显式排除，
+    // 没有 .gitmodules 可供 checkout，上游 fork 也不是本仓库能公开拉取的）。
+    // 缺的是「pinned upstream 那一侧的输入」，不是「本仓库这一侧的正确性」——
+    // 所以报跳过而不是判红，也不报通过（未核实 ≠ 合格）。
+    // 本地 checkout 了 vendor/ 时这条照跑，射程不减。
+    skip: existsSync(UPSTREAM_SETTINGS_CSS)
+      ? false
+      : 'vendor/dsh-desktop 未 checkout（嵌套仓库不入库，CI 无此输入）',
+  },
+  () => {
   const upstream = readFileSync(UPSTREAM_SETTINGS_CSS, 'utf8')
   const nav = upstream.match(/\.nav\s*\{([\s\S]*?)\}/)?.[1]
   const close = upstream.match(/\.close\s*\{([\s\S]*?)\}/)?.[1]
