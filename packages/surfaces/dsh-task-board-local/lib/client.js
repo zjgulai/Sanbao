@@ -166,7 +166,17 @@ window.__ModuleLoader__.load({
 			'.dsh-tb-overlay { position:fixed; inset:0; z-index:20000; display:grid; padding:22px; place-items:center; background:color-mix(in srgb, var(--dsw-alias-bg-overlay) 74%, transparent); }',
 			'.dsh-tb-manual-dialog { display:grid; grid-template-columns:42px minmax(0,1fr); gap:13px; width:min(480px, calc(100% - 44px)); max-height:calc(100% - 44px); box-sizing:border-box; padding:18px; overflow:auto; color:var(--dsw-alias-label-primary); border:1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 55%, var(--dsw-alias-border-l1)); border-radius:var(--dsw-alias-radius-md, 10px); background:var(--tb-panel-bg-solid, var(--dsw-alias-bg-layer-1)); box-shadow:var(--dsw-alias-shadow-lg, 0 18px 48px rgba(0,0,0,.24)); }',
 			'.dsh-tb-manual-dialog.dsh-tb-destructive { border-color:color-mix(in srgb, var(--dsw-alias-state-error-primary) 65%, var(--dsw-alias-border-l1)); }',
-			'.dsh-tb-warning-icon { display:grid; width:38px; height:38px; place-items:center; color:var(--dsw-alias-label-on-accent, #fff); border-radius:var(--dsw-alias-radius-md, 10px); background:var(--dsw-alias-state-warn-primary); font-size:22px; font-weight:800; }',
+			// 2026-09-18：`.dsh-tb-warning-icon` 的文字色原写作 `--dsw-alias-label-on-accent`，
+			// 平台没有这个名字（口径：app 侧 `@deepseek-ai/` 的带冒号自定义属性声明 391 个，
+			// `-on-` 段一次都不出现），它于是一直在走
+			// `#fff` 字面兜底、不随主题。此处要的是「在 warn(琥珀) 或 error(红) 强调底上可读的
+			// 反色标签」——两种底色都出现（见下一行的 destructive 覆盖），所以不能用
+			// `--dsw-alias-state-warn-label`（实测 amber-600 文字色，在琥珀底上不可读）。
+			// 官方语义对应物是 `--dsw-alias-label-primary-inverted`（实测浅色主题 bluish-00 /
+			// 深色主题 bluish-800），官方自己的 Toast.module.css 也是用它配强调底
+			// （`background` 取 `--dsw-alias-button-contrast-fill`、`color` 取此色）。兜底一并删掉：
+			// token 现在由平台供给，留兜底会让「平台供给失效」重新变成静默。
+			'.dsh-tb-warning-icon { display:grid; width:38px; height:38px; place-items:center; color:var(--dsw-alias-label-primary-inverted); border-radius:var(--dsw-alias-radius-md, 10px); background:var(--dsw-alias-state-warn-primary); font-size:22px; font-weight:800; }',
 			'.dsh-tb-destructive .dsh-tb-warning-icon { background:var(--dsw-alias-state-error-primary); }',
 			'.dsh-tb-manual-dialog h2 { margin:1px 0 7px; font-size:16px; }',
 			'.dsh-tb-manual-warning { margin:0 0 13px; color:var(--dsw-alias-label-secondary); font-size:12px; line-height:1.65; }',

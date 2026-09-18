@@ -93,7 +93,7 @@
 
 [data-appearance-button][data-variant="primary"] {
   border-color: transparent;
-  color: var(--dsw-alias-label-inverse, #fff);
+  color: var(--dsw-alias-label-primary-inverted);
   background: var(--appearance-accent);
 }
 

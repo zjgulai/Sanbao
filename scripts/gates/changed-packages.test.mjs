@@ -440,7 +440,19 @@ test('QG-005 L2：解析器的账目与 git status 的账目逐路径对账（�
   assert.deepEqual(problems, [])
 
   const actual = new Set()
-  for (const name of CHANGE_SOURCES) for (const entry of buckets[name]) actual.add(entry.to)
+  // 2026-09-18：这里原先只写 `actual.add(entry.to)`，于是**只要工作树里存在任何未提交的
+  // 重命名**，本条就必红——上面的期望集是从 `git status --porcelain=v1 -z` 独立解析出来的，
+  // 它对 rename 条目**新旧两个路径都收**；而解析器 `collectWorktreeChanges` 的
+  // `buckets[*][].from` 里明明也带着源路径（第 348 行 `new Set([entry.from, entry.to])`）。
+  // 断言只对了账一半，报出来的却是「这些路径在 git status 里，却没进解析器的账目」——
+  // 指向一个不存在的缺陷。它把真缺陷（解析器**确实**丢路径）藏在了一条永远亮着的红灯后面：
+  // 假红会训练人忽略输出（P-02）。两个端点都要收。
+  for (const name of CHANGE_SOURCES) {
+    for (const entry of buckets[name]) {
+      if (entry.to !== undefined && entry.to !== '') actual.add(entry.to)
+      if (entry.from !== undefined && entry.from !== '') actual.add(entry.from)
+    }
+  }
 
   const missing = [...expected].filter((path) => !actual.has(path)).sort()
   assert.deepEqual(missing, [], '这些路径在 git status 里，却没进解析器的账目')
