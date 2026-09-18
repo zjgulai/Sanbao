@@ -41,16 +41,22 @@ export async function apply(ctx) {
     const disposeRemote = await ctx.remote.$mount(deepResearchRemote);
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'deepresearch: dictionaries');
     const store = createDeepResearchUiStore();
+    // Provide entry service for application drawer / product cards (ADR-0033 / ADR-0045)
+    const host = ctx;
+    if (typeof host.provide === 'function') {
+        host.provide('deepresearch-workbench', {
+            open: () => {
+                store.setOpen(true);
+            },
+            describe: () => ({
+                product: 'Deep Research Anything',
+                service: 'deepresearch-workbench',
+            }),
+        });
+    }
     const view = ctx.inject(['remote.deepResearch', 'slots'], (remoteCtx) => {
         const api = createApi(ctx.remote, remoteCtx.remote.deepResearch);
         const face = () => ({ store, api });
-        remoteCtx.slots.inject('sidebar.footer.action', () => remoteCtx.slots.register({
-            name: 'sidebar.footer.action',
-            id: 'deepresearch',
-            order: 20,
-            locale: NS,
-            inject: face,
-        }, DeepResearchSidebarEntry));
         remoteCtx.slots.inject('shell.overlay', () => remoteCtx.slots.register({
             name: 'shell.overlay',
             id: 'deepresearch',

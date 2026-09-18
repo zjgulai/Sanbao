@@ -22,13 +22,16 @@
 | RECOVERY | recovery.html 路径 | main.js | `app.asar.unpacked`（no-ASAR 下 replace 是 no-op，import.meta URL 已直指 Resources/app/lib/native-ui/recovery.html——2.0.10 上语义意外成立，锚串保留；见 E-3） | 7791496f0 |
 | 品牌×9 | ROOT/LUTE 品牌 | updates/update-checker/recovery/setup-wizard/desktop-dialog/client/electron-runtime/main（8 文件 hash glob + main.js userData 路径豁免）+ wordmark JS + index.html | brand-replay.sh（**glob 参数化**：electron-runtime-\*/update-checker-\* 随基座 hash 变化自动捕捉；**D0+L0 → N/A**：上游可能整文件移除品牌串（desktop-terminal.js 实证），旧矩阵把无判定面误报 DRIFT；`${rel}` 花括号修复 macOS bash3.2 多字节变量名吞噬） | 66de2dc6b |
 
+| boot-health-retry | **启动健康上报确认式重试** | **lib/client.js**（dsh-plugin-desktop 客户端 bundle；非 NM 层——NM 目标空间是 app `node_modules`） | `LUTE(2026-09-18): 把一次性上报改成确认式重试`（补丁标记）+ `postRendererBootReport` 锚点唯一 | 装配期重放 `dsh-patches/boot-health-retry/apply-fixes.sh`（**非** vendor 提交；见残差） | [ADR-0127](../docs/adr/ADR-0127.md) |
+
 ## B. 运行时层（NM patch，packaging/patches/nm/，对 0.1.5-rc.2 pristine 重锚）
 
 | # | 包 | 锚 | 2.0.10 重锚说明 |
 |---|---|---|---|
 | P0-3 | dsh-llm | `imageRequestPricing?.(provider, model)` ×2 | 未漂，原样命中 |
 | P0-4 | dsh-tool-subagent / dsh-file-reference-local | `Promise.resolve(fiber.dispose())` ×3 | 未漂 |
-| P0-8 | dsh-llm-pi-ai | PI_AI_API_DIR | 未漂 |
+| ~~P0-8~~ | **退役（2026-09-17，2.5.1）**：它把 pi-ai 懒加载模块路径写死成 `${process.resourcesPath}/app.asar.unpacked/…`，而 2.0.10 起产物是 **no-ASAR**（`Resources/app/` 普通目录，无 `app.asar[.unpacked]`）→ 该路径必然悬空。**锚门当时为它亮绿灯**（`ck … "PI_AI_API_DIR"` 只查身份标记），2.5.0 装到机器上直接进恢复模式（`llm-pi-ai` 导入即 `ERR_MODULE_NOT_FOUND`，`finalStage=host-boot`）。补丁文件已从 `packaging/patches/nm/` **删除**，上游静态 import（`@earendil-works/pi-ai/api/anthropic-messages.lazy` 等三行）回归——解析交还 Node，asar/no-ASAR 两布局通用；**不得再补任何路径常量** | `app.asar.unpacked`（否定式：不得再写进路径）+ 上游静态 import 串（正向） | 见 [ADR-0114](../docs/adr/ADR-0114.md) 与 [Note](../docs/notes/implemented/packaging/2026-09-17-resource-path-reachability-and-v0-title-admission.md)；装配侧由门禁 `resource-path-reachability` 拦「路径悬空」 |
+| migrator-title | dsh-session-format-v0-to-v1 | `allowed.add("title")` + `` `${memberLabel} title` `` | **新增（2026-09-17，2.5.1）**：迁移器对 `skill-catalog` 条目做精确成员校验（只有 `name`/`description`），而 LUTE 的 skill-title 扩展自 2.0.5 起就在 `catalogSourceEntries()` 写入 `title` 并随事件持久化 → 2.0.10 首次真正跑 v0→v1 链时**整条会话被拒**（`user/message N source entries[0] has unexpected member "title"`）。实测本机 470 份 v0 会话：可迁移 **74 → 469**。修法：把 `title` 加成**可选成员并保留类型校验**（非字符串即红），迁移 identity edge 原样保留该成员（870 个 title 无损进入 v3） | 同左两串 | [ADR-0114](../docs/adr/ADR-0114.md) |
 | P0-9 | dsh-client-ui-renderer | data-slot-waiting | **上游 0.1.5-rc.2 已吸收**（raw tgz grep=1）；NM patch 报 skip（patch --forward 判 already-applied），保留作 2.0.5 双基线兼容 |
 | cordis-clamp | cordis | `Math.max(0, index - info.offset)` | 4.0.2 未修，锚未漂 |
 | loader-B4 | cordis-plugin-loader | `Object.keys(newMap).reverse()` | 1.0.3 未修，锚未漂 |
@@ -47,6 +50,7 @@
 1. P0-7v2(main.js)：2.0.10 无此分支（A 节表内已述）。
 2. **上游 0.1.5-rc.2 已吸收的 NM 项**（raw tgz 直证）：fs-local（statModeBits/mtimeNs ?? mtimeMs）、P0-9 renderer（data-slot-waiting）——NM patch 以 `--forward` 判 already-applied 报 skip；applier `_classify` 修复后不再把 skip 误报 FAIL。 Cordis-clamp / loader-B4 **未**吸收（B 节）。
 3. RECOVERY：no-ASAR 下 `app.asar` 子串不存在 → replace no-op，路径由 import.meta.url 直指 Resources/app——锚串 `app.asar.unpacked`（源码中 replace 表达式）仍在 main.js 命中。若上游日后改写该表达式，按锚门失败暴露。
+   - **与 P0-8 的差别（2026-09-17 补记，别把两者混为一谈）**：RECOVERY 那处 `app.asar.unpacked` 是 `String.replace` 的**替换值**，在 no-ASAR 下是语义 no-op 且**不参与路径解析**；P0-8 那处是 `import()` 的**路径本身**。门禁 `resource-path-reachability` 只钉后者：把前者一起判红就是仪器假红（模块头部与 `.test.mjs` 均有反例守着）。
 4. pocket D-track 双修复（2.10.6 升级 + web-rpc）：走 profile 层（apply-patches.mjs 步骤 11），不入 NM 树——见 [13 号计划 §11](../docs/research/13-upgrade-2.0.10-execution-plan.md)。
 4. pocket D-track 双修复（2.10.6 升级 + web-rpc）：走 profile 层（apply-patches.mjs 步骤 11），不入 NM 树——见 [13 号计划 §11](../docs/research/13-upgrade-2.0.10-execution-plan.md)。
 

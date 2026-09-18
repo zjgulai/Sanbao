@@ -67,6 +67,15 @@ export type DeepResearchKey =
   | 'depth.quick'
   | 'depth.standard'
   | 'depth.deep'
+  | 'composer.sources'
+  | 'sources.web'
+  | 'sources.academic'
+  | 'sources.news'
+  | 'sources.docs'
+  | 'composer.budgetPreset'
+  | 'budget.conservative'
+  | 'budget.balanced'
+  | 'budget.exhaustive'
   | 'composer.constraints'
   | 'composer.constraintsPlaceholder'
   | 'composer.seed'
@@ -175,6 +184,16 @@ export type DeepResearchKey =
   | 'report.writing'
   | 'report.empty'
   | 'report.retry'
+  | 'report.exportMarkdown'
+  | 'report.exportHtml'
+  | 'report.exportMindmap'
+  | 'report.exportSuccess'
+  | 'report.executiveSummary'
+  | 'report.keyTakeaways'
+  | 'plan.addQuestion'
+  | 'plan.removeQuestion'
+  | 'plan.addCriterion'
+  | 'plan.removeCriterion'
   // markdown 渲染 chrome（`MarkdownText` 的 labels，按 locale 供一次、引用稳定）
   | 'markdown.codeCopy'
   | 'markdown.codeCopied'
@@ -215,7 +234,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh: Record<DeepResearchKey, string> = {
-  'view.deepResearch': '深度研究',
+  'view.deepResearch': 'Deep Research Anything',
   'library.title': '研究资料库',
   'library.back': '对话',
   'library.backAria': '返回对话',
@@ -262,6 +281,15 @@ export const zh: Record<DeepResearchKey, string> = {
   'depth.quick': '快速',
   'depth.standard': '标准',
   'depth.deep': '深入',
+  'composer.sources': '定向检索源',
+  'sources.web': '全网公开信源',
+  'sources.academic': '学术与研究论文',
+  'sources.news': '行业资讯与快讯',
+  'sources.docs': '官方文档与规范',
+  'composer.budgetPreset': '算力与Token预算',
+  'budget.conservative': '轻量节约 (约 10 次调用)',
+  'budget.balanced': '标准均衡 (约 30 次调用)',
+  'budget.exhaustive': '深度研判 (约 80+ 次调用)',
   'composer.constraints': '限制与要求',
   'composer.constraintsPlaceholder': '时间、地域、来源或输出约束',
   'composer.seed': '已有材料',
@@ -364,6 +392,16 @@ export const zh: Record<DeepResearchKey, string> = {
   'report.writing': '后台研究 Agent 正在整理证据并撰写报告…',
   'report.empty': '报告尚未生成。',
   'report.retry': '重新撰写报告',
+  'report.exportMarkdown': '导出 Markdown',
+  'report.exportHtml': '导出 HTML 研报',
+  'report.exportMindmap': '思维导图大纲',
+  'report.exportSuccess': '导出成功！已复制到剪贴板',
+  'report.executiveSummary': '执行摘要 (Executive Summary)',
+  'report.keyTakeaways': '核心洞见与结论 (Key Takeaways)',
+  'plan.addQuestion': '添加子问题',
+  'plan.removeQuestion': '删除',
+  'plan.addCriterion': '添加验收标准',
+  'plan.removeCriterion': '移除标准',
   'markdown.codeCopy': '复制代码',
   'markdown.codeCopied': '已复制',
   'markdown.footnotes': '脚注',
@@ -394,7 +432,7 @@ export const zh: Record<DeepResearchKey, string> = {
 
 /** English dictionary. */
 export const en: Record<DeepResearchKey, string> = {
-  'view.deepResearch': 'Deep Research',
+  'view.deepResearch': 'Deep Research Anything',
   'library.title': 'Research Library',
   'library.back': 'Chat',
   'library.backAria': 'Back to chat',
@@ -438,9 +476,18 @@ export const en: Record<DeepResearchKey, string> = {
   'composer.goal': 'Research goal',
   'composer.goalPlaceholder': 'What you want to end up with',
   'composer.depth': 'Research depth',
-  'depth.quick': 'Quick',
-  'depth.standard': 'Standard',
-  'depth.deep': 'Deep',
+  'depth.quick': 'Quick (Fast overview)',
+  'depth.standard': 'Standard (Balanced speed & depth)',
+  'depth.deep': 'Exhaustive (Deep cross-verification)',
+  'composer.sources': 'Target Sources',
+  'sources.web': 'Open Web',
+  'sources.academic': 'Academic & Papers',
+  'sources.news': 'Industry News',
+  'sources.docs': 'Official Specs & Docs',
+  'composer.budgetPreset': 'Compute & Budget',
+  'budget.conservative': 'Conservative (~10 calls)',
+  'budget.balanced': 'Balanced (~30 calls)',
+  'budget.exhaustive': 'Exhaustive (~80+ calls)',
   'composer.constraints': 'Constraints & requirements',
   'composer.constraintsPlaceholder': 'Time, region, source, or output constraints',
   'composer.seed': 'Existing material',
@@ -543,6 +590,16 @@ export const en: Record<DeepResearchKey, string> = {
   'report.writing': 'The background research agent is synthesizing evidence and writing the report…',
   'report.empty': 'No report has been generated yet.',
   'report.retry': 'Retry report writing',
+  'report.exportMarkdown': 'Export Markdown',
+  'report.exportHtml': 'Export HTML Report',
+  'report.exportMindmap': 'Mindmap Outline',
+  'report.exportSuccess': 'Exported successfully! Copied to clipboard',
+  'report.executiveSummary': 'Executive Summary',
+  'report.keyTakeaways': 'Key Takeaways & Strategic Insights',
+  'plan.addQuestion': 'Add Sub-Question',
+  'plan.removeQuestion': 'Delete',
+  'plan.addCriterion': 'Add Criterion',
+  'plan.removeCriterion': 'Remove Criterion',
   'markdown.codeCopy': 'Copy code',
   'markdown.codeCopied': 'Copied',
   'markdown.footnotes': 'Footnotes',

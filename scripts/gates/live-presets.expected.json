@@ -2,60 +2,272 @@
   "schemaVersion": 1,
   "identity": "stableId\u0000name\u0000kind",
   "presetCount": 53,
-  "rowCount": 1642,
+  "rowCount": 1692,
   "presets": [
-    { "presetId": "agent-fullstack", "rowCount": 32, "rowIdentitySha256": "ac680a41f61d9ae093f5e6d4a9922b876e46be786f853a1c198b28ee4170aed5" },
-    { "presetId": "agt-001", "rowCount": 31, "rowIdentitySha256": "610c6ee2283e12944db49dd7ac2958798bd8b14d726a0cb5fb715acf5cdd92f3" },
-    { "presetId": "agt-002", "rowCount": 31, "rowIdentitySha256": "0ecf59458c221ce62210b796750a88be1d0d443ab0cc19187b8768af8c198f0a" },
-    { "presetId": "agt-003", "rowCount": 31, "rowIdentitySha256": "fe9442bd7544fd45eb55492cf6f0fe561fff0a30c96679d96487b539641b4bbc" },
-    { "presetId": "agt-004", "rowCount": 31, "rowIdentitySha256": "6e8d078ce6c2eabb7254da403d50390549372da1a22d3905dc73e780e04c9772" },
-    { "presetId": "agt-005", "rowCount": 31, "rowIdentitySha256": "ea9e0cdca54d2089b529a40109bb0fe93ba80b1d187fde3bb68bea9a7c1d87ce" },
-    { "presetId": "agt-006", "rowCount": 31, "rowIdentitySha256": "112f48ba34e5eae0a67cd13e41cc3f57d1d76810d5d72b8c9946180e3748f7de" },
-    { "presetId": "agt-007", "rowCount": 31, "rowIdentitySha256": "0fb604022bde6f6ad9dd2cf5d72507e6bb8e3224c2581576e3f6b6e41515fd2b" },
-    { "presetId": "agt-008", "rowCount": 31, "rowIdentitySha256": "906def95843dfe12c868703d153796760b450ebd538a0b5cb8d53cc984e24db0" },
-    { "presetId": "agt-009", "rowCount": 31, "rowIdentitySha256": "255a92d8d6d7245755a1f13e4b0c644b0c9901453d8b75dd419cfb84faf742a0" },
-    { "presetId": "agt-010", "rowCount": 31, "rowIdentitySha256": "1258337a0bd1e746274b53f4b56ae4fd55f64a10867cdf07fd8a6a4b450a5b97" },
-    { "presetId": "agt-011", "rowCount": 31, "rowIdentitySha256": "d58f7536b06245c565e14bfd69b829cb4d7c516c3212697e10a0e6faec7c505b" },
-    { "presetId": "agt-012", "rowCount": 31, "rowIdentitySha256": "a1badf06affdfcc903b82bb11cc8371f633eab9c8ccb76153dcf34944c5e7f85" },
-    { "presetId": "agt-013", "rowCount": 31, "rowIdentitySha256": "a95579c5a40b6c1d83bef7a975c1740e76f56efe32af8a0c316611f5b8ed3d75" },
-    { "presetId": "agt-014", "rowCount": 31, "rowIdentitySha256": "c3eaa73ba295293fd5699cd2d47b49538d176e1a9c3c8d0de936d77fbe231086" },
-    { "presetId": "agt-015", "rowCount": 31, "rowIdentitySha256": "1b2b804da3134e3c82b2546aafd0b8d6c4552cdb096754f1075eec81fa7f5bdd" },
-    { "presetId": "agt-016", "rowCount": 31, "rowIdentitySha256": "ff6aac858ea69923de351c8cf7e0dbedd53c516c0b34e4049d9d9c48762c0a63" },
-    { "presetId": "agt-017", "rowCount": 31, "rowIdentitySha256": "b8dfb0b8cc77ae14d00866a90544828b760362de31bd8e7e323eb4fc5ddb084c" },
-    { "presetId": "agt-018", "rowCount": 31, "rowIdentitySha256": "d34fde3d9e48066e4d4e648498e733dedc7f1d9837015d6e278d80486b00b66a" },
-    { "presetId": "agt-019", "rowCount": 31, "rowIdentitySha256": "64f1d5e2c81992939f4e6b907a1441bcb07e3177bd7a1387382935ba4999e318" },
-    { "presetId": "agt-020", "rowCount": 31, "rowIdentitySha256": "91fadd9e19bcc2a05089190c81df4a4465fcbb80d6465f282f13e6e084a1a57b" },
-    { "presetId": "agt-021", "rowCount": 31, "rowIdentitySha256": "8fa3f16aafd258c24d59bdfbbc14b648eff627a151d49540e295e25493cdcb13" },
-    { "presetId": "agt-022", "rowCount": 31, "rowIdentitySha256": "32eb9bf35d611b71c42c38114ea2dec11e2b618f4232022754d8952a25e97b47" },
-    { "presetId": "agt-023", "rowCount": 31, "rowIdentitySha256": "bc2b6ec3a93bf8109520e47390f7abcdc0639fab2d1d71e84b7ef46f7c6180ed" },
-    { "presetId": "agt-024", "rowCount": 31, "rowIdentitySha256": "e8fa33d3de386a9ade53e8fdf1e526ccc44360eaaf612de5b329f0d555ba88d8" },
-    { "presetId": "agt-025", "rowCount": 31, "rowIdentitySha256": "43441cdcc2c897b4e933253d351ddd6330659a6870d4cc0c6d7f5a5cd8d409a1" },
-    { "presetId": "agt-026", "rowCount": 31, "rowIdentitySha256": "af7a6b35d7c88a809fbf0160de4bbee62672eec6c0ec1192f3cb464d84aacd75" },
-    { "presetId": "agt-027", "rowCount": 31, "rowIdentitySha256": "870b52e7021c8a415416175ee1f6fd7224c5a888fecb8c51d3a7fd114c91ca26" },
-    { "presetId": "agt-028", "rowCount": 31, "rowIdentitySha256": "7759b2ede06c20c7fb82c0140e946cc74a2ddb4df4bdc5d45f926ac1bcb11e86" },
-    { "presetId": "agt-029", "rowCount": 31, "rowIdentitySha256": "2fff464efc078d32832fecee0fe5778e3ecf000438c913b3677627fac8e77958" },
-    { "presetId": "agt-030", "rowCount": 31, "rowIdentitySha256": "2854e26c1543e9ae8d8373eba88531feb9db9dc83aa99c9f71acf371f0904234" },
-    { "presetId": "agt-031", "rowCount": 31, "rowIdentitySha256": "48ab16e3ad6c4f61e05458412cd9c79807732580e424d6ef8cac42e59a901bc2" },
-    { "presetId": "agt-032", "rowCount": 31, "rowIdentitySha256": "cc4104d6c28643b703912d9c0989dcbc5ab56f11ccb98ccd293ed279254b976e" },
-    { "presetId": "agt-033", "rowCount": 31, "rowIdentitySha256": "5f962ddba355f8c149e2ef9e1b24a137c1e3051956fe2ce257fd712f5d557f35" },
-    { "presetId": "agt-034", "rowCount": 31, "rowIdentitySha256": "16209d67cea82d2df9083f6b8f2badf83e44aa8f3bfd59f168161a26b634ce2d" },
-    { "presetId": "agt-035", "rowCount": 31, "rowIdentitySha256": "c1934cb28b55ca70de029e215fe3c0537778193469c630465fa93e7441b20296" },
-    { "presetId": "agt-036", "rowCount": 31, "rowIdentitySha256": "6d387bb17b1f2eb9f4dced9e65078997dcd1c1544e630ca352e7fce167d158b8" },
-    { "presetId": "agt-037", "rowCount": 31, "rowIdentitySha256": "9c07b408f368c7e6e30b3fb8f1cda1e20207d7c69fd44934fa73ef7c688510d8" },
-    { "presetId": "agt-038", "rowCount": 31, "rowIdentitySha256": "0a83b557b5282f2eeee430a55c37b6d28ca7bfafa04ea3f89fd54b0cf5d01cb6" },
-    { "presetId": "agt-039", "rowCount": 31, "rowIdentitySha256": "658af554f64c7eddc1acb9aad24c57067db918627ab671db5ce4535f3cbd1fcc" },
-    { "presetId": "agt-040", "rowCount": 31, "rowIdentitySha256": "7b33a30db908942965065dcb2095d0a63c3f01450794bd3ccc44757d0cd1c211" },
-    { "presetId": "agt-041", "rowCount": 31, "rowIdentitySha256": "be942e030be5b31cf1439b36fdc70d8dbc58f7a02628f80b06ba014b772dcfc5" },
-    { "presetId": "agt-042", "rowCount": 31, "rowIdentitySha256": "7fb369bee30631279340cbe12ef1aad708bd07225e0ec623e96e89a57e3b9dcc" },
-    { "presetId": "agt-043", "rowCount": 31, "rowIdentitySha256": "fdfedcffcbe3be5b6d5087e286c4434b9aad093fe5dc7ab828af674f0af2d113" },
-    { "presetId": "agt-044", "rowCount": 31, "rowIdentitySha256": "31dd2089b9e95b418dde92a550dd719e505a27aa749ad903f436debb60fa3599" },
-    { "presetId": "agt-045", "rowCount": 31, "rowIdentitySha256": "10fe7ff8223665c06aace7c044bf641fb7b26d64a058109d560f6abc436f032d" },
-    { "presetId": "agt-046", "rowCount": 31, "rowIdentitySha256": "05f0d61b079edc88cf23e64af72fd1b7f2bd8e06364682c47d0d977ada0375c3" },
-    { "presetId": "agt-047", "rowCount": 31, "rowIdentitySha256": "ae2d0115770e6a5626ffaf75a88302890254b25cae9364f4156ab9bc164de030" },
-    { "presetId": "agt-048", "rowCount": 31, "rowIdentitySha256": "113368081e76ca5aed567ac1d4c750d915901f2ef6897a4175c4d66e9aed8994" },
-    { "presetId": "agt-049", "rowCount": 31, "rowIdentitySha256": "e63b0b2c3fdcbd37169ca927e5ab01fb258720cef9b2caf2cdb4939f9d818427" },
-    { "presetId": "agt-050", "rowCount": 31, "rowIdentitySha256": "079be04e6b8bd816abcd2cbd7bcb3500539ff769d687bdfe7f9167e41b6de807" },
-    { "presetId": "bobo-cto", "rowCount": 29, "rowIdentitySha256": "53f5141bfd59c3210223c9bd7d504d7d07c2aed4f7663e63b921abe4f3443b50" },
-    { "presetId": "lute-cordis", "rowCount": 31, "rowIdentitySha256": "5f072a3944abae5a89b02ba8d0ec6c024918c68f4899e737161ca78db837f140" }
+    {
+      "presetId": "agent-fullstack",
+      "rowCount": 32,
+      "rowIdentitySha256": "ac680a41f61d9ae093f5e6d4a9922b876e46be786f853a1c198b28ee4170aed5"
+    },
+    {
+      "presetId": "agt-001",
+      "rowCount": 32,
+      "rowIdentitySha256": "f5b9c07e653c088744d9542aa02a4f9e504ef2854e72c4d3c68e8aed3186f367"
+    },
+    {
+      "presetId": "agt-002",
+      "rowCount": 32,
+      "rowIdentitySha256": "e4b8cb271b4bc67b9e00f976cb7a3116d11a6bf007b8cf4dcbe6ed232be192aa"
+    },
+    {
+      "presetId": "agt-003",
+      "rowCount": 32,
+      "rowIdentitySha256": "dd90dafb578b8aea27be4d058c0062cdfeea1d2568333603aa8c3b7fcdcd7d7e"
+    },
+    {
+      "presetId": "agt-004",
+      "rowCount": 32,
+      "rowIdentitySha256": "eba1c06ba9338f605fddbc3378c1bb1d31ed4d2bc26ce2b2cef2ef773612a149"
+    },
+    {
+      "presetId": "agt-005",
+      "rowCount": 32,
+      "rowIdentitySha256": "adb465bf5bd3f508ac6a9f55ecb39118abd8bd501c934cfdd9e480d1a0e5adcc"
+    },
+    {
+      "presetId": "agt-006",
+      "rowCount": 32,
+      "rowIdentitySha256": "1635d04e17e709f8532eb30b394d81e40b98c5fd72159100229854e2e3d53b28"
+    },
+    {
+      "presetId": "agt-007",
+      "rowCount": 32,
+      "rowIdentitySha256": "5d72d37924d1ed90afd6f568171e7ef5b554d0a68da70572f81b719e13236615"
+    },
+    {
+      "presetId": "agt-008",
+      "rowCount": 32,
+      "rowIdentitySha256": "d0e5c5cb8e67e7e182200574a5332972c7839702919ccac5da6c6bee26558a9d"
+    },
+    {
+      "presetId": "agt-009",
+      "rowCount": 32,
+      "rowIdentitySha256": "454197b5dcc7772e03258be81d78a719ab6054dc4767de62ebe20d449aa518e4"
+    },
+    {
+      "presetId": "agt-010",
+      "rowCount": 32,
+      "rowIdentitySha256": "d0e8da9789490304e4fb8fa3da48b9615f4a0c2e69dd7170b6f5fdf17eb41cff"
+    },
+    {
+      "presetId": "agt-011",
+      "rowCount": 32,
+      "rowIdentitySha256": "28f850859d2e59bbea5b2f4ecb2afc2a68712db6199684037549a1d7c6c5fc66"
+    },
+    {
+      "presetId": "agt-012",
+      "rowCount": 32,
+      "rowIdentitySha256": "2d668411d31a53da491705edc73cfa0f69523476728651fee3186bac238e30a6"
+    },
+    {
+      "presetId": "agt-013",
+      "rowCount": 32,
+      "rowIdentitySha256": "9ffe2a1c54bab8ee4b813b12db539b47176679eaad338f927b4ac4ea35ee1704"
+    },
+    {
+      "presetId": "agt-014",
+      "rowCount": 32,
+      "rowIdentitySha256": "9e0822c398e825c65340775265df63526d7e0838112b27a95b982e56eb730662"
+    },
+    {
+      "presetId": "agt-015",
+      "rowCount": 32,
+      "rowIdentitySha256": "31a08867ffc213826203c1b1d52a859538d8f4c30cfcd4c52c494017fbc66a2b"
+    },
+    {
+      "presetId": "agt-016",
+      "rowCount": 32,
+      "rowIdentitySha256": "6f0475774887453bd62983fdba689ba3778987b8053506faabb8771cd4da024a"
+    },
+    {
+      "presetId": "agt-017",
+      "rowCount": 32,
+      "rowIdentitySha256": "aae29914755c9f6e18f18fab533f8fb155df9970b6c34244cd3bd45fc77e8c70"
+    },
+    {
+      "presetId": "agt-018",
+      "rowCount": 32,
+      "rowIdentitySha256": "f1c003d6ba644c9ca73bb7e52f7d90131cdbab8cebbb5483038fb951f1d7f1dd"
+    },
+    {
+      "presetId": "agt-019",
+      "rowCount": 32,
+      "rowIdentitySha256": "8a3e0ef14a82f99b3a12897de30e8c091297112b1ebad4aa965cfe70738f3e84"
+    },
+    {
+      "presetId": "agt-020",
+      "rowCount": 32,
+      "rowIdentitySha256": "9d711f962c0d1214017d82763b573e16ccefc5873348ca13ec7c6da4fb256ddf"
+    },
+    {
+      "presetId": "agt-021",
+      "rowCount": 32,
+      "rowIdentitySha256": "d1109b5985f1ade4ff271089f2a23acb6cac2e41e8f00f3645d33c4a88a0b909"
+    },
+    {
+      "presetId": "agt-022",
+      "rowCount": 32,
+      "rowIdentitySha256": "e0452c5c474a1e51bf7165b860e9cd06a37fbb1407783d8fefa9e2b05174e0cf"
+    },
+    {
+      "presetId": "agt-023",
+      "rowCount": 32,
+      "rowIdentitySha256": "d2746ab6b731157c5ef33f3fcb97c1be0367cc0a19abe2f605b03ae34bd043c5"
+    },
+    {
+      "presetId": "agt-024",
+      "rowCount": 32,
+      "rowIdentitySha256": "73ed64aec8989ba7238aff03860790734fd10f8f5a30f8dcb882280f3f14edef"
+    },
+    {
+      "presetId": "agt-025",
+      "rowCount": 32,
+      "rowIdentitySha256": "9cd5e6fd6b50ff884a271f6060de299231540d508d9dc62dc135f3e8b32dcc3d"
+    },
+    {
+      "presetId": "agt-026",
+      "rowCount": 32,
+      "rowIdentitySha256": "e8ad6c04bc4ca153cd5037448e56db84db1952d455e6bc0c7246a087639d63f8"
+    },
+    {
+      "presetId": "agt-027",
+      "rowCount": 32,
+      "rowIdentitySha256": "f6eed6004d4f9bec4b9ff0eaa44c7e5691e925299ee749cd3eb3c814ee72d373"
+    },
+    {
+      "presetId": "agt-028",
+      "rowCount": 32,
+      "rowIdentitySha256": "4e974ceb52ac5eeb61c2dbfe83e7945f76a52e1b7cc48c835bdbb43712f39b09"
+    },
+    {
+      "presetId": "agt-029",
+      "rowCount": 32,
+      "rowIdentitySha256": "bde7b2ff00df6cb912b41678240a6c65a134744f36d4dd2e5fcb4910f74933d1"
+    },
+    {
+      "presetId": "agt-030",
+      "rowCount": 32,
+      "rowIdentitySha256": "ce5d8b4ac9ce82ec3d70813bee67c6e3504bb5234a896b90faa8da161f205799"
+    },
+    {
+      "presetId": "agt-031",
+      "rowCount": 32,
+      "rowIdentitySha256": "201f1fdc582743ba30720576f187883c2250da8d14b4d993e439cbbd8eef8c2a"
+    },
+    {
+      "presetId": "agt-032",
+      "rowCount": 32,
+      "rowIdentitySha256": "386bf8dd793432c97840efc2f0bd0a6519f213fed3bd5b015f33779144fe3943"
+    },
+    {
+      "presetId": "agt-033",
+      "rowCount": 32,
+      "rowIdentitySha256": "13dd17830570735b54204b52cb49da5f6e0ad80378e4b954782874987fb3211a"
+    },
+    {
+      "presetId": "agt-034",
+      "rowCount": 32,
+      "rowIdentitySha256": "2df9be634ebffb0790246d15af878ee626433371199b66522395181afbab2160"
+    },
+    {
+      "presetId": "agt-035",
+      "rowCount": 32,
+      "rowIdentitySha256": "1e82db8d9cbb241bf2442b7c7c8e1db68fb63cf6c5ef04dd96f258ee191f9664"
+    },
+    {
+      "presetId": "agt-036",
+      "rowCount": 32,
+      "rowIdentitySha256": "c104c077f3bc2ccbf9744e6926ef8ca979ad1f1335abdaf0c4163f41ae0ea360"
+    },
+    {
+      "presetId": "agt-037",
+      "rowCount": 32,
+      "rowIdentitySha256": "421641af8c9d23fe9ee855775be6a69f7ddfac1e9751fad8bfddf436da4444d1"
+    },
+    {
+      "presetId": "agt-038",
+      "rowCount": 32,
+      "rowIdentitySha256": "1e31892da7f2dcdbccd17e9503fc33b3593188f7c34bb1ca6cc2a589df761742"
+    },
+    {
+      "presetId": "agt-039",
+      "rowCount": 32,
+      "rowIdentitySha256": "ff850651e297114dad2b521bd9d82e2946407b67bd57c3f2e5f681b6d13c07c0"
+    },
+    {
+      "presetId": "agt-040",
+      "rowCount": 32,
+      "rowIdentitySha256": "ff566d87f6e1f8630549e9c5e01244f972ab822a395f4c42fd249d2dfee46baf"
+    },
+    {
+      "presetId": "agt-041",
+      "rowCount": 32,
+      "rowIdentitySha256": "a855551c8942cc7a94c2dfcb3be949585c8275ca1989f26318a20491bf7430b7"
+    },
+    {
+      "presetId": "agt-042",
+      "rowCount": 32,
+      "rowIdentitySha256": "d15efefff409724d5b10dcc3da96d99307f04bf2a942d8a44e2daeff67b0be3b"
+    },
+    {
+      "presetId": "agt-043",
+      "rowCount": 32,
+      "rowIdentitySha256": "11f0491a1ab7c61978bfc1dd5cf2db539d7b5fda1bfe93d3559c43e4488ade9f"
+    },
+    {
+      "presetId": "agt-044",
+      "rowCount": 32,
+      "rowIdentitySha256": "cfe26794254de8afdfbb63c4aeed89437b0df82a3bb7e54ca8ee6bea2d50f153"
+    },
+    {
+      "presetId": "agt-045",
+      "rowCount": 32,
+      "rowIdentitySha256": "cfdbf08e92b3d5e055611c1388abe0563658cd7d57560219dfd5699b8fd647fb"
+    },
+    {
+      "presetId": "agt-046",
+      "rowCount": 32,
+      "rowIdentitySha256": "6a6464ac61061e74d44b73fb5aee4ae1983a4c9c2925a452bf137f1e93527e3f"
+    },
+    {
+      "presetId": "agt-047",
+      "rowCount": 32,
+      "rowIdentitySha256": "c85a1b6fc153d2944dcc7f09fb56647b83f059670e7ca7d24c0c83a6f0b8ff11"
+    },
+    {
+      "presetId": "agt-048",
+      "rowCount": 32,
+      "rowIdentitySha256": "85b587ce818afebe68e9f0c36ff96368350975f3d5c9241ea89f7271f64cd090"
+    },
+    {
+      "presetId": "agt-049",
+      "rowCount": 32,
+      "rowIdentitySha256": "00961a919b1d802ab1b63d0a1e416ea80117679825c563247ac78ce642f4eee5"
+    },
+    {
+      "presetId": "agt-050",
+      "rowCount": 32,
+      "rowIdentitySha256": "16a303b7117ccb932ce554c405e756c04623275d4281094ec4d753d390f52577"
+    },
+    {
+      "presetId": "bobo-cto",
+      "rowCount": 29,
+      "rowIdentitySha256": "53f5141bfd59c3210223c9bd7d504d7d07c2aed4f7663e63b921abe4f3443b50"
+    },
+    {
+      "presetId": "lute-cordis",
+      "rowCount": 31,
+      "rowIdentitySha256": "5f072a3944abae5a89b02ba8d0ec6c024918c68f4899e737161ca78db837f140"
+    }
   ]
 }

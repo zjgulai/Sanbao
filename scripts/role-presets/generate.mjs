@@ -438,7 +438,12 @@ function renderComposition(personaText, skills, presetId) {
     '- id: persona',
     "  name: '@deepseek-ai/dsh-persona'",
     '  config:',
-    '    text: |-',
+    // ⚠️ 字段名是 `prefix`，不是 `text`。2.0.10 的 `@deepseek-ai/dsh-persona` 把配置键从
+    // `text` 改名为 `prefix` 且 `prefix` 为 required（suffix/complete/includeRuntimeContext
+    // 另有默认值）。写 `text:` 的 preset 会在加载期抛
+    // `$.prefix missing required value (at prefix)`，**整个 preset 树**载入失败
+    // → 会话里发消息后模型完全无响应（2026-09-17 实测：53 个 preset 全中）。
+    '    prefix: |-',
     yamlLiteralBlock(personaText, 6),
   ]
   lines.splice(pStart, pEnd - pStart, ...personaRow)

@@ -24,6 +24,18 @@
   运行中替换 app bundle 会触发宿主 HMR 热更 → 生产 renderer 无完整热替换 runtime → 白屏（2026-09-13 实测）。
   本条曾写成一条 `pgrep -f` 判据，而**它在主进程在跑时返回空**——读数与决策见 [ADR-0080](../adr/ADR-0080.md)；
   「在不在跑」只有这一个家，不要在此另写一条命令。
+- [ ] **本版触及的 UI 面，实况探针必须逐条跑绿**（退出码 0 = 全部断言通过）。
+  探针在真实 Chromium 里装载 **profile 装载点的插件产物**，对着**本机 app 包里的官方 CSS**
+  复刻官方结构再断言用户可观察结果——它验的是「类名解析 + DOM 改写真的生效」，
+  那是 `pnpm run gate` 量不到的一层。
+     - `node scripts/acceptance/root-brand-live-anchors.mjs --out .scratch/acceptance/<VERSION>`
+       —— 品牌面：官方标题不再出现、品牌句只出现一次、角标 `Preview`、结构不唯一时不隐藏新的东西、
+       换随机新前缀仍命中、卸载可还原。
+     - 其余按本版改动面取：`pnpm accept:theme-tokens`、`pnpm accept:settings-shell`、
+       `pnpm accept:newapp-products`、`pnpm accept:newapp-systems`、`pnpm accept:worktable-fence`。
+  ⚠️ 本条是 2026-09-18 事故的直接产物：**没有任何检查项要求跑探针**，于是品牌探针在 2.0.10 上
+  第一步就死（按旧结构找已退役的 `StatsLine` 模块，exit 3），而死掉的探针安静得像通过——
+  同一天装机的用户看到的是官方标题「探索未至之境」重新出现。**「没跑」与「跑了且绿」必须是两种读数。**
 - [ ] 目标版本目录 `packaging/release/<VERSION>/` 不存在；若存在且必须重制，使用 `--force`。
 
 ## 1. 环境准备

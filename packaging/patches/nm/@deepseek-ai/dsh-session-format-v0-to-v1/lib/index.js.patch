@@ -1,0 +1,24 @@
+--- a/@deepseek-ai/dsh-session-format-v0-to-v1/lib/index.js
++++ b/@deepseek-ai/dsh-session-format-v0-to-v1/lib/index.js
+@@ -255,7 +255,9 @@
+ * @param label - diagnostic subject.
+ */
+ function assertReleasedV0Keys(record, required, optional = [], label) {
++	// LUTE patch: skill-catalog 条目允许可选 title（LUTE skill-title 扩展；见 docs/adr）
+ 	const allowed = new Set([...required, ...optional]);
++	if (allowed.has("description") && allowed.has("name")) allowed.add("title");
+ 	const unexpected = Object.keys(record).find((key) => !allowed.has(key));
+ 	if (unexpected !== void 0) throw new SessionFormatError(`${label} has unexpected member ${JSON.stringify(unexpected)}`);
+ 	const missing = required.find((key) => !Object.hasOwn(record, key));
+@@ -866,9 +868,10 @@
+ 			literalValue(source["form"], ["catalog"], `${label} form`);
+ 			if (source["update"] !== void 0) literalValue(source["update"], [true], `${label} update`);
+ 			arrayValue(source["entries"], `${label} entries`, (member, memberLabel) => {
+-				const entry = exactRecord(member, memberLabel, ["name", "description"]);
++				const entry = exactRecord(member, memberLabel, ["name", "description"], ["title"]);
+ 				nonEmptyString(entry["name"], `${memberLabel} name`);
+ 				stringValue(entry["description"], `${memberLabel} description`);
++				if (entry["title"] !== void 0) stringValue(entry["title"], `${memberLabel} title`);
+ 			});
+ 			return;
+ 		case "coordinator":

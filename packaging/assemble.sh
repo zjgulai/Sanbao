@@ -429,6 +429,16 @@ node "$PKG_ROOT/scripts/check-preset-rows.mjs" --presets "$SP/presets" --strip \
   --node-modules "$PROFILE/node_modules" --node-modules "$NM_DIR" \
   --config "$PKG_ROOT/local-only-preset-rows.json" \
   || { echo "[assemble] ✗ 出货预设里有解析不到的行，中止（见上）；登记处见 packaging/local-only-preset-rows.json"; exit 1; }
+# 每一条插件行的 config 必须过**插件自己的 schema**（2026-09-17 实测：上游 2.0.10 把
+# dsh-persona 的正文键从 `text` 改成必填的 `prefix`，53 个预设与产出它们的生成器都还写
+# `text:`；装完 preset 树加载失败、日志以 10MB/2min 洪泛、用户看到的是「输入会话，大模型
+# 没反应」，而**当时没有任何判据会因此变红**——行能解析、补丁在、路径可达，全绿）。
+# 判在这一步是刻意的：它量的是**即将打包的那份字节**（$SP 出货副本），不是本机 ~/.dsh 下的
+# 原件——「本机绿、客户炸」正是 2.5.0 那一版的死法。schema 取自**暂存 app 树**（客户机上
+# 真正加载的那份），不是构建机 /Applications 里那份。
+node "$PKG_ROOT/scripts/gates/preset-config-schema.mjs" --root "$SP/presets" --no-shipped \
+  --app "$APP_STAGE/DSH Desktop.app/Contents/Resources/app" \
+  || { echo "[assemble] ✗ 出货预设的 config 过不了插件自己的 schema，中止（见上）；修生成器而不是手改产物：scripts/role-presets/generate.mjs"; exit 1; }
 tar -czf "$PAYLOAD/skills-presets.tar.gz" --exclude '.DS_Store' -C "$SP" skills presets
 rm -rf "$SP"
 say "技能+预设完成 ($(du -sh "$PAYLOAD/skills-presets.tar.gz" | cut -f1))"

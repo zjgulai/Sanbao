@@ -31,6 +31,7 @@ describe('Deep Research client mount', () => {
         },
       },
     }
+    const providedServices: Record<string, unknown> = {}
     const ctx = {
       remote: { $mount: vi.fn(async () => disposeRemote) },
       locale: {
@@ -38,6 +39,9 @@ describe('Deep Research client mount', () => {
         bind: vi.fn(() => (key: string) => key),
       },
       effect: (callback: () => unknown) => callback(),
+      provide: vi.fn((name: string, value: unknown) => {
+        providedServices[name] = value
+      }),
       inject: (deps: readonly string[], callback: (scope: typeof remoteCtx) => void) => {
         expect(deps).toEqual(['remote.deepResearch', 'slots'])
         callback(remoteCtx)
@@ -46,7 +50,13 @@ describe('Deep Research client mount', () => {
     }
 
     const dispose = await apply(ctx as unknown as ClientContext)
-    expect(injected).toEqual(['sidebar.footer.action', 'shell.overlay'])
+    expect(injected).toEqual(['shell.overlay'])
+    expect(providedServices['deepresearch-workbench']).toBeDefined()
+    const entryService = providedServices['deepresearch-workbench'] as { open: () => void; describe: () => unknown }
+    expect(entryService.describe()).toEqual({
+      product: 'Deep Research Anything',
+      service: 'deepresearch-workbench',
+    })
     expect(injectFace).toBeTypeOf('function')
     await expect(injectFace?.().api.list('')).resolves.toEqual([])
     expect(list).toHaveBeenCalledWith({})

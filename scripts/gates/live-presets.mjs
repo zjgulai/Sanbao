@@ -170,14 +170,22 @@ export function disabledTruthy(raw) {
 
 /**
  * 受控解析一个 agent.cordis.yml 文本。
+ *
+ * `includeConfig` 是 **opt-in**：打开后每行额外带 `config`（该行 `config:` 子树的原文切片），
+ * 供 `preset-config-schema` 那条判据把 config 交给插件自己的 schema 校验。默认关闭——
+ * 本模块的第一位消费者（live-presets）只关心行能不能解析，不读 config 正文，
+ * 而「同一个文件里多带一份正文」会让既有的 inventory 摘要面多出一个不该有的输入。
+ *
  * @param {string} text 文件全文。
+ * @param {{includeConfig?: boolean}} [options]
  * @returns {{
  *   placeholders: Array<{line: number, token: string}>,
  *   problems: Array<{line: number, message: string}>,
- *   rows: Array<{id: string|null, name: string, line: number, rowPath: string, disabled: boolean|'conditional'}>
+ *   rows: Array<{id: string|null, name: string, line: number, rowPath: string, disabled: boolean|'conditional', config?: {line: number, inline: string, text: string}|null}>
  * }}
  */
-export function scanAgentCordis(text) {
+export function scanAgentCordis(text, options = {}) {
+  const includeConfig = options?.includeConfig === true
   const placeholders = []
   const problems = []
   const rows = []
@@ -330,6 +338,20 @@ export function scanAgentCordis(text) {
           line: nameField.line,
           rowPath,
           disabled: effectiveDisabled,
+          ...(includeConfig
+            ? {
+                config:
+                  config === null
+                    ? null
+                    : {
+                        line: config.line,
+                        inline: config.raw,
+                        // `config.start` 是 `config:` 那一行的下一行（0 基下标），`end` 是子树的
+                        // 排他边界——与 parseList 用的是同一对下标，所以切片口径与解析口径一致。
+                        text: config.end > config.start ? lines.slice(config.start, config.end).join('\n') : '',
+                      },
+              }
+            : {}),
         })
       }
 

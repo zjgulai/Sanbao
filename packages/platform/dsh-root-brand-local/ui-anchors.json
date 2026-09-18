@@ -1,0 +1,11 @@
+{
+  "$comment": "本插件对官方 DSH 客户端类名的**唯一声明**。插件代码（src/client/live-selectors.ts）与门禁 plugin-ui-anchor-drift 读的是同一份文件：前者据此做运行时定位，后者把每条声明对着**出货产物**核一遍『还能不能解析出唯一的类名』。声明与实现因此不可能分叉——代码用不到清单以外的名字，清单里的每个名字都会被量。新增/修改条目时请同时写清 purpose：一条没有用途说明的上游依赖，就是下一条会烂掉的依赖。",
+  "anchors": [
+    {
+      "id": "heroPreviewBadge",
+      "moduleId": "@deepseek-ai/dsh-client-ui-conversation/HeroShell.module.css",
+      "localName": "previewBadge",
+      "purpose": "官方『预览版』角标。两件事都以它为锚：①把它的文本改成 Preview；②以它定位同一组里的官方标题（兄弟关系），把官方那句『探索未至之境』隐藏掉——官方没给 hero.headline 公开席位，所以只能这样，见 ADR-0019 / ADR-0117"
+    }
+  ]
+}

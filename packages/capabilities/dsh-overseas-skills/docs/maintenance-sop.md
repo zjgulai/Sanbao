@@ -349,7 +349,7 @@ curl -s http://127.0.0.1:43120/api/dsh-overseas-skills/list | \
 > 目录名唯一、图标覆盖、路由引用无悬空，**没有一条在问「这个技能跑得起来吗」**。
 > 结果是假绿：卡片正常、`installed=true`、模型看得见，一调用就 `ImportError`。
 
-**实测（2026-09-14，本机，T0 精选 15 条）**：15 条里 **4 条装完必然跑不起来**——
+**实测（2026-09-14，本机，当时的 T0 精选 15 条）**：15 条里 **4 条装完必然跑不起来**——
 缺 `openpyxl` / `matplotlib` / `python-docx` / `python-pptx` / `PyMuPDF` / `pdfplumber` /
 `pypdf` / `reportlab` / `seaborn`，Node 侧缺 `vega` / `vega-lite` / `sharp`。
 而当时**所有门禁是全绿的**。
@@ -453,7 +453,7 @@ $VENV = ~/.dsh/skills-runtime/.venv        # 注意：不是 ~/.dsh/skills/
 
 **修补与豁免必须声明**（`staging/intake-repairs.json`）：`dropFiles` / `writeFiles` /
 `rewritePaths` / `acceptFatal`。参照 ADR-0014——**匹配不到任何缺陷的豁免会报错**
-（过期豁免长期挂账就是假绿）。实测 T0 15 条里 3 条需要修补：
+（过期豁免长期挂账就是假绿）。实测当时的 T0 15 条里 3 条需要修补（第 16 条 `kami` 见 §12.13）：
 
 - `chart-gen`：丢损坏的 `_meta.json`；从 `scripts/chart.mjs` 的 import **重建**
   `scripts/package.json`（原文件是乱码，`npm install` 必失败）；3 处 `/data/clawd/skills/chart-image/*`
@@ -499,9 +499,13 @@ $VENV = ~/.dsh/skills-runtime/.venv        # 注意：不是 ~/.dsh/skills/
 #### 为什么「通用」在装配上的含义只能是「逐岗各挂一份」
 
 DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hideOthers` 决定，
-**没有「全局技能」这一层**。所以 T0 的 15 条不是「挂一次大家都能用」，
-而是「50 个岗位各自挂上同样那 15 条」。代价是每个会话多约 **1,900 tok** 的技能目录；
+**没有「全局技能」这一层**。所以 T0 的 16 条不是「挂一次大家都能用」，
+而是「50 个岗位各自挂上同样那 16 条」。代价是每个会话多约 **2,000 tok** 的技能目录；
 收益是任何岗位在任何时候都能用上开会纪要、周报、图表、PDF 这些与岗位无关的动作。
+
+> 条数只在这里写「当前值」，其余地方一律**不要写死数字**：它变过一次（15 → 16，2026-09-18
+> 加入 `kami`），而写死的数字不会有任何判据去纠正它。要读真实条数就看
+> `manifest/generic-skills.json` 的 `_meta.counts` 或跑一次 `verify-generic.mjs`。
 
 #### 一份事实只有一个家（与全栈线的差异，这是有意的）
 
@@ -512,7 +516,7 @@ DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hi
 `scripts/build-generic-manifest.mjs`。**T0 名单的家就是派生器里的 `T0_NAMES` 常量**，
 其余四处（设置页、图标分配、`verify_static`、`generate.mjs`）全部**读**它。
 
-> 为什么不把 T0 写进 `generate.mjs` 当常量：同一份 15 条还要被另外三处读。
+> 为什么不把 T0 写进 `generate.mjs` 当常量：同一份名单还要被另外三处读。
 > 常量放进去就等于有第二个家，而第二个家只能靠人对齐——那是纪律，不是机制。
 
 #### 图标
@@ -531,9 +535,9 @@ DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hi
 
 #### 接线判据：读回落的字节，不读意图
 
-`generate.mjs` 写盘后**重新读回** `agent.cordis.yml`，逐条核对 15 个名字是否真的在
-`skill-subset` 里；缺一条即 `exit 1`。只报「T0 名单有 15 条」是自述不是读数——
-那 15 条有没有真的进文件，只有回读才算数（P-17）。
+`generate.mjs` 写盘后**重新读回** `agent.cordis.yml`，逐条核对名单里每个名字是否真的在
+`skill-subset` 里；缺一条即 `exit 1`。只报「T0 名单有 N 条」是自述不是读数——
+那 N 条有没有真的进文件，只有回读才算数（P-17）。
 
 #### 验收（缺一不可）
 
@@ -543,9 +547,9 @@ DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hi
    不是清单坏了。两个 verifier 都把 `2` 当「跳过并说明」，`1` 才是红。契约由
    `test/generic-manifest-skip.spec.mjs` 的 G1–G4 钉住，见 playbook P-21）
 2. 图标：`python3 scripts/assign_lute_icons.py` 通过（缺 id 会 `SystemExit` 点名）
-3. `python3 scripts/build_preset_catalog.py` 重建 `lib/catalog.js`（GN 8 组 / 15 行）
+3. `python3 scripts/build_preset_catalog.py` 重建 `lib/catalog.js`（GN 8 组 / 16 行）
 4. `node scripts/role-presets/generate.mjs` → 收尾必须打印
-   `★ 通用线 T0 15/15 条在 50/50 个岗位的 skill-subset 里逐字回读命中`
+   `★ 通用线 T0 16/16 条在 50/50 个岗位的 skill-subset 里逐字回读命中`
 5. `node scripts/verify-generic.mjs` 全绿
 6. `pnpm run gate` 全绿（含 `gate:skill-lines`，见 §12.12）
 
@@ -592,3 +596,61 @@ DSH 的技能可见性由 `dsh-skill-subset` 的 `skills: [...]` 白名单 + `hi
    而非硬编码的 3（硬编码会让「少了一条」与「改过清单」无法区分）。
 
   > 恒红的判据与恒绿的判据一样没有信息量：人只会学会绕过它。
+
+### 12.13 第二批第三方来件走真管线（2026-09-18 · `kami` 入库 + 两个沉睡的工具缺陷）
+
+**这一节记的不是「又收了一条技能」，是「收的时候必须用管线、不能用笔」。** 第 16 条 T0
+（`kami` · 纸感排版系统，来源 `github.com/tw93/Kami` 的 `skills/kami/`，MIT）在本机
+已经存在过一版**手装**的副本：目录、字体、依赖都对，但没有 `manifest/intake-provenance.json`
+条目、没有 `runtime-deps.json` 声明——**它对三条门禁都是隐形的**。把它纳入门禁有两条路：
+
+| 路 | 做法 | 代价 |
+| --- | --- | --- |
+| 手写 | 照着已有条目的形状，把 sha256 与许可证字段填进去 | 会产生 `intake-provenance.json` 的**第二个写入者**；`repairs` / `lintWarnings` 只能靠人断言，而「未验证的事实被钉进出货面」正是 P-02 |
+| 管线 | 把来件放回 `~/Downloads/skills/<批次>/<nested>/`，走 `intake-install.mjs --force` | 需要一条 `BATCHES` 登记、一条 `intake-repairs` 声明、一份正文覆盖；换来的是**真 lint 读数 + 真实逐文件 sha256 + 可复现的安装路径** |
+
+选了管线。执行完的取证（全部一手）：
+
+```
+逐文件比对（排除 __pycache__）   111 = 111，无单侧文件
+相对上游被改的                   SKILL.md、scripts/verify.py（仅此两条）
+SKILL.md 正文与手装版           逐字节相同（44,381 B）——四件套重生成没有吃掉正文
+scripts/verify.py                与手装版逐字节相同（rewritePaths 一条恒等替换还原了它）
+安装器自报                      111 个文件 · 已汉译 · [修补 丢0/改1/生0] · lint 警告 0
+```
+
+正文（含 DSH 侧的「第 −1 步 · 运行时前提」段）走的是管线本来就有的覆盖通道
+`staging/translations/<name>.body.md`；`verify.py` 的字重归并修复走 `rewritePaths` 的
+**一条恒等替换**（见 §12.7 的「修补必须声明」）。两处都不是为这条技能新开的机制。
+
+#### 两个沉睡的缺陷（都是这次走管线才踩到的，都已修）
+
+**① `promote-intake-batch.mjs` 对任何输入都退出 2。** 它的写盘前自检要求「零改动往返逐字节相同」，
+而 `WRITERS` 里 `fullstack-skills.json` 与 `taxonomy-v3.json` 的 writer 少写尾随换行
+（两份文件都是 `JSON.stringify(o, null, 2) + "\n"` 的形态）。于是自检**挡住的是它自己**：
+该工具自那两份文件成形起就没成功跑过一次，因为没有调用方而无人察觉（P-03 的同族）。
+修法是两个 writer 各补 `+ "\n"`。
+
+**② 重跑安装会把已占位化的机器路径还原。** `intake-install.mjs` 每次都拿 `FROM` 与
+`VENV_PY` 重写两份 manifest 的 `_meta`，而入库的形态是发布期
+`packaging/scripts/rewrite-build-paths.mjs` 处理过的 `__SKILL_INTAKE_SOURCE__` /
+`__DSH_HOME__`。于是「重跑一次安装或扫描」= **把构建机路径写回两个已提交的 manifest**
+（ADR-0056「机器路径只减不增」）。实测这一轮：`_meta.from` 从占位符变回
+`/Users/lute/…/Downloads/skills`，`sourceUnit` 与 `venvPython` 同样。
+
+> ⚠️ **当前没有任何判据在读这两份 manifest 里的机器路径**（`gate:resource-path-reachability`
+> 扫的是出货产物里的 `app.asar` 路径，不是这里）。所以处置目前是**流程性的**：跑完
+> `intake-install.mjs` 或 `scan-runtime-deps.mjs` 之后，重新把 `_meta.from` / `sourceUnit` /
+> `venvPython` 占位化，提交前用 `grep -c "$HOME" <两份 manifest>` 自查（期望 0）。
+> 把这条变成机制（让写入者直接写占位符，或让门禁读它）是**下一版的活**，此处不冒充已落地。
+
+#### 依赖表能表达什么、不能表达什么（诚实划界）
+
+`runtime-deps.json` 的 schema 只有 `python` / `cli` / `node` 三类。`kami` 的三条硬前提
+（`weasyprint` 出 PDF、`pypdf` 文本与页检查、`pymupdf` 截图/密度/孤字）与三条降级项
+（`pygments` / `python-pptx` / `numpy`，按 upstream 自己的 `required=False` 标 optional）
+都进得去；**唯独「4 个中文字体在不在」进不去**——它们不在技能单元里（上游放在仓库根的
+`assets/fonts/`），由 `scripts/ensure-fonts.sh` 下到 `~/.local/share/fonts/kami/`。
+字体缺失的症状是 P-02 最隐蔽的那种：脚本退出码 0、PDF 也生成了，坏的是交付物（中文豆腐块，
+或静默回落到 CDN 字体）。目前这条前提**只有技能自己的 `--doctor` 在读**，门禁读不到。
+射程缺口写在这里，不写进「已覆盖」。

@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-09-15T03:07:58.021Z",
+    "generated": "2026-09-17T17:54:27.609Z",
     "generator": "scripts/scan-runtime-deps.mjs",
     "from": "__SKILL_INTAKE_SOURCE__",
     "partialScan": true,
@@ -8,9 +8,9 @@
     "venvPython": "__DSH_HOME__/skills-runtime/.venv/bin/python"
   },
   "scan": {
-    "units": 1,
-    "withDeps": 1,
-    "overridden": 1,
+    "units": 2,
+    "withDeps": 2,
+    "overridden": 2,
     "broken": 1,
     "preserved": 4
   },
@@ -231,6 +231,69 @@
           "pkg": "playwright",
           "optional": true,
           "why": "只有 render_cover.js 走无头浏览器；纯 PDF 生成不需要"
+        }
+      ]
+    },
+    "kami": {
+      "source": "kami",
+      "overridden": true,
+      "note": "依赖表取自技能自身的 scripts/optional_deps.py（逐条声明 required，doctor 逐条实测）与 scripts/*.py 的 import 静态核对，**不采信扫描器对 SKILL.md 代码块的正则推断**：扫描器在这条上有 4 个 CLI 误报（rsvg-convert / libreoffice / pandoc / @marp-team/marp-cli），它们只出现在 references/production.md 与 references/diagrams.md 的**可选导出路线**里（HTML→DOCX 烘焙 SVG、SVG 取图），代码路径从不调用；upstream 在 production.md:362 还明写「The repo does **not** declare `marp-cli` as a dependency」。三条 required 是 PDF 主路径的硬前提：weasyprint 出 PDF、pypdf 做文本与页检查、pymupdf 做页面截图/密度/孤字检测。pygments / python-pptx / numpy 缺失只降级（代码块不着色、没有可编辑 PPTX 兜底、多页扫描退化为纯 Python），故按 upstream 自己的 required=False 标 optional。mathjax 是 Node 侧运行时（scripts/mathjax-runtime/ 下只有 package.json 与锁文件），只有文档含 LaTeX 公式时才需要。字体不在本表：4 个字体由 scripts/ensure-fonts.sh 下到 ~/.local/share/fonts/kami/，见 manifest/intake-provenance.json 的 knownGaps。",
+      "python": [
+        {
+          "pip": "weasyprint",
+          "module": "weasyprint",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "pypdf",
+          "module": "pypdf",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "PyMuPDF",
+          "module": "fitz",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "python-pptx",
+          "module": "pptx",
+          "optional": true,
+          "why": "只影响可编辑 PPTX 兜底（upstream required=False）；PDF/HTML 主路径不受影响",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "Pygments",
+          "module": "pygments",
+          "optional": true,
+          "why": "只影响代码块着色，PDF 仍照出（upstream required=False）",
+          "evidence": [
+            "override"
+          ]
+        },
+        {
+          "pip": "numpy",
+          "module": "numpy",
+          "optional": true,
+          "why": "checks.py 的向量化多页扫描；源码写的是 Uses numpy when available，缺了退化为纯 Python",
+          "evidence": [
+            "override"
+          ]
+        }
+      ],
+      "cli": [],
+      "node": [
+        {
+          "pkg": "@mathjax/src",
+          "optional": true,
+          "why": "严格 LaTeX→SVG；只有文档含公式时才需要，装法 bash scripts/ensure-mathjax.sh"
         }
       ]
     }

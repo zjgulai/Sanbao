@@ -19,11 +19,24 @@ import { createHash } from "node:crypto";
 
 export const SKILLS_DIR = process.env.DSH_SKILLS_DIR || join(homedir(), ".dsh", "skills");
 
+/**
+ * 来件批次清单：`<DSH_INTAKE_FROM>/<dir>/<nested>/<单元名>`。
+ *
+ * 新增一批时的判据：**它能说清 `source` 是哪一路来件**。批次名会一路流到技能
+ * frontmatter 的 `metadata.batch`、`manifest/intake-provenance.json` 的 `batch`
+ * 与设置页的来源标签，所以「从哪个仓库/哪一批来的」必须能从它读出来。
+ *
+ * `Kami`（2026-09-18）：技能来自 `github.com/tw93/Kami` 的 `skills/kami/`
+ * ——仓库自带 `assets/fonts/`，故来件形状是 `<仓库>/skills/<技能>`，与本机
+ * 落点 `~/.dsh/skills/kami` 不同名。`source` 取 `kami` 而不是 `github`：
+ * 这一批的全部含义就是那一个上游仓库。
+ */
 export const BATCHES = [
   { dir: "kimi", source: "kimi", nested: "skills" },
   { dir: "Manus", source: "manus", nested: "skill02" },
   { dir: "MinMax", source: "minmax", nested: "skills" },
   { dir: "MinMaxDesign", source: "minmaxdesign", nested: null },
+  { dir: "Kami", source: "kami", nested: "skills" },
 ];
 
 /** zip 内条目与目录条目统一用 \0 分成「容器 + 单元内相对路径」两段。 */

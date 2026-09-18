@@ -1,6 +1,17 @@
 import { jsx } from "react/jsx-runtime";
-import { HeroRootBrand, RootMark, SidebarRootName, buildBrandCss, installBrandCss } from "./brand.js";
-import { classSelector, type LiveAnchors, resolveLiveAnchors } from "./live-selectors.js";
+
+import {
+  HeroRootBrand,
+  RootMark,
+  SidebarRootName,
+  installBrandCss,
+} from "./brand.js";
+import {
+  createHeadlineSuppressor,
+  type HeadlineSuppressor,
+  type SuppressCode,
+} from "./hero-title.js";
+import { classSelector, resolveLiveAnchors } from "./live-selectors.js";
 import { observePreviewText } from "./official-text.js";
 
 /** Required Cordis services: the UI slot registry. */
@@ -19,80 +30,94 @@ export interface ClientContext {
   effect(fn: () => () => void, label: string): void;
 }
 
-const ANCHOR_STYLE_ID = "dsh-root-brand-anchors";
 const ANCHORS_STATE_ATTR = "dshRootBrandAnchors";
 
 /** 校验选择器：写进 querySelector 的类名必须是安全标识符（避免抛出并整块跳过）。 */
 const SELECTOR_SAFE = /^[A-Za-z0-9_-]+$/;
 
-function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+/**
+ * 一次同步的结论。
+ *
+ * `ok` / `idle` **不是**缺陷：`idle` 表示「hero 还没挂载，本次无事可做」——空会话以外的
+ * 页面上角标本来就不存在。把它算成 degraded 会让读数长期发红，而长期发红的读数会被无视。
+ */
+type SyncCode = "ok" | "idle" | "anchor-missing" | SuppressCode;
+
+const NON_DEGRADED: ReadonlySet<SyncCode> = new Set<SyncCode>(["ok", "idle"]);
+
+interface SyncOutcome {
+  code: SyncCode;
+  detail: string;
 }
 
 /**
- * 单次同步：读锚点、把 hash 规则交给写入方、维护角标观察、记录漂移状态。
- * 任何官方节点缺失都不抛错（只记 degraded），保证与版本无关的样式先落地。
+ * 单次同步：解析锚点 → 找到官方角标 → 改写它的文案 → 按关系隐藏官方标题。
+ *
+ * 任何一步失败都不抛错（只降级），保证与版本无关的样式与品牌座位先落地：
+ * 品牌标识比「官方标题有没有藏住」重要得多。
  */
-function syncOnce(doc: Document, writeRules: (rules: string) => void): (keyof LiveAnchors)[] {
+function syncOnce(
+  doc: Document,
+  suppressor: HeadlineSuppressor,
+  onBadge: (badge: HTMLElement) => void,
+): SyncOutcome {
   const { anchors, missing } = resolveLiveAnchors(doc);
-  writeRules(buildBrandCss(anchors));
-
-  // 角标保持官方节点与外观，只把文案改成 Preview。
-  const previewSelector = anchors.heroPreviewBadge;
-  if (previewSelector !== undefined && SELECTOR_SAFE.test(previewSelector)) {
-    const badge = doc.querySelector<HTMLElement>(classSelector(previewSelector));
-    if (badge !== null && badge.dataset.dshRbPreview === undefined) {
-      badge.dataset.dshRbPreview = "1";
-      try {
-        observePreviewText(badge);
-      } catch (error) {
-        console.warn(`[dsh-root-brand] 角标改写失败：${describeError(error)}`);
-      }
-    }
+  const className = anchors.heroPreviewBadge;
+  if (className === undefined || !SELECTOR_SAFE.test(className)) {
+    return {
+      code: "anchor-missing",
+      detail: `官方角标锚未解析（${missing.join("、") || "（清单里没有这个键）"}）——官方样式表里没有可用的类名，本次不做任何 DOM 改写`,
+    };
   }
 
-  const state = missing.length === 0 ? "resolved" : `degraded:${missing.join(",")}`;
-  doc.documentElement.dataset[ANCHORS_STATE_ATTR] = state;
-  if (missing.length === 0) {
-    console.info("[dsh-root-brand] anchors resolved");
-  } else {
-    console.warn(`[dsh-root-brand] anchor drift: 未解析 ${missing.join(", ")}`);
+  const badge = doc.querySelector<HTMLElement>(classSelector(className));
+  if (badge === null) {
+    return { code: "idle", detail: "hero 未挂载（非空会话页面），本次无事可做" };
   }
-  return missing;
+
+  onBadge(badge);
+  const outcome = suppressor.apply(badge);
+  if (outcome.code !== "ok") return { code: outcome.code, detail: outcome.detail };
+  return { code: "ok", detail: outcome.detail };
 }
 
 /**
  * 首次同步 + 持续重试：官方样式标签与官方 hero **都可能晚于插件启动才出现**
  * （样式按需注入、hero 在空会话渲染时才挂载），因此观察整个文档子树的新增节点，
- * 每次新增都重新解析一次。disposer 需要把角标改写一并还原（卸载后不留残余）。
+ * 每次新增都重新解析一次。
  *
- * 写入时把标签**移到 head 末尾**（appendChild 移动既有节点）：与官方同特异性的
- * 覆盖规则因此恒在其后，级联顺序不再取决于两侧加载次序。`!important`（见
- * buildBrandCss）是第一道保险，这里是第二道。
+ * 只在**结论变化**时才写读数与打日志：观察器对整棵文档生效，每次节点变动都打日志会
+ * 把 Console 冲成噪音，而噪音里的红色读数等于没有读数。
+ *
+ * disposer 要还原三样东西（卸载后不留残余）：角标文案、被隐藏的官方标题、观察器。
  */
 function watchAnchors(doc: Document): () => void {
+  const suppressor = createHeadlineSuppressor();
   let disposePreview: (() => void) | undefined;
-  let lastRules: string | undefined;
+  let observedBadge: HTMLElement | undefined;
+  let lastKey = "";
 
   const sync = (): void => {
-    const missing = syncOnce(doc, (rules) => {
-      if (lastRules === rules) return;
-      lastRules = rules;
-      let tag = doc.getElementById(ANCHOR_STYLE_ID);
-      if (tag === null) {
-        tag = doc.createElement("style");
-        tag.id = ANCHOR_STYLE_ID;
-        tag.dataset.plugin = "dsh-root-brand";
-      }
-      tag.textContent = rules;
-      doc.head.appendChild(tag);
+    const outcome = syncOnce(doc, suppressor, (badge) => {
+      // 角标节点被 React 换掉时要跟着换观察对象：旧节点已脱离文档，挂在它上面的
+      // 观察器不再起作用，新节点上的文案就永远不会被改写。
+      if (observedBadge === badge) return;
+      disposePreview?.();
+      observedBadge = badge;
+      badge.dataset.dshRbPreview = "1";
+      disposePreview = observePreviewText(badge);
     });
 
-    void missing;
-    if (disposePreview !== undefined) return;
-    const badge = doc.querySelector<HTMLElement>("[data-dsh-rb-preview]");
-    if (badge === null) return;
-    disposePreview = observePreviewText(badge);
+    const key = `${outcome.code}|${outcome.detail}`;
+    if (key === lastKey) return;
+    lastKey = key;
+
+    const degraded = !NON_DEGRADED.has(outcome.code);
+    doc.documentElement.dataset[ANCHORS_STATE_ATTR] = degraded
+      ? `degraded:${outcome.code}`
+      : "resolved";
+    if (degraded) console.warn(`[dsh-root-brand] ${outcome.detail}`);
+    else console.info(`[dsh-root-brand] anchors resolved（${outcome.detail}）`);
   };
 
   sync();
@@ -102,8 +127,8 @@ function watchAnchors(doc: Document): () => void {
   return () => {
     observer.disconnect();
     disposePreview?.();
-    doc.querySelector("[data-dsh-rb-preview]")?.removeAttribute("data-dsh-rb-preview");
-    doc.getElementById(ANCHOR_STYLE_ID)?.remove();
+    observedBadge?.removeAttribute("data-dsh-rb-preview");
+    suppressor.restore();
   };
 }
 

@@ -19,7 +19,14 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { COLUMNS, checkSidebarRowAxis, horizontalAxis, ruleBody } from './sidebar-row-axis.mjs'
+import {
+  COLUMNS,
+  SIDEBAR_WIDTH_BOUNDS,
+  TARGET_SIDEBAR_WIDTH,
+  checkSidebarRowAxis,
+  horizontalAxis,
+  ruleBody,
+} from './sidebar-row-axis.mjs'
 
 const ROOT = new URL('../../', import.meta.url).pathname
 
@@ -45,11 +52,24 @@ const ROWS = [
   {
     entry: 'packages/surfaces/dsh-newapp-local/src/client/sidebar-entry.ts',
     attr: 'data-dsh-newapp-entry',
-    pos: 'split',
+    pos: 'stacked',
     css: 'packages/surfaces/dsh-newapp-local/src/client/newapp.module.css',
-    body: 'box-sizing: border-box; display: flex; height: 38px; margin: 0 2px 8px; padding: 8px 16px;',
+    body: 'box-sizing: border-box; display: flex; width: 100%; height: 36px; margin: 2px 0; padding: 0 10px;',
   },
 ]
+
+/**
+ * 启动带上被新应用包改写的官方「新建会话」行：fixture 必须连它的规则一起造出来，
+ * 否则本项对它的轴断言会因为「找不到规则」而判红——正常 fixture 必须过。
+ */
+const RESTYLED = {
+  css: ROWS[2].css,
+  selector: 'button[class*="newSession"][data-lute-navrow]',
+  body: 'box-sizing: border-box; width: 100%; margin: 2px 0; padding: 0 10px;',
+}
+const CORE = 'shared/client/sidebar-entry-core.ts'
+const CORE_TEXT = "const official = {}\nofficial.dataset.luteNavrow = ''\n"
+
 
 const RM = ROWS[0].entry
 const SC = ROWS[1].entry
@@ -81,8 +101,14 @@ function fixture(spec = {}) {
     }
     const cssAbs = join(root, ...row.css.split('/'))
     mkdirSync(join(cssAbs, '..'), { recursive: true })
-    writeFileSync(cssAbs, `.entry {\n  ${spec.bodies?.[row.entry] ?? row.body}\n}\n`)
+    writeFileSync(cssAbs, `.entry {\n  ${spec.bodies?.[row.entry] ?? row.body}\n}\n`
+      + (row.css === RESTYLED.css
+        ? `${RESTYLED.selector} {\n  ${spec.restyledBody ?? RESTYLED.body}\n}\n`
+        : ''))
   }
+  const coreAbs = join(root, ...CORE.split('/'))
+  mkdirSync(join(coreAbs, '..'), { recursive: true })
+  writeFileSync(coreAbs, spec.coreText ?? CORE_TEXT)
   for (const extra of spec.extraRows ?? []) {
     const abs = join(root, ...extra.entry.split('/'))
     mkdirSync(join(abs, '..'), { recursive: true })
@@ -99,7 +125,8 @@ test('真实仓库通过，并把射程写进 note（登记行数 / 列数 / 断
   assert.equal(result.passed, true)
   // 射程必须落在 note 里，否则「量了几个」无从判断（ADR-0075）。
   assert.match(result.note, /已登记 3 个注入行、2 列/)
-  assert.match(result.note, /其中 2 行断言了行轴/)
+  assert.match(result.note, /其中 3 行断言了行轴/)
+  assert.match(result.note, /另断言 1 条被插件改写的官方行同轴/)
 })
 
 test('真实仓库里两行行轴逐字段相同，且等于声明出来的原生轴', () => {
@@ -107,6 +134,13 @@ test('真实仓库里两行行轴逐字段相同，且等于声明出来的原�
   const sc = horizontalAxis(ruleBody(entryCss(ROWS[1].css), '.entry'))
   assert.deepEqual(rm, sc)
   assert.deepEqual(rm, COLUMNS['sidebar-nav'].axis)
+})
+
+test('真实仓库里启动带三行（新应用行 + 被改写的官方行）同在一条原生轴上', () => {
+  const na = horizontalAxis(ruleBody(entryCss(ROWS[2].css), '.entry'))
+  const official = horizontalAxis(ruleBody(entryCss(ROWS[2].css), RESTYLED.selector))
+  assert.deepEqual(na, COLUMNS['nav-band'].axis)
+  assert.deepEqual(official, COLUMNS['nav-band'].axis)
 })
 
 test('① 岗位矩阵退回自带宽度约定（width: calc(100% - 8px) + margin: 2px 4px）必须判红', () => {
@@ -159,11 +193,11 @@ test('⑤ 登记项指向不存在的入口必须判红（清单不许腐烂）'
   assert.match(result.violations.join('\n'), /登记项已失效：.*dsh-newapp-local/)
 })
 
-test("⑥ position 从 'after' 改成 'split' 必须判红（列归属变了，几何算法也不同）", () => {
-  const root = fixture({ positions: { [RM]: 'split' } })
+test("⑥ position 从 'after' 改成 'stacked' 必须判红（列归属变了，落点路径也不同）", () => {
+  const root = fixture({ positions: { [RM]: 'stacked' } })
   const result = checkSidebarRowAxis({ repoRoot: root })
   assert.equal(result.passed, false)
-  assert.match(result.violations.join('\n'), /position 从 'after' 变成了 'split'/)
+  assert.match(result.violations.join('\n'), /position 从 'after' 变成了 'stacked'/)
 })
 
 test('⑦ 选择器改名后必须判红，而不是静默失去射程', () => {
@@ -223,4 +257,80 @@ test('⑩ 简写展开与浏览器一致：2 值取行内、4 值取起止两侧
 test('⑪ 注释里出现的 `.entry {` 不得被读成声明', () => {
   const withComment = '/* 举例：\n.entry { width: 999px; }\n*/\n.entry {\n  width: 100%;\n}\n'
   assert.equal(ruleBody(withComment, '.entry').includes('999px'), false)
+})
+
+test('⑪b 分组选择器续行的 `.entry {`（`.root,` 换行续过来）不得被读成 `.entry` 的声明块', () => {
+  // token 块常写成 `.root,\n.entry {`：续行的 `.entry` 顶着行首，长得跟独立规则一模一样。
+  // 这只瞎读会把「token 块」当 row 的轴去读，然后判出一个假红。
+  const grouped = '.root,\n.entry {\n  --lute-brand: #000;\n}\n.entry {\n  box-sizing: border-box;\n  width: 100%;\n}\n'
+  const body = ruleBody(grouped, '.entry')
+  assert.equal(body.includes('--lute-brand'), false)
+  assert.equal(horizontalAxis(body).width, '100%')
+})
+
+test('⑫ 被改写的官方行轴漂移必须判红（启动带官方行自我漂移的准确断法）', () => {
+  const root = fixture({ restyledBody: 'box-sizing: border-box; width: 100%; margin: 2px 4px; padding: 0 10px;' })
+  const result = checkSidebarRowAxis({ repoRoot: root })
+  assert.equal(result.passed, false)
+  assert.match(result.violations.join('\n'), /改写的官方行.*marginInline='4px'/)
+})
+
+test('⑬ 共享核心不再写 data-lute-navrow 标记时必须判红（CSS 改名/核心改名都会静默失去射程）', () => {
+  const root = fixture({ coreText: 'export const noop = 1\n' })
+  const result = checkSidebarRowAxis({ repoRoot: root })
+  assert.equal(result.passed, false)
+  assert.match(result.violations.join('\n'), /dataset\.[a-zA-Z]+|找不到 data-lute-navrow/)
+})
+
+test('⑭ 改写规则消失（选择器改了名）必须判红，而不是静默失去射程', () => {
+  const root = fixture({ restyledBody: RESTYLED.body })
+  writeFileSync(
+    join(root, ...RESTYLED.css.split('/')).replace(/\.css$/, '.mjs'),
+    '',
+  )
+  // 顺手把 CSS 里的改写规则写成选择器改名版——规则块还在，但锚名变了。
+  const cssAbs = join(root, ...RESTYLED.css.split('/'))
+  writeFileSync(cssAbs, `.entry {\n  ${ROWS[2].body}\n}\nbutton[class*="newSession"][data-renamed-anchor] {\n  ${RESTYLED.body}\n}\n`)
+  const result = checkSidebarRowAxis({ repoRoot: root })
+  assert.equal(result.passed, false)
+  assert.match(result.violations.join('\n'), /找不到规则 `button\[class\*="newSession"\]\[data-lute-navrow\] \{`/)
+})
+
+test('⑮ 宽度契约常数与合法区间断言（ADR-0125 D7/D8，解决 P-51 缺口）', () => {
+  assert.equal(TARGET_SIDEBAR_WIDTH, 264, '目标宽度必须锁定 264px（用户改判定案）')
+  assert.deepEqual(SIDEBAR_WIDTH_BOUNDS, [264, 420], '合法边界必须对齐基座 clampWidth 物理区间')
+  const root = fixture()
+  const result = checkSidebarRowAxis({ repoRoot: root })
+  assert.equal(result.passed, true)
+  assert.match(result.note, /侧栏宽度契约锁定 264px ⊂ \[264, 420\]/)
+})
+
+test('⑯ 侧栏目标宽度契约漂移必须判红（突变断言：模拟误设为 252 或 280）', () => {
+  const checkWidthMutant = (mutantWidth) => {
+    const [minWidth, maxWidth] = SIDEBAR_WIDTH_BOUNDS
+    const violations = []
+    if (mutantWidth !== 264) {
+      violations.push(
+        `侧栏目标宽度契约漂移：当前声明为 ${mutantWidth}px，必须严格为 264px（ADR-0125 D7）`
+        + '——解决总账 P-51 登记的「宽度无门禁」缺口',
+      )
+    }
+    if (mutantWidth < minWidth || mutantWidth > maxWidth) {
+      violations.push(
+        `侧栏目标宽度 ${mutantWidth}px 超出基座 clampWidth 物理边界 [${minWidth}, ${maxWidth}]`,
+      )
+    }
+    return { passed: violations.length === 0, violations }
+  }
+
+  // 突变 1：试图硬写 252px（越过基座下界）
+  const res252 = checkWidthMutant(252)
+  assert.equal(res252.passed, false, '252px 越过下界必须判红')
+  assert.match(res252.violations.join('\n'), /必须严格为 264px/)
+  assert.match(res252.violations.join('\n'), /超出基座 clampWidth 物理边界/)
+
+  // 突变 2：退回默认 280px
+  const res280 = checkWidthMutant(280)
+  assert.equal(res280.passed, false, '280px 偏离 264px 目标必须判红')
+  assert.match(res280.violations.join('\n'), /当前声明为 280px，必须严格为 264px/)
 })

@@ -48,7 +48,9 @@ import { fileURLToPath } from 'node:url'
 // 这个错会把人引去查路径，其实是写法不对。
 import { scanAgentCordis, rowResolves } from '../../../../scripts/gates/live-presets.mjs'
 // 渲染函数只此一处：同步器写什么，门禁就校什么。
-import { DEFAULT_SOUL_PATH, loadSoulBody, extractPersonaBody } from './sync-fullstack-persona.mjs'
+import {
+  DEFAULT_SOUL_PATH, loadSoulBody, extractPersonaBody, personaAnchorProblem,
+} from './sync-fullstack-persona.mjs'
 // 头像同理：`renderIconLine` / `extractIcon` / 图标 id 只在同步器里定义一份。
 import {
   DEFAULT_ICON_ID, DEFAULT_MANIFEST_PATH, loadAvatarEntry, extractIcon,
@@ -247,7 +249,11 @@ export function checkAgentFullstack(opts = {}) {
     }
 
     const personaBody = extractPersonaBody(yml)
-    need(personaBody !== null, '[人格] agent.cordis.yml 里抽不到 persona 行的正文 —— 锚点形状变了，本条判据已空转，请同步本文件')
+    need(
+      personaBody !== null,
+      '[人格] agent.cordis.yml 里抽不到 persona 行的正文 —— 锚点形状变了，本条判据已空转，请同步本文件'
+      + `：${personaAnchorProblem(yml) ?? '(原因不明)'}`,
+    )
 
     if (soulBody !== null && personaBody !== null) {
       // 6a. 同源：逐字相等。这是本层的核心判据。

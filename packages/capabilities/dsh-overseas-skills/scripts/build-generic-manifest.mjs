@@ -57,6 +57,11 @@ const GROUP_ORDER = [
 /**
  * 技能 → tier。**T0 名单的家就是这里**，不再在任何别处抄第二份。
  * 扩容到 T1(30) 时在此追加 `'<name>'`。
+ *
+ * 一条技能进 T0 要同时满足两条（与 `noRoleKind` 的判定共用同一份理由）：
+ * ①任何岗位都用得上；②它**不产出**该岗位三条责任所要求的工作产物。
+ * Kami（2026-09-18 追加）按 TOOL_ONLY 入线，与上一轮的 minimax-pdf 同判据；
+ * 两者并列而不互替的理由写在 `staging/intake-localize.json` 的 `noRoleReason` 里。
  */
 const T0_NAMES = [
   'meeting-minutes',
@@ -74,6 +79,7 @@ const T0_NAMES = [
   'sn-da-excel-workflow',
   'sn-da-non-spreadsheet-analysis',
   'minimax-pdf',
+  'kami',
 ]
 const TIER_BY_NAME = Object.fromEntries(T0_NAMES.map((n) => [n, 'T0']))
 

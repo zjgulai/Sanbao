@@ -1,0 +1,1296 @@
+{
+  "schema": 1,
+  "note": "机器可读决策账本。**派生面**，由 scripts/gates/adr-agent-records.mjs 从 docs/adr/ADR-NNNN.md 的「## 机器可读决策」块生成；重新生成：node scripts/gates/adr-agent-records.mjs --write。门禁 adr-agent-records 断言本文件与源文件逐字段一致。",
+  "legacyWithoutDecisions": [
+    "ADR-0001",
+    "ADR-0002",
+    "ADR-0003",
+    "ADR-0004",
+    "ADR-0005",
+    "ADR-0006",
+    "ADR-0007",
+    "ADR-0008",
+    "ADR-0009",
+    "ADR-0010",
+    "ADR-0011",
+    "ADR-0012",
+    "ADR-0013",
+    "ADR-0014",
+    "ADR-0015",
+    "ADR-0016",
+    "ADR-0017",
+    "ADR-0018",
+    "ADR-0019",
+    "ADR-0020",
+    "ADR-0021",
+    "ADR-0022",
+    "ADR-0023",
+    "ADR-0024",
+    "ADR-0025",
+    "ADR-0026",
+    "ADR-0027",
+    "ADR-0028",
+    "ADR-0029",
+    "ADR-0030",
+    "ADR-0031",
+    "ADR-0032",
+    "ADR-0033",
+    "ADR-0034",
+    "ADR-0035",
+    "ADR-0036",
+    "ADR-0037",
+    "ADR-0038",
+    "ADR-0039",
+    "ADR-0040",
+    "ADR-0041",
+    "ADR-0042",
+    "ADR-0043",
+    "ADR-0044",
+    "ADR-0045",
+    "ADR-0046",
+    "ADR-0047",
+    "ADR-0048",
+    "ADR-0049",
+    "ADR-0050",
+    "ADR-0051",
+    "ADR-0052",
+    "ADR-0053",
+    "ADR-0054",
+    "ADR-0055",
+    "ADR-0056",
+    "ADR-0057",
+    "ADR-0058",
+    "ADR-0059",
+    "ADR-0060",
+    "ADR-0061",
+    "ADR-0062",
+    "ADR-0063",
+    "ADR-0064",
+    "ADR-0065",
+    "ADR-0066",
+    "ADR-0067",
+    "ADR-0068",
+    "ADR-0069",
+    "ADR-0070",
+    "ADR-0071",
+    "ADR-0072",
+    "ADR-0073",
+    "ADR-0074",
+    "ADR-0075",
+    "ADR-0076",
+    "ADR-0077",
+    "ADR-0078",
+    "ADR-0079",
+    "ADR-0080",
+    "ADR-0081",
+    "ADR-0082",
+    "ADR-0083",
+    "ADR-0084",
+    "ADR-0085",
+    "ADR-0086",
+    "ADR-0087",
+    "ADR-0088",
+    "ADR-0089",
+    "ADR-0090",
+    "ADR-0091",
+    "ADR-0092",
+    "ADR-0093",
+    "ADR-0094",
+    "ADR-0095",
+    "ADR-0096",
+    "ADR-0097",
+    "ADR-0098",
+    "ADR-0099",
+    "ADR-0100",
+    "ADR-0101",
+    "ADR-0102",
+    "ADR-0103",
+    "ADR-0104",
+    "ADR-0105",
+    "ADR-0106",
+    "ADR-0107",
+    "ADR-0108",
+    "ADR-0109",
+    "ADR-0110",
+    "ADR-0111",
+    "ADR-0112",
+    "ADR-0113",
+    "ADR-0114",
+    "ADR-0115",
+    "ADR-0116",
+    "ADR-0117",
+    "ADR-0118",
+    "ADR-0119",
+    "ADR-0120",
+    "ADR-0121"
+  ],
+  "adrs": [
+    {
+      "id": "ADR-0001",
+      "title": "ADR-0001 · GitHub monorepo 管理：单仓库发布 DSH 二开平台",
+      "status": "accepted（原文未入库，本篇为证据重建）",
+      "date": "2026-09-06",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0002",
+      "title": "ADR-0002 · DMG 发布：GitHub Releases 附件 + release/ 哈希清单",
+      "status": "accepted（原文未入库，本篇为证据重建）",
+      "date": "2026-09-06",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0003",
+      "title": "ADR-0003 · 版本策略：单平台版本 vX.Y.Z + 插件 package.json 对齐",
+      "status": "accepted（原文未入库，本篇为证据重建）",
+      "date": "2026-09-06",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0004",
+      "title": "ADR-0004 · 仓库收录范围：全平台 monorepo（含 81-Skills 公开）",
+      "status": "accepted（原文未入库，本篇为证据重建）",
+      "date": "2026-09-06",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0005",
+      "title": "ADR-0005 · rc.1 基座迁移立项（LUTE 2.0.0）",
+      "status": "accepted",
+      "date": "2026-09-10",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0006",
+      "title": "ADR-0006 · 上游版本跟进策略（月度观察窗）",
+      "status": "accepted",
+      "date": "2026-09-10",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0007",
+      "title": "ADR-0007 · 二开平台重构级别：三期推进（骨架 → 结构收敛 → 契约与清账）",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0008",
+      "title": "ADR-0008 · harness submodule 初始化但仅作只读参照系",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0009",
+      "title": "ADR-0009 · 文档消费者与语言策略：主脊柱中文单语 + 客户链独立用户向文档",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0010",
+      "title": "ADR-0010 · 包平面三分治理：自研层 / npm 外部层 / 处置候选层",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0011",
+      "title": "ADR-0011 · 能力五组归位 + 生成式目录墙（不引入 pnpm workspace）",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0012",
+      "title": "ADR-0012 · 包名不改、目录名归一、新增身份三元组门禁",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0013",
+      "title": "ADR-0013 · 资产分级处置：删除 / 归档出工作树 / 纳入版本管理",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0014",
+      "title": "ADR-0014 · 门禁全量硬门槛 + 只减不增的临时豁免（N5=A2）",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0015",
+      "title": "ADR-0015 · 决策记录双轨分职：ADR 时间线 + 本地 Notes（强制留痕）",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0016",
+      "title": "ADR-0016 · 嵌套仓库治理：受管目录不得含未声明的独立仓库",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0017",
+      "title": "ADR-0017 · 包的类型检查必须指向内建运行时的类型，而非应用内打包产物",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0018",
+      "title": "ADR-0018 · 构建产物 `lib/types/` 的入库边界与 build 可执行性",
+      "status": "accepted（2026-09-11）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0019",
+      "title": "ADR-0019 · 对官方 UI 的改写锚必须运行时解析，禁止把 CSS-module 哈希写进产品代码",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0020",
+      "title": "ADR-0020 · 岗位小队 = 单 preset 的人格 + 技能并集，不做多 preset 挂载",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0021",
+      "title": "ADR-0021 · Preset 承载材料声明时，必须显式披露「声明 vs 供给」的差",
+      "status": "accepted",
+      "date": "2026-09-11",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0022",
+      "title": "ADR-0022 · 岗位头像走官方 `icon` 字段，图标库是唯一事实之家",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0023",
+      "title": "ADR-0023 · 删除被会话引用的 preset：默认值先迁移、归档先验字节、损失需显式接受",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0024",
+      "title": "ADR-0024 · 上下文压缩加固：容量表实测 + 摘要路由解耦 + 确定性压缩按需切换",
+      "status": "accepted（2026-09-12）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0025",
+      "title": "ADR-0025 · `webServer.register` 一次只收一条路由；传数组会静默失效",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0026",
+      "title": "ADR-0026 · 对官方 UI 的样式覆盖必须与注入顺序无关",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0027",
+      "title": "ADR-0027 · 模态浮层必须进入浏览器 top layer，不参与 z-index 竞争",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0028",
+      "title": "ADR-0028 · 启动器只拥有「连接」，不拥有事实；侧边栏启动位与官方键各占一半",
+      "status": "accepted（「未声明目录照样列出」这一条**部分被取代**，见下）",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0029",
+      "title": "ADR-0029 · 主题 Token 的判据要两侧共同证伪：真实 CSS 引擎 + 真实供给函数",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0030",
+      "title": "ADR-0030 · 在 `/api` 下注册 exact 路由的插件，绕开了平台自己的来源栅栏——因此必须逐个插件打栅栏",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0031",
+      "title": "ADR-0031 · 技能分类必须与岗位矩阵同构；缺口认领必须与分类落点自洽",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0032",
+      "title": "ADR-0032 · 跨框架注入的共享核心：「未挂载」只有一种表示，且其注入契约必须在真框架环境证伪",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0033",
+      "title": "ADR-0033 · Native Agent 产品 = 项目目录里的声明 + 实现包；启动器只发现与开入口",
+      "status": "accepted（第 6 条**部分被取代**，见下）",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0034",
+      "title": "ADR-0034 · 功能的提示词骨架 = 多技能组合（岗位方法 + 产品契约）；功能内部下沉为 `steps[]`",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0035",
+      "title": "ADR-0035 · 技能效果的断言必须有实测背书；改动须过 held-out 验证门，未过门一律回滚",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0036",
+      "title": "ADR-0036 · 产品包由岗位 preset 的行挂载，且故意不声明 `dsh.bundle`——把「局部技能」变成结构上不可搞错的事",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0037",
+      "title": "ADR-0037 · 产品包挂两层，靠 `role` 分离；局部技能的机关从「缺声明」换成「显式关断」",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0038",
+      "title": "ADR-0038 · 共享来源栅栏的判据必须是「拒绝」，不是「抛异常」；配对服务查询一律尽力而为",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0039",
+      "title": "ADR-0039 · 语义 Token 的三条法则；门禁的「引用」只认 `var()`",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0040",
+      "title": "ADR-0040 · 开发脚本起的子进程必须是**真 node**：`process.execPath` 在 pnpm 下是宿主 Electron，且它「退出码 0 却没有输出」",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0041",
+      "title": "ADR-0041 · 已安装的技能本体就是分类的运行时家；归位与接线必须分开显示",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0042",
+      "title": "ADR-0042 · 外部插件注册 `settings.section` 必须走 `slots.inject`；直接 `register` 会静默丢行",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0043",
+      "title": "ADR-0043 · 门禁报失败必须给出「为它负责的读数」：输出按流分流保留，退出码不得折算",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0044",
+      "title": "ADR-0044 · 归位判定必须自带证据、落在自己的家；四层下钻里「归位 ≠ 接线」照旧分开显示",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0045",
+      "title": "ADR-0045 · 产品矩阵只列已产品化的产品、一张大卡一个产品；工作台与控制室的 UI 全部卸载（部分取代 ADR-0028 与 ADR-0033 第 6 条）",
+      "status": "accepted（2026-09-13 **部分修订**：抽屉增加「业务系统」第二分区，见 [ADR-0062](ADR-0062.md)。",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0046",
+      "title": "ADR-0046 · 可选服务只能用 `ctx.get` 读（裸读会抛，`?? 兜底` 是假兜底）；Remote 三元组必须按位传参并读回 `ok:false`",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0047",
+      "title": "ADR-0047 · p2s 语料的三行级缺陷改在流水线里修，出处按档位如实渲染而非无差别还原",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0048",
+      "title": "ADR-0048 · ⑦ 段是 60 行上限的预览节选，卡面按实测口径渲染；卡页「路径」只作转述",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0049",
+      "title": "ADR-0049 · 完整实现从未丢失：从语料 vault 的 git 明文恢复，落 `references/implementation.py`",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0050",
+      "title": "ADR-0050 · 代码围栏按「宽松枚举候选 + 语法定终点」抽取，不按 Markdown 配对",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0051",
+      "title": "ADR-0051 · `parses=False` 拆成「源码写坏」与「判据未定终点」两类，逐卡带行号",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0052",
+      "title": "ADR-0052 · 第三方技能入库不保留 `.git`，且必须挂岗或显式归为通用型",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0053",
+      "title": "ADR-0053 · 岗位能力事实读它的家（preset manifest + 技能本体），不派生第二份清单",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0054",
+      "title": "ADR-0054 · 改动生效的判据是**装载点的字节**：门禁从「副本有没有这个文件」升到「字节一不一样」",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0055",
+      "title": "ADR-0055 · 依赖层的可复现判据：清单与锁文件逐条对齐、依赖不得指向机器路径、宿主类型来自内建运行时 tgz、产物未入库则 build 先于 test",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0056",
+      "title": "ADR-0056 · 出货的 preset 不烘焙外部产品行；出货树的机器路径只减不增",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0057",
+      "title": "ADR-0057 · 发布产物的发布语义：构建在临时区完成、原子改名就位；同号重制须显式 `--force` 且旧产物归档不删除",
+      "status": "accepted",
+      "date": "2026-09-12",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0058",
+      "title": "ADR-0058 · 发布清单入库：清单是脚本的产出而非 SOP 的人工步骤，且必须先于 tag 落库",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0059",
+      "title": "ADR-0059 · 中转站接入以「逐模型实测工具调用」为准入判据：PoYo 拆两条路由，且在拿到 key 前不写进任何默认位",
+      "status": "accepted（2026-09-13 修订：判据与路由清单已按实测更正，见「决策」1、2 与文末「修订记录」）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0060",
+      "title": "ADR-0060 · 模型准入判据补两关：tool_call 必须「回灌验证」且「多轮重复」——单轮产出 `tool_calls` 不足以判定能干活",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0061",
+      "title": "ADR-0061 · 新应用抽屉同时兼容 `ctx.agentPresets` 与 `connection.api.agentPresets`；深链星探走本机装配而非出货 preset",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0062",
+      "title": "ADR-0062 · 新应用抽屉增加「业务系统」第二分区：外链只由宿主打开且只接受 slug；本包从此拥有一份 catalog（部分修订 ADR-0045）",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0063",
+      "title": "ADR-0063 · 出货 app 改用固定身份的证书签名：TCC 授权不再以 CDHash 为身份（修订 PLAN 决策 D2）",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0064",
+      "title": "ADR-0064 · shell 变量名边界纳入门禁：`$VAR` 紧跟多字节字符是硬故障，不是风格问题",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0065",
+      "title": "ADR-0065 · 生产模式禁用 HMR 热更：运行中替换 app bundle 导致的整屏白屏按机制修复，安装器替换前必须退出运行实例",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0066",
+      "title": "ADR-0066 · 安装向导必须自己定位载荷，且失败必须给出读数：`Setup.app` 不能假设「同级就是安装包」",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0067",
+      "title": "ADR-0067 · 已发布的产物不允许被删除：仓库外归档 + `uchg` 锁定 + 门禁核对 + 找回命令",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0068",
+      "title": "ADR-0068 · 授权状态必须同时读「开关值」与「绑定对象」：换签遗留的「假的已开启」是机读判据，不是人的注意力",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0069",
+      "title": "ADR-0069 · 「输入监控」不是必需项：授权判据不得把一条**未经验证**的事实钉进出货面",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0070",
+      "title": "ADR-0070 · 技能「开没开」的真值只有一个家：技能文件；面向使用方的词必须自解释",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0071",
+      "title": "ADR-0071 · 复发故障总账：教训必须点名**真实存在**的机制，可信度由门禁守",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0072",
+      "title": "ADR-0072 · 岗位白名单是授予，不能被技能文件的开关否决；产物用生成期判据钉住这个不变量",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0073",
+      "title": "ADR-0073 · 出货面由白名单决定，不由构建机的目录状态决定；机器路径守卫必须能看见打包后的 tarball",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0074",
+      "title": "ADR-0074 · 技能出货面 =（被引用集 ∪ 产品级白名单）− 受限许可；落位树必须逐名等于选择结果",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0075",
+      "title": "ADR-0075 · 发布前门禁只量「待发布」的对象：射程从 git 里的家推导，射程为空必须报「跳过」而不是「通过」",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0076",
+      "title": "ADR-0076 · 发布链的最后一环：入库版本必须有分发面，跳过的版本必须被记录",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0077",
+      "title": "ADR-0077 · 交付形态是产物的属性，不是文档的属性：卷内清单只有一个家，且由门禁与产物逐名对照",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0078",
+      "title": "ADR-0078 · 运行中的字节不是磁盘上的字节：客户端 bundle 只有「重启」一条生效路径，且空射程的仪器必须自己报出来",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0079",
+      "title": "ADR-0079 · 同一列里的注入式侧边栏行必须声明同一条行轴；一致性由「清单 + 显式期望值」守，不由纪律守",
+      "status": "accepted（2026-09-13）",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0080",
+      "title": "ADR-0080 · 已证伪的仪器不得再被开成判据；「在不在跑」收成一家，且「读不到」必须与「没有」分开",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0081",
+      "title": "ADR-0081 · 图标有两个家：Finder 图标对了，不等于 Dock 图标对了",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0082",
+      "title": "ADR-0082 · 精选线接入分类底本：只增不改、阻断可见，且工具自己的断言必须先有牙",
+      "status": "accepted",
+      "date": "2026-09-13",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0083",
+      "title": "ADR-0083 · frontmatter 重写必须保留键的原位：字节不变是开关的承诺，而键序看不见",
+      "status": "accepted",
+      "date": "2026-09-14",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0084",
+      "title": "ADR-0084 · 出货 preset 的行级闭合判据：判据的事实来自**出货面**，不是开发机此刻的状态",
+      "status": "accepted",
+      "date": "2026-09-14",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0085",
+      "title": "ADR-0085 · 归位 ≠ 接线：技能入库必须分两个平面各有一条判据，且判据的前提要能分辨「环境不在」与「数据不对」",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0086",
+      "title": "ADR-0086 · 技能入库的第零步必须独立成层：它判的是「这台机器现在能不能跑」，不是「来件长得对不对」",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0087",
+      "title": "ADR-0087 · 设置页呈现层：锚点取 ARIA 语义而非类名解析；分组是登记制，且「不连续」必须拒绝",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0088",
+      "title": "ADR-0088 · profile 清单漂移必须在 vendor 与装载点两侧都有射程；「比了 0 个包」不得读作「都一致」",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0089",
+      "title": "ADR-0089 · 全栈线 40 条入库：证据语料必须先于判定，无岗是一等结论，文档不许承诺没被守住的分型",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0090",
+      "title": "ADR-0090 · 图标的下装颜色：一个「看着像设计」的非法值，与它为什么能活 310 枚",
+      "status": "accepted",
+      "date": "2026-09-15",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0091",
+      "title": "ADR-0091 · 「三无 · Agent全栈专家」preset 与全栈目录的节点轴重建",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0092",
+      "title": "ADR-0092 · 「三无」的头像：形制承载等级，颜色不承载；图标库是家，`icon:` 行是物化副本",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0093",
+      "title": "ADR-0093 · preset/skill 破坏性操作使用 direct-child 证明与 journaled directory transaction",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0094",
+      "title": "ADR-0094 · gate 结论统一记账，live preset row 身份以受控解析与 inventory 闭合",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0095",
+      "title": "ADR-0095 · 第三方 intake 以版本化 source ID inventory 和互斥终态闭合",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0096",
+      "title": "ADR-0096 · Fullstack catalog 先闭合 138，产品 whitelist 只接受批准清单",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0097",
+      "title": "ADR-0097 · Mutation test 只在自有临时根提交副作用",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0098",
+      "title": "ADR-0098 · Settings 样式只消费解析器 marker，AX 校准不得复用验收目标",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0099",
+      "title": "ADR-0099 · Wanzh 状态持久化 fail-closed、单一原子写入器与 OAuth flow 唯一所有者",
+      "status": "accepted",
+      "date": "2026-09-16",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0100",
+      "title": "ADR-0100 · 请求体读取收成有界契约：两处 HTTP 面各自实现、上限由实测天花板推导",
+      "status": "accepted（2026-09-16）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0101",
+      "title": "ADR-0101 · 交付白名单（`files`）的完整性判据从「装载点侧」补到「交付清单侧」",
+      "status": "accepted（2026-09-16）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0102",
+      "title": "ADR-0102 · 门禁的分母必须由「被检查对象的完整集合」推出，而不是由「恰好读到的东西」推出",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0103",
+      "title": "ADR-0103 · 门禁的「无副作用」必须由快照见证与进程级回收证明，而不是由 `finally` 声明",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0104",
+      "title": "ADR-0104 · Codex Desktop 视觉语法的默认主题与渐进式页面迁移",
+      "status": "accepted",
+      "date": "2026-09-17",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0105",
+      "title": "ADR-0105 · CI 的判据面必须能被离线证伪：workflow 契约静态校验 + 干净 HOME 干跑，且不得把「未验证」说成「已建立」",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0106",
+      "title": "ADR-0106 · 保护面由机制守着：声明 + 只读 API 审计 + 离线反向自测，且「权限不足」不得读成「未配置所以通过」",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0107",
+      "title": "ADR-0107 · 管理与研究型页面统一采用内容面板语法",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0108",
+      "title": "ADR-0108 · 抽屉页面共享行为与控件收口",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0109",
+      "title": "ADR-0109 · Settings 内容面板与跨 surface 浮层层级合同",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0110",
+      "title": "ADR-0110 · 视觉收口与 hand-written / compiled artifact owner 边界",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0111",
+      "title": "ADR-0111 · 打包链版本凭据单一事实源化 + T-00 备份树迁出仓库",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0112",
+      "title": "ADR-0112 · 出货技能面不携带 `__pycache__` 字节码",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0113",
+      "title": "ADR-0113 · 供应链不可变性固化（SEC-RT-002）",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0114",
+      "title": "ADR-0114 · 补丁里的环境常量必须随基座形态一起被判定（P0-8 退役 + 会话迁移器 title 准入）",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0115",
+      "title": "ADR-0115 · 浅色主题取真中性骨架；官方被消费的 alias 必须全量接管，字面兜底上收",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0116",
+      "title": "ADR-0116 · 预设行的 config 对着插件自己的 schema 判；工具不得把上游的键名钉成字面量",
+      "status": "accepted（2026-09-17）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0117",
+      "title": "ADR-0117 · 实况探针的「取不到值」分两类：全局断链判红，局部作用域不判红",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0118",
+      "title": "ADR-0118 · profile 插件对官方 UI 的依赖必须成为**可被判据读取的声明**；官方 hero 标题按关系定位而非类名",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0119",
+      "title": "ADR-0119 · 第三方技能入库必须走机制而不是走笔：登记由安装器产生，重跑安装后必须重新占位化",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0120",
+      "title": "ADR-0120 · 安全运行时契约主门禁与自动化端到端验收闭环（SEC-RT-010）",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0121",
+      "title": "ADR-0121 · 对象库不得承载凭据与超大对象（SEC-RT-011）",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": []
+    },
+    {
+      "id": "ADR-0122",
+      "title": "ADR-0122 · 决策记录面向 AGENT：机器可读决策账本（`docs/adr/decisions.json`）",
+      "status": "accepted（2026-09-18）",
+      "date": "2026-09-18",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增机器可读决策账本 docs/adr/decisions.json，它是从 docs/adr/ADR-NNNN.md 生成的派生面，源永远是 ADR 文件。",
+          "constraints": [
+            "账本不得手工编辑；不一致时重新生成：node scripts/gates/adr-agent-records.mjs --write",
+            "门禁只读，不得自动改写账本"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "新增 ADR 必须在正文里带 `## 机器可读决策` 标题下的 json 围栏，decisions 为非空数组，每项含非空 id 与非空 text，可选 constraints 字符串数组。",
+          "constraints": [
+            "标题逐字匹配 `## 机器可读决策`",
+            "围栏语言标注必须是 json",
+            "decisions 为空数组等同于缺失"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "legacyWithoutDecisions 是引入本项时还没有决策块的 ADR 编号清单，只减不增；基线取 git show HEAD:docs/adr/decisions.json。",
+          "constraints": [
+            "写入一个新编号即判红",
+            "补上决策块的编号由生成器自动移出豁免",
+            "清单里的编号必须对应真实存在的 ADR 文件"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "新增门禁 adr-agent-records 与反向自测 adr-agent-records-selftest，四条判据：账本与源逐字段一致、非豁免 ADR 必须有可解析决策块、豁免只减不增、分母常显且空射程判红。",
+          "constraints": [
+            "账本不可读或 docs/adr 下枚举不到 ADR 一律判红，不得静默跳过",
+            "判据必须能在真实读数上判红（反向自测覆盖）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "ADR 的 `状态` 字段语义不在本项射程内：本项只断言账本与文件里那一行的字面值一致，不对 accepted/superseded 的正确性表态。",
+          "constraints": [
+            "「121/121 全 accepted」是事实读数，不是本项的红灯"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0123",
+      "title": "ADR-0123 · 2.5.0 收口次序、清场射程与并发读数纪律",
+      "status": "accepted（2026-09-18）",
+      "date": "2026-09-18",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "已发布的产物一律不在清场射程内：packaging/release/<版本>/（uchg 锁定）与仓库外归档 ~/Library/Application Support/LUTE/releases/<版本>/ 不迁出、不删除、不改名。撤销 MECE 清单里的 J1 归类。",
+          "constraints": [
+            "依据 ADR-0067 决策 2 与决策 3、以及用户裁决「不允许删除发布的版本和历史发布的版本」",
+            "release-verify.sh 对「版本目录在、dmg 不在」判 FAIL，删除会让门禁 release-artifacts-intact 变红"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "清场射程三分且必须显式：受保护（已发布产物与归档、.dsh-types/、dsh-rootoutlet-heal/、.dsh-root-brand-preview/、.ua/、dsh-patches/archive/** 的 .orig）／可删（对象库垃圾包、日志、*.bak-*、过期整档）／需先证明（任何体积型二进制与任何「只在对象库存在」的路径，删前必须逐字节证明盘外有同一副本）。",
+          "constraints": [
+            "标记为「需先证明」的条目在证明完成前不得进入删除批次",
+            "删 ref 前必须先查有没有只存在于对象库的文件"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "2.5.0 收口次序为「先清债、再定版本号」（F1 的 C 选项）：清债完成前不重打同号、不升号、不打 tag。",
+          "constraints": [
+            "理由：清债会改动 packaging/ 与出货面，先定号等于定两次",
+            "重打同号违反 ADR-0057 决策 6",
+            "先补根 CHANGELOG 的 2.5.0 段再打 tag，否则 changelog-release-sections 在 tag 那一刻判红"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "收口作业（提交、复跑门禁取终值、打包）必须等并发写入停止；判据是读数而非感觉：git status 条目数两分钟不变、.git/index mtime 不变、项目会话目录下 session.v3.jsonl.zstd mtime 不变。",
+          "constraints": [
+            "三项读数须同时满足",
+            "取证时刻随终值一起记录"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁终值只在无并发写入时取；并发下的红灯标为「并发假红」且不得计入绿，也不得因它是假的就记成通过。",
+          "constraints": [
+            "两种掩盖等价，均禁止",
+            "repo-attest-selftest 的并发敏感性登记为待处理项，本 ADR 不假装解决"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "「无用垃圾」类结论必须先过一遍「它被谁承诺过」：一条路径只要出现在 release/*.sha256、uchg 标志、门禁射程或 ADR 决策里，它就是证据面而不是垃圾。",
+          "constraints": [
+            "清场流程顺序固定：先查承诺，再查引用，最后才查体积",
+            "本条针对的是误判这一类，不是仅针对 release 这一个案例"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0124",
+      "title": "ADR-0124 · 启动带去按钮化：官方「新建会话」与自建「新应用」是两条同轴导航行，不是两个按钮；行轴判据的射程扩到「被插件改写的官方行」，`split` 列退役",
+      "status": "accepted（2026-09-18）",
+      "date": "2026-09-18",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "「新建会话」与「新应用」是同一条导航列上的两条行，不是两个按钮：官方按钮由插件去外壳（无边框、透明底、左对齐、8px 圆角、36px 行高、13px 字号、24px 图标盒），自建行紧随其下，两行同走 nav-band 轴（box-sizing border-box + width 100% + margin-inline 0 + padding-inline 10px）。",
+          "constraints": [
+            "官方按钮的改写锚只能是属性 data-lute-navrow，禁止钉类名哈希（ADR-0019）",
+            "行文字走 --dsw-alias-label-secondary，品牌色不得用作整行实底（见 D6）",
+            "字号必须用 font: var(--dsw-font-xs-13)，禁止裸 font-size + line-height 配对（Law C）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "几何不再由共享核心内联计算：删除 applySplitGeometry() 与 SPLIT_COLLAPSED_LIMIT，核心只给官方按钮写/撤 data-lute-navrow 标记，几何由被标记的属性锚规则承担。",
+          "constraints": [
+            "核心不得再写任何 inline geometry（行宽/边距一律来自样式表规则）",
+            "卸载时必须删除标记，官方按钮的 style.cssText 必须回到空串",
+            "三个包的 sidebar-entry-core.ts 必须保持逐字节一致（node scripts/sync-shared.mjs 默认即校验）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "布点宽 < STACKED_COLLAPSED_LIMIT（60px）时核心撤掉标记、行样式表整体让位，官方按钮回到自己的 rail 形态，自建行沿用同一 rail 度量（36×36、标签隐藏）。",
+          "constraints": [
+            "收起态不得残留标记（残留会改坏官方 rail 的图标键）",
+            "展开回来标记必须重新施加",
+            "自建行图标不得被 36px 行框裁切"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "行高落地取 36px 而不是规格草案写的 30pt，以与同列既有注入行（岗位矩阵 / 技能中心）和 ADR-0079 的行轴同族。",
+          "constraints": [
+            "改 30pt 必须三行同改并另立决策，不得只改启动带",
+            "行距沿用原生节奏 margin: 2px 0（相邻两行实测 4px）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "行轴判据的射程扩到被插件改写的官方行：sidebar-row-axis 的列注册表新增 nav-band 列（split 列退役），并新增 RESTYLED_SHELL_ROWS 断言官方按钮的属性锚在核心源码里被写入、且其声明块与所在列同轴。",
+          "constraints": [
+            "被改写的官方行必须逐条登记，未登记者不进断言面也不得被当作已守",
+            "ruleBody 必须挡掉分组选择器续行（.root,\\n.entry {）的误读",
+            "空射程判红，不得报通过（ADR-0075）",
+            "反向自测须覆盖三种突变：改写规则轴漂移、核心停止写标记、属性锚改名"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "启动带不用品牌色实底：品牌绿只留给徽标与 3px 活动指示条，行文字走 --dsw-alias-label-secondary。",
+          "constraints": [
+            "深浅两个主题下都不得出现品牌色整行实底",
+            "状态色一律走 shell 的状态族 token，不新增品牌别名（Law 3）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0125",
+      "title": "ADR-0125 · 侧栏四带契约：启动带两行同轴 36px 堆叠为默认、「工作台 ▸」折叠组收编能力带、内容带增置顶与搜索、系统带冻结；侧栏宽度目标 264px；四条结构决策由用户当场逐项裁决后冻结",
+      "status": "accepted（2026-09-18）",
+      "date": "2026-09-18",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "侧栏按四层组织并冻结：启动带 / 能力带 / 内容带 / 系统带；新条目必须先声明归属带，不属于任何一带的条目不得进入侧栏。",
+          "constraints": [
+            "既有条目不得在两个带同时出现",
+            "任一条目移动归属带必须更新本 ADR 并跑过行轴门禁"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "启动带沿用 ADR-0124：官方「新建会话」与自建「新应用」是两条同轴 nav-band 导航行；行高定案 36px、行距 margin: 2px 0，30pt 方案作废。",
+          "constraints": [
+            "行高与行距不得只改启动带（须与同列注入行同族，ADR-0079）",
+            "品牌绿不得作为整行实底（ADR-0124 D6 仍然有效）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "split 恢复为 API 可选形态：position 还原为四值 before/after/split/stacked，默认 stacked；本条取代 ADR-0124 D5 的「split 列退役」前提。",
+          "constraints": [
+            "split 形态不进当前行轴门禁的射程；启用 split 前必须把 sidebar-row-axis 扩为同时断言两种形态",
+            "三份 sidebar-entry-core.ts 副本必须保持逐字节一致（sync-shared 校验）",
+            "本轮不采购用户可切换的偏好载体"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "能力带四个入口（任务板 / SSH / 技能中心 / 岗位矩阵）收进「工作台 ▸」折叠组：L1 一个入口行，L2 四项。",
+          "constraints": [
+            "L2 的承载方式（官方 L2 slot 还是 DOM 注入）是实现期 spike，未决",
+            "折叠组自身必须遵守所在带的行轴，不得引入新几何"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "内容带以会话 / 工作区为主体；置顶与搜索行同进 P1；区内次序：会话 → 工作区 → 置顶 → 搜索。",
+          "constraints": [
+            "旧排序（工作区 → 会话）随之废止"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "系统带冻结：设置 / 帮助 / 账号本轮不纳入重构范围。",
+          "constraints": [
+            "本轮任何改动不得触碰系统带条目的顺序、形态与承载方式"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "侧栏宽度目标 264px——基座 clampWidth 夹逼区间 [264, 420] 的下界；用户在知悉 252 越界后由 252 改判 264。",
+          "constraints": [
+            "兑现路径按序取证：P1 spike「插件能否写布局 store 的 sidebar 偏好」，不行则由用户拖拽到达，禁止 CSS 强改 inline 网格轨道",
+            "读数必须落在 [264, 420] 之内才算达成"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "入口纪律升门禁：官方 UI 改写锚禁止钉哈希与同列同行轴清单合写为侧栏入口契约并升为门禁，判据面新增宽度断言（目标 264px）。",
+          "constraints": [
+            "官方 UI 改写锚只能用属性或稳定结构选择器，禁止钉类名哈希（ADR-0019）",
+            "宽度断言未落地前，「宽度已收口」不得对外声明（P-51 登记的缺口）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0126",
+      "title": "ADR-0126 · 更新安装闸按**行为结构**判，不按文案判（P0-1v2 从「补丁在不在」升级为「闸还成不成立」）",
+      "status": "accepted（2026-09-18）",
+      "date": "2026-09-18",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增门禁 update-guard 与反向自测 update-guard-selftest；判据是纯函数 checkUpdateGuard(text)，位于 scripts/gates/update-guard.mjs。",
+          "constraints": [
+            "纯函数，可被反向自测与恒真桩突变"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "断言四条结构关系而非文案：闸用 DSH_DISABLE_UPDATE_INSTALL 且紧跟与 0 的比较；判完紧跟 throw；闸排在 downloadDesktopUpdate( 与 shell.openPath( 之前；downloadAndOpenUpdate 仍有调用点。",
+          "constraints": [
+            "不钉比较方向与引号形态，只认「有没有在跟 0 比」"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "射程复用 gates/patch-anchor-scope.mjs 的 selectAnchorTargets（本机 /Applications 与未打 tag 的 staging 树），本处只做磁盘读取面，不另立第二把尺。",
+          "constraints": [
+            "ADR-0075",
+            "ADR-0009"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "读不到正文或方法体不可解析时报 unverifiable 并计入失败；unverifiable 不得被当作通过。",
+          "constraints": [
+            "含文件 mode 000 导致 EACCES 的实测形态，属仪器问题而非补丁丢失"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "与 patch-anchors 分工且不合并：patch-anchors 管补丁在不在（含消息串），update-guard 只管它在行为上还成不成立。",
+          "constraints": [
+            "两条都绿才算闸真的在"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "已知副作用全部找不到时判红并要求人工重锚，不得为让门禁变绿而删除判据。",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "id": "ADR-0127",
+      "title": "ADR-0127 · 启动健康上报必须确认送达，不能赌\"路由已就绪\"",
+      "status": "accepted（2026-09-18）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "渲染器的启动健康上报必须确认送达：postRendererBootReport 拿不到 2xx 就退避重试（40 × 500ms，落在宿主 30s 判定窗口内），不得只发一次。",
+          "constraints": [
+            "宿主判定逻辑（DesktopRendererHealthGate.commitIfEligible 的三条件）一行不得改动",
+            "重试上限必须小于宿主超时窗口，避免上报成功落在判定之后",
+            "补丁必须幂等且可回滚：锚点唯一才落笔、node --check 把关、失败自动回滚"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "本补丁登记在清单 §A（宿主壳层）并在 dsh-patches/boot-health-retry/ 提供 apply-fixes.sh；不得放进 packaging/patches/nm/（NM 目标空间是 app node_modules，lib/ 不在其中）。",
+          "constraints": [
+            "packaging/patches/nm/ 的目标一律位于 app node_modules 之下",
+            "宿主壳层补丁的长期承载者是 vendor LUTE 源码提交；装配期重放属过渡态且必须标注残差"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "同类事故的诊断必须先排除「进程是否真在忙」：用 /usr/bin/sample 取原生栈判定主线程状态，再谈 JS 层假设（JIT/服务注入/主线程阻塞）。",
+          "constraints": [
+            "禁止把采样栈里出现的 V8 符号（CompilationDependencies / String::NewFromUtf8 / StackTrace）直接读作病因",
+            "「加载慢」类结论必须同时给出进程 CPU 占用与主线程栈位置两项读数"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -102,10 +102,19 @@ const fail = (layer, msg) => failures.push(`[${layer}] ${msg}`)
 let checks = 0
 const ok = () => { checks++ }
 
-/** 把 agent.cordis.yml 里 persona 行的字面块标量体还原成原文（去掉统一缩进）。 */
+/**
+ * 把 agent.cordis.yml 里 persona 行的字面块标量体还原成原文（去掉统一缩进）。
+ *
+ * 键名两种都认：`prefix`（2.0.10 起 `@deepseek-ai/dsh-persona` 的正式键，**required**）
+ * 与 `text`（2.0.5 及以前的旧键，上游已改名——继续写 `text:` 会让**整棵 preset 树**
+ * 载入失败，会话里发消息后模型完全无响应）。按结构取块而不是钉死键名，上游再改名
+ * 也不会把本校验器变成假红。
+ */
 function extractPersonaText(composition) {
   const lines = composition.split('\n')
-  const start = lines.findIndex((l) => l === '    text: |-')
+  const personaAt = lines.findIndex((l) => l === "  name: '@deepseek-ai/dsh-persona'")
+  const start = lines.findIndex((l, i) =>
+    (l === '    prefix: |-' || l === '    text: |-') && (personaAt < 0 || i > personaAt))
   if (start < 0) return null
   const out = []
   for (let i = start + 1; i < lines.length; i++) {
@@ -254,7 +263,7 @@ function main() {
     // ── L2 全文归档 / persona 摘要 ──
     const persona = extractPersonaText(composition)
     if (persona === null) {
-      fail('L2', `${dirId}: 找不到 persona 字面块（    text: |-）`)
+      fail('L2', `${dirId}: 找不到 persona 字面块（    prefix: |- / text: |-）`)
     } else {
       const card = cardText.replace(/\s+$/, '')
       if (persona.includes(card)) fail('L2', `${dirId}: 完整岗位卡不应常驻 persona，应归档在 manifest.material.role_card`)

@@ -17,9 +17,13 @@
  *   M3 截断成开场白必须判红；
  *   M4/M5/M6 源与副本**一起**改：同源成立、但派活表/三无条文/运行时占位符缺项仍要判红
  *      —— 这一组证明 6b–6d 不是 6a 的附庸（只比字节的话，两边一起删就一致了）；
- *   M7 锚点被改坏必须响亮失败，而不是退化成「无发现」（空转守卫）；
+ *   M7 抽不到正文必须响亮失败，而不是退化成「无发现」（空转守卫）：内联标量、以及
+ *      config 下有两个块标量（prefix + suffix）都必须点名，第二种猜错键会把人格写进 suffix；
  *   M8 SOUL.md 不存在必须判红；
- *   M9 SOUL.md 正文为空：渲染器必须拒绝产出空人格，门禁必须点名。
+ *   M9 SOUL.md 正文为空：渲染器必须拒绝产出空人格，门禁必须点名；
+ *   M11 键名不是判据：键名换成 `preamble` 后必须照读照写、且不得擅自改回 `prefix`
+ *      —— 2026-09-17 上游把 `text` 改成 `prefix` 时，正是锚点把键名钉成了字面量而空转；
+ *   M12 块标量标记（`|` / `|-` / `|+`）是格式字节，不是事实：三种都要能读出同一份正文。
  *
  * ## 射程
  *
@@ -39,7 +43,7 @@ const PKG = join(HERE, '..', '..', 'packages', 'capabilities', 'dsh-overseas-ski
 const syncUrl = pathToFileURL(join(PKG, 'scripts', 'sync-fullstack-persona.mjs')).href
 const gateUrl = pathToFileURL(join(PKG, 'scripts', 'verify-agent-fullstack.mjs')).href
 const contractUrl = pathToFileURL(join(PKG, 'scripts', 'fullstack-contract.mjs')).href
-const { renderPersonaText, loadSoulBody, extractPersonaBody } = await import(syncUrl)
+const { renderPersonaText, loadSoulBody, extractPersonaBody, replacePersonaBody } = await import(syncUrl)
 const { checkAgentFullstack, NODE_IDS } = await import(gateUrl)
 const { auditFullstackCatalog } = await import(contractUrl)
 
@@ -61,18 +65,36 @@ function soulFileText(body) {
   return `<!-- 注释块：不进人格。 -->\n\n${body}\n`
 }
 
+/**
+ * persona 行的形状变体。**形状与内容正交**：内容由 `personaBody` 决定，这里只改结构。
+ *
+ *   default   现状形状（与 `scripts/role-presets/generate.mjs` 产出、live 文件一致）
+ *   renamed   键名换成 `preamble`：键名不是判据，必须照读照写（M11）
+ *   clip      块标量标记从 `|-` 换成 `|`：标记是格式字节，不是事实（M12）
+ *   inline    config 下没有块标量：抽不到就必须响亮失败，不能退化成「正文是空的」
+ *   ambiguous prefix 与 suffix 都是块标量：必须拒绝猜测（猜错会把人格写进 suffix）
+ */
+function personaRow(variant, rendered) {
+  const rows = {
+    default: `    prefix: |-\n${rendered}`,
+    renamed: `    preamble: |-\n${rendered}`,
+    clip: `    prefix: |\n${rendered}`,
+    inline: '    prefix: "开场白：人格写成了内联标量"',
+    ambiguous: `    prefix: |-\n${rendered}    suffix: |-\n      （suffix 也写成了块标量）`,
+  }
+  return `- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n${rows[variant]}\n`
+}
+
 /** 造一份最小 preset 副本：身份文件 + 只有 persona 行与 agent-instructions 行的组合文件。 */
-function writeFixture(root, { soulBody, personaBody, soulText, breakAnchor = false } = {}) {
+function writeFixture(root, { soulBody, personaBody, soulText, variant = 'default' } = {}) {
   mkdirSync(root, { recursive: true })
   // 组合文件里的正文与 SOUL.md 的正文默认同源；要造「不同源」就把 personaBody 单独给出来。
   const body = personaBody ?? soulBody ?? REAL_BODY
   if (soulText !== undefined) writeFileSync(join(root, 'SOUL.md'), soulText)
   else if (soulBody !== undefined) writeFileSync(join(root, 'SOUL.md'), soulFileText(soulBody))
   writeFileSync(join(root, 'preset.yml'), 'name: \'三无 · Agent全栈专家\'\ndescription: \'最小 fixture：只用于人格层判据的反向自测，其余五层由别的自测守着\'\norder: 5\n')
-  const head = breakAnchor
-    ? "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: |\n"
-    : "- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    text: |-\n"
-  const yml = `${head}${renderPersonaText(body)}\n- id: agent-instructions\n  name: '@deepseek-ai/dsh-agent-instructions'\n  config:\n    maxBytes: 65536\n`
+  const yml = personaRow(variant, renderPersonaText(body))
+    + "- id: agent-instructions\n  name: '@deepseek-ai/dsh-agent-instructions'\n  config:\n    maxBytes: 65536\n"
   writeFileSync(join(root, 'agent.cordis.yml'), yml)
   return root
 }
@@ -154,10 +176,38 @@ test('M6 源与副本一起吃掉 {{cwd}}：运行时占位符缺失要判红', 
   assert.ok(has(problems, '丢了运行时占位符') && has(problems, '{{cwd}}'), `必须点名缺哪个占位符，实得：\n${problems.join('\n')}`)
 })
 
-test('M7 锚点被改坏必须响亮失败，而不是退化成「无发现」', () => {
-  const root = writeFixture(makeRoot(), { soulBody: REAL_BODY, breakAnchor: true })
+test('M7 抽不到正文必须响亮失败，而不是退化成「无发现」（空转守卫）', () => {
+  // 两种形状都要响亮失败，且报错里必须带上原因 —— 只说「空转」会让人从头勘查一遍。
+  for (const [variant, needle] of [['inline', 'no-block-scalar'], ['ambiguous', 'multi-block-scalar']]) {
+    const root = writeFixture(makeRoot(), { soulBody: REAL_BODY, variant })
+    const problems = personaProblems(root)
+    assert.ok(
+      has(problems, '抽不到 persona 行的正文') && has(problems, needle),
+      `${variant}：形状变了必须点名空转并带上原因（${needle}），实得：\n${problems.join('\n')}`,
+    )
+  }
+})
+
+test('M11 键名不是判据：换键名后必须照读照写，且不得擅自改回 prefix', () => {
+  // 键名的家是插件自己的 schema（配置镜按它判），不是本同步器的正则：
+  // 2026-09-17 上游把 `text` 改成 `prefix` 时，正是锚点把键名钉成字面量而整条判据空转。
+  const root = writeFixture(makeRoot(), { soulBody: REAL_BODY, variant: 'renamed' })
   const problems = personaProblems(root)
-  assert.ok(has(problems, '抽不到 persona 行的正文'), `锚点坏了必须点名空转，实得：\n${problems.join('\n')}`)
+  assert.deepEqual(problems, [], `换键名本身不该判红（那是配置镜的射程），实得：\n${problems.join('\n')}`)
+
+  const yml = readFileSync(join(root, 'agent.cordis.yml'), 'utf8')
+  assert.equal(extractPersonaBody(yml), REAL_BODY, 'M11 的前提：换键名后还能读出正文')
+  const next = replacePersonaBody(yml, REAL_BODY)
+  assert.equal(next, yml, '同一份正文写回的字节必须与原文相同（否则每次同步都产生幽灵 diff）')
+  assert.match(next, /^ {4}preamble: \|-$/m, '写回必须保留原键名')
+  assert.ok(!/^ {4}prefix:/m.test(next), '写回不得擅自把键名改回 prefix')
+})
+
+test('M12 块标量标记是格式字节、不是事实：`|` 与 `|-` 都要能读出同一份正文', () => {
+  const root = writeFixture(makeRoot(), { soulBody: REAL_BODY, variant: 'clip' })
+  const problems = personaProblems(root)
+  assert.deepEqual(problems, [], `标记是「|」（clip）不该判红 —— 钉标记字符与钉键名是同一类缺陷，实得：\n${problems.join('\n')}`)
+  assert.equal(extractPersonaBody(readFileSync(join(root, 'agent.cordis.yml'), 'utf8')), REAL_BODY)
 })
 
 test('M8 SOUL.md 不存在必须判红', () => {

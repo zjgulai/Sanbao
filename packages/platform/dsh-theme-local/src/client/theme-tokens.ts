@@ -16,11 +16,19 @@ interface Palette {
   /**
    * Scales neutral blend amounts for this scheme's contrast setting.
    * k(50) = 1, so the preset baseline stays byte-identical (frozen by the
-   * golden assertions in theme-tokens.test.ts). Only neutral grays ride on
-   * k — borders, raised surfaces, secondary labels, hover/active veils;
-   * accent-derived blends keep their tuned ratios at every contrast.
+   * golden assertions in theme-tokens.test.ts). Raised surfaces, secondary
+   * labels and hover/active veils ride on k; accent-derived blends keep their
+   * tuned ratios at every contrast, and the four border levels ride on the
+   * narrower `borderFactor` instead — see its note.
    */
   scale: (amount: number) => number;
+  /**
+   * Contrast factor for the border levels only, deliberately narrower than
+   * `scale`'s 0.6–1.4 band: a border is structure, not content, so the slider
+   * must not be able to turn a hairline into a drawn box. 0.75 at contrast 0,
+   * 1.25 at 100, exactly 1 at the 50 baseline.
+   */
+  borderFactor: number;
 }
 
 export const UI_FONT_STACKS: Record<UiFontId, string> = {
@@ -137,6 +145,7 @@ function palette(
   // 0.6 at contrast 0, 1.4 at contrast 100, exactly 1 at the 50 baseline —
   // see Palette.scale for what does and does not ride on this factor.
   const factor = 0.6 + 0.8 * (settings[`${prefix}Contrast`] / 100);
+  const borderFactor = 0.75 + 0.5 * (settings[`${prefix}Contrast`] / 100);
   return {
     accent: settings[`${prefix}Accent`],
     background: settings[`${prefix}Background`],
@@ -145,11 +154,46 @@ function palette(
     inlineCode: settings[`${prefix}InlineCode`],
     sidebar: settings[`${prefix}Sidebar`],
     scale: (amount: number) => Math.round(amount * factor),
+    borderFactor,
   };
 }
 
 function mix(first: string, amount: number, second: string): string {
   return `color-mix(in oklch, ${first} ${amount}%, ${second})`;
+}
+
+/**
+ * The four border levels exactly as Harness ships them, verbatim from
+ * `@deepseek-ai/dsh-client-ui-theme` (`--dsw-alias-border-l{1..4}` on `body`
+ * and `body[data-ds-dark-theme]`). Kept as hex so the next edit has to argue
+ * with the source rather than with a hand-typed percentage.
+ */
+const HARNESS_BORDER_OVERLAYS = {
+  light: ["#0000000a", "#0000001a", "#0000001f", "#00000029"],
+  dark: ["#ffffff0f", "#ffffff1f", "#ffffff29", "#ffffff33"],
+} as const;
+
+/**
+ * A border level as a **translucent overlay** at `factor` times the Harness
+ * baseline alpha.
+ *
+ * Overlay rather than an opaque blend is the point, and it was measured: an
+ * opaque `color-mix(in oklch, #FFF n%, <background>)` moves perceptual
+ * lightness n% of the way to white, which lands 1.18–1.59x heavier than
+ * Harness intends — worst on l1, which carries 60% of the app's borders
+ * (172 of 285 in the audited window). Alpha also keeps a stroke correct on
+ * layer-1/layer-2 surfaces instead of only on the base background, which is
+ * why every border token in the systems surveyed is an alpha step.
+ */
+function borderOverlay(
+  mode: "light" | "dark",
+  level: 0 | 1 | 2 | 3,
+  factor: number,
+): string {
+  const rgb = mode === "light" ? "0 0 0" : "255 255 255";
+  const base = parseInt(HARNESS_BORDER_OVERLAYS[mode][level].slice(7, 9), 16) / 255;
+  const alpha = Math.round(base * factor * 1000) / 1000;
+  return `rgb(${rgb} / ${alpha})`;
 }
 
 export function buildThemeTokenOverrides(
@@ -160,6 +204,10 @@ export function buildThemeTokenOverrides(
   const pair = (getValue: (colors: Palette) => string) => ({
     light: getValue(light),
     dark: getValue(dark),
+  });
+  const border = (level: 0 | 1 | 2 | 3) => ({
+    light: borderOverlay("light", level, light.borderFactor),
+    dark: borderOverlay("dark", level, dark.borderFactor),
   });
 
   return {
@@ -182,22 +230,10 @@ export function buildThemeTokenOverrides(
       light: mix(light.background, light.scale(10), "#FFFFFF"),
       dark: mix("#FFFFFF", dark.scale(12), dark.surface),
     },
-    "--dsw-alias-border-l1": {
-      light: mix("#000000", light.scale(8), light.background),
-      dark: mix("#FFFFFF", dark.scale(10), dark.background),
-    },
-    "--dsw-alias-border-l2": {
-      light: mix("#000000", light.scale(12), light.background),
-      dark: mix("#FFFFFF", dark.scale(16), dark.background),
-    },
-    "--dsw-alias-border-l3": {
-      light: mix("#000000", light.scale(18), light.background),
-      dark: mix("#FFFFFF", dark.scale(22), dark.background),
-    },
-    "--dsw-alias-border-l4": {
-      light: mix("#000000", light.scale(26), light.background),
-      dark: mix("#FFFFFF", dark.scale(30), dark.background),
-    },
+    "--dsw-alias-border-l1": border(0),
+    "--dsw-alias-border-l2": border(1),
+    "--dsw-alias-border-l3": border(2),
+    "--dsw-alias-border-l4": border(3),
     "--dsw-alias-brand-primary": pair((colors) => colors.accent),
     "--dsw-alias-button-info-fill": pair((colors) => colors.accent),
     "--dsw-alias-button-info-hover": {

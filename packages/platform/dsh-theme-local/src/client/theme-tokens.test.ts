@@ -164,21 +164,23 @@ describe("contrast scaling", () => {
       light: "color-mix(in oklch, #F6F7F4 10%, #FFFFFF)",
       dark: "color-mix(in oklch, #FFFFFF 12%, #202420)",
     });
+    // Borders are translucent overlays at the Harness baseline alpha
+    // (#0000000a… / #ffffff0f…), not opaque background blends.
     expect(tokens["--dsw-alias-border-l1"]).toEqual({
-      light: "color-mix(in oklch, #000000 8%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 10%, #171A17)",
+      light: "rgb(0 0 0 / 0.039)",
+      dark: "rgb(255 255 255 / 0.059)",
     });
     expect(tokens["--dsw-alias-border-l2"]).toEqual({
-      light: "color-mix(in oklch, #000000 12%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 16%, #171A17)",
+      light: "rgb(0 0 0 / 0.102)",
+      dark: "rgb(255 255 255 / 0.122)",
     });
     expect(tokens["--dsw-alias-border-l3"]).toEqual({
-      light: "color-mix(in oklch, #000000 18%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 22%, #171A17)",
+      light: "rgb(0 0 0 / 0.122)",
+      dark: "rgb(255 255 255 / 0.161)",
     });
     expect(tokens["--dsw-alias-border-l4"]).toEqual({
-      light: "color-mix(in oklch, #000000 26%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 30%, #171A17)",
+      light: "rgb(0 0 0 / 0.161)",
+      dark: "rgb(255 255 255 / 0.2)",
     });
     expect(tokens["--dsw-alias-label-secondary"]).toEqual({
       light: "color-mix(in oklch, #1E221F 62%, #F6F7F4)",
@@ -224,10 +226,11 @@ describe("contrast scaling", () => {
       lightContrast: 100,
     });
 
-    // k(100) = 1.4: 8 * 1.4 = 11.2 -> 11, 62 * 1.4 = 86.8 -> 87
+    // k(100) = 1.4: 62 * 1.4 = 86.8 -> 87. Borders ride their own narrower
+    // band, k(100) = 1.25: 0.039 * 1.25 = 0.049.
     expect(tokens["--dsw-alias-border-l1"]).toEqual({
-      light: "color-mix(in oklch, #000000 11%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 10%, #171A17)",
+      light: "rgb(0 0 0 / 0.049)",
+      dark: "rgb(255 255 255 / 0.059)",
     });
     expect(tokens["--dsw-alias-label-secondary"]).toEqual({
       light: "color-mix(in oklch, #1E221F 87%, #F6F7F4)",
@@ -250,14 +253,55 @@ describe("contrast scaling", () => {
       darkContrast: 0,
     });
 
-    // k(0) = 0.6: 12 * 0.6 = 7.2 -> 7, 6 * 0.6 = 3.6 -> 4
+    // k(0) = 0.6: 6 * 0.6 = 3.6 -> 4. Borders: k(0) = 0.75,
+    // 0.122 * 0.75 = 0.091.
     expect(tokens["--dsw-alias-border-l2"]).toEqual({
-      light: "color-mix(in oklch, #000000 12%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 10%, #171A17)",
+      light: "rgb(0 0 0 / 0.102)",
+      dark: "rgb(255 255 255 / 0.091)",
     });
     expect(tokens["--dsw-alias-bg-layer-2"]).toEqual({
       light: "color-mix(in oklch, #F6F7F4 30%, #FFFFFF)",
       dark: "color-mix(in oklch, #FFFFFF 4%, #202420)",
     });
+  });
+
+  /**
+   * The property the goldens above cannot state: whatever the contrast slider
+   * does, a border stays a **translucent overlay** and never turns into a drawn
+   * box. Without this, a future edit can silently restore an opaque blend and
+   * every exact-value assertion still looks reasonable.
+   */
+  it("keeps every border level a translucent overlay across the whole contrast range", () => {
+    const levels = [1, 2, 3, 4] as const;
+    const alphaOf = (value: string, label: string) => {
+      const match = /^rgb\((?:0 0 0|255 255 255) \/ (0\.\d+)\)$/.exec(value);
+      expect(match, `${label} must be an alpha overlay, got ${value}`).not.toBeNull();
+      return Number(match![1]);
+    };
+
+    for (const contrast of [0, 25, 50, 75, 100]) {
+      const tokens = buildThemeTokenOverrides({
+        ...DEFAULT_THEME_STUDIO_SETTINGS,
+        lightContrast: contrast,
+        darkContrast: contrast,
+      });
+      for (const mode of ["light", "dark"] as const) {
+        const alphas = levels.map((level) =>
+          alphaOf(
+            tokens[`--dsw-alias-border-l${level}`][mode],
+            `${mode} l${level} at contrast ${contrast}`,
+          ),
+        );
+        // Levels ascend, and the strongest one still stops at 0.25 — the old
+        // opaque oklch blend reached an equivalent ~0.42 at contrast 100, which
+        // is where a separator starts reading as structure. See the appearance
+        // revamp note for the measured 1.18–1.59x drift this replaced.
+        expect(alphas).toEqual([...alphas].sort((a, b) => a - b));
+        for (const alpha of alphas) {
+          expect(alpha).toBeGreaterThan(0);
+          expect(alpha).toBeLessThanOrEqual(0.25);
+        }
+      }
+    }
   });
 });

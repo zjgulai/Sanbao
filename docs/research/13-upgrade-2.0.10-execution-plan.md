@@ -314,3 +314,105 @@ T-11 装的是 payload；若先切换后 commit，装机 manifest 记 SOURCE_DIR
 
 ### r6→r7 与 DMG 记录（20:30–20:40）
 r6 中止于机器路径守卫（overseas 两 manifest 经 rsync 进 live→随内嵌 profile 入出货树）→ 源头占位化（__SKILL_INTAKE_SOURCE__ / __DSH_HOME__，引号损伤两轮后按三败止损行级重建）、amend 进释放提交 605a159。r7 全绿：SMOKE PASSED、14 产物 2.6G、SOURCE_DIRTY=0、出口 pyc 全域 0（含 profile/skills tar 解包树）、manifest/shasum/入口全在位、Info.plist=2.0.10-lute.2.5.0。标题栏残面=2 处死 CSS 类选择器（JS 组件零命中、无节点可挂），登记美容残留下轮清。DMG 652MB 落 release/2.5.0（uchg 锁定+仓库外归档）。**待办：T-11（pristine userData 快照→DMG 换装→验收 gate:full 90/90→OCR 标题栏现场证据）→ tag v2.5.0 → push 双远端 → GH Release。**
+
+## 17. 上游改名那条事实的三个消费面：补镜子 + 修工具（2026-09-17 23:00–23:40）
+
+### 触发形状（用户原话的归纳）
+三条缺陷是同一个形状：**基座升级改了一条事实，而我们的产物/工具里还钉着旧值，且没有任何判据会因此变红**。
+所以这一步不是再补三个补丁，而是补那面**会自己变红**的镜子。
+
+### 事实：`@deepseek-ai/dsh-persona` 的配置键 `text` → `prefix`（必填）
+插件 `Config` 实测（`0.1.5-rc.2` app-cache 副本）：`Config({text:'…'})` → `$.prefix missing required
+value`；`Config({prefix:'…'})` → 接受。后果不是「人格没生效」而是**整棵 preset 树载入失败**。
+
+### 产物面：新建配置镜 `gate:preset-config-schema`
+- 判据：按**插件自己的 `Config`** 判每一行 config，三层（①`Config(obj)` 同 schema 同调用点；
+  ②**键集判据**——实测 schemastery **不拒未知键**（`{prefix, bogus}` 静默通过），只调一次会漏
+  「旧键还在、新键有默认值」；③ 取不到 schema/解析不了 → `unverifiable` **单独计数**）。
+- 四态分母守恒：`discovered = ok + failed + unverifiable + notApplicable`。
+- **红（设计内）**：`node scripts/gates/preset-config-schema.mjs` → `discovered=3255 / checked=1262
+  （ok=1210 failed=52）/ unverifiable=213 / notApplicable=1780`。52 条**全部落在待发布出货载荷**：
+  `staging/2.5.0/payload/skills-presets.tar.gz → presets/agt-003/agent.cordis.yml:25` 等仍为 `text: |-`。
+  live 根 53 个预设 0 违法（迁移已完成）——**「live 修好了」≠「要发出去的东西修好了」**。
+- 未核实面点名：`@deepseek-ai/dsh-plan-mode`×105、`dsh-skill-subset`×103 未导出 `Config`；`!!js`×5。
+- 接线：`scripts/gate.mjs` + `packaging/assemble.sh`（**在 `tar` 之前**判出货副本）。
+- 反向自测 `preset-config-schema-selftest` **11/11**。
+
+### 工具面①：`agent-fullstack` 判据空转（已修，红转绿）
+`sync-fullstack-persona.mjs` 的锚点正则里写死 `    text: |-` → 键名一改锚点**永久失配**，人格层报
+「锚点形状变了，本条判据已空转」（红得对，但要人工消）。改为**认结构不认键名**：
+`- id: persona` → `  name: '<pkg>'` → `  config:` → 恰好**一个字面块标量键**（键名任意、写回原样保留；
+0 或 ≥2 个响亮失败——猜错键会把人格写进 `suffix`，两边不报错、只有行为变了）。
+读数：`node …/verify-agent-fullstack.mjs` → **问题 0**，`人格: SOUL 4224 字符 | persona 行 4224 字符 |
+同源 是`；`agent-fullstack-selftest` **22/22**（新增 M11 键名换成 `preamble` 必须照读照写且不得改回、
+M12 `|`/`|-` 是格式字节不是事实）。**关键负结果：键名无法从 `Config.dict` 推导**——四个键全标
+`required:true`，无区分度（所以"自动发现正文键"这条路不可实现，只认结构）。
+
+### 工具面②③：两个 legacy 生成器仍写旧键（已修）
+`gen_bmg_preset.mjs:52` / `gen_preset.mjs:45` 写 `text: >-` → 重跑会把已修好的预设再写坏。已改
+`prefix:`。**残留待决**：两者的落点 `~/.dsh/.agent-presets/brand-marketing-growth/` 与 5 个
+`overseas-*` **都不在 live 预设根里**（live = `agent-fullstack` + `agt-001..050` + `bobo-cto` +
+`lute-cordis`），却仍是 `maintenance-sop.md`/`iteration-runbook.md` 写着的人工入口（P-09 形态）。
+`backup/intake-2026-09/presets-before-p3/` 的 50 份历史快照仍是 `text: |-`：历史有意不改。
+
+### 门禁读数
+`pnpm run gate`：**84/88 → 85/88**。`agent-fullstack` 与 `agent-fullstack-selftest` 由红转绿；
+**唯一红 = `preset-config-schema`（出货载荷 52 行）**——这是设计内的红，**只能由 r8 重切清除，不许豁免**。
+
+### 本轮决定（用户 2026-09-17）
+1. **r8 装配成功并验收后退役 `packaging/staging/2.5.0`**（否则配置镜对它永久红）。
+2. 顺手修 `agent-fullstack` 空转锚点 —— **已完成**（见上）。
+3. 另两面镜子（资源路径镜升级射程守基座布局类、格式镜注册表守扩展点类）排在 **r8 验收之后**，
+   作为 r8 之后的第一批机制工作。
+
+### 对 r8 的输入
+- r8 必须由**已修好的** `scripts/role-presets/generate.mjs`（写 `prefix:`）重生 53 预设，
+  否则配置镜会在装配链上当场红。
+- 装配链新增一道门：`assemble.sh` 在 `tar` 之前判出货副本（坏字节在成为载荷之前就红）。
+- 留痕：[ADR-0116](../adr/ADR-0116.md)、[Note](../notes/implemented/contract/2026-09-17-preset-config-schema-mirror-and-structural-anchor.md)、总账 P-39。
+
+## 18. 品牌锚漂移与「镜子」落地（2026-09-18）
+
+用户报「新会话对话框上方还有『探索未至之境』」。查下去不是一处文案没改，而是 **profile 插件面上
+一条判据都没有**（打包层有 `verify-patches` 逐锚核对，插件层零核对）。
+
+### 根因（一手读数）
+2.0.10 的 `HeroShell.module.css` **没有 `headlineText`**（标题变成 `titleGroup` 里一个**无类名**的
+span，`headline` 由 grid 改 flex）→ 插件的隐藏规则根本没生成；活应用
+`data-dsh-root-brand-anchors = "degraded:heroHeadlineText,statsLineRoot"`，Console 一直在 warn，
+**没有任何判据在读它**。同一根因带走统计条折叠（`StatsLine.module.css` 整个模块不存在，上游换成
+`StatsPills.module.css`）。并列发现：品牌实况探针在新基座上**第一步就 exit 3**（按旧结构找已退役的
+`StatsLine`），插件的真实产物接缝 5 条用例被 `skipIf` 整段跳过（路径常量钉在 2.0.5 的
+`app.asar.unpacked`，2.0.10 是 no-ASAR）。
+
+### 已落地
+- **声明成为唯一家**：包根 `packages/platform/dsh-root-brand-local/ui-anchors.json`，插件 import 它、
+  门禁读它；`ANCHOR_KEYS` 与清单 id **双向**断言。
+- **标题按关系定位**：`hero-title.ts`（角标父容器里唯一的有文字叶子兄弟）；0 或 ≥2 候选**不猜**，
+  报 `degraded:<code>`；`idle`（hero 未挂载）不算缺陷。
+- **新门禁**：`plugin-ui-anchor-drift` + `-selftest`（见 [ADR-0118](../adr/ADR-0118.md)）。
+- **接缝改硬前置** + 文案一致性断言；**实况探针重写并进 SOP §0**。
+- **staging 构建树退役**：`packaging/staging/{2.4.1,2.5.0}` 删除（5.1G → 164K），
+  `.freeze-*` 指纹与装配日志保留（被 ADR-0073 引用）。
+
+### 门禁读数
+`pnpm run gate`：**85/88 → 87/90，失败 0，退出码 0**（跳过 3 = 射程为空的三条，如实报 skip）。
+`plugin-ui-anchor-drift` 先红后绿：`[expected=8, checked=4, failed=4]` → `[expected=1, checked=1, failed=0]`。
+插件测试 `22 passed / 0 skipped`（原 9/5）；实况探针 `21/21 PASS`。
+
+### 未做（前置不成立或需单独决定）
+1. **`packaging/release/` 历史版本目录一个未删**：计划的前置是「先核对仓库外归档持有同一份 DMG」，
+   核对结果**否定**——`~/project/magpie-horch-backups/` 里只有上游基座 `DSH.Desktop-2.0.10-universal.dmg`，
+   没有我们的发布 DMG。要清就得先给发布产物一个真实的仓库外归档家。
+2. **包测试接线**：`pnpm --filter dsh-root-brand test` 不在 `pnpm run gate` 与 CI 射程内——门禁守住的是
+   锚的解析，行为面靠实况验收。接线会改变「门禁对所有包意味着什么」，单独决策。
+3. **两个 legacy 生成器（`gen_bmg_preset.mjs` / `gen_preset.mjs`）不退役**：复核后判定它们不是死代码，
+   而是 `dsh-overseas-skills` 文档里写明的**预设复现能力**；只是其落点
+   （`~/.dsh/.agent-presets/brand-marketing-growth/` 与 5 个 `overseas-*`）当前不在 live 根里。
+   删掉等于删能力，需要单独决定。
+4. **e2e 未做**：未重装 DMG、未在装机应用上复跑；本轮活体读数取自**装机 app 的官方产物** +
+  profile 装载点的插件产物。
+
+### 留痕
+[ADR-0118](../adr/ADR-0118.md)、
+[Note](../notes/implemented/contract/2026-09-18-plugin-ui-anchor-mirror-and-hero-title-relation.md)、总账 P-40。

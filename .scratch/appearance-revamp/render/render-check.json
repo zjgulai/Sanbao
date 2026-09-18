@@ -1,0 +1,146 @@
+{
+  "instrument": "playwright chrome",
+  "scope": "render-level（真实 apply/组件/CSS + 官方主题画布），非 live GUI",
+  "results": [
+    {
+      "name": "A1 两张卡（主题 / 偏好）",
+      "ok": true
+    },
+    {
+      "name": "A2 模式三卡是真单选组",
+      "ok": true,
+      "detail": "radiogroup=1"
+    },
+    {
+      "name": "A3 预设网格 15 张卡",
+      "ok": true
+    },
+    {
+      "name": "A4 强调色是卡级单组 8 对（不随变体重复）",
+      "ok": true,
+      "detail": "radios=8 groups=1"
+    },
+    {
+      "name": "A5 深浅双区堆叠（各 1 组字段）",
+      "ok": true
+    },
+    {
+      "name": "A6 对比度滑杆存在",
+      "ok": true
+    },
+    {
+      "name": "A7 高级区默认折叠",
+      "ok": true
+    },
+    {
+      "name": "A8 减弱动效三态 + 字体平滑开关",
+      "ok": true
+    },
+    {
+      "name": "A9 无 aria-pressed 残留",
+      "ok": true
+    },
+    {
+      "name": "B1 模式单选调用 ctx.theme.setTheme",
+      "ok": true
+    },
+    {
+      "name": "C1 选预设写入存储（含 contrast=50 基线）",
+      "ok": true,
+      "detail": "proof → lightAccent=#3D755D"
+    },
+    {
+      "name": "C2 预设卡显示的色值 == 落盘的强调色",
+      "ok": true,
+      "detail": "card=#3D755D stored=#3D755D"
+    },
+    {
+      "name": "C3 自定义色值后出现「自定义」卡",
+      "ok": true
+    },
+    {
+      "name": "D1 色卡写入双变体强调色",
+      "ok": true
+    },
+    {
+      "name": "D2 对比度 100 缩放中性混合（border-l1 8→11）",
+      "ok": true,
+      "detail": "light border-l1 8% → 11%"
+    },
+    {
+      "name": "D3 contrast 落盘",
+      "ok": true
+    },
+    {
+      "name": "D4 accent 派生不随对比度变化（bubble 仍 10%）",
+      "ok": true
+    },
+    {
+      "name": "D5 回到 50 = 基线恒等（border-l1 11→8）",
+      "ok": true
+    },
+    {
+      "name": "E1 减弱动效=开 → body 属性 + prefs 落盘",
+      "ok": true
+    },
+    {
+      "name": "E2 减弱动效=关 → 属性移除",
+      "ok": true
+    },
+    {
+      "name": "E3 字体平滑 → body 属性 + prefs 落盘",
+      "ok": true
+    },
+    {
+      "name": "E4 偏好门控样式表已注入",
+      "ok": true
+    },
+    {
+      "name": "F1 复制产出可解析的主题串",
+      "ok": true,
+      "detail": "clipboard len=418"
+    },
+    {
+      "name": "F2 分享串不含 prefs",
+      "ok": true
+    },
+    {
+      "name": "F3 分享串含 contrast 字段",
+      "ok": true
+    },
+    {
+      "name": "F4 导入应用到存储",
+      "ok": true,
+      "detail": "stored=#7A2F5B"
+    },
+    {
+      "name": "F5 坏串报错且不改主题",
+      "ok": true
+    },
+    {
+      "name": "G1 高级区展开出现 3 行次级色",
+      "ok": true
+    },
+    {
+      "name": "H1 无横向溢出",
+      "ok": true,
+      "detail": "w=720 "
+    },
+    {
+      "name": "H2 无页面错误",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "H3 组内相邻行无重叠",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "H4 交互目标不小于 20px",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "failed": []
+}

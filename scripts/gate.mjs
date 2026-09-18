@@ -42,6 +42,7 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
+import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
 import { identical as snapshotIdentical, snapshotRepo } from './lib/repo-snapshot.mjs'
 import {
   WORKFLOW_CHECK_AUTHORITY,
@@ -58,6 +59,13 @@ import {
 } from '../packages/capabilities/dsh-overseas-skills/scripts/fullstack-contract.mjs'
 import { checkThirdPartyIntake } from './gates/third-party-intake.mjs'
 import { checkImmutableSupplyChain } from './gates/immutable-supply-chain.mjs'
+import { auditSecurityContractMasterGate } from './gates/security-contract-master.mjs'
+import { checkObjectStoreHygiene, scanObjectStore } from './gates/object-store-hygiene.mjs'
+import {
+  LEDGER_REL_PATH,
+  checkAdrAgentRecords,
+  readBaselineLedger,
+} from './gates/adr-agent-records.mjs'
 import { checkThemeTokens } from './gates/theme-tokens.mjs'
 import { checkWorktableFence } from './gates/worktable-fence.mjs'
 import { checkNodeInterpreter } from './gates/node-interpreter.mjs'
@@ -83,6 +91,12 @@ import {
   SOP_REL_PATH as DMG_LAYOUT_SOP_PATH,
 } from './gates/dmg-layout.mjs'
 import { selectAnchorTargets } from './gates/patch-anchor-scope.mjs'
+import {
+  ANCHOR_MANIFEST_FILENAME,
+  extractModuleCss,
+  judgeDeclaredAnchors,
+  parseAnchorManifest,
+} from './gates/plugin-ui-anchor-drift.mjs'
 import { selectPublishTargets } from './gates/release-publish-scope.mjs'
 import {
   checkChangelogSections,
@@ -658,6 +672,86 @@ const CHECKS = [
       return runNodeTestFile(
         'scripts/gates/immutable-supply-chain.test.mjs',
         '不可变供应链门禁的反向自测失败',
+      )
+    },
+  },
+  {
+    name: 'security-contract-master',
+    remediation:
+      '排查安全契约主门禁：SEC-RT-001 ~ 009 及 003A 契约清单必须全量闭合，且源文件与测试文件可达（SEC-RT-010 / ADR-0120）',
+    run() {
+      const result = auditSecurityContractMasterGate({ repoRoot })
+      return {
+        status: result.passed ? 'pass' : 'fail',
+        expected: result.expected,
+        discovered: result.discovered,
+        checked: result.checked,
+        skipped: result.skipped,
+        failed: result.failed,
+        typedSkips: [],
+        reason: result.passed
+          ? 'SEC-RT-001 ~ 009 与 003A 全量安全契约注册闭合且文件与用例可达'
+          : result.violations.join('；'),
+        note: 'SEC-RT-010 security contract master gate',
+        violations: result.violations,
+      }
+    },
+  },
+  {
+    name: 'security-contract-master-selftest',
+    remediation:
+      '运行 node --test scripts/gates/security-contract-master.test.mjs；测试覆盖契约缺失、坏路径、缺少注入点及非阻塞项突变拦截（SEC-RT-010）',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/security-contract-master.test.mjs',
+        '安全契约总门禁的反向自测失败',
+      )
+    },
+  },
+  {
+    name: 'object-store-hygiene',
+    remediation:
+      '按报错处置那个超限对象：**先确认盘外有没有逐位相同的副本**（磁盘副本 `shasum -a 256` vs `git cat-file blob <sha> | shasum -a 256`），再决定动作。被 ref 可达的要先改引用，不可达的 gc 即可回收；**定点移除按对象计**：`git show-index < <pack>.idx` 确认该 pack 内只有它，删 `.pack`/`.idx` 两个文件即可，不必 `gc --prune=now`——后者会与并发 `git add` 抢锁（新写的 loose 对象尚未进 index，会被当成不可达而删掉）。**删 ref 前先查有没有只存在于对象库的文件**：2026-09-18 那次就差点连带毁掉 packages/capabilities/dsh-overseas-skills/check-fragment.py（4156 B，磁盘没有、git 未跟踪、只在对象库里）。垃圾包 `tmp_pack_*` 直接 rm：`git gc` 因 2 周的 pruneExpire 删不掉它。防复发看 .gitignore 里 packaging/backup/ 的排除规则（SEC-RT-011 / ADR-0121）',
+    run() {
+      return checkObjectStoreHygiene(scanObjectStore({ repoRoot }))
+    },
+  },
+  {
+    name: 'object-store-hygiene-selftest',
+    remediation:
+      '跑 node --test scripts/gates/object-store-hygiene.test.mjs 看红在哪条：本项必须能说「不」——用**真实读数**当输入：6.8 GB 的凭据快照（ddab355b…）与 183 MB 的 Mach-O（5987db81…）必须判红，26.6 MB 的合法 cpython tgz（389e7de8…，被 main 与全部 tag 可达）必须放行（阈值取 50 MiB 的理由就在这条）；空扫描面、count-objects 取不到、垃圾包不为 0、总量超限都必须判红。恒真桩突变：把 maxObjectBytes 换成 Infinity 后 6.8 GB 必须漏过——否则拦住它的不是体积阈值（P-02 / P-03）',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/object-store-hygiene.test.mjs',
+        '对象库卫生门禁的反向自测失败',
+      )
+    },
+  },
+  {
+    name: 'adr-agent-records',
+    remediation:
+      '账本是**派生面**，源永远是 docs/adr/ADR-NNNN.md——不一致时不要手工改账本，重新生成：node scripts/gates/adr-agent-records.mjs --write。若红在「ADR 没有决策块」，就在该 ADR 的正文里补一节 `## 机器可读决策` + ```json 围栏（decisions 非空数组，每项含非空 id 与非空 text，可选 constraints）。若红在「新加进 legacyWithoutDecisions」，那是历史豁免，只减不增——不许把新编号塞进去，补决策块（ADR-0122）',
+    run() {
+      let ledger = null
+      const text = readIfExists(join(repoRoot, LEDGER_REL_PATH))
+      if (text !== '') {
+        try {
+          ledger = JSON.parse(text)
+        } catch {
+          ledger = null
+        }
+      }
+      return checkAdrAgentRecords({ repoRoot, ledger, baseline: readBaselineLedger(repoRoot) })
+    },
+  },
+  {
+    name: 'adr-agent-records-selftest',
+    remediation:
+      '跑 node --test scripts/gates/adr-agent-records.test.mjs 看红在哪条：本项必须能说「不」——射程为空、账本读不出来、新 ADR 无决策块、账本落后/超前于源、title·status·decisions 与源不一致、把新编号塞进 legacyWithoutDecisions、豁免里的幽灵编号，都必须判红；「只有标题没有围栏」「围栏没闭合」「decisions 是空数组」三种「看起来有块其实没有」的形态必须判为缺失（这三条正是任何粗糙实现会静默放过的）；豁免能变短（补块后自动移出）与生成器幂等必须成立（ADR-0122 / P-02 / P-15）',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/adr-agent-records.test.mjs',
+        'ADR 决策账本门禁的反向自测失败',
       )
     },
   },
@@ -1356,6 +1450,27 @@ const CHECKS = [
     },
   },
   {
+    name: 'plugin-ui-anchor-drift',
+    remediation:
+      '按报错改**声明或产物**那一侧，不要改判据：①点名某个 localName 在产物里不存在 → 上游改了名或搬走了元素，按新的局部名重锚 `ui-anchors.json`，或退役这条依赖并同时删掉插件里对应的规则；②报「前缀不唯一」→ 上游同时存在两个前缀，先人工确认哪个是真身再收窄断言，不要猜；③报「没有这个包 / 搬走了这个模块」→ 模块换了包，先在新包里找到同样的局部名再改 moduleId。⚠️ 三件不许做：①把声明删掉让本项变绿——2026-09-17 的缺陷正是「`headlineText` 在上游消失、插件照旧依赖它」，删声明等于把故障留给用户；②在 `ui-anchors.json` 里写插件代码用不到的名字（声明与实现必须同一个家）；③手抄一份类名表进判据——真值只能来自**产物字节**。反向自测：`node --test scripts/gates/plugin-ui-anchor-drift.test.mjs`',
+    run() {
+      // 量的是「声明（packages/<组>/<包>/ui-anchors.json）× 产物（装机 app ∪ 未打 tag 的 staging 树）」。
+      // 2026-09-17 实测：基座 2.0.10 去掉了 hero 的 `headlineText` 局部名（标题改成一个无类名的
+      // span），插件的隐藏规则因此根本没生成，装机应用的 `data-dsh-root-brand-anchors` 一直是
+      // `degraded:heroHeadlineText,statsLineRoot`，而**从装配到装机到验收没有任何判据会红**——
+      // 打包层的品牌重放有逐锚核对，profile 插件面却一条都没有。用户先看见的是「官方标题又出现了」。
+      return runPluginUiAnchorDriftCheck()
+    },
+  },
+  {
+    name: 'plugin-ui-anchor-drift-selftest',
+    remediation:
+      '跑 node --test scripts/gates/plugin-ui-anchor-drift.test.mjs 看红在哪条：①缺陷原文（2.0.10 去掉了 `headlineText`、`StatsLine.module.css` 整个模块消失）必须判红；②「上游改了名字」（解析出 0 个候选）与「根本没读到产物」（模块 id / 包 / CSS 常量读不出）必须报**不同的原因**，它们在读数上同形就等于把定位工作丢给下一个人；③前缀不唯一必须判红而不是挑一个；④清单结构错误（根不是对象、anchors 不是数组、字段缺失、id 重复）必须判红，不得被读成「没有锚」；⑤射程为空（没有产物、没有清单）必须报 skip 而不是通过；⑥恒真桩突变：把候选判定改成「恒返回一个」、把 skip 改成 pass，用例必须失效——测不出来的判据等于没有判据（P-02 / P-11）',
+    run() {
+      return runNodeTestFile('scripts/gates/plugin-ui-anchor-drift.test.mjs', '插件官方锚漂移判据的反向自测失败')
+    },
+  },
+  {
     name: 'update-guard',
     remediation:
       '本项量的是**更新安装闸的行为结构**（不是「文件里有没有那句话」）：`downloadAndOpenUpdate()` 里必须 ① 用 `DSH_DISABLE_UPDATE_INSTALL` 与 `0` 比较；② 判完紧跟 `throw`；③ 排在 `downloadDesktopUpdate(` / `shell.openPath(` 之前；④ 方法仍有调用点。报「闸排在副作用之后」= 下载已发生才判，按报错把语句移回方法首句（消息串仍在文件里，所以 `packaging/verify-patches-v2.sh` 的 `ck` 看不见这一形态）；报「找不到定义 / 找不到任何已知副作用」= 上游改了名或换了调用形态，**重锚到新的承载面**，不要为了让门禁变绿而删判据；报「读不到 / 方法体不可解析」是**仪器问题**（含文件 mode 000 导致 EACCES），先修读取面，不要读成「补丁丢了」。⚠️ 不要把它与 `patch-anchors` 合并：那条管补丁在不在（含消息串），这条只管它在行为上还成不成立。反向自测：`node --test scripts/gates/update-guard.test.mjs`',
@@ -1434,6 +1549,124 @@ const CHECKS = [
       '跑 node --test scripts/gates/update-guard.test.mjs 看红在哪条：闸判据必须能说「不」——装机真实字节的那段结构必须判绿，而**闸被挪到副作用之后**（消息串仍在文件里）与**闸的条件被抽成 `if (false)`** 这两种形态必须判红，且必须证明按串判的天真实现会在它们身上判绿（这正是本项存在的理由）；定义改名、闸整句移除、只有定义无调用点、已知副作用全不见了都必须判红；读不到正文必须判红而不是跳过；花括号不闭合必须报 unverifiable（判定失败）而不是通过。重点：字符串里带花括号不得让方法体配对错位（那是假红与假绿共用的入口）',
     run() {
       return runNodeTestFile('scripts/gates/update-guard.test.mjs', '更新安装闸判据的反向自测失败')
+    },
+  },
+  {
+    name: 'resource-path-reachability',
+    remediation:
+      '按报错改**那条路径本身**：产物是 no-ASAR（`Resources/app/` 普通目录）时，任何把 `app.asar.unpacked/…` 当路径用的字面量都悬空——它多半是一条写于 asar 基座的**环境常量**（2026-09-17 实测：P0-8 的 `PI_AI_API_DIR` 让 2.5.0 装完直接进恢复模式，而锚门为它亮着绿灯）。修法是**删掉这条常量、把解析交还给 Node**（用包自身 exports 的静态 import），而不是再补一条路径常量。注意本项只钉**路径形态**：`String.replace` 的替换值与正则字面量里的同名字符串是合法的 no-op，不得判红',
+    run() {
+      // 2026-09-17 实测缺陷：补丁把 pi-ai 的懒加载模块路径写死成
+      // `${process.resourcesPath}/app.asar.unpacked/...`，而 2.0.10 起产物是 no-ASAR
+      // （`Resources/app/` 普通目录，既无 app.asar 也无 app.asar.unpacked）。
+      // 锚门 `patch-anchors` 只查「补丁的身份标记在不在」，于是它绿着、装到机器上才炸。
+      // 本项补的正是那个缺口：**路径必须在产物上真实可达**（ADR-0103 / 总账 P-02、P-06）。
+      const scanTrees = []
+      const installedApp = join('/', 'Applications', 'DSH Desktop.app')
+      if (appResourcesRoot(installedApp) !== null) scanTrees.push(installedApp)
+      const stagingRoot = join(repoRoot, 'packaging', 'staging')
+      if (existsSync(stagingRoot)) {
+        for (const version of readdirSync(stagingRoot)) {
+          const app = join(stagingRoot, version, 'app', 'DSH Desktop.app')
+          if (appResourcesRoot(app) !== null) scanTrees.push(app)
+        }
+      }
+      if (scanTrees.length === 0) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: '本机 /Applications 与 packaging/staging/* 都没有可量产的 app 树——本项本次**未校验任何产物**（不是「路径都可达」）',
+        }
+      }
+      const violations = []
+      const notes = []
+      const verified = []
+      const unverified = []
+      for (const app of scanTrees) {
+        const resourcesDir = join(app, 'Contents', 'Resources')
+        const probe = {
+          hasApp: existsSync(join(resourcesDir, 'app')),
+          hasAsar: existsSync(join(resourcesDir, 'app.asar')),
+          hasUnpacked: existsSync(join(resourcesDir, 'app.asar.unpacked')),
+          ok: true,
+        }
+        // 扫描面：出厂会被补丁改到的两处——`lib/`（主进程分块与原生 UI）与
+        // `node_modules/@deepseek-ai/**`（NM 补丁层）。不扫整棵树：第三方包里没有
+        // 我们的环境常量，扫它们只会把门禁的时间花在别人的代码上。
+        const jsFiles = []
+        const walk = (dir, relPrefix, depth) => {
+          let entries
+          try {
+            entries = readdirSync(dir, { withFileTypes: true })
+          } catch {
+            return
+          }
+          for (const entry of entries) {
+            const rel = relPrefix === '' ? entry.name : `${relPrefix}/${entry.name}`
+            if (entry.isDirectory()) {
+              if (depth > 0) walk(join(dir, entry.name), rel, depth - 1)
+              continue
+            }
+            if (entry.name.endsWith('.js')) jsFiles.push(rel)
+          }
+        }
+        walk(join(resourcesDir, 'app', 'lib'), 'lib', 20)
+        walk(join(resourcesDir, 'app', 'node_modules', '@deepseek-ai'), 'node_modules/@deepseek-ai', 3)
+        const verdict = checkResourcePathReachability({
+          tree: relative(repoRoot, app),
+          probe,
+          jsFiles,
+          read: (rel) => readFileSync(join(resourcesDir, 'app', rel), 'utf8'),
+          exists: (rel) => existsSync(join(resourcesDir, rel)),
+        })
+        notes.push(verdict.note)
+        // 违规照报（路径真的悬空）。射程为空**不判红**——扫到文件却零候选，多半正是
+        // 「悬空常量已删除」的**已修复**产物，判红就是仪器假红；但也不能算作已验证，
+        // 所以单独计进 unverified，让「没量到东西」在读数上与「量了都合格」不同形。
+        for (const v of verdict.violations) {
+          violations.push(`${relative(repoRoot, app)}: ${v.file} → ${v.reason}（字面量：${v.literal}）`)
+        }
+        if (verdict.skipped) unverified.push(relative(repoRoot, app))
+        else verified.push(relative(repoRoot, app))
+      }
+      const summary = `已核实 ${verified.length} 棵树${verified.length > 0 ? `（${verified.join('、')}）` : ''}`
+      const unverifiedNote =
+        unverified.length > 0
+          ? `；**未核实** ${unverified.length} 棵（射程为空，不是「都合格」）：${unverified.join('、')}`
+          : ''
+      return {
+        passed: violations.length === 0,
+        skipped: verified.length === 0,
+        violations,
+        note: `${summary}${unverifiedNote}；${notes.join('；')}`,
+      }
+    },
+  },
+  {
+    name: 'resource-path-reachability-selftest',
+    remediation:
+      '跑 node --test scripts/gates/resource-path-reachability.test.mjs 看红在哪条：判据必须能说「不」——用 2026-09-17 的**缺陷原文**（P0-8 那行 `app.asar.unpacked` 模板字面量）当输入必须判红；同时必须**不误报**——`main.js` 里那处 `.replace(/app\\.asar(?!\\.unpacked)/g, "app.asar.unpacked")` 是合法 no-op，判红它就是仪器假红（P-02 的另一半）；射程为空、形态未知都必须报 skip 而不是 ok。重点是恒真桩突变：只查「补丁的常量名在不在文件里」的实现会放过缺陷原文，测不出来的判据等于没有判据',
+    run() {
+      return runNodeTestFile('scripts/gates/resource-path-reachability.test.mjs', '资源路径可达性判据的反向自测失败')
+    },
+  },
+  {
+    name: 'preset-config-schema',
+    remediation:
+      '按报错改**那条配置本身**，或改产出它的生成器（`scripts/role-presets/generate.mjs`）——2026-09-17 实测：上游 2.0.10 把 `dsh-persona` 的配置键从 `text` 改成必填的 `prefix`，53 个预设与生成器都还写 `text:`，装完 preset 树加载失败、日志以 10MB/2min 洪泛、用户看到的是「输入会话，大模型没反应」，而当时**没有任何判据会因此变红**。改完跑 `node scripts/gates/preset-config-schema.mjs` 复验（它同时量 live 根与待发布出货载荷）。⚠️ 两件事不许做：①把「未核实」当合格——插件没导出 `Config` 时那几行归 unverifiable，读数会点名；②手抄一份键名表进判据——手抄的表本身就是下一个会过期的「旧值」，权威只能是插件自己的 `Config`。反向自测：`node --test scripts/gates/preset-config-schema.test.mjs`',
+    run() {
+      // 判据的 schema 来源与行抽取都在子进程里（受控解析器 + 插件自己的 Config），
+      // 所以这里只做编排与读数搬运：`run()` 必须是同步的。
+      return runPresetConfigSchemaCheck()
+    },
+  },
+  {
+    name: 'preset-config-schema-selftest',
+    remediation:
+      '跑 node --test scripts/gates/preset-config-schema.test.mjs 看红在哪条：①缺陷原文（persona 写 `text:` 而上游要 `prefix`）必须判红；②**超出 schemastery 默认严格度**的那一层也要抓——schemastery 不拒未知键（实测 `{prefix, bogus}` 静默通过），所以「上游改了键名、旧键还在、新键有默认值」只能靠键集判据，这条坏了必须有人知道；③仪器假红与假绿一样贵：模板占位符 `{{model}}`/`{{cwd}}`、块标量里的 `:`/`{}`、可选键缺省、group 行、`cordis:` 内置行、disabled 行都必须静默；④分母守恒 discovered = ok + failed + unverifiable + notApplicable，射程为空必须报 skip 而不是通过',
+    run() {
+      return runNodeTestFile('scripts/gates/preset-config-schema.test.mjs', '预设配置 schema 判据的反向自测失败')
     },
   },
   {
@@ -1764,6 +1997,241 @@ function runNodeTestFile(relPath, failureLabel, timeoutMs = 120000) {
     .map((line) => line.trim())
   const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
   return { passed: false, violations: lines.length > 0 ? lines : [`${failureLabel}（${verdict}）`] }
+}
+
+/**
+ * 收集工作区里的 `ui-anchors.json`（声明侧）。
+ *
+ * 用「有就量」的约定而不是登记表：登记表会与包集合分叉，而分叉的那天没有人会知道——
+ * 这正是本项要拦的那类问题，不能让它长在自己的入口上。代价是「清单被改名」会变成
+ * 射程收缩，所以读数里必须报出**量到了几份清单**，而不是只说通过。
+ */
+function collectAnchorManifests() {
+  const root = join(repoRoot, 'packages')
+  const found = []
+  if (!existsSync(root)) return found
+  for (const group of readdirSync(root, { withFileTypes: true })) {
+    if (!group.isDirectory()) continue
+    const groupDir = join(root, group.name)
+    for (const pkg of readdirSync(groupDir, { withFileTypes: true })) {
+      if (!pkg.isDirectory()) continue
+      const manifestPath = join(groupDir, pkg.name, ANCHOR_MANIFEST_FILENAME)
+      if (!existsSync(manifestPath)) continue
+      const origin = relative(repoRoot, manifestPath)
+      let raw = null
+      try {
+        raw = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      } catch (error) {
+        found.push({
+          origin,
+          anchors: [],
+          errors: [
+            `${origin}：不是合法 JSON（${error instanceof Error ? error.message : String(error)}）——读不出来的声明判红，不当作「没有锚」`,
+          ],
+        })
+        continue
+      }
+      const parsed = parseAnchorManifest(raw, origin)
+      found.push({ origin, anchors: parsed.anchors, errors: parsed.errors })
+    }
+  }
+  return found
+}
+
+/** 产物侧射程：本机 /Applications ∪ 未打 tag 的 staging 树（与 patch-anchors 同一份决定）。 */
+function anchorArtifactTargets() {
+  const appDir = join('/', 'Applications', 'DSH Desktop.app')
+  const appRoot = appResourcesRoot(appDir)
+  const stagingRoot = join(repoRoot, 'packaging', 'staging')
+  const stagingVersions = existsSync(stagingRoot)
+    ? readdirSync(stagingRoot).filter(
+        (version) => appResourcesRoot(join(stagingRoot, version, 'app', 'DSH Desktop.app')) !== null,
+      )
+    : []
+  const scope = selectAnchorTargets({
+    stagingVersions,
+    taggedVersions: releasedVersions(),
+    appInstalled: appRoot !== null,
+  })
+  const targets = [
+    ...(scope.checkInstalledApp && appRoot !== null ? [{ label: '本机 /Applications', root: appRoot }] : []),
+    ...scope.scanStaging.flatMap((version) => {
+      const root = appResourcesRoot(join(stagingRoot, version, 'app', 'DSH Desktop.app'))
+      return root === null ? [] : [{ label: `staging/${version}`, root }]
+    }),
+  ]
+  return { targets, note: scope.note }
+}
+
+/**
+ * 「按模块 id 取官方 CSS」的读取器（每份产物一个实例，不做跨产物缓存——app 可被替换）。
+ *
+ * 官方把一个包的模块 CSS 内联在它的 `lib/*.js` 里，所以这里在包目录下**逐个 js 文件**找
+ * 模块 id 字面量，不假设入口文件名（`client.js` 与 `index.js` 都出现过）。
+ * 读不到时返回**原因**而不是 `null`：三种原因（包不在 / 模块 id 不在 / CSS 常量读不出）
+ * 修法完全不同，压成一句「没有这个锚」等于把定位工作丢给下一个读报错的人。
+ */
+function makeOfficialCssLoader(resourcesRoot) {
+  const cache = new Map()
+  return (moduleId) => {
+    const cached = cache.get(moduleId)
+    if (cached !== undefined) return cached
+    const lastSlash = moduleId.lastIndexOf('/')
+    if (lastSlash <= 0) {
+      const bad = { reason: `模块 id 形态不合法：${moduleId}` }
+      cache.set(moduleId, bad)
+      return bad
+    }
+    const pkgName = moduleId.slice(0, lastSlash)
+    const pkgDir = join(resourcesRoot, 'node_modules', pkgName)
+    if (!existsSync(pkgDir)) {
+      const missing = { reason: `产物里没有这个包（${pkgName}）——上游改名或换了包` }
+      cache.set(moduleId, missing)
+      return missing
+    }
+    const libDir = join(pkgDir, 'lib')
+    const files = existsSync(libDir) ? readdirSync(libDir).filter((file) => file.endsWith('.js')) : []
+    let sawModuleId = false
+    for (const file of files) {
+      let source
+      try {
+        source = readFileSync(join(libDir, file), 'utf8')
+      } catch {
+        continue
+      }
+      if (!source.includes(JSON.stringify(moduleId))) continue
+      sawModuleId = true
+      const css = extractModuleCss(source, moduleId)
+      if (css !== null) {
+        const hit = { css }
+        cache.set(moduleId, hit)
+        return hit
+      }
+    }
+    const reason = sawModuleId
+      ? `产物里有模块 id ${moduleId}，但它前面的 CSS 常量读不出来——上游改了产物形态`
+      : `产物里没有任何 js 文件带模块 id ${moduleId}——上游搬走了这个模块`
+    const result = { reason }
+    cache.set(moduleId, result)
+    return result
+  }
+}
+
+/**
+ * `plugin-ui-anchor-drift` 的编排：把**插件声明的官方类名依赖**对着出货产物核一遍。
+ *
+ * 记账单位是「一个待核对对象」= 一条 (声明 × 产物) 组合，外加每条清单结构错误算一个：
+ * `expected = checked + skipped + failed`（ADR-0102）。射程为空时报 skip，不报通过。
+ *
+ * @returns {object} gate 读数（canonical 或 legacy 两种合同之一，一个对象只属于一份合同）
+ */
+function runPluginUiAnchorDriftCheck() {
+  const manifests = collectAnchorManifests()
+  const declared = manifests.flatMap((manifest) => manifest.anchors)
+  const manifestErrors = manifests.flatMap((manifest) => manifest.errors)
+  const { targets, note: scopeNote } = anchorArtifactTargets()
+
+  if (targets.length === 0) {
+    return {
+      passed: true,
+      skipped: true,
+      violations: [],
+      note: `${scopeNote}——本项本次**没有读到任何产物**（不是「锚都在」）`,
+    }
+  }
+  const expected = declared.length * targets.length + manifestErrors.length
+  if (expected === 0) {
+    return {
+      passed: true,
+      skipped: true,
+      violations: [],
+      note: `没有包声明 ${ANCHOR_MANIFEST_FILENAME}（找过 packages/<组>/<包>/）：本项本次**没有量到任何锚**（不是「锚都没问题」）`,
+    }
+  }
+
+  const violations = [...manifestErrors]
+  let checked = 0
+  let failed = manifestErrors.length
+  const resolvedNames = []
+  for (const target of targets) {
+    const judged = judgeDeclaredAnchors(declared, makeOfficialCssLoader(target.root))
+    checked += judged.checked
+    failed += judged.failures.length
+    for (const hit of judged.resolved) resolvedNames.push(`${hit.id}=${hit.className}`)
+    for (const miss of judged.failures) {
+      violations.push(
+        `${miss.origin} → ${target.label}：${miss.id}（localName=${miss.localName}）${miss.reason}`,
+      )
+    }
+  }
+
+  const reason = `${scopeNote}；清单 ${manifests.length} 份（${manifests.map((manifest) => manifest.origin).join('、')}）× 产物 ${targets.length} 份`
+  return {
+    status: failed > 0 ? 'fail' : 'pass',
+    expected,
+    discovered: expected,
+    checked,
+    skipped: 0,
+    failed,
+    typedSkips: [],
+    reason: failed > 0 ? `${reason}——解析失败 ${failed} 个` : `${reason}——全部解析出唯一类名`,
+    note: `解析出的类名：${resolvedNames.join('，')}`,
+    violations,
+  }
+}
+
+/**
+ * `preset-config-schema` 的编排：重活交给子进程（插件 `Config` 的 import 是异步的，
+ * 而 `run()` 必须是同步的），本函数只搬读数。
+ *
+ * 判据自己跳过「已打 tag 的版本」（ADR-0067：已发布产物由归档负责）——不这么做，它对
+ * 2.4.1 这类冻结产物会长期判红，而长期判红的下场是被关掉（P-02 的死法）。
+ *
+ * @returns {{passed: boolean, skipped?: boolean, violations: string[], note: string}}
+ */
+function runPresetConfigSchemaCheck() {
+  const { command, env } = nodeCommand()
+  const script = join(repoRoot, 'scripts/gates/preset-config-schema.mjs')
+  const result = runScript(repoRoot, `"${command}" "${script}" --json`, 600000, env)
+  const stdout = String(result.stdout ?? '').trim()
+  // 从后往前找第一条能解析成读数的行：`runScript` 会把输出截到尾部 4000 字节，
+  // 所以「最后一行就是 JSON」这个假设本身也要能失效得响亮（下面 parsed === null 那条）。
+  let parsed = null
+  const lines = stdout.split('\n').filter(Boolean)
+  for (let i = lines.length - 1; i >= 0 && parsed === null; i -= 1) {
+    const line = lines[i].trim()
+    if (!line.startsWith('{')) continue
+    try {
+      const candidate = JSON.parse(line)
+      if (candidate && typeof candidate === 'object' && 'violations' in candidate) parsed = candidate
+    } catch {
+      // 继续往前找
+    }
+  }
+  if (parsed === null) {
+    const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim()
+    return {
+      passed: false,
+      violations: [
+        `preset-config-schema 未给出可解析的读数（退出码 ${result.code ?? 'null'}）：${text.split('\n').slice(-6).join(' / ') || '（无输出）'}`,
+      ],
+      note: '判据没有产出读数——按失败处理（「读不到」不是「都合格」）',
+    }
+  }
+  const note = typeof parsed.note === 'string' ? parsed.note : ''
+  const violations = Array.isArray(parsed.violations) ? parsed.violations : []
+  const total = typeof parsed.violationsTotal === 'number' ? parsed.violationsTotal : violations.length
+  if (total > violations.length) {
+    violations.push(
+      `（另有 ${total - violations.length} 条同类违规未随读数带出——跑 node scripts/gates/preset-config-schema.mjs 看全量）`,
+    )
+  }
+  return {
+    passed: parsed.passed === true && violations.length === 0,
+    skipped: parsed.skipped === true,
+    violations,
+    note,
+  }
 }
 
 /** Run one node:test process over a related contract suite. */

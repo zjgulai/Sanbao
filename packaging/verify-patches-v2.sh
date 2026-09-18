@@ -84,7 +84,16 @@ ck "P0-7v2 首启兜底(首启真实路径)"  "$LIB_PM" "embeddedRoot"
 # 上一版把它登记成「待移植」并钉自造 marker——仪器对着自造 marker 而非真实保护面，
 # 假 FAIL 会永远阻塞 T-10。改编码为否定式断言：物化 chunk 出现 clear 符号 = 红。
 ckn "P0-7v2c 向导保护(物化chunk无clear符号)" "$LIB_PM" 'clearDesktopProfileUsageHistory'
-ck "P0-8 pi-ai 磁盘化"      "$NM/dsh-llm-pi-ai/lib/index.js" "PI_AI_API_DIR"
+# P0-8 于 2.5.1 退役：它把 pi-ai 懒加载模块路径写死成 `${process.resourcesPath}/app.asar.unpacked/…`，
+# 而 2.0.10 起产物是 **no-ASAR**（`Resources/app/` 普通目录）→ 该路径必然悬空。
+# 2026-09-17 实测：2.5.0 的锚门为它亮绿灯（`ck … "PI_AI_API_DIR"` 只查身份标记），
+# 装到机器上却直接进恢复模式（llm-pi-ai 导入即 ERR_MODULE_NOT_FOUND）。
+# 现在改为钉**上游的静态 import**——它不带任何环境常量，asar/no-ASAR 两种布局都成立；
+# 而「路径在产物上是否真的可达」由 gate `resource-path-reachability` 在装配侧拦住。
+ck "P0-8 退役:pi-ai 走包自身 exports（静态 import，无环境常量）" "$NM/dsh-llm-pi-ai/lib/index.js" '@earendil-works/pi-ai/api/anthropic-messages.lazy'
+ckn "P0-8 退役:不得再把 app.asar.unpacked 写进路径"           "$NM/dsh-llm-pi-ai/lib/index.js" 'app.asar.unpacked'
+ck "会话迁移器:skill-catalog 条目接受 LUTE title"              "$NM/dsh-session-format-v0-to-v1/lib/index.js" 'allowed.add("title")'
+ck "会话迁移器:title 必须是字符串"                             "$NM/dsh-session-format-v0-to-v1/lib/index.js" '`${memberLabel} title`'
 ck "P0-9 RootOutlet 兜底"   "$NM/dsh-client-ui-renderer/lib/client.js" "data-slot-waiting"
 ck "RECOVERY_DOCUMENT"      "$LIB/main.js" 'app.asar.unpacked'
 ck "clipboard fall-through" "$NM/dsh-client-ui-primitives/lib/index.js" "fall through to the legacy"

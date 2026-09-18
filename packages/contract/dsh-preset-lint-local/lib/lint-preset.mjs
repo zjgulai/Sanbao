@@ -19,7 +19,27 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { parse } = require("/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked/node_modules/yaml");
+/**
+ * `yaml` 从**已装 app 的 node_modules** 解析（本工具不应自带一份可能与 app 版本不同的副本）。
+ *
+ * ⚠️ 这里曾经写死 `…/Resources/app.asar.unpacked/node_modules/yaml`——那是 **2.0.5/asar 基座**
+ * 的布局。2.0.10 起官方产物是 **no-ASAR**（`Resources/app/` 普通目录，没有 `app.asar.unpacked`），
+ * 于是这条路径悬空：本工具的 typecheck 报 TS2307、`test` 直接失败，而锚门与装配都不看它。
+ * 与 P0-8 是**同一个根因**（工具/补丁里的环境常量随基座迁移作废，见 ADR-0114 / 总账 P-38）。
+ *
+ * 现在按产物**两种形态**探测，与 `scripts/lib/app-resources.mjs` 同一套判定：
+ * no-ASAR 用 `app/node_modules`，asar 用 `app.asar.unpacked/node_modules`。
+ */
+function resolveYaml() {
+  const resources = "/Applications/DSH Desktop.app/Contents/Resources";
+  for (const nm of [join(resources, "app", "node_modules"), join(resources, "app.asar.unpacked", "node_modules")]) {
+    if (!existsSync(join(nm, "yaml"))) continue;
+    return createRequire(join(nm, "noop.js"))("yaml");
+  }
+  // app 不在场（别的机器上跑测试）：退回仓库解析，让失败指向「缺依赖」而不是路径形态。
+  return require("yaml");
+}
+const { parse } = resolveYaml();
 
 // 已知会向 root realm 发布服务的包（取自 standard preset 的 realm 语义注释）
 const SERVICE_PUBLISHING_PACKAGES = [

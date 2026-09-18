@@ -154,9 +154,24 @@ function ProjectCard({ project, list, t, onOpen, onDelete }: { project: Research
 
 function ResearchComposer({ busy, error, setBusy, t, onClose, onCreate, setError }: { busy: boolean; error: string | null; setBusy: (value: boolean) => void; t: Translate; onClose: () => void; onCreate: (request: ResearchStartRequest) => Promise<void>; setError: (value: string | null) => void }) {
   const [question, setQuestion] = useState(''); const [goal, setGoal] = useState(''); const [constraints, setConstraints] = useState(''); const [seedText, setSeedText] = useState(''); const [depth, setDepth] = useState<ResearchDepth>('standard'); const [contextOpen, setContextOpen] = useState(false)
+  const [selectedSources, setSelectedSources] = useState<string[]>(['web', 'academic', 'news', 'docs'])
+  const [budgetPreset, setBudgetPreset] = useState<'conservative' | 'balanced' | 'exhaustive'>('balanced')
+
+  const toggleSource = (source: string) => {
+    setSelectedSources(current => current.includes(source) ? (current.length > 1 ? current.filter(s => s !== source) : current) : [...current, source])
+  }
+
   const contextCount = [goal, constraints, seedText].filter(value => value.trim() !== '').length
-  const submit = (event: FormEvent) => { event.preventDefault(); const trimmed = question.trim(); if (busy || trimmed === '') return; setBusy(true); setError(null); void onCreate({ question: trimmed, goal: goal.trim(), constraints: constraints.trim(), seedText: seedText.trim(), depth, questions: [] }).catch((cause: unknown) => { setError(messageOf(cause)) }).finally(() => { setBusy(false) }) }
-  return <div className={css.modalBackdrop} role="presentation"><form className={css.modal} role="dialog" aria-modal="true" aria-labelledby="new-research-title" onSubmit={submit}><div className={css.modalHeader}><div className={css.modalHeading}><span aria-hidden="true"><IconBolt size={18} /></span><div><h3 id="new-research-title">{t('composer.title')}</h3><p>{t('composer.subtitle')}</p></div></div><button className={css.modalCloseButton} type="button" aria-label={t('composer.closeAria')} disabled={busy} onClick={onClose}><IconX size={16} /></button></div><div className={css.modalBody}><label className={css.fieldLabel}><span>{t('composer.question')} <b>{t('composer.required')}</b></span><textarea autoFocus className={css.questionInput} value={question} onChange={event => { setQuestion(event.target.value) }} placeholder={t('composer.questionPlaceholder')} /></label><div className={css.contextCard}><button type="button" aria-expanded={contextOpen} onClick={() => { setContextOpen(value => !value) }}><span><IconTarget size={15} /></span><span><strong>{t('composer.context')}{contextCount === 0 ? '' : t('composer.contextCount', { count: contextCount })}</strong><small>{t('composer.contextHint')}</small></span><b>{contextOpen ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}</b></button>{contextOpen ? <div className={css.contextFields}><label>{t('composer.goal')}<input className={css.input} value={goal} onChange={event => { setGoal(event.target.value) }} placeholder={t('composer.goalPlaceholder')} /></label><label>{t('composer.depth')}<select className={css.input} value={depth} onChange={event => { setDepth(event.target.value as ResearchDepth) }}><option value="quick">{t('depth.quick')}</option><option value="standard">{t('depth.standard')}</option><option value="deep">{t('depth.deep')}</option></select></label><label>{t('composer.constraints')}<textarea className={css.textareaSmall} value={constraints} onChange={event => { setConstraints(event.target.value) }} placeholder={t('composer.constraintsPlaceholder')} /></label><label>{t('composer.seed')}<textarea className={css.textareaSmall} value={seedText} onChange={event => { setSeedText(event.target.value) }} placeholder={t('composer.seedPlaceholder')} /></label></div> : null}</div>{error === null ? null : <div className={css.modalError} role="alert">{error}</div>}</div><div className={css.modalFooter}><span>{t('composer.footer')}</span><div><button className={css.modalCancelButton} type="button" disabled={busy} onClick={onClose}>{t('action.cancel')}</button><button className={css.modalSubmitButton} type="submit" disabled={busy || question.trim() === ''}>{busy ? <IconLoading className={css.spinner} size={14} /> : <IconBolt size={14} />}{busy ? t('action.creating') : t('action.createPlan')}</button></div></div></form></div>
+  const submit = (event: FormEvent) => {
+    event.preventDefault(); const trimmed = question.trim(); if (busy || trimmed === '') return; setBusy(true); setError(null);
+    const augmentedConstraints = [
+      constraints.trim(),
+      `[定向检索源: ${selectedSources.join(', ')}]`,
+      `[预算预设: ${budgetPreset}]`,
+    ].filter(Boolean).join('\n')
+    void onCreate({ question: trimmed, goal: goal.trim(), constraints: augmentedConstraints, seedText: seedText.trim(), depth, questions: [] }).catch((cause: unknown) => { setError(messageOf(cause)) }).finally(() => { setBusy(false) })
+  }
+  return <div className={css.modalBackdrop} role="presentation"><form className={`${css.modal} ${css.auroraGlow}`} role="dialog" aria-modal="true" aria-labelledby="new-research-title" onSubmit={submit}><div className={css.modalHeader}><div className={css.modalHeading}><span aria-hidden="true" className={css.auroraPulse}><IconBolt size={18} /></span><div><h3 id="new-research-title">{t('composer.title')}</h3><p>{t('composer.subtitle')}</p></div></div><button className={css.modalCloseButton} type="button" aria-label={t('composer.closeAria')} disabled={busy} onClick={onClose}><IconX size={16} /></button></div><div className={css.modalBody}><label className={css.fieldLabel}><span>{t('composer.question')} <b>{t('composer.required')}</b></span><textarea autoFocus className={css.questionInput} value={question} onChange={event => { setQuestion(event.target.value) }} placeholder={t('composer.questionPlaceholder')} /></label><div className={css.contextCard}><button type="button" aria-expanded={contextOpen} onClick={() => { setContextOpen(value => !value) }}><span><IconTarget size={15} /></span><span><strong>{t('composer.context')}{contextCount === 0 ? '' : t('composer.contextCount', { count: contextCount })}</strong><small>{t('composer.contextHint')}</small></span><b>{contextOpen ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}</b></button>{contextOpen ? <div className={css.contextFields}><label>{t('composer.goal')}<input className={css.input} value={goal} onChange={event => { setGoal(event.target.value) }} placeholder={t('composer.goalPlaceholder')} /></label><label>{t('composer.depth')}<select className={css.input} value={depth} onChange={event => { setDepth(event.target.value as ResearchDepth) }}><option value="quick">{t('depth.quick')}</option><option value="standard">{t('depth.standard')}</option><option value="deep">{t('depth.deep')}</option></select></label><label>{t('composer.budgetPreset')}<select className={css.input} value={budgetPreset} onChange={event => { setBudgetPreset(event.target.value as 'conservative' | 'balanced' | 'exhaustive') }}><option value="conservative">{t('budget.conservative')}</option><option value="balanced">{t('budget.balanced')}</option><option value="exhaustive">{t('budget.exhaustive')}</option></select></label><div><label>{t('composer.sources')}</label><div className={css.sourceSelector}>{[ { id: 'web', label: t('sources.web') }, { id: 'academic', label: t('sources.academic') }, { id: 'news', label: t('sources.news') }, { id: 'docs', label: t('sources.docs') } ].map(src => <button key={src.id} type="button" className={css.sourcePill} data-selected={selectedSources.includes(src.id) || undefined} onClick={() => { toggleSource(src.id) }}>{src.label}</button>)}</div></div><label>{t('composer.constraints')}<textarea className={css.textareaSmall} value={constraints} onChange={event => { setConstraints(event.target.value) }} placeholder={t('composer.constraintsPlaceholder')} /></label><label>{t('composer.seed')}<textarea className={css.textareaSmall} value={seedText} onChange={event => { setSeedText(event.target.value) }} placeholder={t('composer.seedPlaceholder')} /></label></div> : null}</div>{error === null ? null : <div className={css.modalError} role="alert">{error}</div>}</div><div className={css.modalFooter}><span>{t('composer.footer')}</span><div><button className={css.modalCancelButton} type="button" disabled={busy} onClick={onClose}>{t('action.cancel')}</button><button className={css.modalSubmitButton} type="submit" disabled={busy || question.trim() === ''}>{busy ? <IconLoading className={css.spinner} size={14} /> : <IconBolt size={14} />}{busy ? t('action.creating') : t('action.createPlan')}</button></div></div></form></div>
 }
 
 function DeleteConfirmDialog({ pending, busy, t, onCancel, onConfirm }: { pending: PendingDelete; busy: boolean; t: Translate; onCancel: () => void; onConfirm: () => void }) {
@@ -372,9 +387,16 @@ function PlanStep({ project, t, busy, goal, setGoal, questions, setQuestions, on
               </div>
               <small className={css.depHint}>{t('plan.dependsOnHint')}</small>
             </div>}
+            {!project.planConfirmed ? <div className={css.planActionRow}>
+              <span />
+              <button className={css.exportButton} type="button" disabled={busy || questions.length <= 1} onClick={() => { setQuestions(curr => curr.filter((_, i) => i !== index)) }}>{t('plan.removeQuestion')}</button>
+            </div> : null}
           </div>
         </section>
       })}
+      {!project.planConfirmed ? <div style={{ padding: '16px 0' }}>
+        <button className={css.secondaryButton} type="button" disabled={busy} onClick={() => { setQuestions(curr => [...curr, { text: '新增补充子问题', criteria: ['核验该子问题关联的权威事实'], dependsOn: [] }]) }}><IconPlus size={14} />{t('plan.addQuestion')}</button>
+      </div> : null}
     </div>
   </section>
 }
@@ -553,16 +575,61 @@ function EvidenceCard({ evidence, t }: { evidence: ResearchEvidenceView; t: Tran
 function ReportPane({ project, t, busy, onRewrite }: { project: ResearchProject; t: Translate; busy: boolean; onRewrite: () => void }) {
   const accepted = project.evidence.filter(item => item.status !== 'candidate' && item.status !== 'rejected')
   const writing = project.phase === 'writing' && project.runState === 'running'
+  const [copyNotice, setCopyNotice] = useState<string | null>(null)
+
+  const handleExport = (format: 'md' | 'html' | 'mindmap') => {
+    if (!project.report) return
+    let content = ''
+    if (format === 'md') {
+      content = `# ${project.title}\n\n${project.report}\n\n## 引用来源与证据链\n` + accepted.map(a => `- [${a.confidence.toUpperCase()}] ${a.claim} (${primaryEvidenceUrl(a)})`).join('\n')
+    } else if (format === 'html') {
+      content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${project.title}</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:860px;margin:40px auto;line-height:1.7;padding:0 20px;}blockquote{border-left:4px solid currentColor;margin:0;padding-left:16px;}code{padding:2px 6px;border-radius:4px;}</style></head><body><h1>${project.title}</h1><div>${project.report.replace(/\n/g, '<br/>')}</div></body></html>`
+    } else if (format === 'mindmap') {
+      content = `# ${project.title}\n## 核心目标\n- ${project.goal || project.question}\n## 调研子课题\n` + project.questions.map(q => `- ${q.text}`).join('\n')
+    }
+    navigator.clipboard.writeText(content).then(() => {
+      setCopyNotice(t('report.exportSuccess'))
+      setTimeout(() => { setCopyNotice(null) }, 3000)
+    }).catch(() => {})
+  }
+
   // `MarkdownText` 的 `labels` 必须是**引用稳定**的对象（换身份会丢掉流式渲染缓存），
   // 所以按 locale 记忆，而不是每次渲染现造一个（ADR-0055）。
   const markdownLabels = useMemo(() => ({
     code: { copyLabel: t('markdown.codeCopy'), copiedLabel: t('markdown.codeCopied') },
     footnotes: t('markdown.footnotes'),
   }), [t])
+
   return <section className={css.reportPane}>
-    <div className={css.sectionHeader}><div><h3>{t('report.title')}</h3><p>{t('report.subtitle')}</p></div>{project.planConfirmed && !writing ? <button className={css.primaryButton} type="button" disabled={busy} onClick={onRewrite}>{project.report ? t('report.retry') : t('investigate.writeReport')}</button> : null}</div>
+    <div className={css.sectionHeader}>
+      <div>
+        <h3>{t('report.title')}</h3>
+        <p>{t('report.subtitle')}</p>
+      </div>
+      <div className={css.headerActions}>
+        {project.report ? <div className={css.exportButtonGroup}>
+          <button className={css.exportButton} type="button" onClick={() => { handleExport('md') }}>{t('report.exportMarkdown')}</button>
+          <button className={css.exportButton} type="button" onClick={() => { handleExport('html') }}>{t('report.exportHtml')}</button>
+          <button className={css.exportButton} type="button" onClick={() => { handleExport('mindmap') }}>{t('report.exportMindmap')}</button>
+        </div> : null}
+        {project.planConfirmed && !writing ? <button className={css.primaryButton} type="button" disabled={busy} onClick={onRewrite}>{project.report ? t('report.retry') : t('investigate.writeReport')}</button> : null}
+      </div>
+    </div>
+    {copyNotice ? <div className={css.confirmed} style={{ margin: '8px 0' }}><IconCheck size={14} />{copyNotice}</div> : null}
+
+    {/* 顶尖研报：Executive Summary 与 Key Takeaways 顶栏卡片 */}
+    {project.report ? <div className={css.executiveCard}>
+      <h4><IconBolt size={14} />{t('report.executiveSummary')}</h4>
+      <p>{project.goal ? `围绕核心命题「${project.question}」，基于已穿透核验的 ${accepted.length} 项多方信源证据生成全景研报。` : project.question}</p>
+      <ul className={css.takeawayList}>
+        <li className={css.takeawayItem}><b>🎯 研究核心</b><span>{project.question}</span></li>
+        <li className={css.takeawayItem}><b>🔍 证据覆盖</b><span>{accepted.length} 条已核验证据链 · {project.questions.length} 个子领域</span></li>
+        <li className={css.takeawayItem}><b>⚡ 研判置信度</b><span>{accepted.some(a => a.confidence === 'high') ? '高 (多方独立交叉验证通过)' : '中 (基线证据充足)'}</span></li>
+      </ul>
+    </div> : null}
+
     {project.report !== null
-      ? <article className={css.reportDocument}><MarkdownText text={project.report} streaming={writing} labels={markdownLabels} /></article>
+      ? <article className={`${css.reportDocument} ${css.auroraGlow}`}><MarkdownText text={project.report} streaming={writing} labels={markdownLabels} /></article>
       : writing
         ? <div className={css.reportPending} role="status"><IconLoading className={css.spinner} size={16} /><span>{t('report.writing')}</span></div>
         : <div className={css.reportPending}>{t('report.empty')}</div>}

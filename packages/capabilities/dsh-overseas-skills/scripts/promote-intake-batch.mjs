@@ -87,8 +87,14 @@ function writeCompact(obj, keys, lastKey) {
 const WRITERS = {
   [LOCALIZE]: (o) => JSON.stringify(o, null, 2) + "\n",
   [MAPPING]: (o) => writeCompact(o, ["categories", "skills"], "skills"),
-  [SKILLS_FS]: (o) => JSON.stringify(o, null, 2),
-  [TAXONOMY]: (o) => JSON.stringify(o, null, 2),
+  // 尾随换行不是风格问题：`build-fullstack-catalog.mjs:201` 写这份文件时就是
+  // `${JSON.stringify(manifest, null, 2)}\n`，而本函数原先漏了 `+ "\n"`，
+  // 于是下面那条「零改动往返必须逐字节相同」的自检**对任何输入都失败**——
+  // 它挡住的是它自己。实测（2026-09-18）：本工具自那次改动起一直退出 2，
+  // 因为没有任何调用方而无人察觉（P-03「写了但从没跑到」的同族）。
+  [SKILLS_FS]: (o) => JSON.stringify(o, null, 2) + "\n",
+  // 同一条：taxonomy-v3.json 也带尾随换行（实测 file 26,317B / writer 26,316B）。
+  [TAXONOMY]: (o) => JSON.stringify(o, null, 2) + "\n",
 };
 
 if (!FRAGMENTS.length) {

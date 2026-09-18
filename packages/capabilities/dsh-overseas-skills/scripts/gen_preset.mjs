@@ -42,7 +42,10 @@ for (const wf of workflows) {
     `- id: persona`,
     `  name: '@deepseek-ai/dsh-persona'`,
     `  config:`,
-    `    text: >-`,
+    // ⚠️ 配置键是 `prefix`，不是 `text`（上游 2.0.10 改名且 required）—— 写 `text:` 会让
+    // **整棵 preset 树**载入失败（`$.prefix missing required value`），而用户只看到「发消息没反应」。
+    // 键名这份事实的家是插件自己的 `Config`：配置镜 `scripts/gates/preset-config-schema.mjs` 按它判。
+    `    prefix: >-`,
     `      ${wf.persona}`,
     ``,
     `- id: skill-subset`,

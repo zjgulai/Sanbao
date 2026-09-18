@@ -17,7 +17,13 @@ const clientDir = import.meta.dirname;
 /** 产品代码里不允许出现的哈希选择器规则（`.<prefix>_<local> {`）。 */
 const HASHED_SELECTOR = /\.[A-Za-z0-9_]*_[A-Za-z][A-Za-z0-9_]*\s*\{/g;
 
-const SOURCE_FILES = ["brand.tsx", "index.tsx", "live-selectors.ts", "official-text.ts"];
+const SOURCE_FILES = [
+  "brand.tsx",
+  "index.tsx",
+  "hero-title.ts",
+  "live-selectors.ts",
+  "official-text.ts",
+];
 
 describe("brand CSS 不再钉住官方哈希", () => {
   it("src/client 下没有写死的哈希选择器规则", () => {

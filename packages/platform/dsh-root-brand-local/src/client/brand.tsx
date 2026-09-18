@@ -1,8 +1,6 @@
 import type { CSSProperties, ReactElement } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 
-import { classSelector, type LiveAnchors } from "./live-selectors.js";
-
 /**
  * ROOT (路特创新) brand components.
  *
@@ -100,13 +98,13 @@ export function HeroRootBrand({ size = 34, className }: BrandMarkProps): ReactEl
 /**
  * Brand surface styles (version-independent part).
  *
- * `hero.headline` / `hero.preview` are not public slots (they are owned by the
- * conversation package's private locale namespace), so the native headline and
- * preview badge have to be hidden from the outside — but **not** with hashed
- * class names written into this file. The hash-bearing rules are produced at
- * runtime by {@link buildBrandCss} from the anchors read out of the official
- * stylesheets (see `live-selectors.ts`), so an upstream re-hash no longer
- * breaks the skin.
+ * 这里**只有与官方类名无关的样式**（品牌座位自己的外观）。曾经的哈希规则——隐藏官方标题、
+ * 折叠统计条——已全部撤出：2.0.10 之后官方标题是个无类名的 span，按类名隐藏注定失手
+ * （2026-09-18 装机实测的故障原文），改为按 DOM 关系定位并在 JS 里 `display:none`
+ * （见 `hero-title.ts`），统计条折叠则因上游换了模块而退役（见 ADR-0117）。
+ *
+ * 结果：本文件不再需要「运行时解析出的类名」，`installBrandCss` 只装这一份静态样式。
+ * 上游重新哈希不再影响任何样式规则。
  */
 export const BRAND_CSS = `
 [data-plugin="dsh-root-brand"].dsh-rb-hero {
@@ -164,8 +162,6 @@ export const BRAND_CSS = `
   }
 }
 
-/* P1.5a 统计条折叠的视觉留在下面（选择器由 live-selectors 在运行时解析）。 */
-
 /* P2 键盘可达性：覆写区与 hero 的 focus ring（品牌绿描边） */
 .dshro-action:focus-within,
 [data-plugin="dsh-root-brand"].dsh-rb-hero:focus-within {
@@ -193,47 +189,18 @@ export const BRAND_CSS = `
 export const BRAND_CSS_STYLE_ID = "dsh-root-brand-css";
 
 /**
- * Hash-bearing rules, assembled from the anchors read out of the official
- * stylesheets. Empty when an anchor is missing — the version-independent part
- * above stays installed either way, and the caller reports the miss.
+ * Install the brand style tag; returns a disposer that removes it.
  *
- * 覆盖声明一律带 `!important`：官方 HeroShell 规则与这里的选择器**特异性相同**
- * （都是单个类名，0-1-0），谁在 `<head>` 里靠后谁赢。官方样式标签由 conversation
- * 包在模块求值期注入，本插件的锚点标签何时创建取决于两侧加载次序 —— 一旦插件标签
- * 排在官方之前，`grid-template-columns: 34px auto auto` 就反压回来：品牌槽宽度
- * 397px 被塞进 34px 轨道、溢出并与 `previewBadge` 重叠（2.0.5 实测症状：空会话
- * hero 的 Preview 角标错位）。用 `!important` 让结果与注入顺序无关。
+ * 只装上面那份静态样式：哈希规则已随 2.0.10 的 hero 结构变化全部撤出
+ * （标题隐藏改在 JS 里按 DOM 关系做，统计条折叠退役）。
  */
-export function buildBrandCss(anchors: Partial<LiveAnchors>): string {
-  const rules: string[] = [];
-  const { heroHeadline, heroHeadlineText, heroPreviewBadge, statsLineRoot } = anchors;
-
-  if (heroHeadlineText !== undefined) {
-    rules.push(`${classSelector(heroHeadlineText)} { display: none !important; }`);
-  }
-  if (heroHeadline !== undefined) {
-    rules.push(`${classSelector(heroHeadline)} { grid-template-columns: auto !important; }`);
-  }
-  if (statsLineRoot !== undefined) {
-    const root = classSelector(statsLineRoot);
-    rules.push(
-      `${root} { max-height: 6px !important; opacity: 0.45 !important; transition: max-height 0.18s ease, opacity 0.18s ease; }`,
-      `${root}:hover { max-height: 28px !important; opacity: 1 !important; }`,
-      `${root}::after { content: ""; display: block; height: 2px; width: 34px; margin: 2px auto 0; border-radius: 2px; background: var(--dsw-alias-separator-primary, rgba(127, 127, 127, 0.5)); transition: opacity 0.18s ease; }`,
-      `${root}:hover::after { opacity: 0; }`,
-    );
-  }
-  return rules.join("\n");
-}
-
-/** Install the brand style tag; returns a disposer that removes it. */
-export function installBrandCss(anchors: Partial<LiveAnchors> = {}): () => void {
+export function installBrandCss(): () => void {
   if (typeof document === "undefined") return () => {};
   if (document.getElementById(BRAND_CSS_STYLE_ID) !== null) return () => {};
   const tag = document.createElement("style");
   tag.id = BRAND_CSS_STYLE_ID;
   tag.dataset.plugin = "dsh-root-brand";
-  tag.textContent = `${BRAND_CSS}\n${buildBrandCss(anchors)}`;
+  tag.textContent = BRAND_CSS;
   document.head.appendChild(tag);
   return () => {
     document.getElementById(BRAND_CSS_STYLE_ID)?.remove();

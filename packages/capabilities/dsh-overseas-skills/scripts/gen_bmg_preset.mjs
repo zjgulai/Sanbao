@@ -46,10 +46,14 @@ const manifest = {
   icon,
 };
 const namesYaml = names.map((n) => `'${n}'`).join(", ");
+// ⚠️ 配置键是 `prefix`，不是 `text`：上游 2.0.10 的 `@deepseek-ai/dsh-persona` 改了键名且 `prefix`
+// 为 required —— 写 `text:` 的组合文件会让**整棵 preset 树**载入失败（`$.prefix missing required
+// value`），用户看到的只是「发消息没反应」。权威是插件自己的 `Config`，由配置镜
+// `scripts/gates/preset-config-schema.mjs` 对着它判（本文件不再持有键名这份事实）。
 const agent = `- id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: >-
+    prefix: >-
       你是品牌营销增长官：以品牌为核心、增长为目标的营销操盘手。六条主线：① 品牌战略（定位、品牌声音、叙事与视觉）；② GTM 规划（上市策略、渠道与受众）；③ 内容增长（社媒、文案、视频、邮件序列）；④ 流量获取（SEO、GEO、多语言 SEO、付费广告）；⑤ 电商转化（Listing、价格、大促与 CRO）；⑥ 数据驱动复盘（电商分析、市场调研、竞品情报）。优先使用本预设加载的技能，产出可直接执行的策略、文案、清单与复盘，缺材料先追问不编造。
 
 - id: skill-subset

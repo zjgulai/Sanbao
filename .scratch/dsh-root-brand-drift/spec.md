@@ -1,8 +1,17 @@
 ---
 title: ROOT 品牌插件的官方 UI 改写锚：从版本钉升级为运行时解析
-status: ready-for-agent
+status: superseded（2026-09-18）
+superseded_by: docs/notes/implemented/contract/2026-09-18-plugin-ui-anchor-mirror-and-hero-title-relation.md
 test_seam: 加载真实产物 packages/platform/dsh-root-brand-local/lib/client.js（window.__ModuleLoader__ 桩捕获 → happy-dom 中执行 apply）并断言 DOM 与注入样式；官方样式真值取自两代真实产物（归档 .orig / 本机 app 包）
 ---
+
+> **本规格已部分作废（2026-09-18），动手前先读 [Note](../../docs/notes/implemented/contract/2026-09-18-plugin-ui-anchor-mirror-and-hero-title-relation.md) 与 [ADR-0118](../../docs/adr/ADR-0118.md)。**
+> 仍有效：D1（运行时解析锚）、D2、D3（角标文案）、D5（可观测）、D7（退役 brand-replay 的 hero.headline 段）、D8。
+> **已作废**：**D6（结构降级）未实现且不再实现**——失手时不知道哪个是角标，可能把 `预览版` 一起隐藏；
+> 改为「不猜 + 报 degraded + 由门禁与实况验收拦住」。D4（统计条折叠）**退役**：上游把
+> `StatsLine.module.css` 整个模块换成了胶囊式的 `StatsPills.module.css`。
+> 另：2.0.10 把 hero 的独立文本元素去掉了（**没有 `headlineText`**），标题改为「角标父容器里唯一的有文字叶子兄弟」
+> 这条**关系**定位——规格里按局部名找标题的那一段已不成立。
 
 # ROOT 品牌插件的官方 UI 改写锚：从版本钉升级为运行时解析 产品规格
 

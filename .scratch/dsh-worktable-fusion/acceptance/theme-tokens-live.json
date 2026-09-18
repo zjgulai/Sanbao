@@ -1,12 +1,12 @@
 {
-  "checkedAt": "2026-09-17T10:38:33.306Z",
-  "themeBundle": "/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
+  "checkedAt": "2026-09-17T15:45:36.880Z",
+  "themeBundle": "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
   "browser": "chromium 153.0.8010.48",
   "cssBlobs": 8,
-  "cssDefinedTokens": 356,
-  "officialDefinedTokens": 393,
+  "cssDefinedTokens": 357,
+  "officialDefinedTokens": 396,
   "repoSuppliedTokens": 67,
-  "referenced": 78,
+  "referenced": 79,
   "instrument": [
     {
       "name": "正控解析成功",
@@ -37,7 +37,7 @@
   "summary": {
     "agreeOfficial": 54,
     "agreeRepo": 0,
-    "agreeAbsent": 24,
+    "agreeAbsent": 25,
     "gateFalsePositiveOfficial": 0,
     "gateFalsePositiveRepo": 0,
     "gateFalseNegative": 0,

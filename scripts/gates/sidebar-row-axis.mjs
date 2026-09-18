@@ -35,19 +35,27 @@
  *    + `width: 100%` 就是把行框落到那条轴上；水平 padding 一致才能让标签 x 也一致
  *    （标签 x = padding-inline + 图标 24px + gap 8px，图标宽度由两处各自的
  *    `.entryIcon` 归一化到 24px，已由 skill-center 的 `sidebar-entry-layout.spec.ts` 锁定）。
+ * 5. **启动带同轴，含被改写的官方行**：`nav-band` 列（「新建会话」+「新应用」两个上下
+ *    堆叠的导航行，2026-09-18 ADR-0125 D2 定案）的期望轴与导航列是同一条原生轴——官方按钮在
+ *    展开态被 `newapp.module.css` 按 `data-lute-navrow` 标记改写成行形态，这条改写规则
+ *    也在判据内，否则「两条注入行对齐、官方行自己漂走」会恰好漏网。标记名同时出现在
+ *    共享核心（写入方）与 CSS（读出方），两者互相钉住；谁也不许改名而对方不知情。
+ * 6. **宽度契约断言**（ADR-0125 D7 / D8）：侧栏宽度目标为 264px，处于基座硬性夹逼
+ *    区间 [264, 420] 下界。宽度断言锁定 TARGET_SIDEBAR_WIDTH = 264 与合法区间
+ *    SIDEBAR_WIDTH_BOUNDS = [264, 420]，解决 P-51 登记的「宽度无门禁」缺口。
  *
  * ## 本项**不**检查什么（诚实写清楚，免得被当成全覆盖）
  *
- * 1. **`split` 列**（新应用那一行）。它的几何由共享核心的 `applySplitGeometry()` 在运行时
- *    按「新建会话」按钮的框算出来，CSS 里的轴不决定它落在哪，所以本项对它只做登记。
- * 2. **底部 `sidebar.footer.action` 槽里的行**（深度研究 / 知识库 / 设置）。它们走官方
+ * 1. **底部 `sidebar.footer.action` 槽里的行**（深度研究 / 知识库 / 设置）。它们走官方
  *    slot，父容器与导航行不是同一个，实测行轴 62…314，与原生「知识库」逐像素重合。
  *    **与导航列不同是正确结果**；把它们并进来会判红一个正确的实现。故不纳入。
- * 3. **渲染结果**。本项读的是**声明文本**，不是浏览器算出来的框。上文的 64…320 / 62…314
- *    来自 AX 探针；声明一致与渲染一致是两件事，本项只守前者。
- * 4. **垂直轴**。行距、高度不在判据内——两行的高度与 `margin-block` 允许不同
- *    （role-matrix 保留 2px 纵向 margin 以维持既有行距）。
+ * 2. **渲染结果**。本项读的是**声明文本**，不是浏览器算出来的框。上文的 64…320 / 62…314
+ *    来自 AX 探针；声明一致与渲染一致是两件事，本项只守前者，真浏览器的框由
+ *    geometry-probe / sidebar-ax-probe 管。
+ * 3. **垂直轴**。行距、高度不在判据内——各行的高度与 `margin-block` 允许不同。
+ * 4. **收起 rail 与 hover/active 态的度量**（36×36、底色），由 geometry-probe 管。
  */
+
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -75,12 +83,42 @@ const REGISTRY = [
   {
     plugin: 'newapp-local',
     entry: 'packages/surfaces/dsh-newapp-local/src/client/sidebar-entry.ts',
-    position: 'split',
-    column: 'logo-split',
+    position: 'stacked',
+    column: 'nav-band',
     css: 'packages/surfaces/dsh-newapp-local/src/client/newapp.module.css',
     selector: '.entry',
   },
 ]
+
+/**
+ * 被插件改写的**官方行**登记项。
+ *
+ * 启动带上、与注入行并排的官方「新建会话」按钮不靠注入存在，而是被插件的 CSS 在
+ * 展开态整枚改写（`data-lute-navrow` 标记由共享核心按 `position: 'stacked'` 写入）。
+ * 它与注入行构成同一列视觉单元，轴漂移就坏在「两条注入行都对、官方行自己错位」，
+ * 所以同样登记、同样断言。
+ *
+ * `attribute`/`camel` 与共享核心互钉：谁先改标记名，另一方都立刻失去射程。
+ */
+const RESTYLED_SHELL_ROWS = [
+  {
+    plugin: 'newapp-local',
+    css: 'packages/surfaces/dsh-newapp-local/src/client/newapp.module.css',
+    selector: 'button[class*="newSession"][data-lute-navrow]',
+    column: 'nav-band',
+    attribute: 'data-lute-navrow',
+    camel: 'luteNavrow',
+    core: 'shared/client/sidebar-entry-core.ts',
+  },
+]
+
+/**
+ * 侧栏宽度契约常数（ADR-0125 D7 / D8、决策票 T-1，解决 P-51 总账缺口）。
+ * - TARGET_SIDEBAR_WIDTH: 目标宽度 264px（用户知悉 252 越界后改判 264）。
+ * - SIDEBAR_WIDTH_BOUNDS: 基座 @deepseek-ai/dsh-client-ui-layout clampWidth 物理边界 [264, 420]。
+ */
+const TARGET_SIDEBAR_WIDTH = 264
+const SIDEBAR_WIDTH_BOUNDS = [264, 420]
 
 /**
  * 每一列的行轴期望值。
@@ -98,9 +136,14 @@ const COLUMNS = {
     },
     why: '原生侧边栏行轴（实测 64…320）；水平 padding 一致才能让两行标签 x 都为 106',
   },
-  'logo-split': {
-    axis: null,
-    why: '几何由共享核心 applySplitGeometry() 运行时按「新建会话」按钮的框算出，CSS 不决定落点',
+  'nav-band': {
+    axis: {
+      boxSizing: 'border-box',
+      width: '100%',
+      marginInline: '0',
+      paddingInline: '10px',
+    },
+    why: '启动带与导航列共用原生侧边栏行轴——「新建会话」「新应用」与会话列表必须两端同缘、标签同 x',
   },
 }
 
@@ -112,15 +155,20 @@ function stripCssComments(text) {
 /**
  * 取某条选择器的声明块内容。
  *
- * 正则两端都钉住：`(^|\n)\s*\.entry\s*\{` 不会命中 `.entryIcon {`、`.entryLabel {`、
+ * 正则两端都钉住：`(?<!,)\n\s*\.entry\s*\{` 不会命中 `.entryIcon {`、`.entryLabel {`、
  * `.entry:hover,` 或 `.entry[data-active]`——它们要么多一个字符，要么不是 `{` 紧跟。
+ *
+ * 负向回顾 `,(?<!,)` 挡的是**分组选择器的续行**：`.root,\n.entry {`（多个选择器共享一块
+ * 声明，token 块常这样写）把 `.entry {` 顶到行首，若照单全收，读到的声明块属于
+ * `.root,.entry` 那一组而不是 `.entry` 自己——一次静默的错读。续行的特征是上一行行尾
+ * 是逗号，所以该处历史字符不许是 `,`。
  * @param {string} cssText CSS 原文。
  * @param {string} selector 选择器，例如 `.entry`。
  * @returns {string | undefined} 声明块内容；找不到时 undefined。
  */
 function ruleBody(cssText, selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const re = new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`)
+  const re = new RegExp(`(?:^|(?<!,)\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`)
   return re.exec(stripCssComments(cssText))?.[1]
 }
 
@@ -274,7 +322,7 @@ export function checkSidebarRowAxis({ repoRoot }) {
     if (hit.position !== row.position) {
       violations.push(
         `${row.plugin} 的 position 从 '${row.position}' 变成了 '${hit.position ?? '未声明'}'`
-        + `——列归属变了，REGISTRY 的 column='${row.column}' 随之失效（'after' 与 'split' 的几何算法不同）`,
+        + `——列归属变了，REGISTRY 的 column='${row.column}' 随之失效（'after' 与 'stacked' 由共享核心的不同代码路径决定落点）`,
       )
     }
   }
@@ -312,6 +360,63 @@ export function checkSidebarRowAxis({ repoRoot }) {
     }
   }
 
+  // 判据四：被插件改写的官方行，与本列注入行落在同一条轴上；标记名必须与共享核心互钉。
+  for (const row of RESTYLED_SHELL_ROWS) {
+    let coreText
+    try {
+      coreText = readFileSync(join(repoRoot, ...row.core.split('/')), 'utf8')
+    } catch {
+      violations.push(`${row.plugin} 改写官方行依赖的共享核心读不到：${row.core}`)
+      continue
+    }
+    if (!new RegExp(`dataset\\.${row.camel}\\b`).test(coreText)) {
+      violations.push(
+        `共享核心（${row.core}）里找不到 ${row.attribute}（dataset.${row.camel}）的写入`
+        + `——标记若改了名，${row.css} 的改写规则会整体失效而无人知晓，故判红`,
+      )
+    }
+    let cssText
+    try {
+      cssText = readFileSync(join(repoRoot, ...row.css.split('/')), 'utf8')
+    } catch {
+      violations.push(`${row.plugin} 的 CSS 读不到：${row.css}`)
+      continue
+    }
+    const body = ruleBody(cssText, row.selector)
+    if (body === undefined) {
+      violations.push(`${row.plugin} 的 CSS 里找不到规则 \`${row.selector} {\`——改写锚改名/删除后，官方按钮会顶着插件标记静默回退成按钮，本项对此判红`)
+      continue
+    }
+    const axis = horizontalAxis(body)
+    const column = COLUMNS[row.column]
+    if (column.axis !== null) {
+      for (const key of Object.keys(column.axis)) {
+        if (axis[key] !== column.axis[key]) {
+          violations.push(
+            `${row.plugin} 改写的官方行 \`${row.selector}\` 行轴 ${key}='${axis[key]}'，本列（${row.column}）应为 '${column.axis[key]}'`
+            + `——${column.why}`,
+          )
+        }
+      }
+    }
+  }
+
+  // 判据五（ADR-0125 D7 / D8）：侧栏宽度契约断言（目标值 264px，落在 [264, 420] 内）。
+  const targetWidth = TARGET_SIDEBAR_WIDTH
+  const [minWidth, maxWidth] = SIDEBAR_WIDTH_BOUNDS
+  if (targetWidth !== 264) {
+    violations.push(
+      `侧栏目标宽度契约漂移：当前声明为 ${targetWidth}px，必须严格为 264px（ADR-0125 D7）`
+      + '——解决总账 P-51 登记的「宽度无门禁」缺口',
+    )
+  }
+  if (targetWidth < minWidth || targetWidth > maxWidth) {
+    violations.push(
+      `侧栏目标宽度 ${targetWidth}px 超出基座 clampWidth 物理边界 [${minWidth}, ${maxWidth}]`
+      + '——任何低于 264px（如试图硬写 252）或高于 420px 的设定均无法经由基座正规布局到达',
+    )
+  }
+
   if (violations.length > 0) return { passed: false, violations }
 
   const groups = new Set(REGISTRY.map((r) => r.column))
@@ -320,8 +425,20 @@ export function checkSidebarRowAxis({ repoRoot }) {
     passed: true,
     violations: [],
     note: `已登记 ${discovered.length} 个注入行、${groups.size} 列；其中 ${asserted.length} 行断言了行轴`
-      + `（${[...new Set(asserted.map((r) => r.column))].join(' / ')}）`,
+      + `（${[...new Set(asserted.map((r) => r.column))].join(' / ')}）`
+      + `；另断言 ${RESTYLED_SHELL_ROWS.length} 条被插件改写的官方行同轴`
+      + `；侧栏宽度契约锁定 ${targetWidth}px ⊂ [${minWidth}, ${maxWidth}]（ADR-0125 D7/D8）`,
   }
 }
 
-export { COLUMNS, REGISTRY, discoverRows, horizontalAxis, ruleBody, stripCssComments }
+export {
+  COLUMNS,
+  REGISTRY,
+  RESTYLED_SHELL_ROWS,
+  SIDEBAR_WIDTH_BOUNDS,
+  TARGET_SIDEBAR_WIDTH,
+  discoverRows,
+  horizontalAxis,
+  ruleBody,
+  stripCssComments,
+}
