@@ -88,7 +88,7 @@ async function getBytes(url, { attempts = 4 } = {}) {
     }
     if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * 2 ** i))
   }
-  throw new Error(`${url} 取件失败（${attempts} 次）：${lastErr?.message}`)
+  throw new Error(`${url} 取件失败（${attempts} 次）：${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
 }
 
 async function getText(url, options = {}) {
@@ -107,6 +107,8 @@ export async function listTree(repo, commit) {
   }
   const { ok, text, status } = await getText(`${API}/repos/${repo}/git/trees/${commit}?recursive=1`)
   if (!ok) throw new Error(`${repo}: trees API ${status} (commit: ${commit})`)
+  // `text` 在无响应体时为 null；单独报，免得 JSON.parse 抛出看不懂的语法错。
+  if (text === null) throw new Error(`${repo}: trees API 响应体为空 (commit: ${commit})`)
   const data = JSON.parse(text)
   if (data.truncated) {
     throw new Error(
@@ -129,6 +131,10 @@ export function unitFiles(tree, skillDir) {
 async function main() {
   if (!fs.existsSync(MANIFEST)) throw new Error(`缺少 manifest：${MANIFEST}`)
   const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'))
+  // 空数组字面量在 strict 下推断为 `never[]`，于是后面每一处 push 都被判
+  // 「Argument of type 'string' is not assignable to parameter of type 'never'」。
+  // 写清元素类型，别让推断去猜。
+  /** @type {{ fetchedAt: string, repos: Record<string, unknown>, skills: Array<Record<string, unknown>>, problems: string[], skipped: string[] }} */
   const report = { fetchedAt: new Date().toISOString(), repos: {}, skills: [], problems: [], skipped: [] }
 
   for (const repo of manifest.repos) {
@@ -203,6 +209,9 @@ async function main() {
         if (!buf) {
           const { ok, buffer } = await getBytes(url)
           if (!ok) { report.problems.push(`${repo.id}/${s.name}: raw 404 ${f.path}`); continue }
+          // 同 extraFiles 处：`buffer` 自身可空（getBytes 在 404 时回 null），
+          // 不先收窄的话 `buf` 在块后仍是 `Buffer | null`。
+          if (!buffer) { report.problems.push(`${repo.id}/${s.name}: raw 空响应 ${f.path}`); continue }
           buf = buffer
           if (f.size !== undefined && buf.length !== f.size) {
             report.problems.push(
@@ -242,6 +251,9 @@ async function main() {
       if (!buf) {
         const { ok, buffer } = await getBytes(url)
         if (!ok) { report.problems.push(`${repo.id}: extraFile 404 ${rel}`); continue }
+        // 分开判而不是并进上一行：`ok=true` 却没有字节是另一种坏响应，
+        // 报出来时不该假装成 404。顺带让 `buf` 在下面收窄成非空。
+        if (!buffer) { report.problems.push(`${repo.id}: extraFile 空响应 ${rel}`); continue }
         buf = buffer
         fs.mkdirSync(path.dirname(target), { recursive: true })
         fs.writeFileSync(target, buf)

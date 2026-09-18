@@ -30,6 +30,7 @@ import {
   checkShellVarAdjacentMultibyte,
   checkTccDeadGrantRule,
   checkTccPaneGuidance,
+  checkThemeTokensBaselineFrozen,
   checkTrackedIgnored,
 } from './gates/checks.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
@@ -1267,10 +1268,10 @@ const CHECKS = [
     name: 'exemptions-frozen',
     remediation: '不得新增豁免条目；补齐后请删除条目，期限不可延后（ADR-0014）',
     run() {
-      const baselineExists = baselineExemptionsExist()
+      const baselineExists = baselineFileExists(EXEMPTIONS_PATH)
       return checkExemptions({
         exemptions: JSON.parse(readIfExists(EXEMPTIONS_PATH) || '[]'),
-        baseline: baselineExists ? readBaselineExemptions() : [],
+        baseline: baselineExists ? readBaselineFile(EXEMPTIONS_PATH) : [],
         today: new Date().toISOString().slice(0, 10),
         baselineExists,
       })
@@ -1533,7 +1534,7 @@ const CHECKS = [
   {
     name: 'theme-tokens',
     modes: ['full'],
-    remediation: '改用真实 token（官方主题包或 dsh-theme-local 供给的名字）；存量违规登记在 scripts/gates/theme-tokens-baseline.json，该文件只减不增、条目失效即拒绝（ADR-0014、ADR-0028 的 C2 验收）。若被引用的是一个**组件自有的局部自定义属性**（声明它的文件与引用它的文件同属一个包），那是假红而不是违规——见 theme-tokens-selftest',
+    remediation: '改用真实 token（官方主题包或 dsh-theme-local 供给的名字）；存量违规登记在 scripts/gates/theme-tokens-baseline.json，该文件只减不增、条目失效即拒绝（ADR-0014、ADR-0028 的 C2 验收）——「只减不增」由 theme-tokens-baseline-frozen 判据守着，不是靠这句话。若被引用的是一个**组件自有的局部自定义属性**（声明它的文件与引用它的文件同属一个包），那是假红而不是违规——见 theme-tokens-selftest',
     run() {
       const appDir = join('/', 'Applications', 'DSH Desktop.app')
       // 环境相关：app 未安装时由 checkThemeTokens 自身报告跳过（与 patch-anchors 同一语义）。
@@ -1551,6 +1552,19 @@ const CHECKS = [
       '跑 node --test scripts/gates/theme-tokens.test.mjs 看红在哪条：本项在 2026-09-15 差点成了假红制造机——`dsh-settings-shell-local/src/client/shell.css` 在 `:root` 声明 `--dsh-settings-shell-brand` 并在同一文件用 `var()` 引用它（组件自有的局部变量），却因前缀撞上平台命名空间 `--dsh-` 被判「从未被任何地方定义」；而判据文字写着「两种定义形态都要认」，实现只认 `"--dsw-x": v` 这一种。修法的风险**不在漏报而在过度放行**，故用例以负向为主：跨包引用一个只在别的包内部声明的名字必须仍判红（否则射程被放宽成「别处声明过」，本项退化成恒真桩）、幻觉 token 不得被任何局部声明放行、注释里的名字不算声明、局部集合必须真小于引用总量。重点是恒真桩突变：把「局部判定」改成恒真必须让 4 条负向用例失效，把「剥注释」去掉必须让注释那条失效——突变不红就说明拦住缺陷的不是判据本身（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/theme-tokens.test.mjs', '主题 token 可达性判据的反向自测失败')
+    },
+  },
+  {
+    name: 'theme-tokens-baseline-frozen',
+    remediation:
+      '不得新增主题 token 基线条目（只减不增，ADR-0014）。新发现的幻觉 token 请改源头——换用真实 token，或去掉 var() 走字面兜底；登记进基线只是承认「它不随主题变化」并且不去修它，而且不会有到期日。若确需放宽这一条，请连同理由改本判据自身，让放宽显式可见（2026-09-18 前这条纪律只有文字声明，没有任何判据守着）。',
+    run() {
+      const baselineExists = baselineFileExists(THEME_TOKENS_BASELINE_PATH)
+      return checkThemeTokensBaselineFrozen({
+        entries: JSON.parse(readIfExists(THEME_TOKENS_BASELINE_PATH) || '[]'),
+        baseline: baselineExists ? readBaselineFile(THEME_TOKENS_BASELINE_PATH) : [],
+        baselineExists,
+      })
     },
   },
 ]
@@ -1786,12 +1800,13 @@ function runPackageScripts() {
 }
 
 /**
- * 判断豁免登记文件是否已存在于 git HEAD（未入库即处于初始登记引导期）。
+ * 判断某仓库相对路径的文件是否已存在于 git HEAD（未入库即处于初始登记引导期）。
+ * @param {string} relPath 仓库根相对路径
  * @returns {boolean}
  */
-function baselineExemptionsExist() {
+function baselineFileExists(relPath) {
   try {
-    execFileSync('git', ['-C', repoRoot, 'cat-file', '-e', `HEAD:${EXEMPTIONS_PATH}`], { stdio: 'ignore' })
+    execFileSync('git', ['-C', repoRoot, 'cat-file', '-e', `HEAD:${relPath}`], { stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -1799,12 +1814,17 @@ function baselineExemptionsExist() {
 }
 
 /**
- * 从 git HEAD 读取豁免登记基线；文件尚未入库或仓库尚无提交时返回空数组。
+ * 从 git HEAD 读取某个 JSON 基线文件；文件尚未入库或仓库尚无提交时返回空数组。
+ *
+ * 「冻结基线 = HEAD 版本，工作区比 HEAD 多即为新增」是 `exemptions-frozen` 与
+ * `theme-tokens-baseline-frozen` 共用的口径——**不必另存一份快照文件**，也就不会
+ * 出现「快照与基线各说一套」的第二个家（ADR-0009）。
+ * @param {string} relPath 仓库根相对路径
  * @returns {Array<Record<string, unknown>>}
  */
-function readBaselineExemptions() {
+function readBaselineFile(relPath) {
   try {
-    const text = execFileSync('git', ['-C', repoRoot, 'show', `HEAD:${EXEMPTIONS_PATH}`], {
+    const text = execFileSync('git', ['-C', repoRoot, 'show', `HEAD:${relPath}`], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     })

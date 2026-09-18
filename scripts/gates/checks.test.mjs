@@ -17,6 +17,7 @@ import {
   checkScriptsRunnable,
   checkShellVarAdjacentMultibyte,
   checkTccPaneGuidance,
+  checkThemeTokensBaselineFrozen,
   checkTrackedIgnored,
 } from './checks.mjs'
 
@@ -845,4 +846,58 @@ test('出货 README heredoc：段外的裸反引号不受影响（只审判这�
   })
 
   assert.equal(result.passed, true)
+})
+
+test('主题 token 基线冻结：新增条目必须被拒绝（登记等于承认不修它）', () => {
+  const result = checkThemeTokensBaselineFrozen({
+    entries: [{ token: '--dsw-alias-radius-lg' }, { token: '--dsw-alias-newly-registered' }],
+    baseline: [{ token: '--dsw-alias-radius-lg' }],
+  })
+
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1, '只该报新增那一条，不得连带报出已冻结的条目')
+  assert.match(result.violations[0], /--dsw-alias-newly-registered/)
+  assert.match(result.violations[0], /只减不增/)
+})
+
+test('主题 token 基线冻结：删除条目必须放行（这是「只减」那一半）', () => {
+  const result = checkThemeTokensBaselineFrozen({
+    entries: [{ token: '--dsw-alias-radius-lg' }],
+    baseline: [{ token: '--dsw-alias-radius-lg' }, { token: '--dsw-alias-shadow-md' }],
+  })
+
+  assert.equal(result.passed, true)
+  assert.deepEqual(result.violations, [])
+})
+
+test('主题 token 基线冻结：基线文件未入库时不拦（首次登记的引导期）', () => {
+  const result = checkThemeTokensBaselineFrozen({
+    entries: [{ token: '--dsw-alias-radius-lg' }],
+    baseline: [],
+    baselineExists: false,
+  })
+
+  assert.equal(result.passed, true)
+})
+
+test('主题 token 基线冻结：原样保持放行——且证明它不是恒真桩', () => {
+  const unchanged = checkThemeTokensBaselineFrozen({
+    entries: [{ token: '--dsw-alias-radius-lg' }, { token: '--dsw-alias-shadow-md' }],
+    baseline: [{ token: '--dsw-alias-radius-lg' }, { token: '--dsw-alias-shadow-md' }],
+  })
+
+  // 关键：这一条若恒真，上面「新增必须被拒」就失去意义——判据会永远说「没问题」。
+  assert.equal(unchanged.passed, true)
+
+  const gained = checkThemeTokensBaselineFrozen({
+    entries: [
+      { token: '--dsw-alias-radius-lg' },
+      { token: '--dsw-alias-shadow-md' },
+      { token: '--dsw-alias-one-more' },
+    ],
+    baseline: [{ token: '--dsw-alias-radius-lg' }, { token: '--dsw-alias-shadow-md' }],
+  })
+
+  assert.equal(gained.passed, false, '判据必须能说「不」')
+  assert.equal(gained.violations.length, 1)
 })

@@ -298,6 +298,38 @@ export function checkExemptions({ exemptions, baseline, today, baselineExists = 
 }
 
 /**
+ * 校验主题 token 基线只减不增（ADR-0014 的同一条纪律，2026-09-18 补）。
+ *
+ * **为什么需要这一条**：`scripts/gates/theme-tokens-baseline.json` 的「只减不增」
+ * 原先只写在 `theme-tokens` 判据的 remediation 文字与文档里，**没有任何判据守着**——
+ * 任何人往基线里加条目都无人拦。对照 `exemptions.json` 有 `exemptions-frozen` 守着，
+ * 这里是同一个洞：一条纪律若只有文字声明，就不是纪律，是愿望。
+ *
+ * **与 `checkExemptions` 的差异**：基线条目没有 `deadline`。它的「到期」由另一条路
+ * 表达——`theme-tokens` 本体在条目已不被任何包引用时**要求删除**（条目失效即拒绝）。
+ * 所以这里只管「新增」这一个方向。
+ *
+ * **为什么新增必须被拒**：登记进基线等于承认「这个 token 不随主题变化」并且不去修它。
+ * 放它静默通过，就是把「修复」换成了「记账」，而记账不会有到期日。
+ *
+ * @param {{entries: Array<Record<string, unknown>>, baseline: Array<Record<string, unknown>>, baselineExists?: boolean}} input
+ *   当前基线条目、HEAD 版本基线条目（冻结基线）、基线文件是否已入库
+ * @returns {{passed: boolean, violations: string[]}}
+ */
+export function checkThemeTokensBaselineFrozen({ entries, baseline, baselineExists = true }) {
+  const violations = []
+  const known = new Set(baseline.map((entry) => entry.token))
+
+  for (const entry of entries) {
+    if (known.has(entry.token) || !baselineExists) continue
+    violations.push(
+      `${entry.token}: 新增主题 token 基线条目被拒绝（只减不增；新违规请修源头——改用真实 token 或去掉 var() 走字面，登记会让它永远不被判）`,
+    )
+  }
+  return { passed: violations.length === 0, violations }
+}
+
+/**
  * 校验没有「已跟踪文件同时命中忽略规则」的漂移（ADR-0013）。
  * 该状态会让仓库对同一文件给出两种相反回答：git 跟踪它，忽略规则又声称它不该存在。
  * @param {{trackedIgnored: string[]}} input `git ls-files --cached --ignored --exclude-standard` 的输出
