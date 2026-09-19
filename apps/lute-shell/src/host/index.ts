@@ -1,7 +1,6 @@
 /** Plain-Node child process: boots the profile and carries API plus SPA assets over framed pipes. */
 
-import { createRequire } from 'node:module'
-import { closeSync, createReadStream, createWriteStream, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { createReadStream, createWriteStream, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { once } from 'node:events'
 import { join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,8 +72,11 @@ function isInside(root: string, target: string): boolean {
 }
 
 function readDshVersion(profileDir: string): string {
-  const require = createRequire(join(profileDir, 'package.json'))
-  const manifest = JSON.parse(readFileSync(require.resolve('@deepseek-ai/dsh/package.json'), 'utf8')) as { version?: unknown }
+  // Same join-based manifest path as installAnchor in composition.ts; upstream shares one helper across both call sites.
+  const manifest = JSON.parse(readFileSync(
+    join(profileDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
+    'utf8',
+  )) as { version?: unknown }
   if (typeof manifest.version !== 'string') throw new Error('lute shell: installed dsh manifest has no version')
   return manifest.version
 }
@@ -253,8 +255,12 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
       requestBodies.clear()
       blockedRequests.clear()
       discardedRequestBodies.clear()
+      // Upstream closeSyncs both pipe fds after destroy() (desktop-host stop()); we drop the pair — registered
+      // port deviation (docs/research/18-lute-shell-skeleton.md §5). With autoClose:false an errorless destroy()
+      // does NOT close the fd, and the racing explicit close was the intermittent EBADF source. Natural exit
+      // instead relies on the parent contract (host-process.ts stop(): destroy the request-pipe write end after
+      // shutdown) — its EOF completes the pending fd-3 read so the event loop can drain.
       requestPipe.destroy()
-      closeSync(SHELL_REQUEST_PIPE_FD)
       await controller.dispose()
       await Promise.allSettled([...runs])
       await responseWriteTail.catch(() => undefined)
@@ -262,7 +268,6 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
         await new Promise<void>((resolvePromise) => { responsePipe.end(resolvePromise) })
         responsePipe.destroy()
       }
-      closeSync(SHELL_RESPONSE_PIPE_FD)
       if (process.connected) process.disconnect()
       process.exitCode = requestedExitCode
     })()
@@ -405,6 +410,10 @@ if (isEntry) {
     const message = error instanceof Error ? error.message : String(error)
     if (process.send !== undefined) process.send({ type: 'fatal', message } satisfies HostEvent)
     else process.stderr.write(`lute shell: ${message}\n`)
+    // Upstream's entry catch (desktop-host/src/index.ts) leaves the IPC channel open and relies on the parent
+    // to kill the child; we disconnect so a connected channel cannot keep the event loop alive — registered
+    // port deviation (docs/research/18-lute-shell-skeleton.md §5).
+    if (process.connected) process.disconnect()
     process.exitCode = 1
   })
 }

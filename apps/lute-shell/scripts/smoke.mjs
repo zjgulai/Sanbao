@@ -188,6 +188,10 @@ try {
 
 const exitedBeforeShutdown = childExited
 if (child.connected) child.send({ type: 'shutdown' })
+// 忠实父进程契约（src/main/host-process.ts stop()：IPC shutdown 后 destroy 请求管道写端）：
+// 宿主 fd3 上在途的线程池 read 只在 EOF（本端关闭）时完成；不关写端则该请求吊住事件循环，
+// 宿主永不自然退出。旧宿主的 closeSync(FD3) 曾掩盖这一点——它靠作废 fd 硬完成该 read。
+requestPipe.destroy()
 let killTimer
 const { code: exitCode } = await Promise.race([
   exited,
