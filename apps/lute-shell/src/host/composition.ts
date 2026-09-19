@@ -14,8 +14,8 @@ export const SHELL_LABEL = 'lute shell'
 /** Composition root the seed ships; boot mounts it and nothing else. */
 export const ROOT_CONFIG_FILENAME = 'cordis.yml'
 
-/** Written by the materializer so the root config is never absent. */
-export const ROOT_CONFIG_CONTENT = '# lute-shell composition root; the profile seed owns this file.\n[]\n'
+/** Root-config content the host rewrites at every boot; the seed ships the same bytes as the initial copy. */
+export const ROOT_CONFIG_CONTENT = '# lute-shell composition root; the seed ships this file, the host rewrites it at every boot.\n[]\n'
 
 /** Ordered patch layers handed to boot, plus where the bundle layers came from. */
 export interface ShellPatches {

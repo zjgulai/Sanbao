@@ -327,7 +327,7 @@ const CHECKS = [
   },
   {
     name: 'lute-shell-pin',
-    remediation: '把 apps/lute-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0131）',
+    remediation: '把 apps/lute-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0139）',
     run() {
       const reference = join('vendor', 'dsh-desktop', 'deepseek-harness', 'apps', 'desktop-host', 'src', 'wire.ts')
       let trackedFixturePaths = null

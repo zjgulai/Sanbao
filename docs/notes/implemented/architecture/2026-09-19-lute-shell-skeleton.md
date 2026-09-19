@@ -124,11 +124,9 @@ node_modules。** 物化时把 `lib/protocol.js`、`lib/host/*.js`（6 个文件
 5. **首屏截图与 `DSH_HOME` 隔离**：出货截图已是隔离 home 的空态捕获（fix round 2 重拍）；
    机制、隔离 home 下 smoke 的时序显形与 git 历史保留等事实的家是
    [18 号报告 §4.2/§6.6/§6.11](../../../research/18-lute-shell-skeleton.md)。
-6. **一处已过时的 ADR 指针**：`scripts/gate.mjs:328` 的 `lute-shell-pin` remediation 文案写死了
-   `（ADR-0131）`——那是 Task 9 派工时计划里预判的编号，执行期该号已被并发的换皮 ADR 占用，本
-   决策实际落在 ADR-0139。这段是纯提示文本、不参与任何判定（Task 9 报告 Concern 4 已登记），
-   但它是过时指针；本 task 的文件清单不含 `scripts/gate.mjs`，故只登记不改，留给最终评审一处
-   字面量替换。
+6. **一处已过时的 ADR 指针（终审修复波已改指 ADR-0139）**：`lute-shell-pin` 检查项的
+   `remediation` 文案曾把本决策误指为 Task 9 预判的编号 ADR-0131（纯提示文本、不参与判定）；
+   登记与修复事实的家是 [18 号报告 §6.9](../../../research/18-lute-shell-skeleton.md)。
 7. **spec §6 的三条新门禁本期一条都没上**，这是有意的范围裁剪不是遗漏：P1 没有任何 pnpm patch，
    `patch-applies-clean` 无对象；`harness-version-pin` 的 P1 等价物就是 `lute-shell-pin`（覆盖壳
    与 seed 两侧）；`submodule-ref-sync` 要等 P3 有运行时补丁后再上。

@@ -243,8 +243,9 @@ $ grep -c '^PASS' /tmp/t10-smoke-final.txt   # 即上面那次运行的捕获文
 
 **★ 不得把这段输出引用为「空 profile 正常 / 零 LUTE 插件」的证据。** 首行断言的谓词只读
 `package.json` 的 `dsh.profile.bundles`，而插件层真正的挂载点是 `cordis.patch.yml` 与
-`lute-host/shell.cordis.patch.yml`；label 曾在 fix round 2 之前就写着「profile 里没有 LUTE 插件层」，
-那句话超出谓词所证，已被收窄掉（P2 一挂插件它就变假而 PASS 照旧）。
+`lute-host/shell.cordis.patch.yml`；label 曾在 **Task 7 fix round 2** 之前就写着「profile 里没有
+LUTE 插件层」，那句话超出谓词所证，已在那一轮收窄掉（P2 一挂插件它就变假而 PASS 照旧）。
+（本文他处的「fix round 2」均指 Task 10 的空态重拍轮，只有本处指 Task 7 的。）
 
 「零 LUTE 插件」这条里程碑事实的**证据家是仓库里 seed 的 `cordis.patch.yml`**——tracked、内容
 剥掉注释与空白后恰为 `[]`，由门禁 `lute-shell-pin` 静态守住：
@@ -328,7 +329,11 @@ CDP Network 域 35 行**全部 200**、零 `NET-FAIL`，`Runtime.exceptionThrown
 
 **入库图像是空态**（§4.1 的读数判定，非目视）；**原共享 `~/.dsh` 捕获（侧栏含真实会话标题）仍在
 git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图像——git 历史保留是事实登记不是
-缺陷，真要清除需 rewrite history，属用户的决定。机制与隔离归属（`DSH_HOME` 默认共享 `~/.dsh`，
+缺陷，真要清除需 rewrite history，属用户的决定。**公开远端的实测（终审测量，2026-09-19）**：旧图
+（171872 B，含真实会话标题）是 `origin/main` 上的**当前文件**（`git branch -r --contains 1b7bb9e`
+→ origin/main；远端 `github.com/zjgulai/Sanbao` 是公开仓）——空态替换目前只活在未推送的提交里，
+**推送落地才关闭「当前文件」级别的暴露**；从历史里彻底清除则须 rewrite，是用户显式决定的动作，
+不是本仓默认会做的事。机制与隔离归属（`DSH_HOME` 默认共享 `~/.dsh`，
 `apps/lute-shell/src/main/index.ts:52` 的 `dshHome` 回退；隔离成为默认形态属 P4 决策）见 §6.6。
 
 ### 4.3 两条顺带定死的架构前提（引自 Task 8 报告，本轮未重测）
@@ -337,7 +342,8 @@ git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图
   → `24.18.1`，≥ harness engines 下限 `22.19` ⇒ **P4 无需随附 plain node**（计划里这条曾是待实测项）。
 - **`LUTE_SHELL_NODE_BINARY` 覆盖生效**：Run C 下子进程 argv 实测为
   `/opt/homebrew/bin/node /Users/lute/.dsh/profiles/lute-shell/lute-host/host/index.js /Users/lute/.dsh/profiles/lute-shell`，
-  ready 行同文，CDP 截图与 Run B 同字节数（171872）且视觉一致，quit 后 `pgrep` 空。
+  ready 行同文，CDP 截图与 Run B 同字节数（171872，**已被 §4 空态图替换的旧共享 home 捕获**，
+  原文件在 git 历史 `1b7bb9e`）且视觉一致，quit 后 `pgrep` 空。
 
 ### 4.4 本文未做的事（诚实声明）
 
@@ -383,8 +389,30 @@ git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图
 ```
 
 其中 `src/main/host-process.ts`（390 行）是上游 `apps/desktop/src/host-process.ts`（413 行）的
-逐段移植，`src/host/index.ts`（410 行）移植上游 `apps/desktop-host/src/index.ts`；差异清单与
-「必须逐字保留的行为清单」在 Task 8 / Task 5 报告里，本文不复述。
+逐段移植，`src/host/index.ts`（410 行）移植上游 `apps/desktop-host/src/index.ts`。
+
+**移植偏差清单（「我们的移植在哪里偏离上游逐字形状」的出货面唯一家；P3 迁移运行时补丁时
+以本清单为起点核对）**。逐段比对与「必须逐字保留的行为清单」的详细档案在 git-ignored 的
+`.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/task-5-report.md` 与 `task-8-report.md`
+（公开克隆跟不到那两个路径），故在此收敛为紧凑清单、一行一条：
+
+1. `apps/lute-shell/src/host/index.ts` 入口 catch 补 `process.disconnect()`——上游
+   `desktop-host/src/index.ts` 的入口 catch（`:581-587`）发完 fatal 即止、不做任何 disposal；
+   连着的 IPC 通道会吊住子进程事件循环（终审修复波 F1a，登记偏差）。
+2. `stop()` 删掉上游 `:435-444` 的两处显式 `closeSync`（终审修复波 F1b，登记偏差）。实测机制
+   （Node 26）：**写流**的 `destroy()` 会关 fd，`closeSync(FD4)` 因此是结构性双关——隔离 home
+   下 2/2 复现的 `EBADF` 位点；**读流**的无错 `destroy()` 不关 fd，旧 `closeSync(FD3)` 实际兼任
+   「作废 fd 以完成在途线程池 read」。宿主自然退出改为依赖父进程契约
+   （`src/main/host-process.ts` 的 `stop()`：shutdown 后 destroy 请求管道写端，其 EOF 完成该
+   read；smoke 已补齐同一契约），干净拆机与 fatal 拆机两路径的间歇 `EBADF` 均由此清除。
+3. `readDshVersion` 收敛到与 `composition.ts` 的 `installAnchor` 同用 `join` 直取 manifest——
+   上游本就共用一个 `packageManifestPath` helper，此改**恢复**上游形状，记为收敛而非偏差。
+4. `src/main/host-process.ts` 相对上游的机械差异：符号改名（类名/构造签名/spawn 参数/
+   `DESKTOP_*`→`SHELL_*`）、错误前缀统一 `lute shell: `、`isHostEvent` 改从 `../protocol.js`
+   import（上游在文件内留本地副本 `:32-43`）、删上游的 `join` import（Task 8 报告的五处差异）。
+5. `handleMessage` 的 `fatal` 分支在 `fail()` 后补 `this.child?.kill('SIGTERM')`（上游无此行）：
+   `boot()` 被拒的宿主靠父进程收尸——与第 1 条同一缺陷族的父进程侧收口（Task 5 路由、Task 8
+   落地）。
 
 **未测（本文不做口头验收）**：旧壳侧的 12 个壳层补丁数取自
 [spec §3 的对照表](../superpowers/specs/2026-09-19-base-decoupling-design.md)（设计记录），
@@ -421,18 +449,21 @@ git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图
    **入库截图已是空态**（§4）；原共享 `~/.dsh` 捕获仍在 git 历史 `1b7bb9e` 里——用户决定的是
    替换工作树图像，历史保留是事实登记不是缺陷（清除需 rewrite history，属用户决定）。
 7. **打包面缺 CSP**：开发期的 CSP console 警告是 Electron 预期行为，P4 打包必须补。
-8. **quit 路径的孤儿子进程窗口**（Task 8 登记的 Minor，`1b7bb9e`；三种形态，本次对着
-   `src/main/index.ts` 复核均在位）：① 外层 catch 调 `app.exit(1)` 但不 `host.stop()`；② 生命周期
+8. **quit 路径的孤儿子进程窗口**（parked→P4·quit 收口；Task 8 登记的 Minor，`1b7bb9e`；三种
+   形态，本次对着 `src/main/index.ts` 复核均在位）：① 外层 catch 调 `app.exit(1)` 但不
+   `host.stop()`；② 生命周期
    监听器（`window-all-closed` / `before-quit`）只在 `loadURL` resolve 之后才装，quit 早到会绕过
    它们；③ `before-quit` 守卫在第二次 `app.quit()` 时**不** `preventDefault` 就 return，于是
    Electron 可以在 `stop()` 仍在飞行中时退出。P4 的正路是监听器在 `await host.start()` 之前装、
    catch 里补 `stop()`；③ 的守卫是刻意镜像上游「二次 quit 不再 preventDefault，否则永不退出」，
    改它要连上游保真一起判。
-9. **一处过时的 ADR 指针**：`scripts/gate.mjs:328` 的 `lute-shell-pin` remediation 文案写死了
-   `（ADR-0131）`——那是 Task 9 派工时计划里预判的编号，执行期已被并发的换皮 ADR 占用，本决策
-   实为 **ADR-0139**。纯提示文本、不参与任何判定，但它是过时指针，留给最终评审做一处字面量替换。
+9. **一处过时 ADR 指针的登记与修复（本事实唯一家）**：`lute-shell-pin` 检查项的 `remediation` 文案
+   曾写死 `（ADR-0131）`——那是 Task 9 派工时计划预判的编号，执行期已被并发的换皮 ADR 占用，本
+   决策实为 ADR-0139；P1 终审修复波已把该字面量改指 ADR-0139。纯提示文本、不参与任何判定。
+   引用纪律：该 remediation 一律按 `lute-shell-pin` 检查名引用、不按行号——四处旧登记里的
+   `:328` 在 HEAD 已漂到 `:329`，行号不是可靠指针。
 10. **`tsconfig.json` 只 include `src/**/*.ts`**，故 `apps/lute-shell/test/` 下的 spec 只由 vitest
-    转译、从未经过类型检查（Task 1 继承，Task 5/8 均登记）。
+    转译、从未经过类型检查（parked→P2·门禁任务；Task 1 继承，Task 5/8 均登记）。
 11. **宿主侧 disposal 缺口：`boot()` 被拒无处置 + fatal 拆机的二次 `EBADF`**（routed→最终评审；
     Task 5 登记、Task 7 fix round 1 `060ec28` 带可复现负面测试与完整 stderr 栈，出处在
     `.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/progress.md` 的 Task 5 / Task 7 段与同目录
@@ -446,14 +477,15 @@ git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图
     fix round 2 补测（2026-09-19，隔离 `DSH_HOME` 重拍时顺带量到）：这族二次 close 在**干净
     shutdown 路径**上也会显形——无头 smoke 在隔离 home 下 2/2 复现
     `closeSync(SHELL_RESPONSE_PIPE_FD)` 抛 `EBADF`（宿主 exit 1，shutdown 断言 FAIL），共享
-    home 同命令 PASS。机制实测（本轮，Node 26.0.0）：`createWriteStream('', { fd, autoClose: false })`
-    的 `destroy()` 仍会异步关 fd（fd 3 同），故 `stop()` 的「destroy 流 + `closeSync` 同一 fd」是
-    **结构性双 close**，是否显形取决于线程池 close 与主线程 `closeSync` 谁先落地——同族佐证：
-    复刻 smoke 请求模式的小驱动（3 请求）在**两个 home 下都**录得 `close-async(4)`（自
-    `index.js:210` 的 `responsePipe.destroy()`）却都 exit 0：机制在场、竞速未输；真实 smoke
-    （6 请求，含 740575 字节跨分片流式资产）在隔离 home 下竞速 2/2 输掉。仍 routed→最终评审；
-    本轮零代码改动，未修。
-12. **`lute-shell-pin` 判定器的四条 report-only Minor**（routed→最终评审；Task 9，commits
+    home 同命令 PASS。**终审修复波已收口（F1，`src/host/index.ts` 两处 `closeSync` 删除 + 入口
+    catch 补 `process.disconnect()`；偏差登记见 §5 清单第 1/2 条）**：隔离 home smoke 已 3 次全绿
+    （shutdown 断言 PASS），Electron 43 RunAsNode 下 boot 拒绝路径 fatal + 自行退出 code=1、干净
+    shutdown 路径 exit 0 且 stderr 零 `EBADF`。**机制在修复时被进一步精确化（修正本条早先
+    「fd 3 同」的表述）**：写流（fd 4）的 `destroy()` 确实关 fd，故 `closeSync(FD4)` 是结构性
+    双 close；但读流（fd 3）的**无错** `destroy()` 并不关 fd（实测 `fstatSync(3)` 在 destroy 后
+    仍成功）——旧 `closeSync(FD3)` 实际兼任「作废 fd 以完成在途线程池 read」的退出机制，删除它
+    要求父进程履行关写端的契约（smoke 已补齐，详见 §5 第 2 条）。
+12. **`lute-shell-pin` 判定器的四条 report-only Minor**（parked→P2·门禁任务；Task 9，commits
     `7008c42` + `73d7270` + `bd8a220`；账本同上的 Task 9 段）。① override 守卫是**整文件
     substring** 测试——`pnpm-workspace.yaml` 里一行注释提到包名就满足它（今天为真；强化要 YAML
     解析，不成比例）；② 「用户层恰为 `[]`」的谓词拒绝合法变体（`---\n[]`、`[] # 空`）——**方向
@@ -462,3 +494,21 @@ git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图
     抛出、整个 checker 中止，其余违规塌成一行 `checker threw`（门禁仍红，属诊断质量而非漏判；
     fix round 2 之后 vendor manifest 也进了这个输入面）。这四条此前只活在 git-ignored 账本里，
     对下一个读者等于不存在。
+
+### 6.13 终审 parked 清单（owner 已定，一行一条）
+
+最终全分支评审明确 park 的项在此定归属；详细论证在各自条目或 SDD 账本，本清单只回答
+「归谁、何时做」：
+
+- **P2·门禁任务**：① 判定器四条 Minor（第 12 条）；② seed 与壳两侧的 lockfile↔manifest
+  交叉守卫（基线实测 13/13 匹配、`link:`/`file:`/绝对路径 0 条——gap 是未来向的：bump 不
+  重生成锁文件会静默绿）；③ overlay 层守卫——`config/shell.cordis.patch.yml` 是三个挂载层
+  里唯一没有任何门禁的（seed 用户层有守卫、bundle 层被版本锁钉住），P2 的天然插入点；
+  ④ `SHELL_CONTROL_IPC_FD` 配对——其参照孪生在 `host-protocol.ts:13` 而非 `wire.ts`，
+  现有单参照设计看不见它（现值 5=5）；⑤ `tsconfig` 的 test/ typecheck gap（第 10 条）。
+- **P2·smoke 刷新**：八条 smoke Minor（版本正则未与 manifest pin 交叉校验、
+  `largest===undefined` 半边不可达、`entry` 遮蔽、多合取 check 的 detail 缺失、SPA 回退可收
+  等值、403 未断言 body、README 归因复述、stdio 元组按位置硬编码 FD）——注意本文 §3.1
+  **逐字引用了 10 行 smoke 输出**，动断言必须同步重转写该节，属一次成型的刷新而非逐条零敲。
+- **P4·quit 收口**：三种孤儿窗形态（第 8 条；③ 刻意镜像上游，改它要连上游保真一起裁）。
+- **无行动**：`THIRD_PARTY_NOTICES.md` 的 MIT 全文未加代码围栏（美容项，终审判不值得动）。
