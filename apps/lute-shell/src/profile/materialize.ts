@@ -31,12 +31,12 @@ export function defaultInstall(profileDir: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn('pnpm', ['install', '--dir', profileDir], {
       cwd: profileDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // stdout 直通终端：数分钟的 install 必须可观测，「在干活」与「卡住」不得同形。
+      stdio: ['ignore', 'inherit', 'pipe'],
     })
     let stderr = ''
     child.stderr.setEncoding('utf8')
     child.stderr.on('data', (chunk: string) => { stderr += chunk })
-    child.stdout.resume()
     child.once('error', (error) => {
       reject(new Error(`lute shell: pnpm install failed to start: ${error.message}`))
     })
