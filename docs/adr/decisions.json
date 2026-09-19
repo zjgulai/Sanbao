@@ -1490,6 +1490,380 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0131",
+      "title": "ADR-0131 · 品牌收口：出货产品改名 WorldPilot，LUTE 退为内部标识，换皮射程 20 处含签名身份",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "单品牌收口：出货产品即 WorldPilot，路特创新 / AgenticOS / ROOT / LUTE Agentic System 作为对外表达全部退役，不保留底座名与皮名并存的中间态。",
+          "constraints": [
+            "任何出货可见面上不得再出现退役的对外品牌名",
+            "退役名可以留在内部面（包名、目录、代码符号、治理字段）",
+            "不得为「兼容旧名字」在产品文案里做双写"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "改名只发生在显示面，不发生在寻址面：bundle 路径、可执行文件名、appId、包名、目录名、luteOrigin/luteOwner/lutePublish 全部保持不变。",
+          "constraints": [
+            "/Applications/DSH Desktop.app 与 Contents/MacOS/DSH Desktop 不得改名",
+            "appId ai.deepseek.dsh.desktop 不得改（TCC 授权与数据目录挂在它上面）",
+            "改 CFBundleName/CFBundleDisplayName 属于显示面，允许；改 CFBundleIdentifier 属于寻址面，禁止"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "换皮射程为 16 处出货可见面，含代码签名身份；射程表 .scratch/worldpilot-reskin/surface-map.md 是唯一权威清单。",
+          "constraints": [
+            "射程表每条必须写现状值与目标值，不得只写类别名",
+            "签名身份改为 WorldPilot Code Signing，且 ensure-signing-identity.sh 必须能生成该身份",
+            "射程表新增一处就要在同一次提交里给出它的拦它的判据，否则等于没纳入射程"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "存量品牌泄漏三处（favicon.svg、manifest.webmanifest、agent-team-gui i18n）随本轮清零，并由机器判据拦住新增泄漏，不靠人记得。",
+          "constraints": [
+            "PWA 清单的 name/short_name 必须与产品显示名一致",
+            "插件包内用户可见文案同样在射程内——brand-replay 只覆盖 app bundle 是既有的射程缺口",
+            "清零后必须有一条常绿可红的断言扫「出货可见面含基座原名」，扫描面为空判红"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "换皮只改品牌表达，不改 ADR-0130 确立的承载：slot 挂载、事件通道、面板几何契约与零 z-index 约束在换皮前后必须逐字节同形。",
+          "constraints": [
+            "不得借换皮之名改 sidebar-row-axis 的轴值或 TARGET_SIDEBAR_WIDTH",
+            "不得借换皮之名恢复已退役的 DOM 注入或自造事件总线",
+            "换皮后面板进出时的会话 composer 几何必须与换皮前实测一致"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0132",
+      "title": "ADR-0132 · 色彩与排印契约：钛银单主色、1 套品牌 × 明暗双色道、材质解禁、`--wp-*` 为源并纳入门禁",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "全量照抄素材源仓 token 契约，钛银为唯一强调色（暗 #c4d0dc / 亮 #3d566e），中性阶/语义色/圆角/动效一并采纳，#58B848 全面退役。",
+          "constraints": [
+            "主色在盘上只能有一个源，其余位置必须是引用或生成物",
+            "不得为可供性另留饱和强调色——那会推翻素材源仓的品牌裁决",
+            "改后必须给出暗/亮两色的 WCAG 对比度实测读数，不得沿用估算"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "主题收敛为 1 套品牌 × 明暗双色道；codex/graphite/midnight 降为 legacy（不进预设墙，分享串可解析但提示迁移），派生引擎不动。本条取代 capability-hub 计划 D3 的四套清单。",
+          "constraints": [
+            "legacy 预设必须仍可被历史分享串解析，不得做成 404",
+            "预设墙里的条目数与品牌色道数一致（2），不得残留第三套深色",
+            "取代关系必须写进被取代文档，避免同一事实两个版本并存"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "把「不用渐变或装饰性辉光」这条混装断言拆成两条：材质渐变合法化，带色相的 box-shadow 辉光继续禁止；测试名改判为遵循 WorldPilot 材质契约。",
+          "constraints": [
+            "解禁范围只覆盖材质语义的渐变（metal-fill/metal-line），不得放开任意渐变",
+            "彩色辉光禁令保留，且必须能举出现状那个绿光晕作为反例",
+            "断言的前提（所遵循的视觉基线名）必须与实际生效的品牌一致，不得留退役名"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "双轨 token：--wp-* 为源、官方别名 --dsw-alias-* 与 --dsw-static-deepseek-* 为派生；theme-tokens 门禁的 NAMESPACE 扩为含 wp，并在同一次提交建立 --wp-* 的定义之家。",
+          "constraints": [
+            "同一条值不得在 --wp-* 与别名两处都写字面值——只能一处为源、另一处引用",
+            "扩 NAMESPACE 与建定义之家必须同一次提交，否则全仓判红",
+            "--wp-* 的定义之家必须唯一，不得沿用 --lute-* 装钛银（名字撒谎）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "默认 uiFont 由 system 改为 inter（基座已内置，零新资产），并把 .tiny 与 .eyebrow 提为共享排印原语、标题收紧字距；不采纳官网的 Arial 字体栈。",
+          "constraints": [
+            "不得把 Arial 打头的官网字体栈当品牌规范照抄——它是零依赖静态页的妥协",
+            "所有 UI 规则仍必须走 font: var(--dsw-font-…)，不得因换字体而绕过 Law C 断言",
+            "改默认字体后必须实测复核 sidebar-row-axis 的列轴与 TARGET_SIDEBAR_WIDTH=264"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "不纳入 --kg-* 七色分类板：其键（7 条 domains）与本仓渲染的 8 条 FLOW、材料仓 mece_rule 的 12 条三者互斥，色板无落点。",
+          "constraints": [
+            "分类色板必须在「流的条数」定下来之后才纳入，不得先钉色后补本体",
+            "不得把七色当装饰色循环上色——8 域用 7 色必然有两次同色",
+            "本体口径冲突必须照实登记，不得以「视觉先用着」掩盖"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0133",
+      "title": "ADR-0133 · 图形资产落位：资产入仓 + pin 校验、logo 五形态映射、macOS squircle 重画、头像双轨承载",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "品牌资产最小集（logo SVG + app-icons + 头像单档双色道，合计 <3M）纳入本仓受管目录，生产源图与大尺寸档不入仓；新增 vendor/worldpilot.pin 记录素材源仓 commit，构建时校验盘上资产哈希与 pin 一致。",
+          "constraints": [
+            "本仓不得克隆素材源仓，只 pin——它是只读上游，与 vendor/dsh-desktop 同性质",
+            "入仓资产必须逐档给出 sha256 并纳入 pin 校验面，未过校验即构建失败",
+            "不得把 180M 生产源图或 85M/色道原生 PNG 放进工作树（ADR-0013）",
+            "出货资产的事实之家必须在版本管理之内——仓外技能目录 + .bak 文件不算家（P-01）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "logo 五形态按素材源仓使用规范逐位落位：启动屏 stacked、侧栏 mark 28×25 contain + 17px 字标、hero mark 34、tray 各档 mark + black/white 做 template、favicon.svg 直落、PWA 清单接 app-icons。",
+          "constraints": [
+            "映射表是射程表的一部分，每一格必须写明形态、尺寸与规范出处",
+            "四周留白不得小于一个主笔画宽度，缩放保持比例、不给图形加边框（上游规范）",
+            "主题切换只改颜色不换轮廓",
+            "常规导航优先 ≥24px，16px 只用于浏览器标签等空间受限场景"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "macOS 应用图标重画为圆角 squircle（深色底 #0b1521 + 钛银 mark），由可复现脚本生成并替换已废弃的 LUTE_ICON_ENGINE 分支；不得直接采用素材源仓无 alpha 的硬边方块原图。",
+          "constraints": [
+            "生成的 .icns/png 必须 hasAlpha 且四角透明",
+            "brand-icons 门禁必须新增形状/alpha 判据——只校尺寸会让硬边方块静默出货",
+            "生成脚本的输入与输出都纳入 pin 校验面",
+            "禁止一次性手工处理不留生成器"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "头像双轨承载：官方预设卡 icon 放一份深色兜底 data URI（离线可渲染），自研渲染点（岗位矩阵/能力中枢/详情面板）吃资产路径 + 主题与尺寸自适应，解锁双色道×7 档；不扩官方 loader 补丁白名单。",
+          "constraints": [
+            "L10 断言改判为「inline data URI + MIME 与字节头一致 + 全员互异 + 与 manifest 同串」，不得再要求 SVG",
+            "禁止用 SVG 容器包一层位图骗过旧断言（P-02 仪器假绿）",
+            "同一岗位两处供给必须由 pin+哈希证明同源，不得各存一份",
+            "官方卡在浅色主题下仍是深色底头像——必须作为已知残留登记在射程表，不得声称已解决"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "换皮轮内容面冻结：本轮只入 AGT-001…050 的头像，AGT-051/052 与 50 个「待分配岗位」占位一律留到内容轮。",
+          "constraints": [
+            "换皮提交必须能给出「50 产物零扰动」级读数，夹带新增岗即不可证明",
+            "不得把占位岗当作可用岗宣传（实测 job=待分配岗位、plane=扩展成员）",
+            "皮与内容分开提交，与 ADR-0008「pin 变更与行为变更分开」同构"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "不引入知识图谱 hero，只引入 earth-texture 背景纹理。",
+          "constraints": [
+            "图谱的 7 节点即 7 域本体，与材料仓 mece_rule 的 12 条、产品内 8 条 FLOW 互斥，不得先钉图后补本体",
+            "启动屏/hero 不得同时出现两套互斥的业务条数读数",
+            "引入的纹理必须纳入 D1 的入仓与 pin 校验面，不得作为仓外引用"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0134",
+      "title": "ADR-0134 · 命名射程判据：只改品牌位，功能面板名保留；品牌名不翻译，描述语用中文叙述句",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "用一条判据分开品牌位与功能位：同时承担「让用户找到功能」职责的名字是功能位，不进换皮射程；只有纯粹表明产品身份的名字才是品牌位。五个功能面板名及其副标题、空态、错误与操作提示保留现状。",
+          "constraints": [
+            "不得把「全维度换皮」执行为「凡是文字都改」",
+            "改 cordis 行的 name 必须重采样 live-presets.expected.json；改 locales 面板标签不需要——两者不得混为一谈",
+            "面板名保留时其副标题里的组织学叙述（四平面×八责任域）一并保留，不得半换"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "品牌名不翻译：全程只用拉丁字标 WorldPilot，中文只出现在描述位；现状「路特创新 + AgenticOS」两行结构退役。",
+          "constraints": [
+            "不得为中文市场另造中文产品名（会产生第四套并存品牌）",
+            "字标面与文本面必须同名：SVG 字标是 WorldPilot 时，任何显示位不得写中文名"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "品牌位描述语照抄素材源仓中文叙述句：hero 用「AI Native 经营决策与运营执行平台」，badge/eyebrow 用「面向跨境电商与出海品牌」。",
+          "constraints": [
+            "该 eyebrow 是关于客户群的定位断言，出货对象不符时即为假——风险登记在射程表，不靠改文案规避",
+            "不得把营销页 h1 同时用于功能说明位（语境错位）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "启动屏不再放独立文本字标，只留 stacked 形态（其 SVG 已含 WorldPilot 路径字标）；brand-replay 的语义锚随之重切，代码内 ROOT 命名族属内部面不改。",
+          "constraints": [
+            "图形与文本不得各存一份产品名（重复事实，P-07）",
+            "重切锚必须与 patch-anchors 门禁同一次提交",
+            "包名/组件名/类名前缀（dsh-root-brand-local、RootMark、HeroRootBrand、.dsh-rb-*）不得因品牌改名"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "品牌泄漏清零后的目标串取产品名本身：agent-team-gui 的「请重启 DeepSeek Harness」改为「请重启 WorldPilot」（含英文镜像），PWA 清单 name=WorldPilot、short_name=WP，<title>=WorldPilot。",
+          "constraints": [
+            "插件包内的用户可见文案同样在射程内，不得只改 app bundle",
+            "short_name 缩写必须与 app-icons 的 worldpilot-* 命名一致",
+            "清零后必须有一条常绿可红的判据扫「出货可见面含基座原名」（ADR-0131 D4）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0135",
+      "title": "ADR-0135 · 换皮的门禁改造与执行契约：单一品牌源 + 不可消除字面量纳入校验 + 六个垂直切片",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "建单一品牌源：--wp-* token 定义文件是唯一源，生成物走 shared-sync 派生，测试与校验器改为 import 源做断言；只有源、生成物、补丁锚三类可以合法持有值。",
+          "constraints": [
+            "同一条品牌值不得在两个源定义家里各自写字面值（P-07）",
+            "生成物必须带 generated-marker，且由 shared-sync 门禁判同步",
+            "测试复述字面量即判违规——期望值必须来自源或来自真实产物 seam"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "不可消除的字面量纳入校验：补丁锚保留字面量，但新增「锚值 == 源值」断言，做法与 theme-tokens-baseline-frozen / exemptions-frozen 一致。",
+          "constraints": [
+            "不得为了零字面量的洁癖删掉交叉验证（那会把校验器变成自证）",
+            "锚值与源值不一致时必须点名两处路径，不得只报「锚缺失」",
+            "该字面量的存在必须登记在射程表，不得作为隐式例外"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "recovery / setup-wizard / desktop-dialog 三处品牌文案一律走 bundle 重放声明，不改 vendor 嵌套仓源码。",
+          "constraints": [
+            "vendor 是只读 pin（ADR-0008），在其中编辑对 git review 不可见，不得作为品牌改动的落点",
+            "新增重放声明必须纳入 brand-replay-selftest 的 R1–R6 覆盖面",
+            "重放目标路径必须过 resource-path-reachability，不得假设布局"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "新增两条判据：brand-token-single-source（扫出货可见面含退役主色字面量）与 brand-name-leak（扫出货可见面含基座原名/退役名），扫描面为空一律判红。",
+          "constraints": [
+            "扫描面为空与扫过且合规必须可区分（P-15）",
+            "两条判据都要有反向自测并能举出反例，否则只是恒绿",
+            "扫描范围必须覆盖插件包，不得只扫 app bundle——那正是 S20 泄漏活了这么久的原因"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "brand-icons 门禁补形状/alpha 判据：出货图标必须 hasAlpha 且四角透明；只校 IHDR 尺寸会让硬边方块静默出货。",
+          "constraints": [
+            "形状盲区必须有反例测试（拿一张无 alpha 的方块图判红）",
+            "判据读磁盘真实字节，不得读声明表自证（brand-icons-selftest 的既有要求）",
+            "资产集合仍是双向断言，改名必须与 ICON_PAIRS 同一次提交"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "分六个垂直切片：S1 品牌源与 token → S2 logo 与图标资产 → S3 头像管线 → S4 命名与文案 → S5 打包链与身份 → S6 收口；每片可独立验收与回滚。",
+          "constraints": [
+            "S6 之前不得发版（中途停会留下「源已改、复述未清」的中间态）",
+            "S2 与 S3 互不依赖可并行，S4 依赖 S1 的 token 名，S5 依赖 S2 的 squircle 与 S4 的名字",
+            "每片结束必须 gate 全绿并给出真机读数，不得攒到最后一次性验收"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "不灰度：新版本整体替换，回滚等于重装上一版 DMG；分期本身即风险控制。",
+          "constraints": [
+            "不得在 profile 层留 skin 开关（等于重新打开 ADR-0131 D1 已否决的双品牌分层）",
+            "回滚路径依赖发布 SOP 的同号归档，归档缺失即不得发版",
+            "原子就位红线不因换皮放宽"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "验收三层：gate 与 gate:full 全绿、真机三件套读数、视觉基线重建并入仓且给出 20 位逐位对照表；不做对素材源仓官网预览图的像素级 diff。",
+          "constraints": [
+            "视觉基线必须住在受管目录且可从仓库重建——现状 .dsh-root-brand-preview 未跟踪即不可重建",
+            "逐位对照表的行数必须等于射程表落点数（20），少一行即未验收",
+            "不得用「拿产品截图对官网预览图」当判据：语境不同，只会造出恒红的坏判据",
+            "未运行的验收项必须写「未运行」，不得省略（AGENTS.md：不接受口头验收）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0136",
+      "title": "ADR-0136 · 名字与视觉语言解耦：产品名定为 Sanbao / 三宝，WorldPilot 降为视觉语言供体；启动加载动画显式保留",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "产品名定为 Sanbao / 三宝；WorldPilot 降为视觉语言供体（色彩/材质/排印/图像/动效契约的上游），不再是产品名。",
+          "constraints": [
+            "任何出货可见面上不得把 WorldPilot 当产品名使用",
+            "素材源仓的引用注释必须写明它是视觉语言上游，不是品牌目标"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "新增唯一品牌名源，字段含 nameLatin/nameZh/shortName/sloganZh/sloganEn/signingIdentity/bundleDisplayName；字标 SVG、favicon、app icon 字母、short_name、DMG 名、卷名、签名身份、品牌座、<title>、CFBundle*、文档标题全部由它生成。",
+          "constraints": [
+            "改名只能改这一个源并重跑生成，不得在多个落点各改各的（P-07）",
+            "派生物必须带 generated-marker，由门禁判同步",
+            "字标转路径复用素材源仓配方（trace.json + Inter-SemiBold.ttf），字体授权文件必须随产物入仓"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "字顺分工：拉丁 Sanbao 管图形与文件名（字标/图标/favicon/DMG 名/卷名/签名身份/short_name/CFBundle*），中文三宝管描述语与文档标题。本条取代 ADR-0134 D2。",
+          "constraints": [
+            "两个字形是同一名字的两种书写，不得当成两个名字分别维护",
+            "文件名与签名身份不得含汉字（编码与 machine-path 风险）",
+            "同一屏不得出现两个互不隶属的产品名"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "本轮名字源初值直接填 Sanbao，不先发 WorldPilot 版；hero/badge 改用 sloganZh/sloganEn，取代 ADR-0134 D3 的素材源仓中文叙述句。",
+          "constraints": [
+            "不得为「先看到成品」生成一套只活几天的字标与 app-icons",
+            "slogan 是愿景式口号，不得改写成可证伪的客户群断言",
+            "长度受限位（short_name、卷名）只用 Sanbao，不得整句塞入英文 slogan"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "图形字母标另立一轮；本轮 stacked/lockup 的字标用 Inter SemiBold 排 Sanbao 转路径，字母标位用不含 W/P 语义的中性几何占位。",
+          "constraints": [
+            "WP 连笔标与 Sanbao 无对应关系，不得沿用",
+            "占位标必须显式标注为占位，不得在射程表里记作已完成",
+            "字母标设计作为后置待办登记，不得静默遗忘"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "启动加载屏动画列为必须保留项：不改 dsh-client-web 的 boot 页，弧色经 --dsw-alias-brand-primary 自动跟皮；新增断言校验 animation-name=spin、animation-duration=0.8s、conic 弧色解析值等于品牌源 accent。",
+          "constraints": [
+            "不得以「简化启动屏」为由删除或冻结动画",
+            "断言必须读解析后的真实值，不得复述字面量（ADR-0135 D1）",
+            "品牌样式表的运动抑制必须保持作用域限定，不得扩为全局"
+          ]
+        }
+      ]
     }
   ]
 }
