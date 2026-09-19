@@ -1900,29 +1900,35 @@ Expected: PASS（4 tests）
 - [ ] **Step 6: 写失败测试 `test/materialize.spec.ts`**
 
 ```typescript
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { HOST_DIR_NAME, HOST_LIB_FILES, SEED_FILES } from '../src/profile/layout.js'
+import { HOST_CONFIG_FILE, HOST_DIR_NAME, HOST_LIB_FILES, SEED_FILES } from '../src/profile/layout.js'
 import { materializeProfile } from '../src/profile/materialize.js'
 
-const shellRoot = join(import.meta.dirname, '..')
-const seedDir = join(shellRoot, 'seed')
+const realShellRoot = join(import.meta.dirname, '..')
+const seedDir = join(realShellRoot, 'seed')
 const created: string[] = []
 
-function tempProfile(): string {
-  const dir = join(tmpdir(), `lute-shell-materialize-${String(created.length)}-${String(Date.now())}`)
+function tempDir(label: string): string {
+  const dir = join(tmpdir(), `lute-shell-${label}-${String(created.length)}-${String(Date.now())}`)
   created.push(dir)
   return dir
 }
 
-function stubBuiltRuntime(): void {
+// 临时 shellRoot：桩 lib/ + 真 overlay 副本。绝不往仓库的 lib/ 里写东西——
+// 那是构建产物的家，混进桩文件会让后续 build/materialize 拷出假宿主。
+function stubShellRoot(): string {
+  const root = tempDir('shellroot')
   for (const name of HOST_LIB_FILES) {
-    const path = join(shellRoot, 'lib', name)
-    mkdirSync(join(path, '..'), { recursive: true })
-    if (!existsSync(path)) writeFileSync(path, `// built ${name}\n`)
+    const path = join(root, 'lib', name)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, `// built ${name}\n`)
   }
+  mkdirSync(join(root, dirname(HOST_CONFIG_FILE)), { recursive: true })
+  cpSync(join(realShellRoot, HOST_CONFIG_FILE), join(root, HOST_CONFIG_FILE))
+  return root
 }
 
 afterEach(() => {
@@ -1931,8 +1937,8 @@ afterEach(() => {
 
 describe('materializeProfile', () => {
   it('copies the seed and the built host runtime, then installs', async () => {
-    stubBuiltRuntime()
-    const profileDir = tempProfile()
+    const shellRoot = stubShellRoot()
+    const profileDir = tempDir('profile')
     const install = vi.fn(async () => {})
 
     const result = await materializeProfile({ seedDir, shellRoot, profileDir, install })
@@ -1946,12 +1952,13 @@ describe('materializeProfile', () => {
     for (const name of HOST_LIB_FILES) {
       expect(existsSync(join(profileDir, HOST_DIR_NAME, name)), name).toBe(true)
     }
+    expect(existsSync(join(profileDir, HOST_DIR_NAME, 'shell.cordis.patch.yml'))).toBe(true)
     expect(readFileSync(join(profileDir, 'cordis.yml'), 'utf8')).toContain('[]')
   })
 
   it('is idempotent and re-syncs a drifted seed file', async () => {
-    stubBuiltRuntime()
-    const profileDir = tempProfile()
+    const shellRoot = stubShellRoot()
+    const profileDir = tempDir('profile')
     const install = vi.fn(async () => {})
     await materializeProfile({ seedDir, shellRoot, profileDir, install })
     writeFileSync(join(profileDir, 'cordis.yml'), 'drifted\n')
@@ -1963,11 +1970,10 @@ describe('materializeProfile', () => {
   })
 
   it('fails loud when a seed file is missing', async () => {
-    stubBuiltRuntime()
     await expect(materializeProfile({
       seedDir: join(seedDir, 'absent'),
-      shellRoot,
-      profileDir: tempProfile(),
+      shellRoot: stubShellRoot(),
+      profileDir: tempDir('profile'),
       install: vi.fn(async () => {}),
     })).rejects.toThrow(/^lute shell: missing seed file /u)
   })
@@ -1975,23 +1981,24 @@ describe('materializeProfile', () => {
   it('fails loud when the built host runtime is missing', async () => {
     await expect(materializeProfile({
       seedDir,
-      shellRoot: join(shellRoot, 'absent'),
-      profileDir: tempProfile(),
+      shellRoot: tempDir('empty-shellroot'),
+      profileDir: tempDir('profile'),
       install: vi.fn(async () => {}),
-    })).rejects.toThrow(/^lute shell: (missing seed file |built host runtime is missing)/u)
+    })).rejects.toThrow(/^lute shell: built host runtime is missing /u)
   })
 
   it('propagates an install failure', async () => {
-    stubBuiltRuntime()
     await expect(materializeProfile({
       seedDir,
-      shellRoot,
-      profileDir: tempProfile(),
+      shellRoot: stubShellRoot(),
+      profileDir: tempDir('profile'),
       install: async () => { throw new Error('lute shell: pnpm install failed with 1: ERR_PNPM_FETCH_404') },
     })).rejects.toThrow(/ERR_PNPM_FETCH_404/u)
   })
 })
 ```
+
+两条 fail-loud 用例现在各自只缺一样东西（前者缺 seed、后者缺 lib/），所以断言可以收紧成单一措辞而不必用 `|` 兼容两种——这才是「大声失败且说清是哪一种失败」。`stubShellRoot()` 复制的是仓库里**真的** `config/shell.cordis.patch.yml`，故 overlay 缺失不会被误判成 lib 缺失。
 
 - [ ] **Step 7: 跑测试确认失败**
 
@@ -2131,6 +2138,23 @@ Expected: 顶层是真目录（hoisted，非 symlink）；总体积远小于线�
 
 Run: `ls ~/.dsh/profiles/lute-shell/node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html`
 Expected: 文件存在（Task 4 的 `resolveFrontendDistRoot` 依赖它）
+
+- [ ] **Step 11b: 实测原生依赖与 `exports` 两件事（用户裁决「先实测再定」）**
+
+本机 pnpm 用户级配置设了 `ignoreScripts: true`，所以这次 install **没有跑任何 postinstall**。不预先放宽供应链面，改为实测「随包预编译是否已经够用」：
+
+Run:
+```bash
+cd ~/.dsh/profiles/lute-shell
+echo "--- node-pty ---"; ls node_modules/node-pty/prebuilds/darwin-arm64/ 2>&1; ls -l node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper 2>&1
+echo "--- koffi ---"; ls node_modules/@koromix/koffi-darwin-arm64/darwin_arm64/ 2>&1
+echo "--- sharp ---"; ls node_modules/@img/ 2>&1 | head
+echo "--- node-addon-system ---"; ls node_modules/@deepseek-ai/node-addon-system/bin/ 2>&1
+```
+判读：`pty.node` 与 `koffi.node` 在位即可用（都是 N-API 预编译）；**`spawn-helper` 若没有可执行位（`-rw-r--r--`）就是 `ignoreScripts` 跳过了 `dsh-subprocess-local` 的 chmod postinstall** —— 这正是需要白名单的证据。把四类读数原样贴进 report，缺件或权限不对就明确写「需要白名单，理由是 X」，不要自行加 flag、不要写 `.npmrc`、不要改用户全局配置。
+
+Run: `cd ~/.dsh/profiles/lute-shell && node --input-type=module -e "import { createRequire } from 'node:module'; import { join } from 'node:path'; const r = createRequire(join(process.cwd(), 'package.json')); console.log(r.resolve('@deepseek-ai/dsh/package.json'))"`
+Expected: 打印出真实路径。这验的是 Task 5 遗留的一个分裂风险——`readDshVersion` 用 `createRequire().resolve('@deepseek-ai/dsh/package.json')`（受 `exports` map 影响），而 `composition.ts` 的 `installAnchor` 用直接 `join`（免疫）。若这里抛 `ERR_PACKAGE_PATH_NOT_EXPORTED`，说明两条机制在真实包上会分裂失败，必须在 report 里点名（届时 Task 5 的那条 Minor 要升级为 Important）。
 
 - [ ] **Step 12: 把生成的 lockfile 收回 seed 并入库**
 
