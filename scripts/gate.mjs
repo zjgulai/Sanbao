@@ -100,7 +100,7 @@ import {
   judgeDeclaredAnchors,
   parseAnchorManifest,
 } from './gates/plugin-ui-anchor-drift.mjs'
-import { selectPublishTargets } from './gates/release-publish-scope.mjs'
+import { judgeLatestPointer, selectPublishTargets } from './gates/release-publish-scope.mjs'
 import {
   checkChangelogSections,
   PACKAGING_CHANGELOG_REL_PATH,
@@ -953,12 +953,12 @@ const CHECKS = [
     run() {
       let releases
       try {
-        const raw = execFileSync('gh', ['release', 'list', '--limit', '200', '--json', 'tagName,isDraft'], {
+        const raw = execFileSync('gh', ['release', 'list', '--limit', '200', '--json', 'tagName,isDraft,isLatest'], {
           encoding: 'utf8',
           timeout: 60000,
           stdio: ['ignore', 'pipe', 'pipe'],
         })
-        releases = JSON.parse(raw).map((row) => ({ tag: row.tagName, isDraft: row.isDraft }))
+        releases = JSON.parse(raw).map((row) => ({ tag: row.tagName, isDraft: row.isDraft, isLatest: row.isLatest }))
       } catch (error) {
         // 读不到 ≠ 都发了。三态里这是 skip（ADR-0075 / P-02）。
         const reason = String(error?.stderr ?? error?.message ?? error)
@@ -987,6 +987,9 @@ const CHECKS = [
       const violations = [
         ...scope.missing.map((version) => `v${version} 有入库清单且有 tag，但 GitHub Releases 上没有它`),
         ...scope.drafts.map((version) => `v${version} 的 Release 仍是 draft——对客户不存在`),
+        // 「发了」与「客户默认看到」是两件事：Latest 徽标指错时三条差集判据全绿，
+        // 而 Releases 页默认给客户的是一份旧包（补发历史版本漏 --latest=false 的形状）。
+        ...judgeLatestPointer({ releases }),
       ]
       return { passed: violations.length === 0, violations, note: scope.note }
     },

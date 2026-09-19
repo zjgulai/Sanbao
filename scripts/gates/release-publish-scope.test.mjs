@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { selectPublishTargets } from './release-publish-scope.mjs'
+import { judgeLatestPointer, selectPublishTargets } from './release-publish-scope.mjs'
 
 test('射程：修复前的真实形状——四个版本齐全却一个都没发', () => {
   // 2026-09-13 的实际读数（`gh release list` 最新是 v2.0.0 时）。
@@ -121,4 +121,81 @@ test('射程：输出顺序稳定（版本升序），不随输入顺序抖动',
 
   assert.deepEqual(a.inScope, ['2.2.0', '2.3.3'])
   assert.deepEqual(b.inScope, a.inScope)
+})
+
+/* ── Latest 徽标落在哪（2026-09-20 补：换远端补发历史版本后新登记的口子）───────── */
+
+test('Latest：指向最高已发布版本时无违规（当前真机形状）', () => {
+  // 挡的退化：判据写成恒真桩——那样「补发历史版本被顶成 Latest」这条永远不响，
+  // 而它正是本判据存在的唯一理由。
+  const violations = judgeLatestPointer({
+    releases: [
+      { tag: 'v2.4.1', isDraft: false, isLatest: true },
+      { tag: 'v2.4.0', isDraft: false, isLatest: false },
+      { tag: 'v2.2.0', isDraft: false, isLatest: false },
+    ],
+  })
+
+  assert.deepEqual(violations, [])
+})
+
+test('Latest：补发历史版本漏 --latest=false → 徽标指向旧版必须判红，且点名两版本', () => {
+  // 真机形状：`gh release create v2.3.1`（不带 --latest=false）会把**创建时间最新**的
+  // 那条标成 Latest，于是客户点进 Releases 默认看到 2.3.1 而不是 2.4.1。
+  // 三条差集判据全都看不见它：那个版本确实发了、不在 draft、也在射程内。
+  const violations = judgeLatestPointer({
+    releases: [
+      { tag: 'v2.3.1', isDraft: false, isLatest: true },
+      { tag: 'v2.4.1', isDraft: false, isLatest: false },
+    ],
+  })
+
+  assert.equal(violations.length, 1)
+  assert.match(violations[0], /v2\.3\.1/)
+  assert.match(violations[0], /v2\.4\.1/)
+})
+
+test('Latest：一条都没标 → 判红（Releases 页没有默认指向）', () => {
+  // 挡的退化：判据只查「有没有标错」，不查「有没有标」——漏标时静默通过。
+  const violations = judgeLatestPointer({
+    releases: [
+      { tag: 'v2.4.1', isDraft: false, isLatest: false },
+      { tag: 'v2.4.0', isDraft: false, isLatest: false },
+    ],
+  })
+
+  assert.equal(violations.length, 1)
+  assert.match(violations[0], /没有任何 Release 被标为 Latest/)
+})
+
+test('Latest：draft 不参与——最新版本还是 draft 时，徽标应留在最高的**已发布**版本上', () => {
+  // 挡的退化：把 draft 也算进「最新」。上传大附件时 Release 先建为 draft，
+  // 此时若要求 Latest 指向它，判据会在正常发布流程中途翻红（噪声 → 被关掉）。
+  const violations = judgeLatestPointer({
+    releases: [
+      { tag: 'v2.5.0', isDraft: true, isLatest: false },
+      { tag: 'v2.4.1', isDraft: false, isLatest: true },
+    ],
+  })
+
+  assert.deepEqual(violations, [])
+})
+
+test('Latest：没有已发布版本（全是 draft / 空表）时不作判断', () => {
+  // 射程为空由调用方报跳过；这里不制造第二条互相矛盾的读数。
+  assert.deepEqual(judgeLatestPointer({ releases: [] }), [])
+  assert.deepEqual(judgeLatestPointer({ releases: [{ tag: 'v2.5.0', isDraft: true, isLatest: true }] }), [])
+})
+
+test('Latest：版本比较按数字段，不按字符串（2.10.0 > 2.9.0）', () => {
+  // 挡的退化：写成字符串比较——`'2.10.0' < '2.9.0'`，两位数版本一出现就判反。
+  const violations = judgeLatestPointer({
+    releases: [
+      { tag: 'v2.9.0', isDraft: false, isLatest: true },
+      { tag: 'v2.10.0', isDraft: false, isLatest: false },
+    ],
+  })
+
+  assert.equal(violations.length, 1)
+  assert.match(violations[0], /v2\.10\.0/)
 })

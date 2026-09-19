@@ -322,7 +322,9 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
    ```
 
    - **`--latest` 只给最新的入库版本**；补发历史版本时用 `--latest=false`，否则历史版本会因
-     **创建时间较晚**被顶成 Latest，客户从 Releases 首页拿到的是旧包。
+     **创建时间较晚**被顶成 Latest，客户从 Releases 首页拿到的是旧包。这条已经从纪律升为**机制**：
+     门禁 `release-published` 会核对 Latest 徽标是否落在最高已发布版本上（指错、漏标、多标各判红）
+     ——2026-09-20 补，起因是换远端后补发过一批历史版本而三条差集判据对此全绿。
    - `gh` 会先把 Release 建成 **draft** 直到附件传完——draft 对客户不存在，**不算已发布**
      （门禁 `release-published` 按这条判）。
    - **640 MB 的上传是可被打断的，而失败会回滚整个 Release**（连已传完的 `SHA256SUMS` 一起没，
@@ -336,8 +338,8 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
    > `release-published` 在做的事：
 
    ```bash
-   for v in <版本…>; do gh release view "v$v" --json isDraft,assets \
-     | python3 -c "import sys,json;d=json.load(sys.stdin);a={x['name']:x for x in d['assets']};print('v$v draft=%s %s'%(d['isDraft'],'✓' if not d['isDraft'] and 'DSH-Desktop-LUTE-$v-mac-arm64.dmg' in a else '✗'))"; done
+   for v in <版本…>; do gh release view "v$v" --json isDraft,isLatest,assets \
+     | python3 -c "import sys,json;d=json.load(sys.stdin);a={x['name']:x for x in d['assets']};print('v$v draft=%s latest=%s %s'%(d['isDraft'],d['isLatest'],'✓' if not d['isDraft'] and 'DSH-Desktop-LUTE-$v-mac-arm64.dmg' in a else '✗'))"; done
    ```
 
 5. **发布前必答的两问**（缺一不可，见 ADR-0076 决策 4）：

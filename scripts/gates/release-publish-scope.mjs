@@ -33,6 +33,13 @@
  * 射程为空 → `vacuous`，调用方必须报**跳过**而不是通过；`gh` 读不到时的处置同理
  * （那不是「都发了」，而是「本项没量到任何东西」）。
  *
+ * ── 第二条判据：Latest 徽标落在哪（2026-09-20 补）─────────────────────────────
+ *
+ * `gh release create` 不写 `--latest=false` 时，GitHub 会把**按创建时间最新**的那条标成
+ * Latest——补发历史版本时（本仓 2026-09-19 换远端后就补发过一批）新创建的旧版本会被顶上去，
+ * 于是客户点进 Releases 默认看到的是一份旧包。上面那三条差集判据全都看不见它：
+ * 那个版本确实发了、不在 draft 里、也在射程内。**它不是「缺」，是「指错了」。**
+ *
  * @typedef {object} PublishScope
  * @property {string[]} inScope           要核对的版本号（有清单且有 tag，升序）
  * @property {string[]} missing           在射程内、但分发面上没有对应 Release 的版本
@@ -84,4 +91,54 @@ export function selectPublishTargets({ manifestVersions = [], taggedVersions = [
     .join('；')
 
   return { inScope, missing, drafts, untaggedManifests, vacuous, note }
+}
+
+/** `x.y.z` 逐段比大小；非数字段按 0 处理（本仓版本号全是三段数字，不引 semver 依赖）。 */
+function compareVersions(a, b) {
+  const parse = (value) => String(value).replace(/^v/, '').split('.').map((part) => Number.parseInt(part, 10) || 0)
+  const [left, right] = [parse(a), parse(b)]
+  for (let i = 0; i < Math.max(left.length, right.length); i += 1) {
+    const diff = (left[i] ?? 0) - (right[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
+/**
+ * Latest 徽标必须落在**最新已发布版本**上（不是任意一版，也不是缺了就算）。
+ *
+ * 违反形态有三：徽标指向旧版（补发历史版本时漏 `--latest=false`）、一个都没标
+ * （Releases 页没有默认指向）、多于一条被标（GitHub 只应有一个）。
+ * draft 不参与——它对客户不存在，即便被标了 Latest 也不作数。
+ *
+ * @param {object} input
+ * @param {{tag?: string, isDraft?: boolean, isLatest?: boolean}[]} [input.releases] `gh release list` 的读数
+ * @returns {string[]} 违规描述；无违规时空数组
+ */
+export function judgeLatestPointer({ releases = [] } = {}) {
+  const published = releases
+    .map((release) => ({
+      version: String(release?.tag ?? '').replace(/^v/, ''),
+      isDraft: Boolean(release?.isDraft),
+      isLatest: Boolean(release?.isLatest),
+    }))
+    .filter((release) => release.version !== '' && !release.isDraft)
+  if (published.length === 0) return []
+
+  const newest = published.reduce((best, release) => (compareVersions(release.version, best) > 0 ? release.version : best), published[0].version)
+  const flagged = published.filter((release) => release.isLatest).map((release) => release.version)
+
+  if (flagged.length === 0) {
+    return [`没有任何 Release 被标为 Latest——Releases 页没有默认指向（最高已发布版本 v${newest} 应持有它）`]
+  }
+  if (flagged.length > 1) {
+    return [`有 ${flagged.length} 条 Release 同时被标为 Latest（${flagged.map((v) => `v${v}`).join(' ')}）——GitHub 只应有一条`]
+  }
+  if (flagged[0] !== newest) {
+    return [
+      `Latest 徽标指向 v${flagged[0]}，而最新已发布版本是 v${newest}——客户在 Releases 页默认看到的是一份旧包`
+      + `（补发历史版本时漏了 --latest=false 就会这样）`,
+    ]
+  }
+  return []
 }
