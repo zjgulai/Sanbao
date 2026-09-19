@@ -2163,8 +2163,9 @@ cd ~/.dsh/profiles/lute-shell
 echo "--- node-pty ---"; ls node_modules/node-pty/prebuilds/darwin-arm64/ 2>&1; ls -l node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper 2>&1
 echo "--- koffi ---"; ls node_modules/@koromix/koffi-darwin-arm64/darwin_arm64/ 2>&1
 echo "--- sharp ---"; ls node_modules/@img/ 2>&1 | head
-echo "--- node-addon-system ---"; ls node_modules/@deepseek-ai/node-addon-system/bin/ 2>&1
+echo "--- node-addon-system ---"; ls node_modules/@deepseek-ai/node-addon-system-*/bin/ 2>&1
 ```
+（`node-addon-system` 本身是纯 JS 派发器、`files` 里没有 `bin/`；真正的 `system.node` 在平台可选依赖 `@deepseek-ai/node-addon-system-darwin-arm64/bin/` 里。上面这条 glob 是对原写法的更正——照原写法 `ls node_modules/@deepseek-ai/node-addon-system/bin/` 必然报 no such file，会被误读成「原生件缺失 ⇒ 需要白名单」，即伪造出一个放宽供应链的理由。）
 判读：`pty.node` 与 `koffi.node` 在位即可用（都是 N-API 预编译）；**`spawn-helper` 若没有可执行位（`-rw-r--r--`）就是 `ignoreScripts` 跳过了 `dsh-subprocess-local` 的 chmod postinstall** —— 这正是需要白名单的证据。把四类读数原样贴进 report，缺件或权限不对就明确写「需要白名单，理由是 X」，不要自行加 flag、不要写 `.npmrc`、不要改用户全局配置。
 
 Run: `cd ~/.dsh/profiles/lute-shell && node --input-type=module -e "import { createRequire } from 'node:module'; import { join } from 'node:path'; const r = createRequire(join(process.cwd(), 'package.json')); console.log(r.resolve('@deepseek-ai/dsh/package.json'))"`
@@ -2217,9 +2218,9 @@ EOF
 
 ```javascript
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import {
   HostResponseDecoder,
   SHELL_REQUEST_PIPE_FD,
@@ -2273,10 +2274,12 @@ child.stdio[SHELL_RESPONSE_PIPE_FD].on('data', (chunk) => {
     } else if (frame.type === 'data') {
       state.chunks.push(frame.data)
     } else if (frame.type === 'end') {
+      const bytes = Buffer.concat(state.chunks)
       state.resolve({
         status: state.status,
         headers: state.headers,
-        body: Buffer.concat(state.chunks).toString('utf8'),
+        bytes,
+        body: bytes.toString('utf8'),
       })
     } else {
       state.reject(new Error(frame.message))
@@ -2322,6 +2325,28 @@ check('unknown SPA route falls back to index.html', fallback.status === 200 && f
 const traversal = await send('/%2e%2e%2fpackage.json')
 check('path traversal is rejected with 403', traversal.status === 403, `status=${traversal.status}`)
 
+// 真实二进制资产：字体加载失败也返回 200，所以只断言状态码等于没断言。
+// 挑 dist/assets 里最大的文件，既记录 MIME 实际取值，也让响应体大概率跨过 64 KiB
+// 帧分片边界——逐字节比对才能证明分片重组没丢没错序。
+const distAssets = join(profileDir, 'node_modules', '@deepseek-ai', 'dsh-web-frontend', 'dist', 'assets')
+const largest = readdirSync(distAssets)
+  .map(name => ({ name, size: statSync(join(distAssets, name)).size }))
+  .filter(entry => entry.size > 0)
+  .sort((left, right) => right.size - left.size)[0]
+if (largest === undefined) {
+  check('dist/assets holds a binary asset to verify', false, 'directory empty or missing')
+} else {
+  const asset = await send(`/assets/${encodeURIComponent(largest.name)}`)
+  const contentType = asset.headers.find(([name]) => name === 'content-type')?.[1] ?? '<none>'
+  const onDisk = readFileSync(join(distAssets, largest.name))
+  check(
+    `largest dist asset round-trips byte-for-byte (${largest.name}, ${largest.size} bytes, crosses 64 KiB chunks: ${largest.size > 65_536})`,
+    asset.status === 200 && asset.bytes.equals(onDisk),
+    `status=${asset.status} contentType=${contentType} servedBytes=${asset.bytes.byteLength}`,
+  )
+  process.stdout.write(`     实际 content-type = ${contentType}（MIME 表只有 6 项，字体类会落到 octet-stream；实测值记进 report，字形是否真渲染交由 Task 8 在 DevTools 里确认）\n`)
+}
+
 child.send({ type: 'shutdown' })
 const exitCode = await new Promise((resolve) => { child.once('exit', (code) => resolve(code)) })
 check('shutdown IPC exits the host cleanly', exitCode === 0, `code=${String(exitCode)}`)
@@ -2345,9 +2370,13 @@ PASS index.html carries the injected page transport
 PASS injected transport declares ownsHost
 PASS unknown SPA route falls back to index.html
 PASS path traversal is rejected with 403 — status=403
+PASS largest dist asset round-trips byte-for-byte (<真实文件名>, <N> bytes, crosses 64 KiB chunks: <true|false>) — status=200 contentType=<实测值> servedBytes=<N>
+     实际 content-type = <实测值>（MIME 表只有 6 项，字体类会落到 octet-stream；实测值记进 report，字形是否真渲染交由 Task 8 在 DevTools 里确认）
 PASS shutdown IPC exits the host cleanly — code=0
 lute shell smoke: PASS
 ```
+
+`largest dist asset` 那条是 Task 4 评审路由过来的：字体加载失败**也**返回 200，所以只断言状态码等于没断言；逐字节比对才证明帧分片（64 KiB 边界）重组无误，`contentType` 的实测值则交给 Task 8 在 DevTools 里确认字形真的渲染出来。
 
 这一步同时验证 P1 里程碑的「新壳 boot」与「空 profile 正常」（profile 里零 LUTE 插件，只有两个上游 bundle）。**把完整输出贴进 Task 10 的研究报告**，不接受口头验收。
 
