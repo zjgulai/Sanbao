@@ -1,0 +1,8 @@
+packages:
+  - .
+
+nodeLinker: hoisted
+autoInstallPeers: false
+overrides:
+  "@deepseek-ai/dsh-type-meta": "npm:empty-npm-package@1.0.0"
+  "@deepseek-ai/dsh-user-interaction": "npm:empty-npm-package@1.0.0"
