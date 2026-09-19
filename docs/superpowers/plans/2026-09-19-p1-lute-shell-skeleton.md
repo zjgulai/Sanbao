@@ -572,8 +572,10 @@ EOF
 - Create: `apps/lute-shell/test/fixtures/profile/cordis.patch.yml`
 - Create: `apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/package.json`
 - Create: `apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/cordis.patch.yml`
+- Create: `apps/lute-shell/test/fixtures/profile/node_modules/@deepseek-ai/dsh/package.json`
 - Create: `apps/lute-shell/test/fixtures/profile-broken-bundle/package.json`
 - Create: `apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/lute-broken-bundle/package.json`
+- Create: `apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/@deepseek-ai/dsh/package.json`
 - Create: `apps/lute-shell/test/composition.spec.ts`
 - Modify: `.gitignore`（第 73 行 `!packages/**/test/**` 之后加 `!apps/lute-shell/test/fixtures/**/node_modules/**`）
 
@@ -666,6 +668,18 @@ EOF
 {
   "name": "lute-broken-bundle",
   "version": "0.0.0",
+  "type": "module"
+}
+```
+
+**两个 fixture 都还需要一个 `@deepseek-ai/dsh` 桩**，否则 `composeShellPatches` 的 `installAnchor` 会先抛「has no installed @deepseek-ai/dsh」，happy path 根本走不到组合逻辑，broken-bundle 那条也测不到它想测的分支。`installAnchor` 只读这个 manifest 的**路径**（作为 `createRequire` 的锚点），不读内容，所以桩可以极简：
+
+`test/fixtures/profile/node_modules/@deepseek-ai/dsh/package.json` 与 `test/fixtures/profile-broken-bundle/node_modules/@deepseek-ai/dsh/package.json`（两份内容相同）：
+
+```json
+{
+  "name": "@deepseek-ai/dsh",
+  "version": "0.1.5-rc.2",
   "type": "module"
 }
 ```
@@ -779,8 +793,15 @@ describe('composeShellPatches', () => {
   })
 
   it('fails loud when a bundle manifest does not declare dsh.bundle.patch', () => {
-    expect(() => composeShellPatches({ profileDir: brokenProfile, overlayPatchPath: overlay }))
-      .toThrow(/lute shell: |dsh\.bundle\.patch/u)
+    let message = ''
+    try {
+      composeShellPatches({ profileDir: brokenProfile, overlayPatchPath: overlay })
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error)
+    }
+    // 第一条断言才是承重的：证明 fixture 走到了 bundle 校验，而不是被 installAnchor 提前拦下。
+    expect(message).not.toMatch(/has no installed @deepseek-ai\/dsh/u)
+    expect(message).toMatch(/dsh\.bundle\.patch/u)
   })
 })
 
