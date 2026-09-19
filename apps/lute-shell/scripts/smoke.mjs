@@ -6,7 +6,6 @@ import {
   HostResponseDecoder,
   SHELL_REQUEST_PIPE_FD,
   SHELL_RESPONSE_PIPE_FD,
-  encodeRequestEnd,
   encodeRequestStart,
 } from '../lib/protocol.js'
 import { defaultProfileDir, hostEntryPath } from '../lib/profile/layout.js'
@@ -24,6 +23,15 @@ const check = (label, ok, detail) => {
   if (!ok) failures.push(label)
 }
 
+// profile 不落任何列 layers 的收据文件，package.json 是「空 profile 正常」唯一的就地佐证来源。
+const bundles = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8'))?.dsh?.profile?.bundles
+check(
+  'profile manifest pins exactly the two upstream bundles — no LUTE plugin layers in the profile this smoke ran against',
+  Array.isArray(bundles) && bundles.length === 2
+    && bundles[0] === '@deepseek-ai/dsh-base' && bundles[1] === '@deepseek-ai/dsh-web-app',
+  `bundles=${JSON.stringify(bundles)}`,
+)
+
 const child = spawn(process.execPath, [entry, profileDir], {
   cwd: profileDir,
   env: { ...process.env, DSH_HOME: process.env.DSH_HOME ?? `${homedir()}/.dsh` },
@@ -35,11 +43,28 @@ const responses = new Map()
 let streamId = 0
 let stderr = ''
 
-const readyPromise = new Promise((resolve, reject) => {
-  child.once('message', (message) => {
-    if (message?.type === 'ready') resolve(message)
-    else reject(new Error(`lute shell smoke: unexpected IPC event ${JSON.stringify(message)}`))
-  })
+let readyResolve
+let readyReject
+const readyPromise = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject })
+let exitResolve
+const exited = new Promise((resolve) => { exitResolve = resolve })
+
+const failHost = (reason) => {
+  readyReject(new Error(String(reason?.message ?? reason)))
+  for (const state of responses.values()) {
+    state.reject(new Error(`request ${state.path} never answered — ${String(reason?.message ?? reason)}`))
+  }
+  responses.clear()
+}
+
+child.on('message', (message) => {
+  if (message?.type === 'ready') readyResolve(message)
+  else failHost(message?.type === 'fatal' ? `host fatal: ${message.message}` : `unexpected IPC event ${JSON.stringify(message)}`)
+})
+child.on('error', failHost)
+child.on('exit', (code, signal) => {
+  failHost(`host exited (code=${String(code)} signal=${String(signal)})`)
+  exitResolve({ code, signal })
 })
 child.stderr.setEncoding('utf8')
 child.stderr.on('data', (chunk) => { stderr += chunk })
@@ -69,71 +94,92 @@ child.stdio[SHELL_RESPONSE_PIPE_FD].on('data', (chunk) => {
 })
 
 const requestPipe = child.stdio[SHELL_REQUEST_PIPE_FD]
+requestPipe.on('error', failHost)
+// 60s 每请求上限：冷启动开销全在 120s ready 预算内，请求只发生在已 boot 宿主上、命中本地磁盘，误报不可能；超上限必是挂死。
+const REQUEST_TIMEOUT_MS = 60_000
 const send = (path) => {
   const id = ++streamId
-  const pending = new Promise((resolve, reject) => { responses.set(id, { resolve, reject, chunks: [] }) })
-  const hasBody = false
+  const pending = new Promise((resolve, reject) => {
+    const state = {
+      path,
+      chunks: [],
+      resolve: (value) => { clearTimeout(state.timer); responses.delete(id); resolve(value) },
+      reject: (error) => { clearTimeout(state.timer); responses.delete(id); reject(error) },
+    }
+    responses.set(id, state)
+    state.timer = setTimeout(() => {
+      state.reject(new Error(`request ${path} timed out after ${String(REQUEST_TIMEOUT_MS)}ms`))
+    }, REQUEST_TIMEOUT_MS)
+  })
   requestPipe.write(encodeRequestStart(id, {
     url: `dsh-app://app${path}`,
     method: 'GET',
     headers: [['accept', '*/*']],
-    hasBody,
+    hasBody: false,
   }))
-  // 协议契约（参照 apps/desktop/src/host-process.ts 的 pumpRequest）：end 帧只用来结束
-  // 请求体，hasBody:false 的请求绝不发 end——发了宿主会按「ended inactive body stream」
-  // 走 fatal 拆机（参照 desktop-host/src/index.ts 同样如此）。
-  if (hasBody) requestPipe.write(encodeRequestEnd(id))
+  // hasBody:false 的请求绝不发 end 帧——end 只用来结束请求体，多发宿主按 inactive body stream 走 fatal 拆机（vendor/dsh-desktop/deepseek-harness/apps/desktop/src/host-process.ts:229、vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/index.ts:523）。
   return pending
 }
 
-const info = await Promise.race([
-  readyPromise,
-  new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`host not ready in 120s: ${stderr.trim()}`)), 120_000).unref()
-  }),
-])
-check('host reports ready at protocol v3', info.protocolVersion === 3, `dshVersion=${info.dshVersion}`)
-check('host resolved an installed dsh version', /^\d+\.\d+\.\d+/u.test(info.dshVersion), info.dshVersion)
+try {
+  const info = await Promise.race([
+    readyPromise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`host not ready in 120s: ${stderr.trim()}`)), 120_000).unref()
+    }),
+  ])
+  check('host reports ready at protocol v3', info.protocolVersion === 3, `dshVersion=${info.dshVersion}`)
+  check('host resolved an installed dsh version', /^\d+\.\d+\.\d+/u.test(info.dshVersion), info.dshVersion)
 
-const index = await send('/index.html')
-check(
-  'GET /index.html is 200 html',
-  index.status === 200 && index.headers.some(([name, value]) => name === 'content-type' && value.startsWith('text/html')),
-  `status=${index.status}`,
-)
-check('index.html carries the injected page transport', index.body.includes('globalThis.__DSH_TRANSPORT__'))
-check('injected transport declares ownsHost', index.body.includes('ownsHost:true'))
-
-const fallback = await send('/no-such-route')
-check('unknown SPA route falls back to index.html', fallback.status === 200 && fallback.body.includes('__DSH_TRANSPORT__'))
-
-const traversal = await send('/%2e%2e%2fpackage.json')
-check('path traversal is rejected with 403', traversal.status === 403, `status=${traversal.status}`)
-
-// 真实二进制资产：字体加载失败也返回 200，所以只断言状态码等于没断言。
-// 挑 dist/assets 里最大的文件，既记录 MIME 实际取值，也让响应体大概率跨过 64 KiB
-// 帧分片边界——逐字节比对才能证明分片重组没丢没错序。
-const distAssets = join(profileDir, 'node_modules', '@deepseek-ai', 'dsh-web-frontend', 'dist', 'assets')
-const largest = readdirSync(distAssets)
-  .map(name => ({ name, size: statSync(join(distAssets, name)).size }))
-  .filter(entry => entry.size > 0)
-  .sort((left, right) => right.size - left.size)[0]
-if (largest === undefined) {
-  check('dist/assets holds a binary asset to verify', false, 'directory empty or missing')
-} else {
-  const asset = await send(`/assets/${encodeURIComponent(largest.name)}`)
-  const contentType = asset.headers.find(([name]) => name === 'content-type')?.[1] ?? '<none>'
-  const onDisk = readFileSync(join(distAssets, largest.name))
+  const index = await send('/index.html')
   check(
-    `largest dist asset round-trips byte-for-byte (${largest.name}, ${largest.size} bytes, crosses 64 KiB chunks: ${largest.size > 65_536})`,
-    asset.status === 200 && asset.bytes.equals(onDisk),
-    `status=${asset.status} contentType=${contentType} servedBytes=${asset.bytes.byteLength}`,
+    'GET /index.html is 200 html',
+    index.status === 200 && index.headers.some(([name, value]) => name === 'content-type' && value.startsWith('text/html')),
+    `status=${index.status}`,
   )
-  process.stdout.write(`     实际 content-type = ${contentType}（MIME 表只有 6 项，字体类会落到 octet-stream；实测值记进 report，字形是否真渲染交由 Task 8 在 DevTools 里确认）\n`)
+  check('index.html carries the injected page transport', index.body.includes('globalThis.__DSH_TRANSPORT__'))
+  check('injected transport declares ownsHost', index.body.includes('ownsHost:true'))
+
+  const fallback = await send('/no-such-route')
+  check('unknown SPA route falls back to index.html', fallback.status === 200 && fallback.body.includes('__DSH_TRANSPORT__'))
+
+  const traversal = await send('/%2e%2e%2fpackage.json')
+  check('path traversal is rejected with 403', traversal.status === 403, `status=${traversal.status}`)
+
+  // 真实二进制资产：字体加载失败也返回 200，所以只断言状态码等于没断言。
+  // 挑 dist/assets 里最大的文件，让响应体跨过 64 KiB 帧分片边界——分片前提写进谓词，
+  // 前提失效即 FAIL；逐字节比对才能证明分片重组没丢没错序。
+  const distAssets = join(profileDir, 'node_modules', '@deepseek-ai', 'dsh-web-frontend', 'dist', 'assets')
+  const largest = readdirSync(distAssets)
+    .map(name => ({ name, size: statSync(join(distAssets, name)).size }))
+    .filter(entry => entry.size > 0)
+    .sort((left, right) => right.size - left.size)[0]
+  if (largest === undefined) {
+    check('dist/assets holds a binary asset to verify', false, 'directory empty or missing')
+  } else {
+    const asset = await send(`/assets/${encodeURIComponent(largest.name)}`)
+    const contentType = asset.headers.find(([name]) => name === 'content-type')?.[1] ?? '<none>'
+    const onDisk = readFileSync(join(distAssets, largest.name))
+    check(
+      `largest dist asset round-trips byte-for-byte (${largest.name}, ${largest.size} bytes, crosses 64 KiB chunks: ${largest.size > 65_536})`,
+      asset.status === 200 && largest.size > 65_536 && asset.bytes.equals(onDisk),
+      `status=${asset.status} contentType=${contentType} servedBytes=${asset.bytes.byteLength}`,
+    )
+    process.stdout.write(`     实际 content-type = ${contentType}\n`)
+  }
+} catch (error) {
+  check('host survived every request', false, error instanceof Error ? error.message : String(error))
 }
 
-child.send({ type: 'shutdown' })
-const exitCode = await new Promise((resolve) => { child.once('exit', (code) => resolve(code)) })
+if (child.connected) child.send({ type: 'shutdown' })
+let killTimer
+const { code: exitCode } = await Promise.race([
+  exited,
+  new Promise((resolve) => {
+    killTimer = setTimeout(() => { child.kill('SIGKILL'); resolve({ code: null }) }, 10_000)
+  }),
+])
+clearTimeout(killTimer)
 check('shutdown IPC exits the host cleanly', exitCode === 0, `code=${String(exitCode)}`)
 
 if (failures.length > 0) {

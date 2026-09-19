@@ -11,8 +11,9 @@
 ## `smoke.mjs`（`pnpm run smoke`）
 
 无头端到端 smoke：纯 Node 父进程 spawn 真宿主子进程（不启 GUI、不依赖 Electron），走 FD3/FD4
-帧管道把每条 `check(...)` 断言对真 profile 跑一遍（ready、index.html 注入、SPA 回退、403 越界、
-最大资产逐字节往返、优雅退出）。前置条件：`materialize` 跑过（宿主运行时已在 profile 内）。
+帧管道把每条 `check(...)` 断言对真 profile 跑一遍；断言覆盖哪些主题以源码为准（见顶部声明）。
+宿主中途死亡（fatal/提前退出/请求无应答超时）会转成点名请求的 FAIL 行加子进程 stderr 转储，
+不会静默挂起。前置条件：`materialize` 跑过（宿主运行时已在 profile 内）。
 **不进 CI**：profile 要装数百个 npm 包，CI 成本与网络面都不成立。
 
 ## 失败归因顺序
