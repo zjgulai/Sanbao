@@ -19,6 +19,7 @@ const seedManifest = JSON.stringify({
     '@deepseek-ai/dsh-base': '0.1.5-rc.2',
   },
 })
+const vendorDesktopManifest = JSON.stringify({ devDependencies: { electron: '43.3.0' } })
 const workspace = 'overrides:\n  "@deepseek-ai/dsh-type-meta": "npm:empty-npm-package@1.0.0"\n  "@deepseek-ai/dsh-user-interaction": "npm:empty-npm-package@1.0.0"\n'
 const protocol = `export const SHELL_HOST_PROTOCOL_VERSION = 3 as const
 export const SHELL_REQUEST_PIPE_FD = 3
@@ -62,6 +63,7 @@ const good = {
   seedWorkspaceText: workspace,
   protocolText: protocol,
   referenceWireText: referenceWire,
+  vendorDesktopManifestText: vendorDesktopManifest,
   seedUserPatchText: '# 用户层：P1 留空。P2 起在这里声明 LUTE 插件的 id / config / disabled。\n[]\n',
   trackedFixturePaths: TRACKED_FIXTURES,
 }
@@ -89,6 +91,7 @@ test('rejects a ranged harness specifier present only in the shell devDependenci
       devDependencies: {
         '@deepseek-ai/dsh-typert': '^0.1.5-rc.2',
         '@deepseek-ai/cordis': '4.0.2',
+        electron: '43.3.0',
       },
     }),
   })
@@ -178,7 +181,7 @@ test('fails loud when the shell package is absent', () => {
 test('rejects a shell manifest missing the governance fields', () => {
   const result = checkLuteShellPin({
     ...good,
-    shellManifestText: JSON.stringify({ devDependencies: { '@deepseek-ai/cordis': '4.0.2' } }),
+    shellManifestText: JSON.stringify({ devDependencies: { '@deepseek-ai/cordis': '4.0.2', electron: '43.3.0' } }),
   })
   assert.equal(result.passed, false)
   assert.equal(result.violations.length, 3)
@@ -192,7 +195,7 @@ test('rejects governance fields whose values are not self/lute/false', () => {
       luteOrigin: '',
       luteOwner: 'someone-else',
       lutePublish: true,
-      devDependencies: { '@deepseek-ai/cordis': '4.0.2' },
+      devDependencies: { '@deepseek-ai/cordis': '4.0.2', electron: '43.3.0' },
     }),
   })
   assert.equal(result.passed, false)
@@ -200,6 +203,74 @@ test('rejects governance fields whose values are not self/lute/false', () => {
   assert.match(result.violations[0], /luteOrigin = ""，应为 "self"/u)
   assert.match(result.violations[1], /luteOwner = "someone-else"，应为 "lute"/u)
   assert.match(result.violations[2], /lutePublish = true，应为 false/u)
+})
+
+test('rejects a ranged shell electron pin', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({
+      luteOrigin: 'self',
+      luteOwner: 'lute',
+      lutePublish: false,
+      devDependencies: {
+        '@deepseek-ai/dsh-app-boot': '0.1.5-rc.2',
+        '@deepseek-ai/cordis': '4.0.2',
+        electron: '^43.3.0',
+      },
+    }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /devDependencies\.electron = "\^43\.3\.0" 不是精确版本/u)
+})
+
+test('rejects a missing shell electron pin', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({
+      luteOrigin: 'self',
+      luteOwner: 'lute',
+      lutePublish: false,
+      devDependencies: {
+        '@deepseek-ai/dsh-app-boot': '0.1.5-rc.2',
+        '@deepseek-ai/cordis': '4.0.2',
+      },
+    }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /devDependencies 缺 electron pin/u)
+})
+
+test('rejects a shell electron pin that diverges from the vendor desktop plugin', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    vendorDesktopManifestText: JSON.stringify({ devDependencies: { electron: '44.0.0' } }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /electron（43\.3\.0）.*dsh-plugin-desktop 的 devDependencies\.electron（44\.0\.0）不一致/u)
+})
+
+test('skips the electron equality check with a note when the vendor manifest is absent', () => {
+  const skipped = checkLuteShellPin({ ...good, vendorDesktopManifestText: null })
+  assert.equal(skipped.passed, true)
+  assert.deepEqual(skipped.violations, [])
+  assert.match(skipped.note, /electron 版本一致性比对未跑/u)
+
+  const stillEnforced = checkLuteShellPin({
+    ...good,
+    vendorDesktopManifestText: null,
+    shellManifestText: JSON.stringify({
+      luteOrigin: 'self',
+      luteOwner: 'lute',
+      lutePublish: false,
+      devDependencies: { '@deepseek-ai/cordis': '4.0.2', electron: 'latest' },
+    }),
+  })
+  assert.equal(stillEnforced.passed, false)
+  assert.equal(stillEnforced.violations.length, 1)
+  assert.match(stillEnforced.violations[0], /devDependencies\.electron = "latest" 不是精确版本/u)
 })
 
 test('rejects a seed user patch that declares a LUTE plugin layer', () => {

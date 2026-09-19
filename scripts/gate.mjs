@@ -342,6 +342,7 @@ const CHECKS = [
         seedWorkspaceText: readRepoText('apps/lute-shell/seed/pnpm-workspace.yaml'),
         protocolText: readRepoText('apps/lute-shell/src/protocol.ts'),
         referenceWireText: readRepoText(reference),
+        vendorDesktopManifestText: readRepoText('vendor/dsh-desktop/dsh-plugin-desktop/package.json'),
         seedUserPatchText: readRepoText('apps/lute-shell/seed/cordis.patch.yml'),
         trackedFixturePaths,
       })

@@ -1,14 +1,15 @@
 /**
  * 薄壳的版本 pin 与协议常量校验。
  * apps/ 不在 package collector 的射程内（package-layout.mjs 只下钻 packages/<五组>/），
- * 故这里独立守七件事：
+ * 故这里独立守八件事：
  * 1. seed deps 与壳 devDependencies 两侧的 @deepseek-ai/* 都非空且都是精确版本（range 会静默落到 npm 旧 latest tag）；
  * 2. 两侧同名包版本一致（编译期类型与运行时是同一套包）；
  * 3. 两个 pnpm-workspace.yaml 都带 dsh-type-meta / dsh-user-interaction 的 override；
  * 4. protocol.ts 的 7 个帧协议常量不漂移于 submodule 参照 wire.ts；
  * 5. 壳 manifest 的治理三字段取 self / lute / false；
  * 6. seed cordis.patch.yml 用户层剥注释后恰为 []；
- * 7. 12 个 test fixture 保持被 git 跟踪。
+ * 7. 12 个 test fixture 保持被 git 跟踪；
+ * 8. 壳 devDependencies.electron 是精确版本，且与 vendor/dsh-desktop/dsh-plugin-desktop 的同名 pin 一致（参照缺失时一致性比对跳过并进 note）。
  */
 
 const UNPUBLISHED_OVERRIDES = [
@@ -61,7 +62,7 @@ function constantValue(text, name) {
 }
 
 /**
- * @param {object} input 八个输入（六个文件文本 + seed 用户层文本 + git 跟踪清单），缺失的为 null
+ * @param {object} input 九个输入（七个文件文本 + seed 用户层文本 + git 跟踪清单），缺失的为 null
  * @returns {{passed: boolean, violations: string[], note?: string}}
  */
 export function checkLuteShellPin(input) {
@@ -142,6 +143,19 @@ export function checkLuteShellPin(input) {
         violations.push(`apps/lute-shell/package.json 的治理字段 ${name} = ${JSON.stringify(manifest[name])}，应为 ${JSON.stringify(expected)}——这三字段没有别的读者，值写错就等于治理归属静默改了`)
       }
     }
+
+    // electron 的事实是「与 vendor 桌面插件同版本」（减少 renderer 分歧）：断言相等而非硬编码 43.3.0，参照 bump 后本门禁才有对象可跟。
+    const electronSpec = manifest.devDependencies?.electron
+    if (electronSpec === undefined) {
+      violations.push('apps/lute-shell/package.json 的 devDependencies 缺 electron pin——薄壳的 Electron 版本没有事实源，与参照的一致性无从判定')
+    } else if (!EXACT_VERSION.test(electronSpec)) {
+      violations.push(`apps/lute-shell/package.json 的 devDependencies.electron = "${electronSpec}" 不是精确版本——range/latest 会随 npm tag 漂移，锁版本的意图落空`)
+    } else if (input.vendorDesktopManifestText !== null) {
+      const vendorElectron = JSON.parse(input.vendorDesktopManifestText).devDependencies?.electron
+      if (electronSpec !== vendorElectron) {
+        violations.push(`壳 devDependencies.electron（${electronSpec}）与 vendor/dsh-desktop/dsh-plugin-desktop 的 devDependencies.electron（${String(vendorElectron)}）不一致——锁同版本是为减少 renderer 分歧，参照 bump 后壳 pin 必须显式跟进`)
+      }
+    }
   }
 
   // seed 的用户层是「零 LUTE 插件」这条里程碑事实的证据家（smoke 只证 manifest 的 bundles）。
@@ -174,6 +188,7 @@ export function checkLuteShellPin(input) {
   const degraded = []
   if (referenceMissing) degraded.push(`submodule 参照未初始化，${PROTOCOL_CONSTANTS.length} 项协议常量比对全部未跑`)
   if (unpairedConstants > 0) degraded.push(`${unpairedConstants}/${PROTOCOL_CONSTANTS.length} 项协议常量在参照里找不到同名常量，该几项比对未跑`)
+  if (input.vendorDesktopManifestText === null) degraded.push('vendor/dsh-desktop/dsh-plugin-desktop/package.json 不可读，electron 版本一致性比对未跑')
 
   return {
     passed: violations.length === 0,
