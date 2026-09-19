@@ -1,0 +1,30 @@
+# lute-shell reuses the browser composition without its network and browser-launch rows.
+# 参照：vendor/dsh-desktop/deepseek-harness/apps/desktop-host/config/desktop.cordis.patch.yml
+# 差异：上游末尾插入 directory-picker-native / ui-directory-picker-native 两行，二者需要壳侧
+# IPC 对端；薄壳尚未实现该对端，故不插入（directory-picker 本身仍 disabled，无引用者）。
+
+- id: web-startup
+  disabled: true
+
+- id: webserver
+  disabled: true
+
+- id: web-runtime
+  disabled: true
+
+- id: client-hmr
+  disabled: true
+
+- id: open-in-app
+  disabled: true
+
+- id: ui-open-in-app
+  disabled: true
+
+- id: directory-picker
+  disabled: true
+
+- id: connection
+  inject:
+    - credentials
+  config: {}

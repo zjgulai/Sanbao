@@ -1,0 +1,10 @@
+{
+  "name": "lute-shell-fixture-profile",
+  "private": true,
+  "type": "module",
+  "dsh": {
+    "profile": {
+      "bundles": ["lute-fixture-bundle"]
+    }
+  }
+}

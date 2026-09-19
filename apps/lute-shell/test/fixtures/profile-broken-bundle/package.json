@@ -1,0 +1,10 @@
+{
+  "name": "lute-shell-fixture-broken",
+  "private": true,
+  "type": "module",
+  "dsh": {
+    "profile": {
+      "bundles": ["lute-broken-bundle"]
+    }
+  }
+}

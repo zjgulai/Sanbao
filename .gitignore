@@ -73,6 +73,10 @@ packaging/.app-cache/
 !dsh-patches/archive/**
 !release/**
 !packages/**/test/**
+# fixture 的 node_modules 必须入库（干净克隆上 composition.spec.ts 才跑得起来）；
+# 第 42 行 node_modules/ 排除的是目录本身，git 不会进入被排除的目录，故目录与内容各需一行否定。
+!apps/lute-shell/test/fixtures/**/node_modules/
+!apps/lute-shell/test/fixtures/**/node_modules/**
 !packages/**/tsconfig.json
 
 # ADR-0017：从内建运行时 tgz 解出的 DSH 类型来源，可重建，不入库
