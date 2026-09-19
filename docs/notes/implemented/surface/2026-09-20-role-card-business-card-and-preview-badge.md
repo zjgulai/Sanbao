@@ -107,6 +107,11 @@
     另一会话正在改共享层；本轮未触碰该文件族），按 ADR-0123 D5 标注而不计绿。
     本轮顺带修掉两条自身漂移：`ui-anchors.json` 改了 purpose 却未同步装载点、
     `docs/catalog/packages.md` 未随新包再生成（两项均为派生/声明面的机械同步）。
+  - 门禁在 `0ba6345` 又抓出两处**本轮自身的缺陷**，均已修复并各登记一条总账
+    （[P-53](../../../pitfalls-playbook.md)：`brand.tsx` 三处描边引用了**从未定义**的
+    `--dsw-alias-border-focus`，`var()` 兜底让它在任何可见读数里都成立 → 改指 `--sanbao-accent`；
+    [P-54](../../../pitfalls-playbook.md)：`boot-animation` 自测的单次 100ms 采样把「时钟被挤住」
+    读成「圆环没转」→ 改成带 3s 截止的轮询）。
 
 ## 机器可读决策
 
