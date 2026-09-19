@@ -1906,6 +1906,60 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0139",
+      "title": "ADR-0139 · LUTE 自有 Electron 薄壳（P1 骨架）：宿主走子进程 + FD3/FD4 DSH3 管道、profile 用仓库 seed + 运行时物化、宿主运行时就位在 profile 内以保单一 cordis 实例",
+      "status": "accepted（2026-09-19）",
+      "date": "2026-09-19",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "薄壳的 AI 宿主跑在独立子进程里，与 Electron 主进程之间只走 FD3/FD4 上的 DSH3 v3 帧协议；不在主进程内 boot，也不走 harness 自带的 HTTP 服务面。",
+          "constraints": [
+            "宿主入口由薄壳自己持有（apps/lute-shell/src/host/），因为 @deepseek-ai/dsh-desktop-host 未发布到 npm（实测 ERR_PNPM_FETCH_404）",
+            "协议常量必须与 submodule 参照 wire.ts 逐值对齐，漂移由门禁 lute-shell-pin 判红",
+            "父进程必须保留三段拆机阶梯（IPC shutdown + destroy 请求管道 → 10s → SIGTERM → 5s → SIGKILL → 5s → 抛错），不得简化：父进程停止读 FD4 会让 drain 永不 settle，stop() 卡住且不发 fatal",
+            "hasBody:false 的请求绝不发 end 帧（end 只用来结束请求体）；多发一个 end 帧会让宿主 fatal 拆机",
+            "父进程收到任何 fatal 后主动收尸，不依赖子进程自杀——boot() 被拒那条路径没有 disposal",
+            "选择子进程的理由是观测旁路：进程内 boot 时「主线程挂了」与「宿主挂了」在唯一仪表上同形（总账 P-52）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "薄壳的 profile 由仓库内的 seed（5 个文件）在运行时物化到 ~/.dsh/profiles/lute-shell/，物化时在 profile 目录内跑真 pnpm install；不把 profile 放进仓库，也不用 symlink 代替 install。",
+          "constraints": [
+            "seed 的 @deepseek-ai/* 依赖一律精确 pin，出现 ^ / ~ / range 即门禁判红——npm 的 latest tag 指向 0.0.1-rc.* 旧线，range 会静默漂到旧线",
+            "seed/pnpm-lock.yaml 入库，且真装后不得漂移；link:/file:/绝对路径条数必须为 0 才可移植",
+            "两个 pnpm-workspace.yaml 都必须带 dsh-type-meta 与 dsh-user-interaction 的 override（两个包未发布到 npm，缺 override 则 install 404）",
+            "只写 ~/.dsh/profiles/lute-shell/；~/.dsh/profiles/desktop/ 是旧壳装载点，不得触碰",
+            "物化入口的 install 输出必须可观测（stdout inherit）：数分钟静默会让「在干活」与「卡住」同形，但不加 kill 看门狗——那会把「看得见地慢」变成「静默地被杀」"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "宿主运行时就位在 profile 内的 <profile>/lute-host/，使它的裸导入解析到 profile 唯一一份 hoisted node_modules，从而全进程只有一份 cordis 实例。",
+          "constraints": [
+            "seed 的 pnpm-workspace.yaml 必须写 nodeLinker: hoisted；顶层出现 symlink 即前提失效",
+            "lute-host/ 内不得出现 package.json——6 个宿主 .js 的 ESM 身份由 profile 根的 \"type\": \"module\" 决定，塞一份清单会把它们变 CJS 并在第一个 import 上炸",
+            "宿主入口路径固定为 <profile>/lute-host/host/index.js；overlay 用相对路径 ../shell.cordis.patch.yml 从该入口上溯一级定位",
+            "拷进 profile 的宿主字节只有一份，刻意不拷 .map（否则「宿主字节」在仓库与 profile 之间变成两份可漂移的事实）；代价是 profile 侧栈追踪行号对不上 src/",
+            "子进程环境必须经凭证擦洗，并注入 ELECTRON_RUN_AS_NODE=1 与 DSH_HOME"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "薄壳的版本与治理事实由独立静态门禁 lute-shell-pin 守，不把 apps/ 纳入 package collector。",
+          "constraints": [
+            "八条守卫：两侧精确版本、两侧同名包同版本、两个 workspace override、7 个协议常量不漂移、治理三字段取 self/lute/false、seed cordis.patch.yml 用户层剥注释后恰为 []、12 个 fixture 保持被 git 跟踪、壳 electron 精确且与 vendor 桌面插件同版本",
+            "空依赖集判违规而不是判通过：空分母会让两道版本守卫同时静默（gate-result.mjs:116 的 checked > 0 教义，P-15）",
+            "参照缺失（submodule 未初始化 / vendor manifest 不在）时跳过比对并进 note，不得静默判绿；note 必须说出跳过了几项",
+            "治理三字段查值不查类型：luteOrigin:\"\" 与 lutePublish:true 都曾是静默通过路径",
+            "「零 LUTE 插件」这条里程碑事实的证据家是 seed 的 cordis.patch.yml（内容 []），由本门禁静态守；不得把 smoke 输出引用为它的证据——smoke 的 label 只声称 profile manifest 的 dsh.profile.bundles",
+            "P2 起需重新评估把 apps/ 收编进 collector 还是长期双轨（当前治理三字段是第二份实现）"
+          ]
+        }
+      ]
     }
   ]
 }

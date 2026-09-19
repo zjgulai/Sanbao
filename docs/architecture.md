@@ -10,6 +10,7 @@
 | 壳层 fork | `vendor/dsh-desktop/` | 嵌套仓库，pin 见 `vendor/dsh-desktop.pin`；改 pin 与行为变更分开提交 |
 | 运行时来源 | `vendor/dsh-runtime/0.1.2-rc.1/*.tgz` | 打包与 profile 实际使用的运行时产物 |
 | 二开插件 | `packages/<能力组>/<包>/` | 19 个受管包按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
+| 自有薄壳 | `apps/lute-shell/` | LUTE 自有的 Electron 薄壳，用 npm 上的 harness 运行时启动 cordis host（脱离 `vendor/dsh-desktop` fork）；**不在 package collector 射程内**（`package-layout.mjs` 只下钻 `packages/<五组>/`），版本与治理事实由独立门禁守，详见 [ADR-0139](adr/ADR-0139.md) |
 | 出海技能创作源 | `~/project/81-Skills/`（**仓库外**） | 81 个中文名原文，经 `dsh-overseas-skills/scripts/import-81skills.mjs` 转换后安装进 `~/.dsh/skills/`。2026-09-11 迁出仓库，与同包其余 3 个 importer（accio / marketing / fullstack）的「源在仓库外」设计一致 |
 | 门禁 | `scripts/gate.mjs` | 单命令聚合校验，退出码即契约（[ADR-0014](adr/ADR-0014.md)） |
 
@@ -21,6 +22,7 @@
 | --- | --- | --- |
 | `package-identity` | 是 | 每个受管 `package.json` 必含 `luteOrigin` / `luteOwner` / `lutePublish`（ADR-0012） |
 | `pin-consistency` | 是 | `vendor/dsh-desktop.pin` 的 `harness-submodule` 必须等于子模块实际 HEAD（ADR-0008） |
+| `lute-shell-pin` | 是 | 薄壳（`apps/lute-shell/`，不在 collector 射程内）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 与 `electron` 都必须**非空、精确、同名包同版本**（npm `latest` tag 指向旧线，range 会静默漂移），7 个帧协议常量不漂移于 submodule 参照，治理三字段取 `self`/`lute`/`false`，seed 用户层剥注释后恰为 `[]`，12 个 test fixture 保持被跟踪（[ADR-0139](adr/ADR-0139.md)） |
 | `gitignore-whitelist` | 是 | 白名单条目必须指向真实路径，禁止幽灵条目（ADR-0013） |
 | `adr-index` | 是 | ADR 编号连续、索引与文件一致（ADR-0015） |
 | `adr-note-links` | 是 | ADR 的「决策记录」链接可达，且 Note 正文回引该 ADR 编号（ADR-0015） |

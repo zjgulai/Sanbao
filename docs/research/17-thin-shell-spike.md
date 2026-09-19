@@ -73,6 +73,8 @@ host 正常 boot 且 callback 中 `hostCtx` 可用（能 `provide` 服务），�
 
 **根因分析**：真实 profile（`~/.dsh/profiles/desktop/`）通过完整 `pnpm install` 建立 `.pnpm` store 结构，`loadProfileDirectory` 依赖该结构解析 `file:` 依赖的 bundle 元数据。Spike 用 symlink 简化了这一步，导致发现失败。
 
+> **2026-09-19 更正**：真因是 profile `package.json` 缺 `dsh.profile.bundles`（`packages/boot/app-boot/src/profile.ts:781`），与 pnpm workspace 结构无关。实测见 [18 号报告 §2](18-lute-shell-skeleton.md)。
+
 **P1 解法**：在薄壳的 profile 目录执行完整 `pnpm install`（与真实 profile 相同流程），而非 symlink。这是配置细节，不是架构阻塞——cordis host 已证明能 boot 并接受 entries，只要 entries 非空插件就会加载。
 
 ## 4. pnpm patch（Fact）
