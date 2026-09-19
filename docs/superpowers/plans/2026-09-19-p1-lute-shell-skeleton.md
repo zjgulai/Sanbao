@@ -2751,6 +2751,7 @@ EOF
 - Create: `scripts/gates/lute-shell-pin.mjs`
 - Create: `scripts/gates/lute-shell-pin.test.mjs`
 - Modify: `scripts/gate.mjs`（在 `CHECKS` 数组里注册一项）
+- Modify: `apps/lute-shell/package.json`（补 `luteOrigin`/`luteOwner`/`lutePublish` 三治理字段，值 `self`/`lute`/`false`——与 `packages/` 下 21 个自有包同形；`apps/` 对仓库 package collector 结构性不可见，故这三字段只能由本门禁守）
 
 **Interfaces:**
 - Consumes: 无（纯文件读取 + 比较）。
@@ -2763,6 +2764,8 @@ EOF
     seedWorkspaceText: string | null,     // apps/lute-shell/seed/pnpm-workspace.yaml
     protocolText: string | null,          // apps/lute-shell/src/protocol.ts
     referenceWireText: string | null,     // vendor/.../apps/desktop-host/src/wire.ts（可能为 null）
+    seedUserPatchText: string | null,     // apps/lute-shell/seed/cordis.patch.yml
+    trackedFixturePaths: string[] | null, // git ls-files apps/lute-shell/test/fixtures/ 的输出
   }
   ```
 
@@ -2774,6 +2777,9 @@ import assert from 'node:assert/strict'
 import { checkLuteShellPin } from './lute-shell-pin.mjs'
 
 const shellManifest = JSON.stringify({
+  luteOrigin: 'self',
+  luteOwner: 'lute',
+  lutePublish: false,
   devDependencies: {
     '@deepseek-ai/dsh-app-boot': '0.1.5-rc.2',
     '@deepseek-ai/cordis': '4.0.2',
@@ -2806,6 +2812,23 @@ const FRAME_HEADER_BYTES = 13
 const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
 `
 
+// 与 `git ls-files apps/lute-shell/test/fixtures/` 逐字一致（12 个，仓库相对路径）。
+// 这份清单是门禁的期望值：干净克隆上 fixtures 必须全在，否则 test/ 跑不起来。
+const TRACKED_FIXTURES = [
+  'apps/lute-shell/test/fixtures/frontend/dist/assets/app.css',
+  'apps/lute-shell/test/fixtures/frontend/dist/index.html',
+  'apps/lute-shell/test/fixtures/frontend/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/@deepseek-ai/dsh/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/lute-broken-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile/cordis.patch.yml',
+  'apps/lute-shell/test/fixtures/profile/cordis.yml',
+  'apps/lute-shell/test/fixtures/profile/node_modules/@deepseek-ai/dsh/package.json',
+  'apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/cordis.patch.yml',
+  'apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile/package.json',
+]
+
 const good = {
   shellManifestText: shellManifest,
   seedManifestText: seedManifest,
@@ -2813,6 +2836,8 @@ const good = {
   seedWorkspaceText: workspace,
   protocolText: protocol,
   referenceWireText: referenceWire,
+  seedUserPatchText: '# 用户层：P1 留空。P2 起在这里声明 LUTE 插件的 id / config / disabled。\n[]\n',
+  trackedFixturePaths: TRACKED_FIXTURES,
 }
 
 test('passes on a consistent pin', () => {
@@ -2864,6 +2889,34 @@ test('fails loud when the shell package is absent', () => {
   assert.equal(result.passed, false)
   assert.match(result.violations[0], /apps\/lute-shell\/package\.json/u)
 })
+
+test('rejects a shell manifest missing the governance fields', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({ devDependencies: { '@deepseek-ai/cordis': '4.0.2' } }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 3)
+  assert.match(result.violations[0], /luteOrigin/u)
+})
+
+test('rejects a seed user patch that declares a LUTE plugin layer', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    seedUserPatchText: '# 用户层\n- id: lute-something\n',
+  })
+  assert.equal(result.passed, false)
+  assert.match(result.violations[0], /cordis\.patch\.yaml|cordis\.patch\.yml|用户层/u)
+})
+
+test('rejects an untracked fixture', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    trackedFixturePaths: TRACKED_FIXTURES.slice(0, -1),
+  })
+  assert.equal(result.passed, false)
+  assert.match(result.violations[0], /test\/fixtures\/profile\/package\.json/u)
+})
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
@@ -2897,6 +2950,26 @@ const PROTOCOL_CONSTANTS = [
   ['MAX_CONTROL_PAYLOAD_BYTES', 'MAX_CONTROL_PAYLOAD_BYTES'],
 ]
 
+// apps/ 对仓库 package collector 结构性不可见，故治理三字段只能由本门禁守。
+const GOVERNANCE_FIELDS = ['luteOrigin', 'luteOwner', 'lutePublish']
+
+// 与 `git ls-files apps/lute-shell/test/fixtures/` 逐字一致；新增 fixture 时本门禁会红，
+// 那是**预期**的失败模式：干净克隆上 fixtures 缺失会让 test/ 跑不起来，必须有人显式更新清单。
+const TRACKED_FIXTURES = [
+  'apps/lute-shell/test/fixtures/frontend/dist/assets/app.css',
+  'apps/lute-shell/test/fixtures/frontend/dist/index.html',
+  'apps/lute-shell/test/fixtures/frontend/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/@deepseek-ai/dsh/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/node_modules/lute-broken-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile-broken-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile/cordis.patch.yml',
+  'apps/lute-shell/test/fixtures/profile/cordis.yml',
+  'apps/lute-shell/test/fixtures/profile/node_modules/@deepseek-ai/dsh/package.json',
+  'apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/cordis.patch.yml',
+  'apps/lute-shell/test/fixtures/profile/node_modules/lute-fixture-bundle/package.json',
+  'apps/lute-shell/test/fixtures/profile/package.json',
+]
+
 function harnessSpecifiers(manifestText, field) {
   if (manifestText === null) return null
   const manifest = JSON.parse(manifestText)
@@ -2910,7 +2983,7 @@ function constantValue(text, name) {
 }
 
 /**
- * @param {object} input 六个文件文本，缺失的为 null
+ * @param {object} input 八个输入（六个文件文本 + seed 用户层文本 + git 跟踪清单），缺失的为 null
  * @returns {{passed: boolean, violations: string[]}}
  */
 export function checkLuteShellPin(input) {
@@ -2958,6 +3031,41 @@ export function checkLuteShellPin(input) {
     }
   }
 
+  if (input.shellManifestText !== null) {
+    const manifest = JSON.parse(input.shellManifestText)
+    for (const name of GOVERNANCE_FIELDS) {
+      if (typeof manifest[name] !== 'string' && typeof manifest[name] !== 'boolean') {
+        violations.push(`apps/lute-shell/package.json 缺治理字段 ${name}——apps/ 不在 package collector 射程内，此字段只能由本门禁守`)
+      }
+    }
+  }
+
+  // seed 的用户层是「零 LUTE 插件」这条里程碑事实的证据家（smoke 只证 manifest 的 bundles）。
+  // 剥掉注释与空白后必须恰为 []；P2 起要挂插件时本门禁会红，那是需要人显式确认的时刻。
+  if (input.seedUserPatchText === null) {
+    violations.push('apps/lute-shell/seed/cordis.patch.yml 不存在或不可读')
+  } else {
+    const body = input.seedUserPatchText
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .join('')
+      .replace(/\s+/gu, '')
+    if (body !== '[]') {
+      violations.push(`seed/cordis.patch.yml 的用户层不是 []（剥注释后为 ${body}）——P1 的「零 LUTE 插件」以该文件为证据家，挂载插件属有意变更，须显式更新本门禁`)
+    }
+  }
+
+  if (input.trackedFixturePaths === null) {
+    violations.push('无法读取 git 跟踪清单——fixtures 是否入库不可判定')
+  } else {
+    const tracked = new Set(input.trackedFixturePaths)
+    for (const path of TRACKED_FIXTURES) {
+      if (!tracked.has(path)) {
+        violations.push(`${path} 不再被 git 跟踪——干净克隆上 test/ 会因缺 fixture 而失败（.gitignore 是白名单式，删 negation 会静默丢文件）`)
+      }
+    }
+  }
+
   return { passed: violations.length === 0, violations }
 }
 ```
@@ -2967,7 +3075,7 @@ export function checkLuteShellPin(input) {
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `cd /Users/lute/project/Magpie-Horch && node --test scripts/gates/lute-shell-pin.test.mjs`
-Expected: PASS（7 tests）
+Expected: PASS（10 tests）
 
 - [ ] **Step 5: 注册进门禁**
 
@@ -2979,6 +3087,13 @@ Expected: PASS（7 tests）
     remediation: '把 apps/lute-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0131）',
     run() {
       const reference = join('vendor', 'dsh-desktop', 'deepseek-harness', 'apps', 'desktop-host', 'src', 'wire.ts')
+      let trackedFixturePaths = null
+      try {
+        trackedFixturePaths = execSync('git ls-files apps/lute-shell/test/fixtures/', { cwd: repoRoot, encoding: 'utf8' })
+          .split('\n').filter((line) => line !== '')
+      } catch {
+        trackedFixturePaths = null
+      }
       return checkLuteShellPin({
         shellManifestText: readIfExists(join(repoRoot, 'apps', 'lute-shell', 'package.json')),
         seedManifestText: readIfExists(join(repoRoot, 'apps', 'lute-shell', 'seed', 'package.json')),
@@ -2986,10 +3101,14 @@ Expected: PASS（7 tests）
         seedWorkspaceText: readIfExists(join(repoRoot, 'apps', 'lute-shell', 'seed', 'pnpm-workspace.yaml')),
         protocolText: readIfExists(join(repoRoot, 'apps', 'lute-shell', 'src', 'protocol.ts')),
         referenceWireText: existsSync(join(repoRoot, reference)) ? readIfExists(join(repoRoot, reference)) : null,
+        seedUserPatchText: readIfExists(join(repoRoot, 'apps', 'lute-shell', 'seed', 'cordis.patch.yml')),
+        trackedFixturePaths,
       })
     },
   },
 ```
+
+`execSync` 失败（不在 git 仓库、或 git 不可用）时 `trackedFixturePaths` 为 `null`，checker 报「无法读取 git 跟踪清单」而非静默跳过——fixtures 是否入库这件事没有「跳过」的合法形态。若 `scripts/gate.mjs` 顶部尚未 import `execSync`，在同一处补上。
 
 并在 `scripts/gate.mjs` 顶部既有的一串 `import { check… } from './gates/…'` 里加上 `checkLuteShellPin`（与 `checkPinConsistency` 同一处 import 风格）。
 
@@ -3002,19 +3121,22 @@ Run: `cd /Users/lute/project/Magpie-Horch && pnpm run test:gate 2>&1 | tail -15`
 Expected: 全绿（新 checker 的 test 被 `scripts/gates/*.test.mjs` glob 收到）
 
 Run: `cd /Users/lute/project/Magpie-Horch && pnpm run gate 2>&1 | grep -A3 "lute-shell-pin"`
-Expected: 该项 PASS
+Expected: 该项 PASS。**注意**：仓库门禁有一项继承红 `profile-bundle-sync`（另一条工作线的在制品，与薄壳无关）——**不要追它、不要修它、不要动 `scripts/gates/exemptions.json`**。只看 `lute-shell-pin` 与 `test:gate`。
 
 - [ ] **Step 7: 提交**
 
 ```bash
 cd /Users/lute/project/Magpie-Horch
-git add scripts/gates/lute-shell-pin.mjs scripts/gates/lute-shell-pin.test.mjs scripts/gate.mjs
+git add scripts/gates/lute-shell-pin.mjs scripts/gates/lute-shell-pin.test.mjs scripts/gate.mjs apps/lute-shell/package.json
 git commit -m "$(cat <<'EOF'
-feat(gates): lute-shell-pin——薄壳版本精确锁、两侧一致、协议常量不漂移
+feat(gates): lute-shell-pin——薄壳版本精确锁、两侧一致、协议常量不漂移、治理与证据家入库
 
-apps/ 不在 package collector 射程内，deps-reproducible 管不到薄壳；本项独立守三件事：
+apps/ 不在 package collector 射程内，deps-reproducible 管不到薄壳；本项独立守六件事：
 seed 的 @deepseek-ai/* 必须精确版本（npm latest tag 指向旧线）、壳 devDeps 与 seed deps
-同名包必须同版本（否则编译期类型与运行时是两套包）、protocol.ts 常量对齐 submodule 参照。
+同名包必须同版本（否则编译期类型与运行时是两套包）、protocol.ts 常量对齐 submodule 参照、
+壳 manifest 带 luteOrigin/luteOwner/lutePublish 三治理字段、seed/cordis.patch.yml 用户层
+保持 []（「零 LUTE 插件」的证据家）、12 个 test fixture 保持被 git 跟踪（白名单式 .gitignore
+删一条 negation 就会静默丢文件）。
 EOF
 )"
 ```
