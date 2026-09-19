@@ -37,8 +37,9 @@ P0 spike 已经证明「npm 装 harness + 纯 Node 独立 boot」这条路走得
 ## Decision
 
 四条，逐条是本期实际做的选择与理由。实测读数的家在
-[18 号报告](../../../research/18-lute-shell-skeleton.md)；本文只在结论离不开某个读数时引它一次，
-命令与完整输出不重贴（ADR-0009：一份事实只有一个家）。
+[18 号报告](../../../research/18-lute-shell-skeleton.md)；本节与 Consequences 只引读数与验收入口
+名，数出读数的命令与完整输出以该报告为家（§3 smoke、§5 补丁数与源码行数），不重贴
+（ADR-0009：一份事实只有一个家）。
 
 **D1 宿主传输走子进程 + FD3/FD4 上的 DSH3 v3 帧协议，不在主进程内 boot、不走 harness 自带 HTTP。**
 薄壳自己写宿主入口（`apps/lute-shell/src/host/`），移植上游 `apps/desktop-host/src/index.ts` 的
@@ -89,18 +90,21 @@ node_modules。** 物化时把 `lib/protocol.js`、`lib/host/*.js`（6 个文件
 
 **正面**
 
-1. **壳层补丁数为 0**。实测 `git ls-files apps/lute-shell | grep -c '\.patch$'` → `0`，两个
-   `pnpm-workspace.yaml` 都没有 `patchedDependencies` 段（只有两条未发布包的 `overrides`）。
-   spec §3 的对照表把旧壳的壳层补丁记为 12 个、目标 0 个——本期在新壳侧兑现了目标值，旧壳的
-   12 个补丁一个没动（P5 才退役）。
+1. **壳层补丁数为 0**。实测读数是 `0`（数它的命令在 18 号报告 §5），两个 `pnpm-workspace.yaml`
+   都没有 `patchedDependencies` 段（只有两条未发布包的 `overrides`）。spec §3 的对照表把旧壳的
+   壳层补丁记为 12 个、目标 0 个——本期在新壳侧兑现了目标值，旧壳的 12 个补丁一个没动（P5 才退役）。
 2. **更新路径的第一段已经通了**：spec §6 的正常路径（`pnpm update @deepseek-ai/dsh-*` →
    `pnpm run gate` → 提交 lockfile）在薄壳侧有了可作用的对象——seed 的 13 个 `@deepseek-ai/*`
    依赖全部精确 pin，且由 `lute-shell-pin` 守着「range 即判红」。
 3. **P0 的 PARTIAL 收口**：`layers: 0` → `layers: 2` 已实测（18 号报告 §2），并且根因被换成了
    正确的那个，17 号报告的错误归因不会再被下一个读者继承。
-4. **自有源码体量可控**：`find apps/lute-shell/src -name '*.ts' | xargs wc -l` → 1680 行 / 12 个
-   文件，其中 390 行（`src/main/host-process.ts`）是上游 `host-process.ts` 的逐段移植（差异清单见
-   [18 号报告 §5](../../../research/18-lute-shell-skeleton.md)）。
+4. **自有源码体量可控**：1680 行 / 12 个 `.ts` 文件，其中 390 行（`src/main/host-process.ts`）是
+   上游 `host-process.ts` 的逐段移植（逐文件行数与数它的命令在
+   [18 号报告 §5](../../../research/18-lute-shell-skeleton.md)）。逐段差异与「必须逐字保留的行为
+   清单」的家是执行期报告
+   `.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/task-5-report.md` 与 `task-8-report.md`
+   （该目录被 `.gitignore` 排除、不随克隆走，故写行内代码不做链接）；18 号报告 §5 同样只给对照、
+   明写「本文不复述」。
 5. **无头验收可重复**：`pnpm run smoke` 走真管道、真 profile、真二进制往返，10 条断言全 PASS
    且退出码 0，不需要 GUI（18 号报告 §3）。
 

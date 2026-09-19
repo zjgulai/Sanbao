@@ -13,8 +13,8 @@
 
 | 类别 | 章节 | 说明 |
 |---|---|---|
-| **本次重跑**（写本文时实跑） | §1、§2、§3、§5 | 全部无头、廉价、可重复；输出逐字贴在对应小节 |
-| **引自执行期报告**（未重跑） | §4 | GUI 验收。重开一个窗口在用户屏幕上不产生任何新信息，故按 Task 8 报告的原始捕获逐字引用并标注出处 |
+| **本次重跑**（写本文时实跑） | §1、§2（**除 §2.4**）、§3、§5 | 全部无头、廉价、可重复；输出逐字贴在对应小节 |
+| **引自执行期报告**（未重跑） | §4（Task 8）、§2.4（Task 6） | GUI 验收与物化后的 profile 形态。重开一个窗口在用户屏幕上不产生任何新信息，重装 274 MB 的 profile 也不产生新事实，故按执行期报告的原始捕获逐字引用，出处写在小节标题里 |
 
 执行期报告的持久位置：`.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/task-{6,7,8,9}-report.md`
 （该目录被 `.gitignore` 排除，不随克隆走）；裁决账本在同目录 `progress.md`。**这两处的裁决已由
@@ -97,6 +97,11 @@ $ pnpm view @deepseek-ai/dsh-web-app@0.1.5-rc.2 dependencies | grep -E "cmdline|
   "@deepseek-ai/dsh-cmdline": "^0.1.5-rc.2",
   "@deepseek-ai/dsh-app-boot": "^0.1.5-rc.2",
 ```
+
+（两段 `dist-tags` 在这里统一按 `alpha` → `next` → `latest` 排列以便对照，**不是** pnpm 的原样键序：
+键序由 registry 侧决定、两个包互不相同——本次复核 `dsh-cmdline` 打的是 `latest, next, alpha`，
+`dsh-web-app` 打的是 `next, alpha, latest`。三个 tag 的值一个未改。与 §1.2 的折行同一性质：
+只改排版，不改内容。）
 
 判读：`latest` 停在 `0.0.1-rc.1`（`dsh-app-boot` 的 `latest` 是 `0.1.0-rc.6`），而本期用的是
 `0.1.5-rc.2`（在 `next` tag 上）。**任何 `^`/`~`/省略版本号的写法都会解析到旧线**——而旧线的
@@ -214,9 +219,15 @@ $ grep -c '^PASS' /tmp/t10-smoke-final.txt   # 即上面那次运行的捕获文
 10
 ```
 
-初版是 **8** 条断言，两轮 fix 后为 **10** 条（fix round 1 加「profile manifest 的两个 bundle」，
-round 2 把它的 label 收窄）。以 `apps/lute-shell/scripts/smoke.mjs` 实跑输出为准，本文不写死条数
-之外的任何断言清单——断言的家是脚本本身。
+初版是 **9** 条断言，fix round 1 加上「profile manifest 的两个 bundle」后为 **10** 条（round 2 只
+把这条的 label 收窄，没动条数）。**计数口径**：happy path 上会执行的 `check(` 站点数，只在失败
+分支里出现的站点不计——初版即 `6b30938`，
+`git show 6b30938:apps/lute-shell/scripts/smoke.mjs | grep -c 'check('` → **10**，其中 1 处
+（`check('dist/assets holds a binary asset to verify', false, …)`）在 `largest === undefined` 的失败
+分支里，故 **10 − 1 = 9**；`task-7-report.md` 记的也是「断言数 9 → 10（新增 bundle 断言）」，与该
+读数一致（那份报告在 git-ignored 的 SDD 目录里，见 §0）。以
+`apps/lute-shell/scripts/smoke.mjs` 实跑输出为准，本文不写死条数之外的任何断言清单——断言的家是
+脚本本身。
 
 ### 3.2 这段输出**证明什么**、**不证明什么**（引用纪律）
 
@@ -274,20 +285,20 @@ $ cat apps/lute-shell/seed/cordis.patch.yml
 
 补充的 DOM 探针读数（同一 CDP 会话）：
 `{"title":"DeepSeek Harness","bodyChildren":3,"rootHtmlLen":114367,"styleSheets":107,"scripts":7,
-"bodyTextHead":"新会话 工作区 agent_cot Magpie-Horch …"}`。
+"bodyTextHead":"<首屏文本头部，含新建会话入口 + 工作区分组 + 真实会话标题；逐字原文不在此转写>"}`。
+`bodyTextHead` 的逐字捕获刻意不转写——本仓公开，转写会让用户真实会话标题变成可 grep 的文本；
+它的可读形态就是上面那张已入库 PNG，图里侧栏自己印着计数：展开的工作区下 5 条会话行 +
+「展开其余 31 个会话」，另有 9 行工作区条目（第 10 行被视口裁切）。探针要证的正是这件事：
+renderer 渲染出的是共享 `~/.dsh` 里的**真实内容**而非空壳——114367 字节的 `#root` HTML、107 张
+样式表、7 个脚本、3 个 body 子节点。
 
 Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各一次，Electron 自述打包后不出现）。
 
 ### 4.2 截图内容的一条必须说明的事实
 
-**这张 PNG 的侧栏显示的是用户本机 DSH Desktop 的真实会话列表**（Magpie-Horch、agent_cot、
-DTC-Agent…）。机制是 `DSH_HOME` 共享 `~/.dsh`（`apps/lute-shell/src/main/index.ts:52` 的
-`dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh')`，本次复核行号），会话库住在 `~/.dsh`
-下而非 per-profile。
-
-这不是 P1 缺陷：spec §5 的「空 profile 正常」定义是**零 LUTE 插件**（见 §3.2 的证据家），不含
-会话数据隔离；隔离是 **P4 的决策**。图片按原样引用（已入库），本文不新增任何可识别内容，也不
-对其做重制或模糊处理——隐私面由用户裁决（可后续换一张空态截图）。
+**这张 PNG 的侧栏是用户本机 DSH Desktop 的真实会话列表**（标题不在本文枚举，计数见 §4.1 的探针
+段）：机制是 `DSH_HOME` 共享 `~/.dsh`（`apps/lute-shell/src/main/index.ts:52` 的 `dshHome`，本次
+复核行号），会话库住在 `~/.dsh` 下而非 per-profile。它不是 P1 缺陷，归属与隐私处置见 §6.6。
 
 ### 4.3 两条顺带定死的架构前提（引自 Task 8 报告）
 
@@ -368,13 +379,37 @@ DTC-Agent…）。机制是 `DSH_HOME` 共享 `~/.dsh`（`apps/lute-shell/src/ma
    **不需要随附 plain node**；但「`ELECTRON_RUN_AS_NODE` 在**签名 + 公证**后仍可用」这一条尚未
    验证——本期两次运行都是开发态（未签名）。P4 必须在签名产物上复验，否则宿主子进程起不来。
 6. **`DSH_HOME` 未隔离**（§4.2）：会话数据与旧壳共享，隔离属 P4 决策；已入库截图含真实会话标题，
-   隐私面由用户裁决。
+   隐私面由用户裁决（可后续换一张空态截图）。截图按原样引用，本文不新增任何可识别内容、不重制
+   不模糊。
 7. **打包面缺 CSP**：开发期的 CSP console 警告是 Electron 预期行为，P4 打包必须补。
-8. **quit 路径的孤儿子进程窗口**（Task 8 登记的 Minor）：`src/main/index.ts` 的外层 catch 调
-   `app.exit(1)` 但不 `host.stop()`，且生命周期监听器只在 `loadURL` resolve 之后才装。P4 的正路
-   是监听器在 `await host.start()` 之前装、catch 里补 `stop()`。
+8. **quit 路径的孤儿子进程窗口**（Task 8 登记的 Minor，`1b7bb9e`；三种形态，本次对着
+   `src/main/index.ts` 复核均在位）：① 外层 catch 调 `app.exit(1)` 但不 `host.stop()`；② 生命周期
+   监听器（`window-all-closed` / `before-quit`）只在 `loadURL` resolve 之后才装，quit 早到会绕过
+   它们；③ `before-quit` 守卫在第二次 `app.quit()` 时**不** `preventDefault` 就 return，于是
+   Electron 可以在 `stop()` 仍在飞行中时退出。P4 的正路是监听器在 `await host.start()` 之前装、
+   catch 里补 `stop()`；③ 的守卫是刻意镜像上游「二次 quit 不再 preventDefault，否则永不退出」，
+   改它要连上游保真一起判。
 9. **一处过时的 ADR 指针**：`scripts/gate.mjs:328` 的 `lute-shell-pin` remediation 文案写死了
    `（ADR-0131）`——那是 Task 9 派工时计划里预判的编号，执行期已被并发的换皮 ADR 占用，本决策
    实为 **ADR-0139**。纯提示文本、不参与任何判定，但它是过时指针，留给最终评审做一处字面量替换。
 10. **`tsconfig.json` 只 include `src/**/*.ts`**，故 `apps/lute-shell/test/` 下的 spec 只由 vitest
     转译、从未经过类型检查（Task 1 继承，Task 5/8 均登记）。
+11. **宿主侧 disposal 缺口：`boot()` 被拒无处置 + fatal 拆机的二次 `EBADF`**（routed→最终评审；
+    Task 5 登记、Task 7 fix round 1 `060ec28` 带可复现负面测试与完整 stderr 栈，出处在
+    `.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/progress.md` 的 Task 5 / Task 7 段与同目录
+    `task-7-report.md`——该目录被 `.gitignore` 排除、不随克隆走，故写行内代码不做链接）。两个症状
+    同族、一并处置：(a) `src/host/index.ts` 里 `ctx.fiber.dispose()` 只在「三服务缺失」那条分支跑，
+    `boot()` **自身拒绝**时没有任何处置路径；(b) fatal 拆机时 `stop(1)` 在管道已 destroyed 之后再次
+    `close`，stderr 上出现二次 `EBADF: bad file descriptor, close`。此前这一族只以**理由**形态出现
+    在 [ADR-0139](../adr/ADR-0139.md) D1 的 constraint 里（「父进程收到任何 fatal 后主动收尸……
+    `boot()` 被拒那条路径没有 disposal」），从未作为**未修项**出现在任何出货文档——在此登记一次，
+    免得下一个读者以为它已收口。
+12. **`lute-shell-pin` 判定器的四条 report-only Minor**（routed→最终评审；Task 9，commits
+    `7008c42` + `73d7270` + `bd8a220`；账本同上的 Task 9 段）。① override 守卫是**整文件
+    substring** 测试——`pnpm-workspace.yaml` 里一行注释提到包名就满足它（今天为真；强化要 YAML
+    解析，不成比例）；② 「用户层恰为 `[]`」的谓词拒绝合法变体（`---\n[]`、`[] # 空`）——**方向
+    安全**：响亮红而非假绿，是严格不是洞；③ `remediation` 文案只覆盖部分违规类（计划逐字给的
+    文本，fix round 2 新增的 electron 违规也不在其内）；④ 畸形 / 0 字节 manifest 会让 `JSON.parse`
+    抛出、整个 checker 中止，其余违规塌成一行 `checker threw`（门禁仍红，属诊断质量而非漏判；
+    fix round 2 之后 vendor manifest 也进了这个输入面）。这四条此前只活在 git-ignored 账本里，
+    对下一个读者等于不存在。

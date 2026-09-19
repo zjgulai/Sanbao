@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | `package-identity` | 是 | 每个受管 `package.json` 必含 `luteOrigin` / `luteOwner` / `lutePublish`（ADR-0012） |
 | `pin-consistency` | 是 | `vendor/dsh-desktop.pin` 的 `harness-submodule` 必须等于子模块实际 HEAD（ADR-0008） |
-| `lute-shell-pin` | 是 | 薄壳（`apps/lute-shell/`，不在 collector 射程内）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 与 `electron` 都必须**非空、精确、同名包同版本**（npm `latest` tag 指向旧线，range 会静默漂移），7 个帧协议常量不漂移于 submodule 参照，治理三字段取 `self`/`lute`/`false`，seed 用户层剥注释后恰为 `[]`，12 个 test fixture 保持被跟踪（[ADR-0139](adr/ADR-0139.md)） |
+| `lute-shell-pin` | 是 | 薄壳（`apps/lute-shell/`）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 都必须**非空、精确、同名包同版本**（npm `latest` tag 指向旧线，range 会静默漂移）；壳 `devDependencies.electron` 精确且等于 `vendor/dsh-desktop/dsh-plugin-desktop` 的同名 pin（参照缺失则跳过并进 note）；7 个帧协议常量不漂移于 submodule 参照，治理三字段取 `self`/`lute`/`false`，seed 用户层剥注释后恰为 `[]`，12 个 test fixture 保持被跟踪（[ADR-0139](adr/ADR-0139.md)） |
 | `gitignore-whitelist` | 是 | 白名单条目必须指向真实路径，禁止幽灵条目（ADR-0013） |
 | `adr-index` | 是 | ADR 编号连续、索引与文件一致（ADR-0015） |
 | `adr-note-links` | 是 | ADR 的「决策记录」链接可达，且 Note 正文回引该 ADR 编号（ADR-0015） |
