@@ -121,9 +121,9 @@ node_modules。** 物化时把 `lib/protocol.js`、`lib/host/*.js`（6 个文件
    有面板需要选目录，要连壳侧 IPC 一起做，不能只在插件侧等。
 4. **smoke 不进 CI**：它要真 profile（274 MB）与网络，靠人工跑。这意味着「薄壳还能 boot」这条
    事实**没有常驻读者**——只有跑过的人知道。
-5. **首屏共享 `~/.dsh`**：`DSH_HOME` 未隔离，所以薄壳首屏显示的是本机 DSH Desktop 的真实会话
-   列表。spec §5 的「空 profile 正常」定义是**零 LUTE 插件**，不含会话隔离；隔离是 P4 的决策。
-   已入库的首屏截图因此含有真实会话标题（隐私面由用户裁决，可后续换空态截图）。
+5. **首屏截图与 `DSH_HOME` 隔离**：出货截图已是隔离 home 的空态捕获（fix round 2 重拍）；
+   机制、隔离 home 下 smoke 的时序显形与 git 历史保留等事实的家是
+   [18 号报告 §4.2/§6.6/§6.11](../../../research/18-lute-shell-skeleton.md)。
 6. **一处已过时的 ADR 指针**：`scripts/gate.mjs:328` 的 `lute-shell-pin` remediation 文案写死了
    `（ADR-0131）`——那是 Task 9 派工时计划里预判的编号，执行期该号已被并发的换皮 ADR 占用，本
    决策实际落在 ADR-0139。这段是纯提示文本、不参与任何判定（Task 9 报告 Concern 4 已登记），

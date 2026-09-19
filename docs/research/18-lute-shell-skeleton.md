@@ -14,7 +14,8 @@
 | 类别 | 章节 | 说明 |
 |---|---|---|
 | **本次重跑**（写本文时实跑） | §1、§2（**除 §2.4**）、§3、§5 | 全部无头、廉价、可重复；输出逐字贴在对应小节 |
-| **引自执行期报告**（未重跑） | §4（Task 8）、§2.4（Task 6） | GUI 验收与物化后的 profile 形态。重开一个窗口在用户屏幕上不产生任何新信息，重装 274 MB 的 profile 也不产生新事实，故按执行期报告的原始捕获逐字引用，出处写在小节标题里 |
+| **fix round 2 重拍**（2026-09-19，用户指令下重开 GUI 一次） | §4 的空态五件套与 DOM 探针 | 隔离 `DSH_HOME` 的空态捕获替换了入库截图；本轮读数与 Task 8 原读数在 §4 内**分块标注**，不混写 |
+| **引自执行期报告**（未重跑） | §2.4（Task 6）、§4.3（Task 8） | 物化后的 profile 形态与两条架构前提；重装 274 MB 的 profile 不产生新事实，架构前提与截图重拍无关 |
 
 执行期报告的持久位置：`.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/task-{6,7,8,9}-report.md`
 （该目录被 `.gitignore` 排除，不随克隆走）；裁决账本在同目录 `progress.md`。**这两处的裁决已由
@@ -99,9 +100,8 @@ $ pnpm view @deepseek-ai/dsh-web-app@0.1.5-rc.2 dependencies | grep -E "cmdline|
 ```
 
 （两段 `dist-tags` 在这里统一按 `alpha` → `next` → `latest` 排列以便对照，**不是** pnpm 的原样键序：
-键序由 registry 侧决定、两个包互不相同——本次复核 `dsh-cmdline` 打的是 `latest, next, alpha`，
-`dsh-web-app` 打的是 `next, alpha, latest`。三个 tag 的值一个未改。与 §1.2 的折行同一性质：
-只改排版，不改内容。）
+键序随调用/客户端而变，同一包两次调用可不同；本节两块为对照重排过键序，值未变。与 §1.2 的折行
+同一性质：只改排版，不改内容。）
 
 判读：`latest` 停在 `0.0.1-rc.1`（`dsh-app-boot` 的 `latest` 是 `0.1.0-rc.6`），而本期用的是
 `0.1.5-rc.2`（在 `next` tag 上）。**任何 `^`/`~`/省略版本号的写法都会解析到旧线**——而旧线的
@@ -262,45 +262,76 @@ $ cat apps/lute-shell/seed/cordis.patch.yml
 它要真 profile（274 MB）与网络，靠人工跑。代价是「薄壳还能 boot」这条事实没有常驻读者
 （[Note](../notes/implemented/architecture/2026-09-19-lute-shell-skeleton.md) Consequences「负面 / 待办」4）。
 
-## 4. 第一个可见 UI（引自 Task 8 报告，2026-09-19 实机捕获；本文未重开 GUI）
+## 4. 第一个可见 UI（fix round 2 空态重拍：隔离 `DSH_HOME`，2026-09-19；Task 8 共享 home 读数留作历史出处）
 
-![lute-shell 第一个可见 UI](assets/2026-09-19-lute-shell-first-ui.png)
+![lute-shell 第一个可见 UI（空态）](assets/2026-09-19-lute-shell-first-ui.png)
+
+**入库图像是 fix round 2（2026-09-19，用户指令）在隔离 `DSH_HOME` 下的空态捕获**：启动命令
+`DSH_HOME=<临时目录> pnpm run dev --remote-debugging-port=9223`，`LUTE_SHELL_PROFILE` 未设
+（宿主仍跑真 profile `~/.dsh/profiles/lute-shell/`，换的只是会话库/设置的落点）。它比 Task 8 的
+原共享 `~/.dsh` 捕获更贴 P1 里程碑的验收字面——[spec §5](../superpowers/specs/2026-09-19-base-decoupling-design.md)
+的「显示 harness 默认 UI」与[计划 Task 8 Step 10](../superpowers/plans/2026-09-19-p1-lute-shell-skeleton.md)
+的「未登录/无 API key 状态下的启动页」：`api/session/list` 响应体 `{"items":[]}`（§4.1 逐字），
+侧栏「暂无会话」，无任何真实会话标题。Task 8 的原读数**原样保留**在 §4.1 末尾（标注「原共享
+`~/.dsh` 捕获」）——它们是「壳对共享 home 同样工作」的证据，不因换图作废。
+
+**空态截图前有一段首启流程，如实交代**：全新 `DSH_HOME` 首启会先后弹两个首启弹窗——「内测声明」
+（按钮「继续」）与「添加一个 API Key 开始使用」（按钮「稍后配置」/「保存并继续」）。本轮经 CDP
+点击按钮依次 dismiss 后，对 settle 的默认视图采集读数与截图（同一 GUI 运行内多次 reload 分多趟
+采集，每条读数标注所在趟）；第二个弹窗本身就是「无 API key 启动页」的字面形态，但其捕获未入库
+（首屏图只保留一张）。
 
 ### 4.1 ★ 引证必须给整条证据链，不能只给这张截图
 
 **这张 PNG 是 CDP `Page.captureScreenshot` 的产物**——macOS 的 `screencapture` 被 TCC 拒
-（`screencapture -l 41280` → `could not create image from window`；全屏 `screencapture -x` →
-`could not create image from display`），而本次工作不去碰 TCC 授权。CDP 截图是**进程内合成器
-捕获**，所以单凭它只能证明「renderer 画了这些像素」，**不能**证明「原生窗口真在物理屏上合成」。
+（Task 8 实测：`screencapture -l 41280` → `could not create image from window`；全屏
+`screencapture -x` → `could not create image from display`），本仓不去碰 TCC 授权。CDP 截图是
+**进程内合成器捕获**，所以单凭它只能证明「renderer 画了这些像素」，**不能**证明「原生窗口真在
+物理屏上合成」。
 
-「窗口已显示」这个结论由五件套共同支撑，缺一即不得写：
+「窗口已显示」这个结论由五件套共同支撑，缺一即不得写。**本轮五件套全部来自 fix round 2 的同一
+次 GUI 运行**（2026-09-19，隔离 `DSH_HOME`；与 Task 8 读数分块，不混写）：
 
-| # | 证据 | 原始读数（引自 Task 8 报告 §Step 10） |
+| # | 证据 | 本轮原始读数（2026-09-19 fix round 2，隔离 `DSH_HOME`） |
 |---|---|---|
-| 1 | **on-screen 合成**（窗口服务器层，独立于 renderer） | Swift `CGWindowListCopyWindowInfo`：`41280 Electron bounds=["Height": 840, "Width": 1280, …]`——尺寸恰为规格 1280×840；另有 `41298 Electron bounds=["Height": 600, "Width": 800]`（detach 的 DevTools 窗） |
-| 2 | **代码事实**：窗口不是无条件 show 的 | `apps/lute-shell/src/main/index.ts:31` 建窗时 `show: false`，`:43` 才 `window.once('ready-to-show', () => { if (!window.isDestroyed()) window.show() })`——所以「显示」发生在首帧就绪之后，不是构造即显示（本次复核行号） |
+| 1 | **on-screen 合成**（窗口服务器层，独立于 renderer） | Swift `CGWindowListCopyWindowInfo`：`42426 Electron bounds=["Height": 840, "Width": 1280] layer=0 onscreen=true`——尺寸恰为规格 1280×840；另有 `42445 Electron bounds=["Height": 600, "Width": 800] layer=0 onscreen=true`（detach 的 DevTools 窗） |
+| 2 | **代码事实**：窗口不是无条件 show 的 | `apps/lute-shell/src/main/index.ts:31` 建窗时 `show: false`，`:43` 才 `window.once('ready-to-show', () => { if (!window.isDestroyed()) window.show() })`——「显示」发生在首帧就绪之后，不是构造即显示（本轮复核行号；`src/main/**` 自 Task 8 后零改动） |
 | 3 | **宿主就绪** | 主进程 stdout 逐字：`lute shell: host ready, dsh 0.1.5-rc.2` |
-| 4 | **网络与异常面干净** | CDP Network 域 35 行**全部 200**（`dsh-app://app/index.html`、两条 `/plugins/??…client.js` 组合包、`assets/vendor-*.css`/`index-*.css`/`index-*.js`/`vendor-*.js`、十余条 `/api/*` JSON、4 条 `/.dsh/remote-stream` NDJSON），零 `NET-FAIL`；`Runtime.exceptionThrown` 计数 **0** |
-| 5 | **退出后无孤儿子进程** | AppleScript quit 后 `pgrep -f "lute-host/host/index.js"` 空（exit 1），Electron 主进程亦空 |
+| 4 | **网络与异常面干净** | CDP Network 域 28 个请求**全部 200**（直方图 `{"200":28}`）、零 `loadingFailed`；`Runtime.exceptionThrown` 计数 **0**；console 仅 2 条 Electron 开发期 CSP 安全警告（与 Task 8 观察到的同一条，Electron 自述打包后不出现） |
+| 5 | **退出后无孤儿子进程** | AppleScript quit 后（后台 dev 任务 exit 0）：`pgrep -f "lute-host/host/index.js"` 空（exit 1）、Electron 主进程空（exit 1）、`9223` 端口无监听 |
 
-补充的 DOM 探针读数（同一 CDP 会话）：
-`{"title":"DeepSeek Harness","bodyChildren":3,"rootHtmlLen":114367,"styleSheets":107,"scripts":7,
-"bodyTextHead":"<首屏文本头部，含新建会话入口 + 工作区分组 + 真实会话标题；逐字原文不在此转写>"}`。
-`bodyTextHead` 的逐字捕获刻意不转写——本仓公开，转写会让用户真实会话标题变成可 grep 的文本；
-它的可读形态就是上面那张已入库 PNG，图里侧栏自己印着计数：展开的工作区下 5 条会话行 +
-「展开其余 31 个会话」，另有 9 行工作区条目（第 10 行被视口裁切）。探针要证的正是这件事：
-renderer 渲染出的是共享 `~/.dsh` 里的**真实内容**而非空壳——114367 字节的 `#root` HTML、107 张
-样式表、7 个脚本、3 个 body 子节点。
+**空态判定是读数，不是目视**（同一 GUI 运行内采集；截图所在趟的读数与其同趟）：
 
-Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各一次，Electron 自述打包后不出现）。
+- `api/session/list` 响应体（115 字节，逐字，dismiss 首启弹窗后那趟）：
+  `{"type":"server-response","rpcId":"dedc1a65-228e-4267-b39a-d3255abba0a0","result":{"ok":true,"value":{"items":[]}}}`
+  ——会话库为空是协议层事实，不靠看图。
+- DOM 探针（截图所在趟）：`{"title":"DeepSeek Harness","bodyChildren":3,"rootHtmlLen":47094,"styleSheets":107,"scripts":7}`；
+  侧栏文本采样 `新会话 | 工作区 | 暂无会话 | 设置 | 探索未至之境 | 预览版 | 选择工作区 | 标准模式 |
+  选择一个工作区开始`——无任何会话标题。
+- **对入库 PNG 的读回判定**：完整 harness 默认 UI 非白屏（HARNESS 徽标、「新会话」按钮、hero
+  「探索未至之境」+ 预览版徽标、工作区/标准模式选择器、带发送钮的 composer 均在位）；侧栏工作区
+  分组下是「暂无会话」占位，**零会话行**。
+- 隔离 home 里宿主真实写过数据（运行后实测，共 16 KB）：`.anonymous-user-id`、
+  `.credentials.yaml`、`settings.yaml`、`storages/workspace.json`——数据落点确实换到了临时目录，
+  不是「UI 恰好没显示旧数据」。
 
-### 4.2 截图内容的一条必须说明的事实
+**原共享 `~/.dsh` 捕获的读数（Task 8，2026-09-19，历史出处——「壳对共享 home 同样工作」的证据，
+读数原样保留）**：ready 行同文 `lute shell: host ready, dsh 0.1.5-rc.2`；`CGWindowListCopyWindowInfo`：
+`41280 Electron bounds=["Height": 840, "Width": 1280]`、`41298 Electron bounds=["Height": 600, "Width": 800]`；
+CDP Network 域 35 行**全部 200**、零 `NET-FAIL`，`Runtime.exceptionThrown` **0**；DOM 探针
+`{"title":"DeepSeek Harness","bodyChildren":3,"rootHtmlLen":114367,"styleSheets":107,"scripts":7}`，
+侧栏为真实会话列表（原侧栏计数，对当时入库 PNG 数出：展开工作区下 5 条会话行 +「展开其余 31 个
+会话」+ 9 行工作区条目，第 10 行被视口裁切；逐字标题不转录——该 PNG 已被本轮空态图替换，原文件
+在 git 历史 `1b7bb9e`）；quit 后 `pgrep` 空；Console 同样只有 Electron 开发期 CSP 警告。
 
-**这张 PNG 的侧栏是用户本机 DSH Desktop 的真实会话列表**（标题不在本文枚举，计数见 §4.1 的探针
-段）：机制是 `DSH_HOME` 共享 `~/.dsh`（`apps/lute-shell/src/main/index.ts:52` 的 `dshHome`，本次
-复核行号），会话库住在 `~/.dsh` 下而非 per-profile。它不是 P1 缺陷，归属与隐私处置见 §6.6。
+### 4.2 出货图像的隐私处置（一条必须说明的事实）
 
-### 4.3 两条顺带定死的架构前提（引自 Task 8 报告）
+**入库图像是空态**（§4.1 的读数判定，非目视）；**原共享 `~/.dsh` 捕获（侧栏含真实会话标题）仍在
+git 历史 `1b7bb9e` 里**。fix round 2 按用户指令替换的是工作树图像——git 历史保留是事实登记不是
+缺陷，真要清除需 rewrite history，属用户的决定。机制与隔离归属（`DSH_HOME` 默认共享 `~/.dsh`，
+`apps/lute-shell/src/main/index.ts:52` 的 `dshHome` 回退；隔离成为默认形态属 P4 决策）见 §6.6。
+
+### 4.3 两条顺带定死的架构前提（引自 Task 8 报告，本轮未重测）
 
 - **Electron 43 内置 Node 的版本号**：`ELECTRON_RUN_AS_NODE=1 …/Electron -p "process.versions.node"`
   → `24.18.1`，≥ harness engines 下限 `22.19` ⇒ **P4 无需随附 plain node**（计划里这条曾是待实测项）。
@@ -310,15 +341,18 @@ Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各�
 
 ### 4.4 本文未做的事（诚实声明）
 
-- **未重开 GUI 重取 §4 的任何读数**：重开窗口只会在用户屏幕上复刻已有证据，不产生新信息。
+- **fix round 2 之后本文不再有「未重开 GUI」**：本轮按用户指令重开了一次 GUI（隔离 `DSH_HOME`
+  的空态重拍）；重开读数已并入 §4.1，Task 8 原读数降级为历史出处。
 - **未取得 macOS 合成器级窗口截图**（TCC 所限）；on-screen 合成由 §4.1 第 1 项的 CGWindowList
   读数独立佐证。
-- **未在 GUI 内触发 KaTeX 字体请求**：Network 追踪里没有任何字体请求，与「KaTeX 字体仅在渲染
-  数学时加载」一致。结论是「未发生字体请求」，**不是**「字体请求成功」。嵌套字体路径的逐字节
-  服务已由无头测量证明（Task 8 派工前实测
+- **未在 GUI 内触发 KaTeX 字体请求**：本轮 Network 追踪（28 请求）同样零字体请求，与「KaTeX
+  字体仅在渲染数学时加载」一致。结论是「未发生字体请求」，**不是**「字体请求成功」。嵌套字体
+  路径的逐字节服务已由无头测量证明（Task 8 派工前实测
   `/assets/fonts/KaTeX_Main-Regular-B22Nviop.woff2` → `status=200 … servedBytes=26272
   diskBytes=26272 byteEqual=true`）。
 - **未端到端演练** `before-quit` 二次触发路径与 fatal-kill 路径（需 boot 失败注入）；代码层在位。
+- **本轮零代码改动**：隔离靠 `DSH_HOME` 环境变量，`src/main/index.ts` 的默认回退（共享
+  `~/.dsh`）未动——隔离成为默认形态仍属 P4 决策（§6.6）。
 
 ## 5. 与旧壳的对照（Fact，本次重跑）
 
@@ -378,9 +412,14 @@ Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各�
 5. **P4 打包**：Electron 43 内置 Node 实测 `24.18.1`（§4.3），已满足 harness engines 下限，故
    **不需要随附 plain node**；但「`ELECTRON_RUN_AS_NODE` 在**签名 + 公证**后仍可用」这一条尚未
    验证——本期两次运行都是开发态（未签名）。P4 必须在签名产物上复验，否则宿主子进程起不来。
-6. **`DSH_HOME` 未隔离**（§4.2）：会话数据与旧壳共享，隔离属 P4 决策；已入库截图含真实会话标题，
-   隐私面由用户裁决（可后续换一张空态截图）。截图按原样引用，本文不新增任何可识别内容、不重制
-   不模糊。
+6. **`DSH_HOME` 未隔离**（§4.2）：薄壳默认仍共享 `~/.dsh`（`src/main/index.ts` 的 `dshHome`
+   回退），会话数据与旧壳同库；**隔离成为默认形态属 P4 决策**——fix round 2 的空态重拍靠的是
+   `DSH_HOME=<临时目录>` 环境变量，零代码改动。隔离对 boot/UI 成立（§4 五件套 + 空会话库读数），
+   但隔离 home 下的无头 smoke 会在 shutdown 断言上踩红（宿主 ready、9/10 断言 PASS 后
+   `closeSync` 二次 close 报 `EBADF`、宿主 exit 1，2/2 复现；共享 home 同命令 PASS）——这是
+   §6.11(b) 同族缺陷在**干净 shutdown 路径**上的时序显形，机制与读数见 §6.11，本轮未修。
+   **入库截图已是空态**（§4）；原共享 `~/.dsh` 捕获仍在 git 历史 `1b7bb9e` 里——用户决定的是
+   替换工作树图像，历史保留是事实登记不是缺陷（清除需 rewrite history，属用户决定）。
 7. **打包面缺 CSP**：开发期的 CSP console 警告是 Electron 预期行为，P4 打包必须补。
 8. **quit 路径的孤儿子进程窗口**（Task 8 登记的 Minor，`1b7bb9e`；三种形态，本次对着
    `src/main/index.ts` 复核均在位）：① 外层 catch 调 `app.exit(1)` 但不 `host.stop()`；② 生命周期
@@ -404,6 +443,16 @@ Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各�
     在 [ADR-0139](../adr/ADR-0139.md) D1 的 constraint 里（「父进程收到任何 fatal 后主动收尸……
     `boot()` 被拒那条路径没有 disposal」），从未作为**未修项**出现在任何出货文档——在此登记一次，
     免得下一个读者以为它已收口。
+    fix round 2 补测（2026-09-19，隔离 `DSH_HOME` 重拍时顺带量到）：这族二次 close 在**干净
+    shutdown 路径**上也会显形——无头 smoke 在隔离 home 下 2/2 复现
+    `closeSync(SHELL_RESPONSE_PIPE_FD)` 抛 `EBADF`（宿主 exit 1，shutdown 断言 FAIL），共享
+    home 同命令 PASS。机制实测（本轮，Node 26.0.0）：`createWriteStream('', { fd, autoClose: false })`
+    的 `destroy()` 仍会异步关 fd（fd 3 同），故 `stop()` 的「destroy 流 + `closeSync` 同一 fd」是
+    **结构性双 close**，是否显形取决于线程池 close 与主线程 `closeSync` 谁先落地——同族佐证：
+    复刻 smoke 请求模式的小驱动（3 请求）在**两个 home 下都**录得 `close-async(4)`（自
+    `index.js:210` 的 `responsePipe.destroy()`）却都 exit 0：机制在场、竞速未输；真实 smoke
+    （6 请求，含 740575 字节跨分片流式资产）在隔离 home 下竞速 2/2 输掉。仍 routed→最终评审；
+    本轮零代码改动，未修。
 12. **`lute-shell-pin` 判定器的四条 report-only Minor**（routed→最终评审；Task 9，commits
     `7008c42` + `73d7270` + `bd8a220`；账本同上的 Task 9 段）。① override 守卫是**整文件
     substring** 测试——`pnpm-workspace.yaml` 里一行注释提到包名就满足它（今天为真；强化要 YAML
