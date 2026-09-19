@@ -42,6 +42,7 @@ import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
+import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
 import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
 import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
@@ -1929,6 +1930,38 @@ const CHECKS = [
       + '突变后按期望值重写必须能回到绿（生成回路真实可执行）；清单里每个派生物必须声明源字段、落点与 global pattern',
     run() {
       return runNodeTestFile('scripts/gates/brand-derivatives-sync.test.mjs', '品牌派生物一致性判据的反向自测失败')
+    },
+  },
+  {
+    name: 'brand-avatars-pin',
+    // 工单 004（S3 头像管线 R8）：入仓头像资产与 vendor/worldpilot.pin 逐档 sha256，
+    // 篡改任一字节即构建期拦截——上游重画不得静默改变本仓出货面。
+    remediation:
+      '资产被手改或重采未 bump pin：从 pin 的 upstream-* 出处重采（gh api contents raw），'
+      + '重算 sha256 逐档回填 vendor/worldpilot.pin 并人工审查 diff；禁止为了让门禁变绿而回填哈希（P-01）',
+    run() {
+      return checkBrandAvatarsPin({ repoRoot })
+    },
+  },
+  {
+    name: 'brand-avatars-pin-selftest',
+    remediation:
+      '跑 node --test scripts/gates/brand-avatars-pin.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '资产改一个字节必须判红且点名路径（P-02/P-03）；资产缺失必须判红；pin 的 sha256 段为空必须判红（P-15 同族）',
+    run() {
+      return runNodeTestFile('scripts/gates/brand-avatars-pin.test.mjs', '头像资产 pin 判据的反向自测失败')
+    },
+  },
+  {
+    name: 'role-icon-judge-selftest',
+    // 工单 004（L10 改判）：头像判据本体在 scripts/lib/role-icon-judge.mjs——
+    // MIME 与字节头一致、SVG 包位图伪造路径封死、三处同串。
+    remediation:
+      '跑 node --test scripts/lib/role-icon-judge.test.mjs 看红在哪条：本项必须能说「不」——'
+      + 'SVG 裹位图必须判红（「SVG 包位图」）、webp MIME 配 PNG 字节必须判红（RIFF）、'
+      + '非 base64 data URI 必须判红、三处不同串必须判红（P-02/P-03）',
+    run() {
+      return runNodeTestFile('scripts/lib/role-icon-judge.test.mjs', '头像 L10 判据的反向自测失败')
     },
   },
 ]

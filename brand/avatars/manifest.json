@@ -1,0 +1,28 @@
+{
+  "$comment": "受管头像清单（S3 头像管线，工单 004 示踪弹：仅 AGT-001）。id 与 role-catalog/preset id 同名（agt-001..agt-050），本文件是「岗位↔头像」事实之家。字节判据在 vendor/worldpilot.pin，由 brand-avatars-pin 门禁守护；上游出处见 pin 的 upstream-* 字段，此处不重复（ADR-0009 一份事实一个家）。",
+  "format": "lute-avatar-manifest",
+  "version": 1,
+  "presetId": "agt-001",
+  "colorways": ["dark", "light"],
+  "sizes": [32, 48, 64, 80, 128, 256, 512],
+  "assets": {
+    "dark": {
+      "32": "assets/dark/32/AGT-001.webp",
+      "48": "assets/dark/48/AGT-001.webp",
+      "64": "assets/dark/64/AGT-001.webp",
+      "80": "assets/dark/80/AGT-001.webp",
+      "128": "assets/dark/128/AGT-001.webp",
+      "256": "assets/dark/256/AGT-001.webp",
+      "512": "assets/dark/512/AGT-001.webp"
+    },
+    "light": {
+      "32": "assets/light/32/AGT-001.webp",
+      "48": "assets/light/48/AGT-001.webp",
+      "64": "assets/light/64/AGT-001.webp",
+      "80": "assets/light/80/AGT-001.webp",
+      "128": "assets/light/128/AGT-001.webp",
+      "256": "assets/light/256/AGT-001.webp",
+      "512": "assets/light/512/AGT-001.webp"
+    }
+  }
+}

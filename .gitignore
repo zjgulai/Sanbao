@@ -31,6 +31,7 @@
 !dsh-patches/**
 !dsh-rootoutlet-heal/**
 !apps/**
+!brand/**
 
 # —— vendor 嵌套仓库：源码不入库，仅 pin 文件入库 ——
 !vendor/
@@ -38,6 +39,7 @@
 vendor/dsh-desktop/
 !vendor/dsh-worktable.pin
 vendor/dsh-worktable/
+!vendor/worldpilot.pin
 
 # —— 纳入目录内的常见排除 ——
 node_modules/

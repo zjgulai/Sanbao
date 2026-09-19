@@ -1,0 +1,29 @@
+# LUTE vendor pin —— WorldPilot 视觉供体资产（Sanbao 换皮，工单 004 起）
+#
+# 门禁契约：brand-avatars-pin 门禁重算 brand/avatars/ 下已登记资产的 sha256，
+# 与本文件逐档比对，不一致即拒绝（构建期拦截，R8：入仓后与素材源仓分叉即失败）。
+# 每次从上游重采资产时：先 bump upstream-sha 与本表，再让门禁过。
+#
+# 供体只是视觉素材来源，不构成运行时依赖；本仓资产以本表 sha256 为准——
+# 上游重画不会静默改变本仓出货面（pin 后分叉是显式决策，不是事故）。
+upstream-url: https://github.com/lillian-maker/WorldPilot
+upstream-sha: 2e676da87999c88fbc70baae9eb5dbf72c2b757e
+upstream-root: digital-employees
+checked-at: 2026-09-19
+colorways: dark,light
+sizes: 32,48,64,80,128,256,512
+sha256:
+brand/avatars/assets/dark/32/AGT-001.webp e13f75924876481f05a90c6ff3a4b7daa88cce6cb69374e63cab2dc61455e5dc
+brand/avatars/assets/dark/48/AGT-001.webp 0320f7b991f2a4ec875eb476564eab50902bb02bf9ca2349332d690d1054b776
+brand/avatars/assets/dark/64/AGT-001.webp 6cd0185ab8b2c79fd08ea83d7d53c942f5ec674d089580ea7ddd1a1d474d1a53
+brand/avatars/assets/dark/80/AGT-001.webp 7cca41df06b537f73cbf24091b1a06575584e1db392e1788c761d00deb1ccf7b
+brand/avatars/assets/dark/128/AGT-001.webp 5b5e7ec37adc1d264f5d790325d5980b7c5f90a40ad1da5da916de0e44ed496d
+brand/avatars/assets/dark/256/AGT-001.webp 1bbcdda5528ac895f121486c7fbf34f837a40e84fe4c2447f3fb3f6d60508d63
+brand/avatars/assets/dark/512/AGT-001.webp 6eef4851c5c3c9ee11628131f6f1bcced9baa200d7ea1e697e07c41098da1a8d
+brand/avatars/assets/light/32/AGT-001.webp d361c51265d2a184a899ea3a5c2fd022e05c6fe40480f03aa1c7712fe06236a1
+brand/avatars/assets/light/48/AGT-001.webp cd15a429d0fbea4826e0d04ac10dd0eddedd82ad3e6a5826db35cb28384529fc
+brand/avatars/assets/light/64/AGT-001.webp e1985715b72aab5bfb25b06a90753088065e6406ec83a64305a45bf3e237c165
+brand/avatars/assets/light/80/AGT-001.webp 3150065be9e8d2a0750135f3efa33093d3988bdd5580fa2c33a84fd1bc692aa6
+brand/avatars/assets/light/128/AGT-001.webp a16544caaac7109c27cea6b05187e5bae7bdfa77e89a3a4509488a91ae010004
+brand/avatars/assets/light/256/AGT-001.webp 592f013034fdf48837a86299aa3402ad1dcd5d901c9bf9ad0154ce2205f6267e
+brand/avatars/assets/light/512/AGT-001.webp 5ee2f7f57163cf1ec9849b6853bfb4e6fecb8aaa2c092172732e74cf9b831b53

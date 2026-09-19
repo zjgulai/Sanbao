@@ -89,15 +89,23 @@ const GENERIC_MANIFEST =
  */
 const SUBSET_RESPECTS_FILE_FLAGS = false
 /**
- * 图标索引（lute-brand-icons 的产物）。
+ * 图标索引（lute-brand-icons 的产物；仓外未版本管理）。
  *
  * 岗位 ↔ 头像的对应关系**不需要第二张映射表**：catalog 里的条目 id 与 preset id
  * 同名（agt-001..agt-050），图标库自己就是这条事实之家（ADR-0009）。
  * 少了它就直接失败——静默写 null 正是「50 张卡片没头像」这个缺陷本身。
+ *
+ * 受管源（S3，工单 004）：brand/avatars/manifest.json 登记的岗位**优先**——
+ * 由 vendor/worldpilot.pin 锁过字节的 webp 产出 data URI（深色道兜底串，
+ * 官方卡显式消费）。未登记的岗位回退本索引；022 全量迁移后本索引退役
+ * （ADR-0133 残留 R5：只停止新增依赖）。
  */
 const ICON_MANIFEST =
   process.env.ROLE_ICON_MANIFEST ||
   join(SKILLS_ROOT, 'lute-brand-icons', 'assets', 'manifest.json')
+const AVATAR_MANIFEST = join(HERE, '..', '..', 'brand', 'avatars', 'manifest.json')
+/** 官方卡头像显示约 40px；128 档给 3x 屏留余量，单文件仍 <10KB。 */
+const AVATAR_CARD_SIZE = '128'
 const STANDARD_COMPOSITION =
   process.env.ROLE_STANDARD_COMPOSITION ||
   join(appNodeModules() ?? '', '@deepseek-ai/dsh-agent-presets/presets/standard/agent.cordis.yml')
@@ -700,11 +708,36 @@ function loadIconIndex() {
     throw new Error(
       `图标索引不存在：${ICON_MANIFEST}\n` +
         '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js\n' +
-        '  （或用 ROLE_ICON_MANIFEST 指向别处）',
+        '  （或用 ROLE_ICON_MANIFEST 指向别处；受管岗位见 brand/avatars/manifest.json）',
     )
   }
   const rows = JSON.parse(readFileSync(ICON_MANIFEST, 'utf8'))
   return new Map(rows.map((row) => [row.id, row.icon]))
+}
+
+/**
+ * 受管头像源：brand/avatars/manifest.json 登记的岗位 → data:image/webp 深色道
+ * 兜底串（字节已由 brand-avatars-pin 门禁对 vendor/worldpilot.pin 校验）。清单
+ * 缺深色道 ${AVATAR_CARD_SIZE} 档或资产缺失都在生成期响亮失败——静默回退正是
+ * 「新旧头像混装但没人知道」这个缺陷本身。
+ * @returns {Map<string, string>} preset id 到 webp data URI 的映射。
+ */
+function loadManagedAvatarIndex() {
+  if (!existsSync(AVATAR_MANIFEST)) return new Map()
+  const mf = JSON.parse(readFileSync(AVATAR_MANIFEST, 'utf8'))
+  const rel = mf.assets?.dark?.[AVATAR_CARD_SIZE]
+  if (!rel) {
+    throw new Error(
+      `受管头像清单缺深色道 ${AVATAR_CARD_SIZE} 档：${AVATAR_MANIFEST}\n` +
+        '  官方卡的兜底串必须来自受管资产；先补齐 manifest 再生成',
+    )
+  }
+  const abs = join(dirname(AVATAR_MANIFEST), rel)
+  if (!existsSync(abs)) {
+    throw new Error(`受管头像资产缺失：${abs}（manifest 登记了它但盘上没有）`)
+  }
+  const icon = `data:image/webp;base64,${readFileSync(abs).toString('base64')}`
+  return new Map([[mf.presetId, icon]])
 }
 
 /** 计算 order：平面基座 + 平面内责任域段 + 域内序号（域段按 AGT 升序首次出现顺序分配）。 */
@@ -1034,6 +1067,7 @@ function main() {
   }
   const orders = computeOrders(src.organizationGraph)
   const iconIndex = loadIconIndex()
+  const managedAvatars = loadManagedAvatarIndex()
   const flowCatalogSections = splitSections(src.text.flowCatalog, 'FLOW-')
   const playbookSections = splitSections(src.text.playbooks, 'PB-')
   const rosterLines = src.text.roster.split('\n')
@@ -1199,12 +1233,13 @@ function main() {
     const name = `${role.alias} · ${role.title}`
     const description =
       `【${plane.name}·${domain.name}】${role.mission}（标准产物：${role.artifact}）`
-    const icon = iconIndex.get(presetId)
+    const icon = managedAvatars.get(presetId) ?? iconIndex.get(presetId)
     if (!icon) {
       throw new Error(
         `岗位 ${presetId}（${name}）在图标库里没有对应头像。\n` +
           `  期望 ${ICON_MANIFEST} 里存在 id="${presetId}" 的条目。\n` +
-          '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js',
+          '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js\n' +
+          '  （或用 ROLE_ICON_MANIFEST 指向别处；受管岗位见 brand/avatars/manifest.json）',
       )
     }
     const presetYml = renderPresetYml(name, description, order, icon)
@@ -1496,12 +1531,13 @@ function main() {
     const name = `${mrole.alias} · ${mrole.title}`
     const description =
       `【${mgtPlane.name}·${mgtDomain.name}】${mrole.mission}（标准产物：${mrole.artifact}）〔管理层·评估载体·未授权Shadow〕`
-    const icon = iconIndex.get(presetId)
+    const icon = managedAvatars.get(presetId) ?? iconIndex.get(presetId)
     if (!icon) {
       throw new Error(
         `管理岗位 ${presetId}（${name}）在图标库里没有对应头像。\n` +
           `  期望 ${ICON_MANIFEST} 里存在 id="${presetId}" 的条目。\n` +
-          '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js',
+          '  先生成头像库：node ~/.dsh/skills/lute-brand-icons/scripts/build.js\n' +
+          '  （或用 ROLE_ICON_MANIFEST 指向别处；受管岗位见 brand/avatars/manifest.json）',
       )
     }
     const presetYml = renderPresetYml(name, description, order, icon)

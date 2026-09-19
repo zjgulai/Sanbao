@@ -31,13 +31,14 @@
  *   ROLE_PRESET_OUT=/tmp/... node scripts/role-presets/verify-lossless.mjs
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { homedir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { nodeCommand } from '../lib/real-node.mjs'
+import { judgeIconEntry } from '../lib/role-icon-judge.mjs'
 
 // 起 lint 子进程用的解释器。**不能**用 process.execPath：在 pnpm 生命周期脚本下它是宿主
 // Electron 可执行文件，子进程「退出码 0 且没有任何输出」→ L7 会报「lint 未返回 [ok]」，
@@ -910,7 +911,9 @@ function main() {
 
   // ── L10 头像（卡片的视觉身份）────────────────────────────────────────────
   // 官方 roster 把 preset.yml 的 icon 直接送到前端渲染成 <img class="cardAvatar">。
-  // 这条断言守的是「50 张岗位卡片都有头像、且与图标库同一字符串、且互不重样」。
+  // 这条断言守的是「53 个岗位卡片都有头像、与头像源同一字符串、互不重样，且
+  // MIME 与字节头一致」——SVG 包位图骗过旧前缀断言的路径已封死（工单 004，
+  // 判据本体在 scripts/lib/role-icon-judge.mjs，反向自测举得出反例）。
   const ICON_MANIFEST =
     process.env.ROLE_ICON_MANIFEST || join(SKILLS_ROOT, 'lute-brand-icons', 'assets', 'manifest.json')
   const iconIndexOf = new Map()
@@ -920,25 +923,39 @@ function main() {
     for (const row of JSON.parse(readFileSync(ICON_MANIFEST, 'utf8'))) iconIndexOf.set(row.id, row.icon)
     ok()
   }
+  // 受管源（工单 004）：brand/avatars/manifest.json 登记的岗位优先，深色道 128 档
+  // 兜底串与 generate.mjs 同一算法——两侧算法分叉就是「三处同串」判据的失效面。
+  const AVATAR_MANIFEST = fileURLToPath(new URL('../../brand/avatars/manifest.json', import.meta.url))
+  const AVATAR_CARD_SIZE = '128'
+  const managedAvatars = new Map()
+  if (existsSync(AVATAR_MANIFEST)) {
+    const mf = JSON.parse(readFileSync(AVATAR_MANIFEST, 'utf8'))
+    const rel = mf.assets?.dark?.[AVATAR_CARD_SIZE]
+    if (!rel) {
+      fail('L10', `受管头像清单缺深色道 ${AVATAR_CARD_SIZE} 档：${AVATAR_MANIFEST}`)
+    } else {
+      const abs = join(dirname(AVATAR_MANIFEST), rel)
+      if (!existsSync(abs)) {
+        fail('L10', `受管头像资产缺失：${abs}（manifest 登记了它但盘上没有）`)
+      } else {
+        managedAvatars.set(mf.presetId, `data:image/webp;base64,${readFileSync(abs).toString('base64')}`)
+        ok()
+      }
+    }
+  }
   const iconOwner = new Map()
   for (const d of presentDirs) {
     const ymlText = readFileSync(join(OUT_ROOT, d, 'preset.yml'), 'utf8')
     const ymlIcon = ymlText.match(/^icon: '([^']+)'$/m)?.[1]
     const mfIcon = JSON.parse(readFileSync(join(OUT_ROOT, d, 'manifest.json'), 'utf8')).icon
-    const expectedIcon = iconIndexOf.get(d)
+    const expectedIcon = managedAvatars.get(d) ?? iconIndexOf.get(d)
 
-    if (ymlIcon === undefined) {
-      fail('L10', `${d}: preset.yml 缺 icon —— 官方卡片会渲染成空头像`)
-    } else if (!ymlIcon.startsWith('data:image/svg+xml;base64,')) {
-      fail('L10', `${d}: icon 不是内联 SVG data URI`)
-    } else ok()
-
-    if (expectedIcon === undefined) {
-      fail('L10', `${d}: 图标库里没有 id 为 ${d} 的条目`)
-    } else if (ymlIcon !== expectedIcon || mfIcon !== expectedIcon) {
-      fail('L10', `${d}: 头像三处不一致（preset.yml / manifest.json / 图标库必须同一字符串）`)
-    } else {
-      ok()
+    const violations = judgeIconEntry({ presetId: d, ymlIcon, mfIcon, expectedIcon })
+    for (const violation of violations) {
+      fail('L10', violation)
+    }
+    if (violations.length === 0) {
+      // 本岗位头像层无红才进入互异记账——带红进入会把同一缺陷记两笔。
       if (iconOwner.has(expectedIcon)) {
         fail('L10', `${d} 与 ${iconOwner.get(expectedIcon)} 用了同一枚头像（岗位头像必须一一对应）`)
       } else {
