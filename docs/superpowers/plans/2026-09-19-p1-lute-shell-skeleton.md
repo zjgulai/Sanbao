@@ -2392,7 +2392,9 @@ lute shell smoke: PASS
 
 - [ ] **Step 4: 写 `scripts/README.md`**
 
-内容三段，每段两三行：(1) `materialize` 做什么（拷 seed + 宿主运行时到 `~/.dsh/profiles/lute-shell/`，再 `pnpm install`）、前置条件（`pnpm run build` 先跑）、`LUTE_SHELL_PROFILE` 可改落点；(2) `smoke` 做什么（纯 Node 父进程 spawn 宿主、走 FD3/FD4 管道断言 8 项）、前置条件（materialize 跑过）、**为什么不进 CI**（要装数百个 npm 包）；(3) 失败归因顺序，直接链接本计划 Task 7 Step 3 或把那 5 条抄过来（选一处为家，另一处留链接）。
+内容三段，每段两三行：(1) `materialize` 做什么（拷 seed + 宿主运行时到 `~/.dsh/profiles/lute-shell/`，再 `pnpm install`）、前置条件（`pnpm run build` 先跑）、`LUTE_SHELL_PROFILE` 可改落点；(2) `smoke` 做什么（纯 Node 父进程 spawn 宿主、走 FD3/FD4 管道把 Step 1 的每条 `check(...)` 断言跑一遍）、前置条件（materialize 跑过）、**为什么不进 CI**（要装数百个 npm 包）；(3) 失败归因顺序，直接链接本计划 Task 7 Step 3 或把那 5 条抄过来（选一处为家，另一处留链接）。
+
+**README 里不要写断言条数**——条数会随 Step 1 增删而腐烂，让读者去看脚本本身。
 
 - [ ] **Step 5: 提交**
 
@@ -2402,7 +2404,7 @@ git add apps/lute-shell/scripts/smoke.mjs apps/lute-shell/scripts/README.md
 git commit -m "$(cat <<'EOF'
 test(apps): lute-shell 无头端到端 smoke——纯 Node 父进程走真管道验真 profile
 
-8 项断言覆盖 ready/版本/index.html 注入/ownsHost/SPA 回退/403 越界/优雅退出。
+断言覆盖 ready/版本/index.html 注入/ownsHost/SPA 回退/403 越界/最大资产逐字节往返/优雅退出。
 不进 CI（需装数百 npm 包）；scripts/README.md 记前置条件与失败归因顺序。
 EOF
 )"
