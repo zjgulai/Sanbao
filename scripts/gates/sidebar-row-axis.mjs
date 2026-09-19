@@ -82,6 +82,14 @@ const REGISTRY = [
     css: 'packages/surfaces/dsh-newapp-local/src/client/newapp.module.css',
     selector: '.entry',
   },
+  {
+    plugin: 'dsh-right-sidebar-local',
+    entry: 'packages/surfaces/dsh-right-sidebar-local/src/client/sidebar-entry.ts',
+    position: 'after',
+    column: 'sidebar-nav',
+    css: 'packages/surfaces/dsh-right-sidebar-local/styles/right-sidebar.module.css',
+    selector: '.entry',
+  },
 ]
 
 /**

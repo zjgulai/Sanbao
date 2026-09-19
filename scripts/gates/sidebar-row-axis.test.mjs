@@ -51,6 +51,13 @@ const ROWS = [
     css: 'packages/surfaces/dsh-newapp-local/src/client/newapp.module.css',
     body: 'box-sizing: border-box; display: flex; width: 100%; height: 36px; margin: 2px 0; padding: 0 10px;',
   },
+  {
+    entry: 'packages/surfaces/dsh-right-sidebar-local/src/client/sidebar-entry.ts',
+    attr: 'data-dsh-right-todo-entry',
+    pos: 'after',
+    css: 'packages/surfaces/dsh-right-sidebar-local/styles/right-sidebar.module.css',
+    body: 'box-sizing: border-box; display: flex; width: 100%; height: 36px; margin: 2px 4px; padding: 0 10px;',
+  },
 ]
 
 /**
@@ -118,8 +125,8 @@ test('真实仓库通过，并把射程写进 note（登记行数 / 列数 / 断
   assert.deepEqual(result.violations, [])
   assert.equal(result.passed, true)
   // 射程必须落在 note 里，否则「量了几个」无从判断（ADR-0075）。
-  assert.match(result.note, /已登记 2 个注入行、2 列/)
-  assert.match(result.note, /其中 2 行断言了行轴/)
+  assert.match(result.note, /已登记 3 个注入行、2 列/)
+  assert.match(result.note, /其中 3 行断言了行轴/)
   assert.match(result.note, /另断言 1 条被插件改写的官方行同轴/)
 })
 

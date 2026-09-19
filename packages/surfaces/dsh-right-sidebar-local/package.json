@@ -1,0 +1,30 @@
+{
+  "name": "dsh-right-sidebar-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unified right sidebar with 7 capability modules (todo, env, skills/mcp, web-search, background-procs, outputs, sources)",
+  "luteOrigin": "Magpie-Horch",
+  "luteOwner": "lute",
+  "lutePublish": false,
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "css-modules-typescript-loader": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-core": "file:../../vendor/packages/deepseek-harness/packages/client/core"
+  }
+}
