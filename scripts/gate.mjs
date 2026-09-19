@@ -9,7 +9,7 @@
  *   quick（默认）提交前使用；full 推送前使用（含变更包 typecheck/test，二期接入 git 钩子后启用）。
  */
 import { existsSync, lstatSync, readFileSync, readlinkSync, readdirSync, rmSync, statSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,6 +33,7 @@ import {
   checkThemeTokensBaselineFrozen,
   checkTrackedIgnored,
 } from './gates/checks.mjs'
+import { checkLuteShellPin } from './gates/lute-shell-pin.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
 import { checkProfileBundleSync, checkProfileFilesSync, checkProfileMetadata } from './gates/sync-profile.mjs'
 import { checkPackageFilesCoverage, createFileSource, listPackageTree } from './gates/package-files-coverage.mjs'
@@ -319,6 +320,30 @@ const CHECKS = [
       return checkPinConsistency({
         pinText: readIfExists(join(repoRoot, 'vendor', 'dsh-desktop.pin')),
         submoduleSha: submoduleHead() ?? '<未初始化>',
+      })
+    },
+  },
+  {
+    name: 'lute-shell-pin',
+    remediation: '把 apps/lute-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0131）',
+    run() {
+      const reference = join('vendor', 'dsh-desktop', 'deepseek-harness', 'apps', 'desktop-host', 'src', 'wire.ts')
+      let trackedFixturePaths = null
+      try {
+        trackedFixturePaths = execSync('git ls-files apps/lute-shell/test/fixtures/', { cwd: repoRoot, encoding: 'utf8' })
+          .split('\n').filter((line) => line !== '')
+      } catch {
+        trackedFixturePaths = null
+      }
+      return checkLuteShellPin({
+        shellManifestText: readRepoText('apps/lute-shell/package.json'),
+        seedManifestText: readRepoText('apps/lute-shell/seed/package.json'),
+        shellWorkspaceText: readRepoText('apps/lute-shell/pnpm-workspace.yaml'),
+        seedWorkspaceText: readRepoText('apps/lute-shell/seed/pnpm-workspace.yaml'),
+        protocolText: readRepoText('apps/lute-shell/src/protocol.ts'),
+        referenceWireText: readRepoText(reference),
+        seedUserPatchText: readRepoText('apps/lute-shell/seed/cordis.patch.yml'),
+        trackedFixturePaths,
       })
     },
   },

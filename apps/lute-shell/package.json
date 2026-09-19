@@ -1,6 +1,9 @@
 {
   "name": "lute-shell",
   "version": "0.1.0",
+  "luteOrigin": "self",
+  "luteOwner": "lute",
+  "lutePublish": false,
   "private": true,
   "description": "LUTE 自有 Electron 薄壳：用 npm 上的 harness 运行时启动 cordis host，脱离 dsh-desktop fork",
   "type": "module",
