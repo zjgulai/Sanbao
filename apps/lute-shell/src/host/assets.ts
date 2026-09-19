@@ -92,7 +92,7 @@ export function createAssetHandler(ctx: Context, distRoot: string): FetchHandler
       }
       if (pathname === '/' || pathname === '/index.html') return renderIndex()
       const target = resolve(normalize(join(distRoot, pathname)))
-      // dsh-app: is a non-special scheme, so new URL() leaves %2e%2e%2f for decodeURIComponent to turn into ../ — reachable escape.
+      // %2f is never a URL path separator, so %2e%2e%2f survives parsing on every scheme — decodeURIComponent above creates a real ../ escape.
       if (target !== distRoot && !target.startsWith(distRoot + sep)) return new Response(null, { status: 403 })
       try {
         const realTarget = realpathSync(target)

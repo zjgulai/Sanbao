@@ -1,6 +1,8 @@
 /** Bridges gateway wire streams to the page transport as NDJSON. */
 
 import type { Context } from '@deepseek-ai/cordis'
+// Type-only: loads the module augmentation that declares ctx.typertGateway on cordis Context.
+import type {} from '@deepseek-ai/dsh-api-gateway'
 import { REMOTE_STREAM_PATH } from './assets.js'
 import type { FetchHandler } from './handler.js'
 

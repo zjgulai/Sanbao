@@ -6,12 +6,12 @@ const distRoot = join(import.meta.dirname, 'fixtures', 'frontend', 'dist')
 
 interface FakeContext {
   emit(event: string, payload: unknown): void
-  clientModules: { fetchBundle(request: Request): Promise<Response> }
+  clientModules: { fetchBundle(request: Request): Response }
 }
 
 function fakeContext(): { ctx: FakeContext; emitted: [string, unknown][]; fetchBundle: ReturnType<typeof vi.fn> } {
   const emitted: [string, unknown][] = []
-  const fetchBundle = vi.fn(async () => new Response('bundle-bytes', { status: 200 }))
+  const fetchBundle = vi.fn(() => new Response('bundle-bytes', { status: 200 }))
   return {
     emitted,
     fetchBundle,
