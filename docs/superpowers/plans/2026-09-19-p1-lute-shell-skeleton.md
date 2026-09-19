@@ -539,7 +539,7 @@ Expected: FAIL —— `Cannot find module '../src/protocol.js'`
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm exec vitest run test/protocol.spec.ts`
-Expected: PASS（13 tests）
+Expected: PASS（15 tests —— frame header 3 + request round trip 7 + response round trip 3 + ipc guards 2）
 
 - [ ] **Step 5: 类型检查**
 
