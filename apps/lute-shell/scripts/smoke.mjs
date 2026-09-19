@@ -23,7 +23,7 @@ const check = (label, ok, detail) => {
   if (!ok) failures.push(label)
 }
 
-// profile 不落任何列 layers 的收据文件，package.json 是「空 profile 正常」唯一的就地佐证来源。
+// 本 check 只佐证 manifest 的 dsh.profile.bundles；LUTE 插件层的实际挂载点是 profile 的 cordis.patch.yml（P1 用户层为 []，P2 起在此声明）与 lute-host/shell.cordis.patch.yml，不在本谓词射程。
 const manifestPath = join(profileDir, 'package.json')
 if (!existsSync(manifestPath)) {
   process.stderr.write(`lute shell smoke: no profile manifest at ${manifestPath} — run pnpm run materialize\n`)
