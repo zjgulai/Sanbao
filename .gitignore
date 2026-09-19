@@ -77,6 +77,10 @@ packaging/.app-cache/
 # 第 42 行 node_modules/ 排除的是目录本身，git 不会进入被排除的目录，故目录与内容各需一行否定。
 !apps/lute-shell/test/fixtures/**/node_modules/
 !apps/lute-shell/test/fixtures/**/node_modules/**
+# frontend fixture 的 dist 必须入库（干净克隆上 assets.spec.ts 才跑得起来）；
+# 第 46 行 dist/ 同理排除的是目录本身，故目录与内容各需一行否定。
+!apps/lute-shell/test/fixtures/frontend/dist/
+!apps/lute-shell/test/fixtures/frontend/dist/**
 !packages/**/tsconfig.json
 
 # ADR-0017：从内建运行时 tgz 解出的 DSH 类型来源，可重建，不入库
