@@ -1908,6 +1908,81 @@
       ]
     },
     {
+      "id": "ADR-0138",
+      "title": "ADR-0138 · 引入 Jev 作 SkillOpt 的 Tier 1.5 语义判读层；判据出报告、内容寻址指纹进门禁；出网上限钉在仓库文本",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Jev 落点域限定为内部研发回路，出货面本轮不接",
+          "constraints": [
+            "Electron 本地优先无服务端 ⇒ 直调付费第三方 API 必然把 key 打进 app bundle",
+            "卖家数据出境不在本轮射程",
+            "官方声明限流动态调整，接入即把可用性交给别人"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "出网上限钉为仓库内 git 跟踪文本，attrib 会话轨迹永久禁止",
+          "constraints": [
+            "~/.dsh/scratch/attrib 实测 43.4MB+18.8MB 完整转录、含 danger-full-access、前 300KB 命中密钥形态",
+            "判据：任何把 attrib 内容读进 outbound state 的代码路径必须不存在"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "技能指令体检并入既有 SkillOpt 流水线作 Tier 1.5，不新建第二个家",
+          "constraints": [
+            "输出复用 sug-*.json，落盘复用 skillopt-tier1-apply.py 的机械校验与 .bak/.t1 快照",
+            "对照样例复用 skill-contract 的 frontmatter example 键",
+            "Tier 1.5 只做纯文本可读出的缺陷，不接管轨迹层"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "判据主集三条：逐任务 Noul 由代码算越界率、无例外停止、收窄后的环境机制依赖；高影响未确认出主集",
+          "constraints": [
+            "单条 Score 把相关度与宽度揉进一个数且实测出现 1.74 级间插值，弃用",
+            "③ 未收窄时把两条已修好的真实语料判成 0.90/0.81（射程未定义，P-25）",
+            "④ 在本语料实测 0.04–0.20 无方差，留在主集即恒绿判据"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁判据为内容寻址输入指纹（语料⊕判据⊕阈值⊕模型版本），不用时间窗",
+          "constraints": [
+            "第三方 API 不得进入 gate 关键路径",
+            "时间窗会把 529/key 失效变成 gate 红，而 exemptions 只减不增、到期即拒绝"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "请求钉 jev-1.13.0 并回读 model 字段，判据文本与阈值住单文件",
+          "constraints": [
+            "官方：别名随发布漂移，调过阈值必须钉版本",
+            "官方：人最该复核的是问题与阈值"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "凭证复用 ~/.dsh/.credentials.yaml 的 refs，名 LUTE_JEV_API_KEY，dev 侧只读不写",
+          "constraints": [
+            "官方 README 自陈该存储无法向 agent 隔离机密，且实测 64% 的 agent 步在跑 bash —— 风险由 D2 缓解、由本条登记，不假装它不存在",
+            "解析优先级：启动环境快照 > 存储文件 > 项目 .env > $DSH_HOME/.env"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "验收双轨：离线工程轨进 gate，语义基线记分卡只进报告",
+          "constraints": [
+            "F1–F10 仅 10 个正例，撑不起置信区间，记分卡必须把分母常显（P-15）",
+            "准确率不得成为阻塞判据"
+          ]
+        }
+      ]
+    },
+    {
       "id": "ADR-0139",
       "title": "ADR-0139 · LUTE 自有 Electron 薄壳（P1 骨架）：宿主走子进程 + FD3/FD4 DSH3 管道、profile 用仓库 seed + 运行时物化、宿主运行时就位在 profile 内以保单一 cordis 实例",
       "status": "accepted（2026-09-19）",
