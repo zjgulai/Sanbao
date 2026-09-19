@@ -12,6 +12,7 @@ import '../lib/client.js'
 
 import {
   brandMarkHtml,
+  disposeInstalledPlugins,
   installOfficialStyle,
   installPlugin,
   renderHeroFixture,
@@ -40,6 +41,7 @@ const futureClasses = {
 
 describe('升级免疫与可观测性', () => {
   afterEach(() => {
+    disposeInstalledPlugins()
     document.body.innerHTML = ''
     document.head.innerHTML = ''
     vi.restoreAllMocks()
@@ -53,7 +55,7 @@ describe('升级免疫与可观测性', () => {
 
     expect(getComputedStyle(fixture.officialTitle).display).toBe('none')
     expect(visibleTexts(fixture.hero, BRAND_PHRASE)).toEqual([BRAND_PHRASE])
-    expect(fixture.previewBadge.textContent).toBe('Preview')
+    expect(getComputedStyle(fixture.previewBadge).display).toBe('none')
     expect(document.documentElement.dataset.dshRootBrandAnchors).toBe('resolved')
   })
 

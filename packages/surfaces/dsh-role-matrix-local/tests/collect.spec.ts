@@ -266,6 +266,40 @@ describe('collectRoleMatrix', () => {
     expect(collectRoleMatrix(root).planes[0]!.domains[0]!.roles[0]!.icon).toBe(icon)
   })
 
+  it.each(['业务运营', ''])('round-trips the light portrait with plane name %j without replacing the official icon', (planeName: string) => {
+    const root = makeRoot()
+    const icon = 'data:image/webp;base64,ZGFyaw=='
+    const iconLight = 'data:image/webp;base64,bGlnaHQ='
+    writeRole(root, 'agt-007', { name: '望野', description: 'd', order: 2102, icon }, {
+      ...manifestFor({ planeId: 'PLN-OPS', planeName, domainId: 'DOM-02', domainName: '产品与创新', agt: 'AGT-007', alias: '望野', title: 't', artifact: 'a' }),
+      iconLight,
+    })
+
+    const card = collectRoleMatrix(root).planes[0]!.domains[0]!.roles[0]!
+    expect(JSON.parse(JSON.stringify(card))).toMatchObject({ icon, iconLight })
+    expect(card.degraded !== undefined).toBe(planeName === '')
+  })
+
+  it.each([undefined, null, 123, {}, '', 'https://example.com/light.webp', 'data:image/svg+xml;base64,PHN2Zy8+'])('omits unsupported light portrait %j without degrading a valid manifest', (iconLight: unknown) => {
+    const root = makeRoot()
+    writeRole(root, 'agt-007', { name: '望野', description: 'd', order: 2102 }, {
+      ...manifestFor({ planeId: 'PLN-OPS', planeName: '业务运营', domainId: 'DOM-02', domainName: '产品与创新', agt: 'AGT-007', alias: '望野', title: 't', artifact: 'a' }),
+      iconLight,
+    })
+
+    const card = collectRoleMatrix(root).planes[0]!.domains[0]!.roles[0]!
+    expect(card).not.toHaveProperty('iconLight')
+    expect(card.degraded).toBeUndefined()
+  })
+
+  it.each([undefined, { iconLight: 'data:image/webp;base64,bGlnaHQ=' }])('omits light portraits when the manifest is missing or invalid', (manifest: Record<string, unknown> | undefined) => {
+    const root = makeRoot()
+    writeRole(root, 'agt-007', { name: '望野', description: 'd', order: 2102 }, manifest)
+    const card = collectRoleMatrix(root).planes[0]!.domains[0]!.roles[0]!
+    expect(card).not.toHaveProperty('iconLight')
+    expect(card.degraded).toBeDefined()
+  })
+
   it('yields an empty avatar — not a degraded card — when preset.yml declares none', () => {
     const root = makeRoot()
     writeRole(root, 'agt-001', { name: '衡远', description: 'd', order: 1101 },

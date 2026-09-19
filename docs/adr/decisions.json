@@ -1856,7 +1856,7 @@
         },
         {
           "id": "D6",
-          "text": "启动加载屏动画列为必须保留项：不改 dsh-client-web 的 boot 页，弧色经 --dsw-alias-brand-primary 自动跟皮；新增断言校验 animation-name=spin、animation-duration=0.8s、conic 弧色解析值等于品牌源 accent。",
+          "text": "启动加载屏动画必须保留；2026-09-20 用户将周期改为2s，仅经bundle重放修改CSS时长，不改vendor源码。验收animation-name对应spin（允许CSS Modules派生名）、animation-duration=2s、conic弧色解析值等于品牌源accent。",
           "constraints": [
             "不得以「简化启动屏」为由删除或冻结动画",
             "断言必须读解析后的真实值，不得复述字面量（ADR-0135 D1）",
@@ -2032,6 +2032,125 @@
             "治理三字段查值不查类型：luteOrigin:\"\" 与 lutePublish:true 都曾是静默通过路径",
             "「零 LUTE 插件」这条里程碑事实的证据家是 seed 的 cordis.patch.yml（内容 []），由本门禁静态守；不得把 smoke 输出引用为它的证据——smoke 的 label 只声称 profile manifest 的 dsh.profile.bundles",
             "P2 起需重新评估把 apps/ 收编进 collector 还是长期双轨（当前治理三字段是第二份实现）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0140",
+      "title": "ADR-0140 · 右边侧边栏重构：统一扁平布局与 7 个能力模块",
+      "status": "accepted（2026-09-20）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "采用单一扁平列表布局，而非折叠分组容器",
+          "constraints": []
+        },
+        {
+          "id": "D2",
+          "text": "模块顺序按使用频率从高到低：待办 > 环境 > MCP > 网页查阅 > 后台 > 产出 > 来源",
+          "constraints": []
+        },
+        {
+          "id": "D3",
+          "text": "信息密度采用极简图标 + 文字，徽章仅在必要时添加",
+          "constraints": []
+        },
+        {
+          "id": "D4",
+          "text": "面板交互采用独立折叠面板，而非悬浮面板或模态对话框",
+          "constraints": []
+        },
+        {
+          "id": "D5",
+          "text": "创建独立插件包 dsh-right-sidebar-local，复用 sidebar-entry-core.ts 注入逻辑",
+          "constraints": []
+        },
+        {
+          "id": "D6",
+          "text": "数据源优先使用官方已有接口，实时性要求高的模块采用轮询，低频模块按需加载",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "id": "ADR-0141",
+      "title": "ADR-0141 · 右边侧边栏 UI 优化：Qoder CN 风格折叠分组设计",
+      "status": "proposed",
+      "date": "2026-09-20",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "采用折叠分组设计，将 7 个模块分为工作区/工具/信息三组",
+          "constraints": []
+        },
+        {
+          "id": "D2",
+          "text": "图标尺寸 24x24px，组内间距 8px，组间间距 16px",
+          "constraints": []
+        },
+        {
+          "id": "D3",
+          "text": "采用 Qoder CN 风格：双层边框 + 微渐变 + 柔和阴影",
+          "constraints": []
+        },
+        {
+          "id": "D4",
+          "text": "激活状态：高亮背景色 + 发光边框 + 图标变色",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "id": "ADR-0142",
+      "title": "ADR-0142 · 岗位名片版式与官方预览角标移除：版面层也是换皮的一层",
+      "status": "accepted（2026-09-20）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "官方 hero 预览角标整节点隐藏（display:none + dsh-rb-hidden），文本原样不动、卸载还原；角标继续作为定位官方标题的锚，且标题候选歧义时角标照旧隐藏。取代 ADR-0019 D2。",
+          "constraints": [
+            "不得改写角标文本（不写死「Preview」，也不翻译）",
+            "角标的隐藏与标题唯一性解耦：no-candidate/ambiguous 只影响标题",
+            "锚点声明 ui-anchors.json 的 purpose 必须与处置一致"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "岗位卡改为名片版式：左栏 96px 圆角方形头像槽 + 居中工号（mono），右栏姓名(16/500)/岗位(13)/两行职责(12)/徽标；标准产物移入展开详情。",
+          "constraints": [
+            "头像槽几何固定（96×96、radius 14px、object-fit cover），主题切换不得改变卡片布局",
+            "素材缺失时用同尺寸同形状占位，卡片几何不跳变",
+            "标准产物只在展开详情里出现，不得同时出现在名片正文"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "名片栅格按可用宽度定列数：repeat(auto-fill, minmax(340px,1fr))，面板上限 min(1200px,94vw)；标准桌面窗口一行 3 张，更窄降 2/1 列。",
+          "constraints": [
+            "降列不降字号、不缩头像",
+            "不得写 @media 死列数断点",
+            "判据钉列宽下限 340px 与 96px 头像这两条几何事实"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "面板字号收敛为五级阶梯（20/16/13/13/12/11），每类信息只对应一档，取值全部走 --dsw-font-* token。",
+          "constraints": [
+            "不得新增瞬时字号；面板内不得出现 token 之外的 px 字号",
+            "阶梯必须写在样式文件头并有用例钉住",
+            "断言读解析后的真实字号/字重，不复述字面量"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "名片上的一句话职责由 card-brief.ts 纯函数从官方 description 派生：只删除前导【…】/结尾〔…〕/第一个圆括号之后的补充说明与残留标点，删空则原样返回；长度上限交给 CSS 两行截断。",
+          "constraints": [
+            "不得按字数改写或截断成新句子",
+            "派生结果为空时必须回退原文，不得渲染空职责",
+            "完整 description 必须在展开详情里逐字可见"
           ]
         }
       ]

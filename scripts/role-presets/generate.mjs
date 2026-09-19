@@ -723,21 +723,24 @@ function loadIconIndex() {
  * @returns {Map<string, string>} preset id 到 webp data URI 的映射。
  */
 function loadManagedAvatarIndex() {
-  if (!existsSync(AVATAR_MANIFEST)) return new Map()
   const mf = JSON.parse(readFileSync(AVATAR_MANIFEST, 'utf8'))
-  const rel = mf.assets?.dark?.[AVATAR_CARD_SIZE]
-  if (!rel) {
-    throw new Error(
-      `受管头像清单缺深色道 ${AVATAR_CARD_SIZE} 档：${AVATAR_MANIFEST}\n` +
-        '  官方卡的兜底串必须来自受管资产；先补齐 manifest 再生成',
-    )
+  const expected = Array.from({ length: 50 }, (_, i) => `agt-${String(i + 1).padStart(3, '0')}`)
+  if (JSON.stringify(mf.entries?.map((entry) => entry.presetId)) !== JSON.stringify(expected)) {
+    throw new Error('受管头像必须完整覆盖 agt-001…agt-050，且无重复或额外岗位')
   }
-  const abs = join(dirname(AVATAR_MANIFEST), rel)
-  if (!existsSync(abs)) {
-    throw new Error(`受管头像资产缺失：${abs}（manifest 登记了它但盘上没有）`)
-  }
-  const icon = `data:image/webp;base64,${readFileSync(abs).toString('base64')}`
-  return new Map([[mf.presetId, icon]])
+  return new Map(mf.entries.map((entry) => {
+    const icons = {}
+    for (const colorway of ['dark', 'light']) {
+      const rel = entry.assets?.[colorway]?.[AVATAR_CARD_SIZE]
+      if (!rel) throw new Error(`${entry.presetId} 缺 ${colorway}/${AVATAR_CARD_SIZE} 头像`)
+      const bytes = readFileSync(join(dirname(AVATAR_MANIFEST), rel))
+      if (bytes.subarray(0, 4).toString() !== 'RIFF' || bytes.subarray(8, 12).toString() !== 'WEBP') {
+        throw new Error(`${entry.presetId} ${colorway} 不是 WebP`)
+      }
+      icons[colorway] = `data:image/webp;base64,${bytes.toString('base64')}`
+    }
+    return [entry.presetId, icons]
+  }))
 }
 
 /** 计算 order：平面基座 + 平面内责任域段 + 域内序号（域段按 AGT 升序首次出现顺序分配）。 */
@@ -1233,7 +1236,7 @@ function main() {
     const name = `${role.alias} · ${role.title}`
     const description =
       `【${plane.name}·${domain.name}】${role.mission}（标准产物：${role.artifact}）`
-    const icon = managedAvatars.get(presetId) ?? iconIndex.get(presetId)
+    const icon = managedAvatars.get(presetId)?.dark ?? iconIndex.get(presetId)
     if (!icon) {
       throw new Error(
         `岗位 ${presetId}（${name}）在图标库里没有对应头像。\n` +
@@ -1264,8 +1267,9 @@ function main() {
       name,
       description,
       sourceDshVersion: SOURCE_DSH_VERSION,
-      // 与 preset.yml 里那一份**同一个字符串**：官方卡片与自建矩阵面板读到的头像必然一致。
+      // 与 preset.yml 里那一份同串；浅色头像仅供自研展示，不扩官方 loader。
       icon,
+      iconLight: managedAvatars.get(presetId).light,
       source_snapshot: {
         schema_version: 'rp-m2',
         snapshot_date: SNAPSHOT_DATE,
@@ -1531,7 +1535,7 @@ function main() {
     const name = `${mrole.alias} · ${mrole.title}`
     const description =
       `【${mgtPlane.name}·${mgtDomain.name}】${mrole.mission}（标准产物：${mrole.artifact}）〔管理层·评估载体·未授权Shadow〕`
-    const icon = managedAvatars.get(presetId) ?? iconIndex.get(presetId)
+    const icon = managedAvatars.get(presetId)?.dark ?? iconIndex.get(presetId)
     if (!icon) {
       throw new Error(
         `管理岗位 ${presetId}（${name}）在图标库里没有对应头像。\n` +

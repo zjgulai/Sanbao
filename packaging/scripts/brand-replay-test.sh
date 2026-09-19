@@ -32,6 +32,8 @@ ICNS_ASSET="$REPO/packaging/assets/app-icon.icns"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/tools"
 cp "$REPLAY_SOURCE" "$TMP/tools/brand-replay.sh"
+cp "$REPO/dsh-patches/boot-brand-replay.py" "$TMP/tools/boot-brand-replay.py"
+cp "$REPO/dsh-patches/brand-payload-wordmark.txt" "$TMP/tools/brand-payload-wordmark.txt"
 cp "$ICNS_ASSET" "$TMP/tools/app-icon.icns"
 REPLAY="$TMP/tools/brand-replay.sh"
 
@@ -47,9 +49,15 @@ no(){ FAIL=$((FAIL+1)); printf '  [FAIL] %s\n' "$1"; }
 # 是否落笔——一张假 PNG 会让那条判据读不出尺寸，测的就不是我们要测的东西了。
 mkfixture(){ # $1=app 路径 $2=尺寸覆盖（空=照表；"512x512"=全部改成这个尺寸）
   python3 - "$REPLAY" "$ASSETS" "$1" "${2:-}" <<'PY'
-import struct, sys, zlib, pathlib, shutil
+import json, struct, sys, zlib, pathlib
 replay, assets, appdir, override = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 root = pathlib.Path(appdir)
+web = root / 'Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
+web.mkdir(parents=True, exist_ok=True)
+svg = pathlib.Path(replay).with_name('brand-payload-wordmark.txt').read_text().strip()
+boot = 'const css={wordmark:"_wordmark_fixture_1",spinner:"_spinner_fixture_1"};class Boot{constructor(t){this.wordmark=div(css.wordmark,""),this.wordmark.innerHTML=' + json.dumps(svg,ensure_ascii=True) + ',this.spinner=div(css.spinner),this.spinner.dataset.dshBootSpinner="",t.append(this.wordmark,this.spinner)}}'
+(web / 'boot.js').write_text(boot)
+(web / 'boot.css').write_text('._spinner_fixture_1{animation:_spin_fixture_1 2s linear infinite}@keyframes _spin_fixture_1{to{transform:rotate(360deg)}}')
 build = root / 'Contents/Resources/app.asar.unpacked/build'
 build.mkdir(parents=True, exist_ok=True)
 (root / 'Contents/Resources').mkdir(parents=True, exist_ok=True)

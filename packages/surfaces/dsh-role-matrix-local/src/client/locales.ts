@@ -5,8 +5,6 @@
  */
 
 export const zh = {
-  'workbench.group.label': '工作台',
-  'workbench.group.tooltip': '工作台：任务板、连接、扩展中心与组织岗位',
   'entry.label': '岗位矩阵',
   'entry.tooltip': '岗位矩阵：按组织平面查看 50 个 AI 分身',
 
@@ -37,6 +35,7 @@ export const zh = {
   'card.expand': '展开',
   'card.collapse': '收起',
 
+  'detail.description': '官方描述',
   'detail.metrics': '岗位指标',
   'detail.materialSkills': '材料业务技能',
   'detail.subset': '已装配技能',
@@ -67,8 +66,6 @@ export const zh = {
 export type RoleMatrixKey = keyof typeof zh
 
 export const en: Record<RoleMatrixKey, string> = {
-  'workbench.group.label': 'Workbench',
-  'workbench.group.tooltip': 'Workbench: Task Board, SSH, Extensions & Roles',
   'entry.label': 'Role Matrix',
   'entry.tooltip': 'Role matrix: browse the 50 AI role profiles by organization plane',
 
@@ -99,6 +96,7 @@ export const en: Record<RoleMatrixKey, string> = {
   'card.expand': 'Expand',
   'card.collapse': 'Collapse',
 
+  'detail.description': 'Official description',
   'detail.metrics': 'Metric',
   'detail.materialSkills': 'Material business skills',
   'detail.subset': 'Installed skills',

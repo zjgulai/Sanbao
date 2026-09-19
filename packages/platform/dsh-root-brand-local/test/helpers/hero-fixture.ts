@@ -15,6 +15,7 @@
  * 纯 DOM 操作，不引入 React —— 避免与 bundle 内部压缩符号发生顶层命名冲突。
  */
 import { loaderEntries } from '../setup'
+import { SANBAO_BRAND_SOURCE } from '../../src/client/sanbao-brand-source.js'
 
 /** 官方 hero 的类名（真值来自官方产物，由调用方解析传入）。 */
 export interface HeroClasses {
@@ -24,8 +25,8 @@ export interface HeroClasses {
   fishHitbox: string
 }
 
-/** 插件渲染的品牌句：期望值来自用户可见需求（规格 User Story 1），不是实现里的常量。 */
-export const BRAND_PHRASE = 'Artificial Business Intelligence Agentic'
+/** Expected title follows the shared brand copy source. */
+export const BRAND_PHRASE = `${SANBAO_BRAND_SOURCE.nameLatin} · ${SANBAO_BRAND_SOURCE.nameZh}`
 
 /**
  * 把官方某个模块的**完整 CSS 文本**注册成官方形态的样式标签
@@ -82,12 +83,13 @@ export function renderHeroFixture(
   }
 }
 
-/** 复刻插件在 hero 席位渲染的内容：ROOT 字标 + 品牌句。 */
+/** Sanbao placeholder and two-line hero copy. */
 export function brandMarkHtml(): string {
   return (
     '<div data-plugin="dsh-root-brand" class="dsh-rb-hero">' +
-    '<svg viewBox="0 0 61 32" width="46" height="24"><rect x="6.5" y="26" width="16.5" height="5" fill="#58B848"/></svg>' +
-    `<span class="dsh-rb-hero-name">${BRAND_PHRASE}</span>` +
+    '<svg data-plugin="dsh-root-brand" data-status="placeholder" viewBox="0 0 512 512" width="34" height="34" aria-hidden="true"><g fill="currentColor"><polygon points="256,92 330,166 256,240 182,166"/><polygon points="164,212 238,286 164,360 90,286"/><polygon points="348,212 422,286 348,360 274,286"/></g></svg>' +
+    `<span class="dsh-rb-hero-copy"><span class="dsh-rb-hero-name">${BRAND_PHRASE}</span>` +
+    `<span class="dsh-rb-hero-slogan">${SANBAO_BRAND_SOURCE.sloganZh}</span></span>` +
     '</div>'
   )
 }
@@ -129,6 +131,23 @@ export function pluginExports(): PluginExports {
 }
 
 /**
+ * 已装载、但用例没自己 dispose 的插件实例。
+ *
+ * 必须由用例的 afterEach 统一收口（{@link disposeInstalledPlugins}）：
+ * 观察器挂在 `document.documentElement` 上，而 `document.body.innerHTML = ''`
+ * **不会**把它摘掉——上一个用例的插件会继续对下一个用例的 DOM 动手，
+ * 且它记录的「隐藏前状态」变成上一个用例的读数。2026-09-20 实测：本文件里
+ * 一条「换掉角标节点」的用例因此永远看不到还原（残留实例先把新节点隐藏了，
+ * 于是本用例的 dispose 把「隐藏」当成它接管时的原状写了回去）。
+ */
+const installed: Array<() => void> = []
+
+/** 收口本用例（以及此前用例）装载的插件；幂等。 */
+export function disposeInstalledPlugins(): void {
+  while (installed.length > 0) installed.pop()?.()
+}
+
+/**
  * 装载插件：提供最小 ctx（slots 注册 + effect 生命周期），返回 dispose。
  * slot 登记在测试里不参与渲染（DOM 由 fixture 直接构造），
  * 只保证插件启动路径与产品一致。
@@ -146,9 +165,9 @@ export function installPlugin(): { dispose: () => void } {
     },
   }
   pluginExports().apply(ctx)
-  return {
-    dispose: () => {
-      for (const dispose of disposers) dispose()
-    },
+  const dispose = (): void => {
+    while (disposers.length > 0) disposers.pop()?.()
   }
+  installed.push(dispose)
+  return { dispose }
 }

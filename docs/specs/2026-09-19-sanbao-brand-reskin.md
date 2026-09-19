@@ -109,7 +109,7 @@ app bundle，改不到插件包。
 | # | 作为…我想要… | 验在 |
 | --- | --- | --- |
 | US-25 | 作为用户，启动屏是 `stacked` 形态（图上字下），且**不再有独立的文本字标段** | S-C + `brand-replay-selftest` |
-| US-26 | 作为用户，**启动加载的 spin 圆环动画保留**，弧色自动跟随新主色 | ADR-0136 D6 三条断言（`animation-name=spin`、`0.8s`、弧色解析值） |
+| US-26 | 作为用户，**启动加载的 spin 圆环动画保留**，周期为 **2s**，弧色自动跟随新主色 | [ADR-0136 D6（2026-09-20 修订）](../adr/ADR-0136.md)：spin（含 CSS Modules 派生名）、`2s`、弧色解析值 |
 | US-27 | 作为用户，侧栏品牌座是 28×25 容器内 `contain` 等比居中的 mark + 17px 字标 | S-F 几何读数 |
 | US-28 | 作为用户，菜单栏图标在 16/20/24/32 四档清晰，模板图是纯黑带 alpha | `brand-icons` IHDR + alpha 判据 |
 | US-29 | 作为用户，Finder/Dock 里的 app 图标是**圆角 squircle + 透明四角**，不是硬边方块 | **新增** alpha/形状判据（旧门禁只校尺寸，会假绿） |
@@ -230,7 +230,7 @@ app bundle，改不到插件包。
 | 功能位 | 五个面板名及其副标题、空态、错误、操作提示 | ADR-0134 D1 判据 |
 | 内部面 | 包名、目录名、`luteOrigin`/`luteOwner`/`lutePublish`、`ROOT` 命名族（`dsh-root-brand-local`、`RootMark`、`HeroRootBrand`、`.dsh-rb-*`） | ADR-0131 D2、ADR-0012 |
 | 不可动锚 | `/Applications/DSH Desktop.app`、`Contents/MacOS/DSH Desktop`、`appId`、`productName` | ADR-0131 D2 |
-| 基座 | `--dsw-*` 定义权、`shadows-shipped-ui` slot、KaTeX 字体、**boot 页 `spin` 动画本体** | ADR-0008、ADR-0136 D6 |
+| 基座 | `--dsw-*` 定义权、`shadows-shipped-ui` slot、KaTeX 字体、boot 页 `spin` 的 keyframes 与进度逻辑；仅周期允许通过 bundle 重放改为 2s | ADR-0008、ADR-0136 D6（2026-09-20 修订） |
 | 本体轴 | `--kg-*` 七色板、知识图谱 hero | ADR-0132 D6、ADR-0133 D6 |
 | 内容 | AGT-051 BoBo、AGT-052 筑程、AGT-053…102 共 50 个占位岗 | ADR-0133 D5 |
 | 承载 | slot 挂载、事件通道、面板几何契约、零 z-index | ADR-0131 D5 |

@@ -24,8 +24,9 @@ ROOT 路特创新 品牌皮肤：把 DSH Desktop 初始页面的官方品牌位�
   届时才需要重锚模块 id。决定与代价见 ADR-0019。
 - **漂移可观测**：解析失败时 `document.documentElement.dataset.dshRootBrandAnchors` 变为
   `degraded:<缺失锚点列表>`，并在 Console 打出 `[dsh-root-brand] anchor drift: …`；全部命中时为 `resolved`。
-- **角标文案**：保持官方节点与外观，只把文本 `预览版 → Preview`（中英界面一致），
-  `MutationObserver` 抗 React 回写，卸载时还原原文。
+- **官方预览角标**：整节点隐藏（`display: none` + `dsh-rb-hidden` 标记），文本原样不动；
+  React 换掉节点后由文档级观察器重新隐藏，卸载时还原。为什么不是改写成 `Preview`（ADR-0019 的原处置）
+  见 [ADR-0142](../../../docs/adr/ADR-0142.md)。
 - hero 渲染的替换内容通过公开 slot `conversation.hero.brand.mark` 挂入（官方推荐的品牌座位路径）。
 - 原先把官方 `hero.headline` 改写成同一句的兜底（`dsh-patches/brand-replay.sh`）**已退役**：
   品牌句的唯一真相源是本插件，避免「插件隐藏规则 miss 时同文案出现两次」。

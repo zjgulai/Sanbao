@@ -219,6 +219,61 @@ describe('RoleMatrixPanel close paths', () => {
 })
 
 describe('RoleMatrixPanel content', () => {
+  it('renders paired decorative portraits while retaining single-icon and empty fallbacks', async () => {
+    const portraits = structuredClone(payload)
+    const roles = portraits.planes[0]!.domains[0]!.roles
+    Object.assign(roles[0]!, {
+      icon: 'data:image/webp;base64,ZGFyaw==',
+      iconLight: 'data:image/webp;base64,bGlnaHQ=',
+    })
+    portraits.planes[1]!.domains[0]!.roles[0]!.icon = ''
+    const { dialog, dispose } = await mount({ list: async () => portraits }, () => {})
+    try {
+      const buttons = dialog.querySelectorAll('li > button')
+      const images = buttons[0]!.querySelectorAll('img')
+      expect([...images].map((image) => image.getAttribute('src'))).toEqual([
+        'data:image/webp;base64,ZGFyaw==',
+        'data:image/webp;base64,bGlnaHQ=',
+      ])
+      expect(images[0]!.parentElement).toBe(images[1]!.parentElement)
+      expect([...images].every((image) => image.alt === '')).toBe(true)
+      const fallback = buttons[1]!.querySelectorAll('img')
+      expect(fallback).toHaveLength(1)
+      expect(fallback[0]!.getAttribute('src')).toBe('data:image/svg+xml;base64,PHN2Zy8+')
+      expect(buttons[2]!.querySelectorAll('img')).toHaveLength(0)
+    } finally {
+      dispose()
+    }
+  })
+
+  it('renders each card as a business card: 工号 under the portrait, brief on the right', async () => {
+    const { dialog, dispose } = await mount({ list: async () => payload }, () => {})
+    try {
+      const first = dialog.querySelector<HTMLButtonElement>('li > button')!
+      const idColumn = first.querySelector<HTMLElement>('[data-dsh-part="card-identity"]')!
+      const body = first.querySelector<HTMLElement>('[data-dsh-part="card-body"]')!
+      // 头像与工号同栏，且工号在头像**之后**（“下方”在 DOM 顺序里就是"之后"）。
+      const portrait = idColumn.querySelector('img')!
+      const empNo = idColumn.querySelectorAll('span')
+      expect(idColumn.contains(portrait)).toBe(true)
+      expect(empNo[empNo.length - 1]!.textContent).toBe('AGT-001')
+      // 工号排在头像**之后**（DOM 顺序即视觉上的「下方」）。
+      expect(portrait.compareDocumentPosition(empNo[empNo.length - 1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      // 右栏依次是：姓名、岗位、一句话职责、徽标。
+      const parts = [...body.children].map((child) => child.textContent)
+      expect(parts[0]).toBe('衡远')
+      expect(parts[1]).toBe('岗位名')
+      expect(parts[2]).toBe('把目标转成可执行的方案')
+      expect(parts[3]).toContain('技能')
+      // 标准产物不再是名片正文，展开后在详情里（信息不丢，只是不挤在名片上）。
+      expect(first.textContent).not.toContain('目标与资源决策包')
+      act(() => { first.click() })
+      expect(first.textContent).toContain('目标与资源决策包')
+    } finally {
+      dispose()
+    }
+  })
+
   it('renders planes as sections and domains as sub-sections', async () => {
     const { dialog, dispose } = await mount({ list: async () => payload }, () => {})
     const text = dialog.textContent ?? ''

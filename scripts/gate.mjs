@@ -1974,6 +1974,22 @@ const CHECKS = [
       return runNodeTestFile('scripts/lib/role-icon-judge.test.mjs', '头像 L10 判据的反向自测失败')
     },
   },
+  {
+    name: 'boot-wordmark-selftest',
+    remediation:
+      '跑 node --test scripts/gates/brand-wordmark.test.mjs；名源改名须改变字形路径，重放只接受唯一启动锚，缺锚/重复锚须拒绝且保持字节，SVG 不得依赖运行时字体。',
+    run() {
+      return runNodeTestFile('scripts/gates/brand-wordmark.test.mjs', '启动路径字标与重放自测失败')
+    },
+  },
+  {
+    name: 'boot-animation-selftest',
+    remediation:
+      '跑 node --test scripts/gates/boot-animation.test.mjs；真实浏览器测量实际 BootPage/CSS 重放后 spin 的 2s 周期及双色道弧色；删除动画、改时长、改弧色必须各自判红。',
+    run() {
+      return runNodeTestFile('scripts/gates/boot-animation.test.mjs', '启动旋转周期与主题弧色自测失败')
+    },
+  },
 ]
 
 // 注册表级自检（P-08）：每个注册项必须声明非空 remediation——第 87 条悄悄不写时，

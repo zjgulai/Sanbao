@@ -511,7 +511,10 @@ cp "$PKG_ROOT/scripts/tcc-grant-status.sh" "$PAYLOAD/tools/"
 # 「本脚本已退役」这句话，看起来像失败。唯一权威是 verify-patches-v2.sh（下一行）。
 cp "$PKG_ROOT/verify-patches-v2.sh" "$PAYLOAD/tools/" 2>/dev/null || true
 cp "$DSH_VENDOR/dsh-patches/brand-replay.sh" "$PAYLOAD/tools/" 2>/dev/null || true
-cp "$DSH_VENDOR/dsh-patches/brand-payload-wordmark.txt" "$PAYLOAD/tools/" 2>/dev/null || true
+cp "$DSH_VENDOR/dsh-patches/boot-brand-replay.py" "$PAYLOAD/tools/"
+cp "$DSH_VENDOR/dsh-patches/brand-payload-wordmark.txt" "$PAYLOAD/tools/"
+mkdir -p "$PAYLOAD/tools/licenses"
+cp "$DSH_VENDOR/brand/logo/Inter-OFL-1.1.txt" "$PAYLOAD/tools/licenses/"
 # runtime-guards 随包分发：客户机安装后可用 --check 体检、--apply 自愈（升级重打包后重放）。
 mkdir -p "$PAYLOAD/tools/runtime-guards"
 cp "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" "$PAYLOAD/tools/runtime-guards/" 2>/dev/null || true

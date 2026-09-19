@@ -15,6 +15,22 @@
  *     light, dark and future themes resolve without a per-theme override. The
  *     business accent token carries the existing LUTE brand green; no new
  *     component colour is introduced here.
+ *
+ * ── 字号阶梯（2026-09-20 起，五层，只走 `--dsw-font-*`）──────────────────────
+ *
+ * 旧版把 11–14px 摊在整面板上，层级几乎不可辨（用户原话：字号大小「跟实际页面
+ * 完全不搭」）。现在每层只对应一类信息，取值全部来自主题 token 家族：
+ *
+ *   L1 20/500  面板标题                                    --dsw-font-l-20
+ *   L2 16/500  平面名 · 名片姓名                            --dsw-font-base-strong-16
+ *   L3 13/500  责任域名 · 详情行标签                        --dsw-font-xs-strong-13
+ *     13/400  名片岗位 · 面板副题 · 搜索框 · 详情正文/取值   --dsw-font-xs-13
+ *   L4 12/400  职责简介 · 平面用途 · 计数 pill · chip · 页脚 --dsw-font-xxs-12
+ *   L5 11/400  工号 · 卡片徽标                              --dsw-font-xxxs-11
+ *
+ * 名片本身是「左栏头像＋工号 / 右栏姓名·岗位·一句话职责」的两栏版式：一行排三张
+ * （见 `.cards`），窄窗口降两列、再窄降一列，降列不降字号——头像与文字都被挤小
+ * 才是要避免的那件事。
  */
 
 /* ── Drawer shell ─────────────────────────────────────────────────────────── */
@@ -53,7 +69,9 @@
 .panel {
   display: flex;
   flex-direction: column;
-  width: min(960px, 92vw);
+  /* 三张名片并排的宽度预算：3×340（列最小宽）+ 2×12（列距）+ 2×24（正文内边距）= 1092，
+     取 1200 给每张名片约 376px；视口更窄时由 `.cards` 的列数规则降列。 */
+  width: min(1200px, 94vw);
   max-width: calc(100vw - 16px);
   height: 100%;
   background: var(--dsw-alias-bg-layer-1, #fff);
@@ -116,15 +134,17 @@
   min-width: 0;
 }
 
+/* L1：面板标题。 */
 .title {
   margin: 0;
-  font: var(--dsw-font-m-18);
+  font: var(--dsw-font-l-20);
   letter-spacing: 0.2px;
 }
 
+/* L3：面板副题。 */
 .subtitle {
   margin: 0;
-  font: var(--dsw-font-xxs-12);
+  font: var(--dsw-font-xs-13);
   color: var(--dsw-alias-label-secondary, #666);
 }
 
@@ -190,9 +210,9 @@
 
 .search {
   width: 100%;
-  height: 32px;
+  height: 34px;
   padding: 0 32px 0 30px;
-  font: var(--dsw-font-xxs-12);
+  font: var(--dsw-font-xs-13);
   color: inherit;
   border-radius: 8px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.14));
@@ -256,17 +276,18 @@
   gap: 6px;
 }
 
+/* L4：计数 pill。 */
 .total {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 20px;
+  height: 22px;
   padding: 0 9px;
   border-radius: 999px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.11));
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
   color: var(--dsw-alias-label-secondary, #666);
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
   white-space: nowrap;
 }
 
@@ -390,17 +411,19 @@
   background: var(--dsw-alias-state-business-primary, #347a2f);
 }
 
+/* L2：平面名。 */
 .planeName {
-  font: var(--dsw-font-s-strong-14);
+  font: var(--dsw-font-base-strong-16);
   letter-spacing: 0.2px;
 }
 
+/* L4：平面用途。 */
 .planePurpose {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-caption, #999);
 }
 
@@ -409,12 +432,12 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  height: 20px;
+  height: 22px;
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1));
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-secondary, #666);
   white-space: nowrap;
 }
@@ -438,23 +461,28 @@
   flex: none;
 }
 
+/* L3：责任域名。 */
 .domainName {
-  font: var(--dsw-font-xxs-strong-12);
+  font: var(--dsw-font-xs-strong-13);
   letter-spacing: 0.3px;
   color: var(--dsw-alias-label-secondary, #666);
 }
 
+/* L4：责任域计数。 */
 .domainCount {
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-caption, #999);
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 
+/* 一行几张由**可用宽度**决定：340px 是「96px 头像 + 两行职责」还能排下的最小列宽。
+   面板上限 1200px（正文 1152）时正好 3 列、每列约 376px；窗口再窄就降 2 列、1 列，
+   不靠缩小头像或字号去塞。 */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(286px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -469,12 +497,12 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
   text-align: left;
   font: inherit;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.09));
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -509,52 +537,111 @@
   border-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, var(--dsw-alias-border-l1));
 }
 
-.cardTop {
+/* 名片主行：左栏（头像 + 工号）· 右栏（姓名/岗位/职责/徽标）· 展开指示。 */
+.cardMain {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 14px;
   min-width: 0;
 }
 
-/* Mirror of the official preset card's avatar treatment: the same brand-green
-   ring and glow, sized down because this grid is denser than the picker's. */
-.cardAvatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  overflow: hidden;
-  object-fit: contain;
+.cardId {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 96px;
+}
+
+/* A fixed square slot keeps portrait theme changes out of card layout. */
+.cardAvatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex: none;
+  display: grid;
+  place-items: center;
   background: var(--dsw-alias-bg-base, rgba(0, 0, 0, 0.04));
   box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
 }
 
-.cardHeadText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+.cardAvatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.cardAlias {
-  font: var(--dsw-font-s-strong-14);
+.cardAvatar .cardAvatarLight {
+  display: none;
+}
+
+:global(body:not([data-ds-dark-theme])) .cardAvatarThemed .cardAvatarDark {
+  display: none;
+}
+
+:global(body:not([data-ds-dark-theme])) .cardAvatarThemed .cardAvatarLight {
+  display: block;
+}
+
+/* 素材缺失时的占位：与真实头像同尺寸同形状，卡片几何不因此跳变。 */
+.cardAvatarEmpty {
+  color: var(--dsw-alias-label-caption, #bbb);
+}
+
+/* L5：工号（mono，等宽对齐 AGT-001…AGT-050）。 */
+.cardEmpNo {
+  font: var(--dsw-font-xxxs-11);
+  font-family: var(--dsw-font-mono);
+  letter-spacing: 0.4px;
+  color: var(--dsw-alias-label-caption, #999);
+}
+
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* L2：名片姓名——整张卡最大的一行。 */
+.cardName {
+  font: var(--dsw-font-base-strong-16);
   letter-spacing: 0.2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cardTitle {
-  font: var(--dsw-font-xxxs-11);
+/* L3：岗位。 */
+.cardRole {
+  font: var(--dsw-font-xs-13);
   color: var(--dsw-alias-label-secondary, #666);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* L4：一句话职责，最多两行——文字不能多，超出交给省略号，完整描述在展开里。 */
+.cardBrief {
+  margin-top: 3px;
+  font: var(--dsw-font-xxs-12);
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary, #666);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 .chevron {
   margin-left: auto;
   flex: none;
+  align-self: flex-start;
   width: 14px;
   height: 14px;
   color: var(--dsw-alias-label-caption, #aaa);
@@ -567,28 +654,24 @@
 }
 
 .cardMeta {
+  margin-top: 7px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;
-  font: var(--dsw-font-xxxs-11);
   color: var(--dsw-alias-label-caption, #888);
 }
 
+/* L5：卡片徽标。 */
 .badge {
   display: inline-flex;
   align-items: center;
-  height: 18px;
+  height: 19px;
   padding: 0 7px;
   border-radius: 999px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1));
   font: var(--dsw-font-xxxs-11);
   color: var(--dsw-alias-label-secondary, #666);
-}
-
-.badgeAgt {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.2px;
 }
 
 .badgeDraft {
@@ -606,26 +689,6 @@
   border-color: var(--dsw-alias-state-business-primary, #347a2f);
 }
 
-.cardArtifact {
-  display: flex;
-  gap: 6px;
-  min-width: 0;
-  font: var(--dsw-font-xxxs-11);
-  color: var(--dsw-alias-label-secondary, #666);
-}
-
-.cardArtifactLabel {
-  flex: none;
-  color: var(--dsw-alias-label-caption, #999);
-}
-
-.cardArtifactValue {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ── Expanded detail ──────────────────────────────────────────────────────── */
 
 .detail {
@@ -635,7 +698,8 @@
   margin-top: 2px;
   padding-top: 10px;
   border-top: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
-  font: var(--dsw-font-xxs-12);
+  /* L3：展开后的正文——与卡片上的职责简介同一档，读起来不跳。 */
+  font: var(--dsw-font-xs-13);
   cursor: default;
 }
 
@@ -646,8 +710,9 @@
   align-items: start;
 }
 
+/* L3：详情行标签。 */
 .detailLabel {
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xs-strong-13);
   color: var(--dsw-alias-label-caption, #999);
 }
 
@@ -664,12 +729,13 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
+/* L4：详情 chip。 */
 .chip {
   display: inline-flex;
   align-items: center;
-  height: 19px;
+  height: 21px;
   margin: 0 4px 4px 0;
-  padding: 0 7px;
+  padding: 0 8px;
   border-radius: 6px;
   /* Was `--dsw-alias-fill-tsp-secondary` — a name nothing defines, so this
      always fell through to the literal and the chip had no fill at all in the
@@ -698,7 +764,7 @@
   padding: 10px 24px 14px;
   border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.07));
   background: var(--dsw-alias-bg-layer-1, #fff);
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-caption, #888);
 }
 
@@ -847,9 +913,6 @@
     margin-right: -16px;
     padding-left: 16px;
     padding-right: 16px;
-  }
-  .cards {
-    grid-template-columns: 1fr;
   }
   .detailRow {
     grid-template-columns: 84px minmax(0, 1fr);

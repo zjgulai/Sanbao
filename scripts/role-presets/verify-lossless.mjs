@@ -928,26 +928,30 @@ function main() {
   const AVATAR_MANIFEST = fileURLToPath(new URL('../../brand/avatars/manifest.json', import.meta.url))
   const AVATAR_CARD_SIZE = '128'
   const managedAvatars = new Map()
-  if (existsSync(AVATAR_MANIFEST)) {
-    const mf = JSON.parse(readFileSync(AVATAR_MANIFEST, 'utf8'))
-    const rel = mf.assets?.dark?.[AVATAR_CARD_SIZE]
-    if (!rel) {
-      fail('L10', `受管头像清单缺深色道 ${AVATAR_CARD_SIZE} 档：${AVATAR_MANIFEST}`)
-    } else {
-      const abs = join(dirname(AVATAR_MANIFEST), rel)
-      if (!existsSync(abs)) {
-        fail('L10', `受管头像资产缺失：${abs}（manifest 登记了它但盘上没有）`)
-      } else {
-        managedAvatars.set(mf.presetId, `data:image/webp;base64,${readFileSync(abs).toString('base64')}`)
-        ok()
-      }
+  const managedLightAvatars = new Map()
+  const mf = JSON.parse(readFileSync(AVATAR_MANIFEST, 'utf8'))
+  const expectedAvatarIds = Array.from({ length: 50 }, (_, i) => `agt-${String(i + 1).padStart(3, '0')}`)
+  if (!isDeepStrictEqual(mf.entries?.map((entry) => entry.presetId), expectedAvatarIds)) {
+    fail('L10', '受管头像须完整覆盖 agt-001…agt-050，不得缺人或重复')
+  } else ok()
+  for (const entry of mf.entries ?? []) {
+    for (const [colorway, index] of [['dark', managedAvatars], ['light', managedLightAvatars]]) {
+      const rel = entry.assets?.[colorway]?.[AVATAR_CARD_SIZE]
+      if (!rel || !existsSync(join(dirname(AVATAR_MANIFEST), rel))) {
+        fail('L10', `${entry.presetId}: 缺受管 ${colorway}/${AVATAR_CARD_SIZE} 头像`)
+      } else index.set(entry.presetId, `data:image/webp;base64,${readFileSync(join(dirname(AVATAR_MANIFEST), rel)).toString('base64')}`)
     }
   }
   const iconOwner = new Map()
   for (const d of presentDirs) {
     const ymlText = readFileSync(join(OUT_ROOT, d, 'preset.yml'), 'utf8')
     const ymlIcon = ymlText.match(/^icon: '([^']+)'$/m)?.[1]
-    const mfIcon = JSON.parse(readFileSync(join(OUT_ROOT, d, 'manifest.json'), 'utf8')).icon
+    const man = JSON.parse(readFileSync(join(OUT_ROOT, d, 'manifest.json'), 'utf8'))
+    const mfIcon = man.icon
+    if (d.startsWith('agt-')) {
+      if (!managedLightAvatars.has(d) || man.iconLight !== managedLightAvatars.get(d)) fail('L10', `${d}: 浅色头像与受管源不同串`)
+      else ok()
+    }
     const expectedIcon = managedAvatars.get(d) ?? iconIndexOf.get(d)
 
     const violations = judgeIconEntry({ presetId: d, ymlIcon, mfIcon, expectedIcon })

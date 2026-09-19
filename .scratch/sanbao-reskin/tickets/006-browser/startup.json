@@ -1,0 +1,64 @@
+{
+  "capturedAt": "2026-09-19T18:01:14.800989+00:00",
+  "runId": "c434f106-70b8-4316-859f-7eca70400f9a",
+  "completion": {
+    "schemaVersion": 1,
+    "timestamp": "2026-09-19T17:55:49.530Z",
+    "monotonicMs": 36728.567,
+    "durationMs": 36728.564,
+    "runId": "c434f106-70b8-4316-859f-7eca70400f9a",
+    "operationId": "6b62fb2a-b9c2-406c-b412-9fe72d237d64",
+    "eventName": "startup.run.completed",
+    "details": {
+      "finalStage": "health-commit",
+      "rendererStatus": "healthy"
+    }
+  },
+  "rendererStarts": 1,
+  "rendererCompletions": 1,
+  "failedEvents": [],
+  "newLogBytes": 345,
+  "unverifiableLogs": [],
+  "watchdogAlerts": [],
+  "otherWarnings": [
+    "dsh-plugin-desktop: LAN HTTPS certificate setup is unavailable: dsh-plugin-desktop: LAN HTTPS CA private key could not be opened.",
+    "dsh-plugin-desktop: LAN HTTPS certificate setup is unavailable: dsh-plugin-desktop: LAN HTTPS CA private key could not be opened."
+  ],
+  "processes": [
+    {
+      "pid": 24735,
+      "cpu": 0.0,
+      "name": "DSH Desktop"
+    },
+    {
+      "pid": 24742,
+      "cpu": 0.0,
+      "name": "chrome_crashpad_handler"
+    },
+    {
+      "pid": 24743,
+      "cpu": 0.0,
+      "name": "LUTE Agentic System Helper"
+    },
+    {
+      "pid": 24744,
+      "cpu": 0.0,
+      "name": "LUTE Agentic System Helper"
+    },
+    {
+      "pid": 24761,
+      "cpu": 99.2,
+      "name": "LUTE Agentic System Helper"
+    },
+    {
+      "pid": 25557,
+      "cpu": 0.0,
+      "name": "LUTE Agentic System Helper (Renderer)"
+    },
+    {
+      "pid": 25575,
+      "cpu": 0.0,
+      "name": "LUTE Agentic System Helper (Renderer)"
+    }
+  ]
+}

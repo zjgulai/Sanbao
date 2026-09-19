@@ -132,6 +132,29 @@ test('refresh-app-brand 必须在重放前备份，并覆盖 no-ASAR/旧 unpacke
   assert.match(refreshScript, /Contents\/Resources\/app\.asar\.unpacked\/build/)
 })
 
+test('refresh 在重放前完整备份启动 JS/CSS，兼容两种资源布局', (t) => {
+  const block = refreshScript.slice(refreshScript.indexOf('  STAMP='), refreshScript.indexOf('\n# ── 3.'))
+  const root = mkdtempSync(join(tmpdir(), 'sanbao-boot-backup-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  for (const layout of ['app', 'app.asar.unpacked']) {
+    const home = join(root, layout)
+    const app = join(home, 'DSH Desktop.app')
+    const resources = join(app, 'Contents/Resources')
+    const web = join(resources, layout, 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets')
+    mkdirSync(join(resources, layout, 'build'), { recursive: true })
+    mkdirSync(web, { recursive: true })
+    writeFileSync(join(resources, 'icon.icns'), 'original icon')
+    writeFileSync(join(web, 'boot.js'), 'original boot JS')
+    writeFileSync(join(web, 'boot.css'), 'original boot CSS')
+    const result = spawnSync('bash', ['-c', `set -u\nsay() { :; }\nif true; then\n${block}\nprintf '%s' "$BACKUP"`], {
+      encoding: 'utf8', env: { ...process.env, HOME: home, DSH_APP: app },
+    })
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(readFileSync(join(result.stdout, 'boot-assets/boot.js'), 'utf8'), 'original boot JS')
+    assert.equal(readFileSync(join(result.stdout, 'boot-assets/boot.css'), 'utf8'), 'original boot CSS')
+  }
+})
+
 test('占位输入与全部生成输出必须进入 pin，brand-replay 回退 sha1 必须指向当前 icns', () => {
   const pinEntries = parsePinEntries(readFileSync(join(repoRoot, 'vendor', 'worldpilot.pin'), 'utf8'))
   assert.ok(pinEntries)

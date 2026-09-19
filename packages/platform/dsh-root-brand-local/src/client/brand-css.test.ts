@@ -22,7 +22,6 @@ const SOURCE_FILES = [
   "index.tsx",
   "hero-title.ts",
   "live-selectors.ts",
-  "official-text.ts",
 ];
 
 describe("brand CSS 不再钉住官方哈希", () => {
@@ -46,6 +45,24 @@ describe("brand CSS 不再钉住官方哈希", () => {
   it("保留可发布安装所需的稳定样式标签 id", () => {
     expect(BRAND_CSS_STYLE_ID).toBe("dsh-root-brand-css");
     expect(BRAND_CSS).toContain('data-plugin="dsh-root-brand"');
+  });
+
+  it("keeps the sidebar name and second-line slogan inside the 114px seat", () => {
+    const name = BRAND_CSS.match(/\[data-plugin="dsh-root-brand"\]\.dsh-rb-name\s*\{([^}]+)\}/)?.[1];
+    expect(name).toContain("flex-direction: column");
+    expect(name).toContain("max-width: 114px");
+    expect(name).toContain("min-width: 0");
+    expect(BRAND_CSS).toContain("text-overflow: ellipsis");
+    expect(BRAND_CSS).toContain("overflow: hidden");
+    expect(BRAND_CSS).toContain(".dsh-rb-hero-copy");
+    expect(BRAND_CSS).toContain(".dsh-rb-hero-slogan");
+  });
+
+  it("uses neutral titanium accents instead of the old business green", () => {
+    expect(BRAND_CSS).toContain("#3d566e");
+    expect(BRAND_CSS).toContain("#c4d0dc");
+    expect(BRAND_CSS).toContain('body[data-ds-dark-theme]');
+    expect(BRAND_CSS).not.toMatch(/#58b848|88,\s*184,\s*72|--dsw-alias-state-business/i);
   });
 
   it("品牌强调遵循 Codex 视觉基线，不使用渐变或装饰性辉光", () => {

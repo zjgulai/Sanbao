@@ -102,7 +102,7 @@ S6  收口（复述清零 + 判据 + 总账）← 必须在最后；S6 之前不
 | 2.3 | 写 squircle 生成器：透明底 `mark` + `#0b1521` 圆角底 → `icon.icns` + `icon-1024.png`；替换 `build-app-icon.sh` 里废弃的 `LUTE_ICON_ENGINE` 分支 | `packaging/scripts/build-app-icon.sh` |
 | 2.4 | tray 彩色四档 + 模板两档换成 `mark` PNG 与 `png/black/` 版（模板图必须纯黑带 alpha） | `packaging/assets/brand-icons/` |
 | 2.5 | `ICON_PAIRS`（`brand-replay.sh:266-275`）与 `brand-icons` 门禁**同一次提交**改；门禁补 **alpha/形状判据**（ADR-0135 D5）+ 反例自测 | 两处 |
-| 2.6 | 启动屏：`brand-payload-wordmark.txt` 换成 **S0 生成的 `stacked` SVG**（字标 `Sanbao` 转路径 + 占位字母标），**删除文本段**；重切 `brand-replay.sh:110-140` 的 `this.wordmark=…("ROOT")` 语义锚。**spin 加载动画零改动**（K1），并加 ADR-0136 D6 的三条断言 | 两处 + 新断言 |
+| 2.6 | 启动屏：`brand-payload-wordmark.txt` 换成 **S0 生成的 `stacked` SVG**（字标 `Sanbao` 转路径 + 占位字母标），**删除文本段**；重切 `brand-replay.sh:110-140` 的 `this.wordmark=…("ROOT")` 语义锚。**spin 加载动画保留，仅周期通过 bundle 重放改为 2s**（2026-09-20 用户修订 K1），并加 ADR-0136 D6 的三条断言 | 两处 + 新断言 |
 | 2.7 | 侧栏品牌座与 hero 的图形换 `mark`（28×25 `contain` / 34） | `dsh-root-brand-local/src/client/brand.tsx:31-66,87-96` |
 | 2.8 | `icns` 哈希回退常量 `2902868…`（`brand-replay.sh:203-225`）必须重算，否则 `--check` 假红/假绿 | 该行 |
 
@@ -212,5 +212,5 @@ Finder/Dock/菜单栏/启动屏四处真机截图；`.icns` 与 `icon-1024.png` 
 - 不改 vendor 嵌套仓源码（ADR-0135 D3）
 - 不做 profile 层 skin 开关灰度（ADR-0135 D7）
 - 不为换皮修改 `exemptions.json` 或 `theme-tokens-baseline.json`（ADR-0014）
-- **不改动启动加载屏的 `spin` 动画**（ADR-0136 D6 / K1）——它经 `--dsw-alias-brand-primary` 自动跟皮，零改动
+- **保留启动加载屏 `spin` 的旋转与进度逻辑**；按 [ADR-0136 D6](../../docs/adr/ADR-0136.md) 2026-09-20 修订，仅通过 bundle 重放把周期改为 2s，弧色继续经 `--dsw-alias-brand-primary` 自动跟皮，不改 vendor 源码
 - 不沿用 `WP` 连笔字母标与任何 `WorldPilot` 字标（ADR-0136 D1/D5）

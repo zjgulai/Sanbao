@@ -24,7 +24,7 @@
 
 1. `src/client/live-selectors.ts`（新）：按 `style[data-plugin-css="<包路径>/<模块>.module.css"]` 定位官方样式标签，用「模块局部名负向断言」算出完整类名（候选前缀必须恰好一个）。
 2. `src/client/brand.tsx`：删除两条哈希规则；新增 `buildBrandCss(anchors)` 组装 hash 规则；`installBrandCss()` 只装与版本无关的部分。
-3. `src/client/official-text.ts`（新）：角标保持官方节点，只改写文本节点 `预览版 → Preview`；`MutationObserver` 抗 React 回写；disposer 还原原文。
+3. `src/client/official-text.ts`（新）：角标保持官方节点，只改写文本节点 `预览版 → Preview`；`MutationObserver` 抗 React 回写；disposer 还原原文。〔已被 [ADR-0142](../../../adr/ADR-0142.md) D1 取代（2026-09-20）：该模块删除，角标改为整节点隐藏，处置并入 `hero-title.ts` 的隐藏器。〕
 4. `src/client/index.tsx`：`watchAnchors` 首次同步 + 观察 `document.head` 新增节点重试；写 `data-dsh-root-brand-anchors="resolved|degraded:…"` 并 warn/info。
 5. `dsh-patches/brand-replay.sh`：退役 hero.headline 补丁段（保留其余品牌重放），原地留退役说明。
 6. 测试：新增真实产物 seam（`test/*.spec.ts`）4 支 8 项；重写 `src/client/brand-css.test.ts` 为「来源不得出现哈希选择器」的反向守卫；`vitest.config.ts` 同时纳入 `test/` 与 `src/`（只写前者会让既有 src 测试静默不执行——本轮故障的同款盲区）。

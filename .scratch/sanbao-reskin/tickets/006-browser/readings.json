@@ -1,0 +1,24 @@
+{
+  "source": "index-BKQ_L1z6.js",
+  "readings": [
+    {
+      "scheme": "light",
+      "name": "_spin_1fywu_47",
+      "duration": "2s",
+      "running": true,
+      "background": "conic-gradient(rgb(52, 122, 47) 72deg, rgba(0, 0, 0, 0) 0deg)",
+      "arcColor": "rgb(52, 122, 47)",
+      "accent": "rgb(52, 122, 47)"
+    },
+    {
+      "scheme": "dark",
+      "name": "_spin_1fywu_47",
+      "duration": "2s",
+      "running": true,
+      "background": "conic-gradient(rgb(88, 184, 72) 72deg, rgba(0, 0, 0, 0) 0deg)",
+      "arcColor": "rgb(88, 184, 72)",
+      "accent": "rgb(88, 184, 72)"
+    }
+  ],
+  "errors": []
+}

@@ -102,6 +102,9 @@ if [ "$MODE" = "--apply" ]; then
     if [ -f "$f" ]; then cp "$f" "$BACKUP/runtime-icons/" || exit 1; fi
   done
   cp "$DSH_APP/Contents/Resources/icon.icns" "$BACKUP/icon.icns" || exit 1
+  WEB_ASSETS="${BUILD_DIR%/build}/node_modules/@deepseek-ai/dsh-web-frontend/dist/assets"
+  [ -d "$WEB_ASSETS" ] || { say "启动资源目录缺失，拒绝在无备份时重放"; exit 1; }
+  cp -R "$WEB_ASSETS" "$BACKUP/boot-assets" || exit 1
   say "已备份原字节 → $BACKUP"
 fi
 

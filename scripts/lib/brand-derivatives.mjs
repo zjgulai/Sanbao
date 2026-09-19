@@ -13,6 +13,7 @@
  */
 import { chmodSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { renderWordmark } from './brand-wordmark.mjs'
 
 export const BRAND_SOURCE_DISPLAY = 'shared/client/sanbao-brand-source.ts'
 
@@ -44,10 +45,20 @@ export const DERIVATIVES = [
     pattern: /(['"])<title>(?!DeepSeek Harness<\/title>)[^<]*<\/title>\1/g,
     render: (brand) => `<title>${brand.nameLatin}</title>`,
   },
+  {
+    id: 'boot-stacked-wordmark',
+    description: '启动屏单一 SVG 路径字标',
+    sourceField: 'nameLatin',
+    file: 'dsh-patches/brand-payload-wordmark.txt',
+    pattern: /^[\s\S]+$/g,
+    wholeFile: true,
+    render: (brand) => `${renderWordmark({ nameLatin: brand.nameLatin })}\n`,
+  },
 ]
 
 /** 单个派生物的期望文本：把 pattern 命中的字面量重写成当前名源的值。 */
 export function computeExpectedForDerivative(text, derivative, brand) {
+  if (derivative.wholeFile) return derivative.render(brand)
   return text.replace(derivative.pattern, (match, quote) => quote + derivative.render(brand) + quote)
 }
 
@@ -68,11 +79,8 @@ export function writeDerivativeFile(abs, expected) {
   renameSync(tmp, abs)
 }
 
-/**
- * 把文本按整份清单重算成期望内容（全部派生物依次应用）。
- * 单参调用（只给 text）即按当前名源重算；brand 缺省时自动加载名源。
- */
-export async function computeExpected(text, derivatives = DERIVATIVES, brand = null) {
+/** 重算行内派生值；完整文件产物由对应清单项单独生成。 */
+export async function computeExpected(text, derivatives = DERIVATIVES.filter((entry) => !entry.wholeFile), brand = null) {
   if (brand === null) brand = await loadBrandSource()
   let out = text
   for (const d of derivatives) out = computeExpectedForDerivative(out, d, brand)
@@ -109,7 +117,7 @@ export function checkDerivativesSync(repoRoot, brand) {
     const expected = computeExpectedForDerivative(text, d, brand)
     if (expected !== text) {
       violations.push(
-        `${d.id}: ${d.file} 的「${d.description}」与名源 ${BRAND_SOURCE_DISPLAY}.${d.sourceField} 不一致（当前应为「${d.render(brand)}」，共 ${matches} 处）——名源是唯一可编辑面，跑 node scripts/generate-brand-derivatives.mjs --write`,
+        `${d.id}: ${d.file} 的「${d.description}」与名源 ${BRAND_SOURCE_DISPLAY}.${d.sourceField} 不一致（源字段当前为「${brand[d.sourceField]}」，共 ${matches} 处）——名源是唯一可编辑面，跑 node scripts/generate-brand-derivatives.mjs --write`,
       )
     }
   }

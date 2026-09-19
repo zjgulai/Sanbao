@@ -5,7 +5,7 @@
       "id": "heroPreviewBadge",
       "moduleId": "@deepseek-ai/dsh-client-ui-conversation/HeroShell.module.css",
       "localName": "previewBadge",
-      "purpose": "官方『预览版』角标。两件事都以它为锚：①把它的文本改成 Preview；②以它定位同一组里的官方标题（兄弟关系），把官方那句『探索未至之境』隐藏掉——官方没给 hero.headline 公开席位，所以只能这样，见 ADR-0019 / ADR-0117"
+      "purpose": "官方『预览版』角标。两件事都以它为锚：①隐藏它本身（用户裁决不显示官方发布状态，见 ADR-0142）；②以它定位同一组里的官方标题（兄弟关系），把官方那句『探索未至之境』隐藏掉——官方没给 hero.headline 公开席位，所以只能这样，见 ADR-0019 / ADR-0117"
     }
   ]
 }

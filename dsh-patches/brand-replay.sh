@@ -36,6 +36,11 @@ fail=0
 
 say() { echo "[$MODE] $*"; }
 
+case "$MODE" in --apply|--check) ;; *) say "用法: brand-replay.sh [--apply|--check]"; exit 2;; esac
+BOOT_REPLAY="$(dirname "$0")/boot-brand-replay.py"
+[ -f "$BOOT_REPLAY" ] || { say "MISSING boot-brand-replay.py"; exit 1; }
+python3 "$BOOT_REPLAY" "$ASSETS" "$PAYLOAD" "$MODE" || exit 1
+
 # ── 1. 显示名品牌 ────────────────────────────────────────────────────────────
 # 动态文件名：hash 文件名随基座版本变化（2.0.4: Mw2EmLOX/DS52LbUW；2.0.5: DaaZGYGQ/DLNj0vyk）
 UPDATE_CHECKER="$(basename "$(ls "$CHK"/lib/update-checker-*.js 2>/dev/null | head -1)" 2>/dev/null)"
@@ -101,46 +106,6 @@ PY
   fi
 done
 
-# ── 2. 启动词标（ROOT + SVG）─────────────────────────────────────────────────
-# 版本无关语义锚点（2026-09-11 加固）：
-#   文本：this.wordmark=<fn>(<ref>.wordmark,"X") → "ROOT"（2.0.4 Gt(Kt.wordmark,…) / 2.0.5 Yt(Gt.wordmark,…) 通吃）
-#   SVG：2.0.4 系 this.brandMark=…innerHTML='<svg…' → ROOT SVG；2.0.5 无 brandMark，仅文本
-if [ -f "$PAYLOAD" ]; then
-  for asset in "$ASSETS"/*.js; do
-    [ -f "$asset" ] || continue
-    # 跳过不含词标构造的 vendor/框架 chunk
-    grep -qE 'this\.wordmark=[A-Za-z_$]+\([A-Za-z_$.]+wordmark,"[^"]*"' "$asset" 2>/dev/null || continue
-    if grep -qE 'this\.wordmark=[A-Za-z_$]+\([A-Za-z_$.]+wordmark,"ROOT"' "$asset" 2>/dev/null; then
-      say "OK   wordmark $(basename "$asset")"
-    elif [ "$MODE" = "--apply" ]; then
-      python3 - "$asset" "$PAYLOAD" <<'PY'
-import sys, re
-asset, payload = sys.argv[1], sys.argv[2]
-s = open(asset, encoding="utf-8").read()
-# 1) 词标文本 → "ROOT"（语义锚点，不依赖压缩器 Kt/Gt 命名）
-pat_text = re.compile(r'(this\.wordmark=\w+\(\w+\.wordmark,")[^"]*("\))')
-s, n = pat_text.subn(r'\g<1>ROOT\g<2>', s)
-if n: print(f"wordmark text -> ROOT x{n}")
-# 2) 启动标 SVG（仅 2.0.4 系有 brandMark；payload 里取 ROOT SVG）
-m = re.search(r"this\.brandMark=([^;]*?)\.innerHTML='<svg[^']*'", s)
-if m:
-    block = open(payload, encoding="utf-8").read().rstrip()
-    inner = block.split("innerHTML='", 1)[1].rsplit("'", 1)[0]
-    s = s[:m.start()] + "this.brandMark=" + m.group(1) + ".innerHTML='" + inner + "'" + s[m.end():]
-    print("brandMark svg -> ROOT")
-open(asset, "w", encoding="utf-8").write(s)
-PY
-      say "APPLY wordmark $(basename "$asset")"
-    else
-      say "DRIFT wordmark $(basename "$asset") — 跑 --apply"
-      fail=1
-    fi
-  done
-else
-  say "MISSING ${PAYLOAD}（词标补丁载荷）"
-  fail=1
-fi
-
 # ── 2b. 网页标题（hero 空态标题的补丁已于 2026-09-11 退役）───────────────
 # 退役说明：原先此处把官方 locale 的 "hero.headline" 改写成品牌句做兜底，与
 # dsh-root-brand 插件的「隐藏官方标题 + 渲染品牌句」构成第二条真相源 —— 一旦插件
@@ -149,14 +114,14 @@ fi
 # 规格：.scratch/dsh-root-brand-drift/spec.md ｜ 决定：ADR-0019
 IDX_HTML="$CHK/node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html"
 if [ -f "$IDX_HTML" ]; then
-  if grep -q '<title>LUTE Agentic System</title>' "$IDX_HTML" 2>/dev/null; then
+  if grep -q '<title>Sanbao</title>' "$IDX_HTML" 2>/dev/null; then
     say "OK   index.html 标题"
   elif [ "$MODE" = "--apply" ]; then
     python3 - "$IDX_HTML" <<'PY'
 import sys
 p = sys.argv[1]
 s = open(p, encoding="utf-8").read()
-s = s.replace("<title>DeepSeek Harness</title>", "<title>LUTE Agentic System</title>")
+s = s.replace("<title>DeepSeek Harness</title>", "<title>Sanbao</title>")
 open(p, "w", encoding="utf-8").write(s)
 print("index.html title patched")
 PY

@@ -16,7 +16,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DERIVATIVES, computeExpected, writeDerivativeFile } from '../lib/brand-derivatives.mjs'
 import { checkBrandDerivatives } from './brand-derivatives-sync.mjs'
+import { SANBAO_BRAND_SOURCE } from '../../shared/client/sanbao-brand-source.ts'
 
+const currentTitle = `<title>${SANBAO_BRAND_SOURCE.nameLatin}</title>`
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(scriptDir, '..', '..')
 
@@ -26,6 +28,7 @@ function makeFixture() {
   mkdirSync(join(root, 'dsh-patches'), { recursive: true })
   const file = join(root, 'dsh-patches', 'brand-replay.sh')
   writeFileSync(file, readFileSync(join(repoRoot, 'dsh-patches', 'brand-replay.sh'), 'utf8'))
+  writeFileSync(join(root, 'dsh-patches', 'brand-payload-wordmark.txt'), readFileSync(join(repoRoot, 'dsh-patches', 'brand-payload-wordmark.txt')))
   return { root, file }
 }
 
@@ -47,7 +50,7 @@ test('真实仓库：派生物与名源一致', async () => {
 
 test('突变：派生物手改一个字符 → 红，且同时点名派生物与名源两处路径', async () => {
   const { root, file } = makeFixture()
-  const tampered = readFileSync(file, 'utf8').replace('LUTE Agentic System</title>', 'LUTE Agentic Systex</title>')
+  const tampered = readFileSync(file, 'utf8').replace(currentTitle, '<title>WrongBrand</title>')
   assert.notEqual(tampered, readFileSync(file, 'utf8'), '突变必须真的发生')
   writeFileSync(file, tampered)
 
@@ -61,7 +64,7 @@ test('突变：派生物手改一个字符 → 红，且同时点名派生物与
 
 test('空射程：锚点行删光 → 红（不得静默绿，P-15）', async () => {
   const { root, file } = makeFixture()
-  const emptied = readFileSync(file, 'utf8').replaceAll('<title>LUTE Agentic System</title>', '')
+  const emptied = readFileSync(file, 'utf8').replaceAll(currentTitle, '')
   writeFileSync(file, emptied)
 
   const result = await checkBrandDerivatives({ repoRoot: root })
@@ -72,7 +75,7 @@ test('空射程：锚点行删光 → 红（不得静默绿，P-15）', async ()
 test('write 回路：突变后按期望值重写 → 回到绿，且原文件 mode 不被抹掉', async () => {
   const { root, file } = makeFixture()
   chmodSync(file, 0o755)
-  const tampered = readFileSync(file, 'utf8').replace('LUTE Agentic System</title>', 'LUTE Agentic Systex</title>')
+  const tampered = readFileSync(file, 'utf8').replace(currentTitle, '<title>WrongBrand</title>')
   writeFileSync(file, tampered)
   assert.equal((await checkBrandDerivatives({ repoRoot: root })).passed, false)
 

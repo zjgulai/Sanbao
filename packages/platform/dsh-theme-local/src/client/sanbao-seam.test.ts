@@ -21,12 +21,12 @@ describe('S-A 品牌名源（002 骨架：形状齐全，值 = 现状）', () =>
     }
   })
 
-  it('现状值钉住：换值工单必须显式修改这里，而不是悄悄绕过', () => {
-    expect(SANBAO_BRAND_SOURCE.nameLatin).toBe('LUTE Agentic System')
-    expect(SANBAO_BRAND_SOURCE.nameZh).toBe('路特创新')
-    expect(SANBAO_BRAND_SOURCE.shortName).toBe('LUTE')
-    expect(SANBAO_BRAND_SOURCE.sloganZh).toBe('AgenticOS')
-    expect(SANBAO_BRAND_SOURCE.sloganEn).toBe('Artificial Business Intelligence Agentic')
+  it('品牌显示值迁入 Sanbao，签名和 bundle 身份保持不变', () => {
+    expect(SANBAO_BRAND_SOURCE.nameLatin).toBe('Sanbao')
+    expect(SANBAO_BRAND_SOURCE.nameZh).toBe('三宝')
+    expect(SANBAO_BRAND_SOURCE.shortName).toBe('SB')
+    expect(SANBAO_BRAND_SOURCE.sloganZh).toBe('三宝出海，货通四方')
+    expect(SANBAO_BRAND_SOURCE.sloganEn).toBe('Sanbao — Your AI Fleet to Global Markets')
     expect(SANBAO_BRAND_SOURCE.signingIdentity).toBe('LUTE Code Signing')
     expect(SANBAO_BRAND_SOURCE.bundleDisplayName).toBe('LUTE Agentic System')
   })

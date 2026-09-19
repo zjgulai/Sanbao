@@ -80,8 +80,10 @@ export interface RoleCard {
   title: string
   name: string
   description: string
-  /** Inline SVG avatar (data URI) from preset.yml; empty when the preset declares none. */
+  /** Official avatar scalar from preset.yml; empty when the preset declares none. */
   icon: string
+  /** Optional light-theme WebP data URI from the LUTE manifest. */
+  iconLight?: string
   order?: number
   artifact: string
   metrics: string

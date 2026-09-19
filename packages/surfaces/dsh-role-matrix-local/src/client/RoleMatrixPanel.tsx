@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { MatrixApi, MatrixPayload, PlaneGroup, RoleCard } from './api.ts'
+import { cardBrief } from './card-brief.ts'
 import { tt } from './panel-helpers.ts'
 import css from './role-matrix.module.css'
 
@@ -454,55 +455,74 @@ export function RoleMatrixPanel({ api, onClose }: RoleMatrixPanelProps): JSX.Ele
                             css['chevron'] ?? '',
                             open ? css['chevronOpen'] ?? '' : '',
                           ].filter((name) => name !== '').join(' ')
+                          const avatar = [
+                            css['cardAvatar'] ?? '',
+                            card.iconLight !== undefined ? css['cardAvatarThemed'] ?? '' : '',
+                          ].filter((name) => name !== '').join(' ')
+                          const brief = cardBrief(card.description)
+                          const name = card.alias !== '' ? card.alias : card.name
                           return (
                             <li key={card.id}>
                               <button
                                 type="button"
                                 className={classes}
                                 aria-expanded={open}
-                                aria-label={`${card.alias !== '' ? card.alias : card.name} · ${open ? tt('card.collapse') : tt('card.expand')}`}
+                                aria-label={`${name} · ${open ? tt('card.collapse') : tt('card.expand')}`}
                                 onClick={() => toggle(card.id)}
                               >
-                                <span className={css['cardTop'] ?? ''}>
-                                  {card.icon !== '' ? (
-                                    <img className={css['cardAvatar'] ?? ''} src={card.icon} alt="" />
-                                  ) : null}
-                                  <span className={css['cardHeadText'] ?? ''}>
-                                    <span className={css['cardAlias'] ?? ''}>{card.alias !== '' ? card.alias : card.name}</span>
-                                    <span className={css['cardTitle'] ?? ''}>{card.title}</span>
+                                <span className={css['cardMain'] ?? ''}>
+                                  {/* 名片左栏：头像在上、工号在下——识别一个人先看脸再看编号，
+                                      两者同栏，右侧整块留给职责。 */}
+                                  <span className={css['cardId'] ?? ''} data-dsh-part="card-identity">
+                                    {card.icon !== '' ? (
+                                      <span className={avatar}>
+                                        <img className={css['cardAvatarDark'] ?? ''} src={card.icon} alt="" />
+                                        {card.iconLight !== undefined ? (
+                                          <img className={css['cardAvatarLight'] ?? ''} src={card.iconLight} alt="" />
+                                        ) : null}
+                                      </span>
+                                    ) : (
+                                      <span className={`${css['cardAvatar'] ?? ''} ${css['cardAvatarEmpty'] ?? ''}`} aria-hidden="true">
+                                        <IconGrid />
+                                      </span>
+                                    )}
+                                    <span className={css['cardEmpNo'] ?? ''}>{card.agt}</span>
+                                  </span>
+                                  <span className={css['cardBody'] ?? ''} data-dsh-part="card-body">
+                                    <span className={css['cardName'] ?? ''}>{name}</span>
+                                    <span className={css['cardRole'] ?? ''}>{card.title}</span>
+                                    {brief !== '' ? <span className={css['cardBrief'] ?? ''}>{brief}</span> : null}
+                                    <span className={css['cardMeta'] ?? ''}>
+                                      {card.lifecycleStatus !== '' ? (
+                                        <span
+                                          className={`${css['badge'] ?? ''} ${css['badgeDraft'] ?? ''}`}
+                                          title={tt('card.draftTip')}
+                                        >
+                                          {tt('card.draft')}
+                                        </span>
+                                      ) : null}
+                                      {card.gaps.length > 0 ? (
+                                        <span className={`${css['badge'] ?? ''} ${css['badgeGap'] ?? ''}`}>
+                                          {card.gaps.length} {tt('card.gaps')}
+                                        </span>
+                                      ) : null}
+                                      <span className={`${css['badge'] ?? ''} ${css['badgeSkills'] ?? ''}`}>
+                                        {card.subset.length} {tt('card.skills')}
+                                      </span>
+                                    </span>
                                   </span>
                                   <span className={chevron}><IconChevron /></span>
                                 </span>
-                                <span className={css['cardMeta'] ?? ''}>
-                                  <span className={`${css['badge'] ?? ''} ${css['badgeAgt'] ?? ''}`}>{card.agt}</span>
-                                  {card.lifecycleStatus !== '' ? (
-                                    <span
-                                      className={`${css['badge'] ?? ''} ${css['badgeDraft'] ?? ''}`}
-                                      title={tt('card.draftTip')}
-                                    >
-                                      {tt('card.draft')}
-                                    </span>
-                                  ) : null}
-                                  {card.gaps.length > 0 ? (
-                                    <span className={`${css['badge'] ?? ''} ${css['badgeGap'] ?? ''}`}>
-                                      {card.gaps.length} {tt('card.gaps')}
-                                    </span>
-                                  ) : null}
-                                  <span className={`${css['badge'] ?? ''} ${css['badgeSkills'] ?? ''}`}>
-                                    {card.subset.length} {tt('card.skills')}
-                                  </span>
-                                </span>
-                                {card.artifact !== '' ? (
-                                  <span className={css['cardArtifact'] ?? ''}>
-                                    <span className={css['cardArtifactLabel'] ?? ''}>{tt('card.artifact')}</span>
-                                    <span className={css['cardArtifactValue'] ?? ''}>{card.artifact}</span>
-                                  </span>
-                                ) : null}
                                 {open ? (
                                   <span className={css['detail'] ?? ''}>
                                     {card.description !== '' ? (
-                                      <DetailRow label={tt('panel.subtitle')}>
+                                      <DetailRow label={tt('detail.description')}>
                                         <DetailText value={card.description} />
+                                      </DetailRow>
+                                    ) : null}
+                                    {card.artifact !== '' ? (
+                                      <DetailRow label={tt('card.artifact')}>
+                                        <DetailText value={card.artifact} />
                                       </DetailRow>
                                     ) : null}
                                     {card.metrics !== '' ? (

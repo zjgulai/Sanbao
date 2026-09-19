@@ -105,10 +105,28 @@ describe('role matrix visual contract', () => {
     expect(css).not.toContain('rgba(192, 57, 43')
   })
 
+  it('pins the business-card grid: 340px floor column and a 96px portrait', () => {
+    // 用户裁决的版式（2026-09-20）：标准窗口一行三张名片、头像要大。
+    // 判据钉的是**这两条几何事实**——列宽下限决定 3/2/1 列（窄窗口降列），
+    // 头像 96px 是「大头像」的可测量形式；只钉「看起来变大了」不是判据。
+    expect(css).toMatch(/\.cards\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(340px,\s*1fr\)\)/s)
+    expect(css).toMatch(/\.cardAvatar\s*\{[^}]*width:\s*96px;[^}]*height:\s*96px;/s)
+    expect(css).toMatch(/\.cardEmpNo\s*\{[^}]*font-family:\s*var\(--dsw-font-mono\)/s)
+  })
+
+  it('rides the shared five-step type ladder instead of ad-hoc sizes', () => {
+    // 文件头的字号阶梯：每类信息只对应一档 token。旧版把 11–14px 摊在整面板上，
+    // 层级不可辨（用户原话：字号「跟实际页面完全不搭」）。
+    expect(css).toMatch(/\.title\s*\{[^}]*font:\s*var\(--dsw-font-l-20\)/s)
+    expect(css).toMatch(/\.cardName\s*\{[^}]*font:\s*var\(--dsw-font-base-strong-16\)/s)
+    expect(css).toMatch(/\.planeName\s*\{[^}]*font:\s*var\(--dsw-font-base-strong-16\)/s)
+    expect(css).toMatch(/\.cardBrief\s*\{[^}]*font:\s*var\(--dsw-font-xxs-12\)/s)
+    expect(css).toMatch(/\.cardBrief\s*\{[^}]*-webkit-line-clamp:\s*2/s)
+  })
+
   it('pins the 180ms motion and reduced-motion fallback', () => {
     expect(css).toContain('180ms')
     expect(css).toMatch(/@media \(prefers-reduced-motion:\s*reduce\)/)
-    expect(css).toMatch(/@media \(max-width:\s*720px\)[\s\S]*\.cards\s*\{[^}]*grid-template-columns:\s*1fr/s)
     expect(heroCss).toContain('180ms')
     expect(heroCss).toMatch(/@media \(prefers-reduced-motion:\s*reduce\)/)
     expect(heroCss).toMatch(/@container \(max-width:\s*620px\)[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s)

@@ -12,7 +12,6 @@ import {
   type SuppressCode,
 } from "./hero-title.js";
 import { classSelector, resolveLiveAnchors } from "./live-selectors.js";
-import { observePreviewText } from "./official-text.js";
 
 /** Required Cordis services: the UI slot registry. */
 export const inject = ["slots"];
@@ -51,16 +50,12 @@ interface SyncOutcome {
 }
 
 /**
- * 单次同步：解析锚点 → 找到官方角标 → 改写它的文案 → 按关系隐藏官方标题。
+ * 单次同步：解析锚点 → 找到官方角标 → 隐藏角标、并按关系隐藏官方标题。
  *
  * 任何一步失败都不抛错（只降级），保证与版本无关的样式与品牌座位先落地：
  * 品牌标识比「官方标题有没有藏住」重要得多。
  */
-function syncOnce(
-  doc: Document,
-  suppressor: HeadlineSuppressor,
-  onBadge: (badge: HTMLElement) => void,
-): SyncOutcome {
+function syncOnce(doc: Document, suppressor: HeadlineSuppressor): SyncOutcome {
   const { anchors, missing } = resolveLiveAnchors(doc);
   const className = anchors.heroPreviewBadge;
   if (className === undefined || !SELECTOR_SAFE.test(className)) {
@@ -75,7 +70,6 @@ function syncOnce(
     return { code: "idle", detail: "hero 未挂载（非空会话页面），本次无事可做" };
   }
 
-  onBadge(badge);
   const outcome = suppressor.apply(badge);
   if (outcome.code !== "ok") return { code: outcome.code, detail: outcome.detail };
   return { code: "ok", detail: outcome.detail };
@@ -89,24 +83,14 @@ function syncOnce(
  * 只在**结论变化**时才写读数与打日志：观察器对整棵文档生效，每次节点变动都打日志会
  * 把 Console 冲成噪音，而噪音里的红色读数等于没有读数。
  *
- * disposer 要还原三样东西（卸载后不留残余）：角标文案、被隐藏的官方标题、观察器。
+ * disposer 要还原两样东西（卸载后不留残余）：被隐藏的官方标题与角标、观察器。
  */
 function watchAnchors(doc: Document): () => void {
   const suppressor = createHeadlineSuppressor();
-  let disposePreview: (() => void) | undefined;
-  let observedBadge: HTMLElement | undefined;
   let lastKey = "";
 
   const sync = (): void => {
-    const outcome = syncOnce(doc, suppressor, (badge) => {
-      // 角标节点被 React 换掉时要跟着换观察对象：旧节点已脱离文档，挂在它上面的
-      // 观察器不再起作用，新节点上的文案就永远不会被改写。
-      if (observedBadge === badge) return;
-      disposePreview?.();
-      observedBadge = badge;
-      badge.dataset.dshRbPreview = "1";
-      disposePreview = observePreviewText(badge);
-    });
+    const outcome = syncOnce(doc, suppressor);
 
     const key = `${outcome.code}|${outcome.detail}`;
     if (key === lastKey) return;
@@ -126,8 +110,6 @@ function watchAnchors(doc: Document): () => void {
 
   return () => {
     observer.disconnect();
-    disposePreview?.();
-    observedBadge?.removeAttribute("data-dsh-rb-preview");
     suppressor.restore();
   };
 }

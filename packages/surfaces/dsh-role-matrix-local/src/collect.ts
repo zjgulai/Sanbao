@@ -4,13 +4,12 @@
  * Two sources, deliberately kept separate:
  *   - `preset.yml` — the OFFICIAL display metadata: name / description / order
  *     and `icon`. The loader's `readPresetMetadata` carries all four through
- *     verbatim, and the roster ships `icon` to the client, which renders it as
- *     an `<img class="cardAvatar">`. The panel therefore reads the avatar from
- *     HERE rather than from the sidecar, so a matrix card and the official
- *     preset card for the same role cannot show different faces.
+ *     verbatim, and the roster ships `icon` to the client as the default avatar.
+ *     The panel preserves this scalar as its dark-theme and single-icon fallback.
  *   - `manifest.json` — the LUTE-owned sidecar carrying the material
  *     provenance, the two-level classification (plane / domain), the squad
- *     contract and the skill inventory. The official roster never reads it,
+ *     contract, the skill inventory and an optional light-theme WebP avatar.
+ *     The official roster never reads it,
  *     so extending it cannot break preset loading.
  *
  * A preset missing its manifest still renders (degraded): the official roster
@@ -35,8 +34,10 @@ export interface RoleCard {
   name: string
   /** Official one-line description from preset.yml. */
   description: string
-  /** Inline SVG avatar (data URI) from preset.yml; empty when the preset declares none. */
+  /** Official avatar scalar from preset.yml; empty when the preset declares none. */
   icon: string
+  /** Optional light-theme WebP data URI from the LUTE manifest. */
+  iconLight?: string
   /** Official roster order (plane-blocked); undefined when the preset declares none. */
   order: number | undefined
   /** Standard artifact the role is accountable for. */
@@ -167,6 +168,7 @@ function readManifest(raw: unknown): {
   lifecycleStatus: string; productionAuthorized: boolean
   subset: string[]; gaps: string[]; materialSkillNames: string[]
   flows: string[]; scenarios: string[]; collaboratesWith: string[]; playbooks: string[]
+  iconLight?: string
 } | undefined {
   if (raw === null || typeof raw !== 'object') return undefined
   const root = raw as Record<string, any>
@@ -205,6 +207,8 @@ function readManifest(raw: unknown): {
     scenarios: list(record['scenarios']),
     collaboratesWith: list(record['collaborates_with']),
     playbooks: list(record['playbooks']),
+    ...(typeof root['iconLight'] === 'string' && root['iconLight'].startsWith('data:image/webp;base64,')
+      ? { iconLight: root['iconLight'] } : {}),
   }
 }
 
@@ -272,6 +276,7 @@ export function collectRoleMatrix(root: string): MatrixPayload {
         name,
         description,
         icon,
+        ...(manifest.iconLight !== undefined ? { iconLight: manifest.iconLight } : {}),
         order,
         artifact: manifest.artifact,
         metrics: manifest.metrics,
@@ -302,6 +307,7 @@ export function collectRoleMatrix(root: string): MatrixPayload {
       name,
       description,
       icon,
+      ...(manifest?.iconLight !== undefined ? { iconLight: manifest.iconLight } : {}),
       order,
       artifact: '',
       metrics: '',

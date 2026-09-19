@@ -7,9 +7,9 @@
  *   1) 从本机官方 app 包取出真实的官方模块 CSS 与类名（真值，不写死哈希）；
  *   2) 按官方 2.0.10 的真实 DOM 结构复刻空会话 hero；
  *   3) 装载并执行插件产物；
- *   4) 断言用户可观察结果：官方标题不再显示、品牌句只出现一次、ROOT 字标存在、
- *      角标显示 Preview（且抗 React 回写、可还原）、官方标题卸载后还原、
- *      结构不唯一时**什么都不隐藏**并如实报 degraded、锚点状态 resolved。
+ *   4) 断言用户可观察结果：官方标题不再显示、品牌句只出现一次、Sanbao 标识存在、
+ *      官方角标被隐藏（节点在、文案原样、抗 React 换节点、可还原）、官方标题卸载后还原、
+ *      结构不唯一时**不隐藏标题**（角标仍隐藏）并如实报 degraded、锚点状态 resolved。
  * 再注入一份**随机新前缀**的假官方 CSS，断言同一份实现自动命中（升级免疫）。
  *
  * 用法：node scripts/acceptance/root-brand-live-anchors.mjs [--bundle <path>] [--out <dir>]
@@ -27,6 +27,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { appNodeModules } from '../lib/app-resources.mjs'
 import { fileURLToPath } from "node:url";
+import { SANBAO_BRAND_SOURCE } from '../../shared/client/sanbao-brand-source.ts';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DEFAULT_BUNDLE = join(
@@ -153,7 +154,7 @@ async function main() {
   await page.goto(origin, { waitUntil: "load" });
 
   const result = await page.evaluate(
-    async ({ heroCss, heroClasses, moduleIds, brandPhrase, officialHeadlineText, officialPreviewText }) => {
+    async ({ heroCss, heroClasses, moduleIds, brandPhrase, brandSlogan, officialHeadlineText, officialPreviewText }) => {
       const notes = [];
       const scriptErrors = [];
       window.addEventListener("error", (event) => {
@@ -207,8 +208,9 @@ async function main() {
           `<div class="${classes.headline}">` +
           `<span class="${classes.fishHitbox}">` +
           `<div data-plugin="dsh-root-brand" class="dsh-rb-hero">` +
-          `<svg viewBox="0 0 61 32" width="46" height="24" aria-hidden="true"><rect x="6.5" y="26" width="16.5" height="5" rx="2.5" fill="#58B848"/></svg>` +
-          `<span class="dsh-rb-hero-name">${brandPhrase}</span></div></span>` +
+          `<svg data-plugin="dsh-root-brand" data-status="placeholder" viewBox="0 0 512 512" width="34" height="34" aria-hidden="true"><g fill="currentColor"><polygon points="256,92 330,166 256,240 182,166"/><polygon points="164,212 238,286 164,360 90,286"/><polygon points="348,212 422,286 348,360 274,286"/></g></svg>` +
+          `<span class="dsh-rb-hero-copy"><span class="dsh-rb-hero-name">${brandPhrase}</span>` +
+          `<span class="dsh-rb-hero-slogan">${brandSlogan}</span></span></div></span>` +
           `<span class="${classes.titleGroup}">` +
           `<span>${titleText}</span>` +
           `<span class="${classes.previewBadge}">${officialPreviewText}</span>` +
@@ -267,25 +269,33 @@ async function main() {
       const afterApply = {
         anchorState: state,
         markLeftOfName: markRect.right <= nameRect.left + 1,
-        badgeRightmost: badgeRect.left >= nameRect.right - 1,
-        badgeVisible: getComputedStyle(badge).display !== "none",
+        badgeOccupiesSpace: badgeRect.width > 0,
+        badgeHidden: getComputedStyle(badge).display === "none",
+        // 隐藏的是节点，不是文案：节点仍在、文案仍是官方原文，只是不可见。
+        badgeTextUnchanged: badge.textContent === officialPreviewText,
+        badgeMarker: badge.getAttribute("dsh-rb-hidden"),
         markWidth: markRect.width,
         officialHeadlineHidden: getComputedStyle(officialTitle).display === "none",
         brandPhraseVisibleCount: visibleLeafCount(hero, brandPhrase),
         officialHeadlineVisibleCount: visibleLeafCount(hero, officialHeadlineText),
         rootMarkPresent: hero.querySelector("svg") !== null,
-        badgeText: badge.textContent,
       };
       notes.push(`第一幕锚点状态：${state}`);
 
-      // React 回写角标文案 → 插件必须重新改写
-      badge.textContent = officialPreviewText;
+      // React 重渲染等价形态：角标节点被整个换掉 → 新节点必须被重新隐藏
+      // （旧实现在这里改写文案，现在隐藏的是节点，所以用换节点来代表那条路径）。
+      const replacement = document.createElement("span");
+      replacement.className = badge.className;
+      replacement.textContent = officialPreviewText;
+      badge.replaceWith(replacement);
+      const liveBadge = replacement;
       await new Promise((r) => setTimeout(r, 30));
-      afterApply.badgeTextAfterReactWrite = badge.textContent;
+      afterApply.badgeHiddenAfterReactSwap = getComputedStyle(liveBadge).display === "none";
 
-      // —— 第一幕 b：结构不唯一时**不猜** ——
+      // —— 第一幕 b：结构不唯一时**不猜标题** ——
       // 往同一容器里再塞一个有文字的叶子，此时「谁是标题」不再唯一：
-      // 插件必须什么都不隐藏，并如实报 degraded:ambiguous。
+      // 插件必须不隐藏标题，并如实报 degraded:ambiguous。角标是**被正向识别**的节点，
+      // 它的隐藏与标题唯一性无关，所以角标此时仍然隐藏。
       const extraLeaf = document.createElement("span");
       extraLeaf.textContent = "额外的说明";
       first.titleGroup.appendChild(extraLeaf);
@@ -296,6 +306,7 @@ async function main() {
         // 它是当结构唯一时被正向识别出来的，模糊化本身不构成「撤销识别」的理由。
         officialHeadlineStillHidden: getComputedStyle(officialTitle).display === "none",
         extraLeafStillVisible: getComputedStyle(extraLeaf).display !== "none",
+        badgeStillHidden: getComputedStyle(liveBadge).display === "none",
       };
       extraLeaf.remove();
       await new Promise((r) => setTimeout(r, 30));
@@ -307,11 +318,13 @@ async function main() {
       // —— 第二幕：卸载还原（官方样式标签保留，只撤销插件）——
       for (const d of disposers) d();
       const afterDispose = {
-        badgeText: badge.textContent,
+        badgeText: liveBadge.textContent,
+        badgeRestored: getComputedStyle(liveBadge).display !== "none",
+        badgeMarkerLeft: liveBadge.getAttribute("dsh-rb-hidden"),
         officialHeadlineRestored: getComputedStyle(officialTitle).display !== "none",
         hiddenMarkerLeft: officialTitle.getAttribute("dsh-rb-hidden"),
       };
-      notes.push(`卸载后角标文案：${afterDispose.badgeText}；官方标题还原：${afterDispose.officialHeadlineRestored}`);
+      notes.push(`卸载后角标还原：${afterDispose.badgeRestored}（文案 ${afterDispose.badgeText}）；官方标题还原：${afterDispose.officialHeadlineRestored}`);
 
       // —— 第三幕：升级免疫（随机新前缀）——
       // 先清掉旧场（含官方样式标签与插件样式块），再注入新前缀的官方样式并**重新装载**插件
@@ -344,7 +357,7 @@ async function main() {
         anchorState: anchorState(),
         officialHeadlineHidden: getComputedStyle(future.officialTitle).display === "none",
         brandPhraseVisibleCount: visibleLeafCount(future.hero, brandPhrase),
-        badgeText: future.badge.textContent,
+        badgeHidden: getComputedStyle(future.badge).display === "none",
       };
 
       // 把舞台留在第一幕的可视结果上，供截图
@@ -361,7 +374,8 @@ async function main() {
       heroCss,
       heroClasses,
       moduleIds: { hero: HERO_MODULE_ID },
-      brandPhrase: "Artificial Business Intelligence Agentic",
+      brandPhrase: `${SANBAO_BRAND_SOURCE.nameLatin} · ${SANBAO_BRAND_SOURCE.nameZh}`,
+      brandSlogan: SANBAO_BRAND_SOURCE.sloganZh,
       officialHeadlineText,
       officialPreviewText,
     },
@@ -378,21 +392,22 @@ async function main() {
     ["官方标题不再显示", result.afterApply.officialHeadlineHidden === true, String(result.afterApply.officialHeadlineHidden)],
     ["官方标题文案一处都不可见", result.afterApply.officialHeadlineVisibleCount === 0, String(result.afterApply.officialHeadlineVisibleCount)],
     ["品牌句只出现一次", result.afterApply.brandPhraseVisibleCount === 1, String(result.afterApply.brandPhraseVisibleCount)],
-    ["ROOT 字标存在", result.afterApply.rootMarkPresent === true, String(result.afterApply.rootMarkPresent)],
-    ["角标显示 Preview", result.afterApply.badgeText === "Preview", result.afterApply.badgeText],
-    ["React 回写后仍为 Preview", result.afterApply.badgeTextAfterReactWrite === "Preview", result.afterApply.badgeTextAfterReactWrite],
-    ["结构不唯一时不猜（degraded:ambiguous）", result.afterAmbiguous.anchorState === "degraded:ambiguous", result.afterAmbiguous.anchorState],
-    ["结构不唯一时不隐藏新的东西（已识别的标题保持隐藏）", result.afterAmbiguous.officialHeadlineStillHidden === true && result.afterAmbiguous.extraLeafStillVisible === true, `已识别标题仍隐藏=${result.afterAmbiguous.officialHeadlineStillHidden} 新增叶子可见=${result.afterAmbiguous.extraLeafStillVisible}`],
+    ["Sanbao 标识存在", result.afterApply.rootMarkPresent === true, String(result.afterApply.rootMarkPresent)],
+    ["官方角标被隐藏", result.afterApply.badgeHidden === true, String(result.afterApply.badgeHidden)],
+    ["角标节点仍在且文案是官方原文（隐藏节点不改写文本）", result.afterApply.badgeTextUnchanged === true && result.afterApply.badgeMarker === "1", `text=${result.afterApply.badgeTextUnchanged} marker=${result.afterApply.badgeMarker}`],
+    ["React 换掉角标节点后新节点被重新隐藏", result.afterApply.badgeHiddenAfterReactSwap === true, String(result.afterApply.badgeHiddenAfterReactSwap)],
+    ["结构不唯一时不猜标题（degraded:ambiguous）", result.afterAmbiguous.anchorState === "degraded:ambiguous", result.afterAmbiguous.anchorState],
+    ["结构不唯一时不隐藏新的东西（已识别的标题保持隐藏、角标仍隐藏）", result.afterAmbiguous.officialHeadlineStillHidden === true && result.afterAmbiguous.extraLeafStillVisible === true && result.afterAmbiguous.badgeStillHidden === true, `已识别标题仍隐藏=${result.afterAmbiguous.officialHeadlineStillHidden} 新增叶子可见=${result.afterAmbiguous.extraLeafStillVisible} 角标仍隐藏=${result.afterAmbiguous.badgeStillHidden}`],
     ["结构恢复后重新转回 resolved 并隐藏", result.afterAmbiguousRecovered.anchorState === "resolved" && result.afterAmbiguousRecovered.officialHeadlineHidden === true, `${result.afterAmbiguousRecovered.anchorState} hidden=${result.afterAmbiguousRecovered.officialHeadlineHidden}`],
-    ["卸载后还原官方文案", result.afterDispose.badgeText === officialPreviewText, result.afterDispose.badgeText],
+    ["卸载后角标还原（文案与可见性都是官方状态）", result.afterDispose.badgeRestored === true && result.afterDispose.badgeText === officialPreviewText, `restored=${result.afterDispose.badgeRestored} text=${result.afterDispose.badgeText}`],
     ["卸载后官方标题还原", result.afterDispose.officialHeadlineRestored === true, String(result.afterDispose.officialHeadlineRestored)],
-    ["卸载后不残留隐藏标记", result.afterDispose.hiddenMarkerLeft === null, String(result.afterDispose.hiddenMarkerLeft)],
-    ["排版：ROOT 字标在品牌句左侧", result.afterApply.markLeftOfName === true, String(result.afterApply.markLeftOfName)],
-    ["排版：Preview 角标位于标题右侧（右上角）", result.afterApply.badgeRightmost === true, String(result.afterApply.badgeRightmost)],
-    ["排版：角标可见且字标已渲染", result.afterApply.badgeVisible === true && result.afterApply.markWidth > 0, `badgeVisible=${result.afterApply.badgeVisible} markWidth=${result.afterApply.markWidth}`],
+    ["卸载后不残留隐藏标记", result.afterDispose.hiddenMarkerLeft === null && result.afterDispose.badgeMarkerLeft === null, `title=${result.afterDispose.hiddenMarkerLeft} badge=${result.afterDispose.badgeMarkerLeft}`],
+    ["排版：Sanbao 标识在品牌句左侧", result.afterApply.markLeftOfName === true, String(result.afterApply.markLeftOfName)],
+    ["排版：字标已渲染", result.afterApply.markWidth > 0, String(result.afterApply.markWidth)],
+    ["排版：被隐藏的官方角标不占位", result.afterApply.badgeOccupiesSpace === false, `occupiesSpace=${result.afterApply.badgeOccupiesSpace}`],
     ["换随机新前缀仍命中（锚点 resolved）", result.futureApplied.anchorState === "resolved", result.futureApplied.anchorState],
     ["换随机新前缀后标题唯一", result.futureApplied.brandPhraseVisibleCount === 1 && result.futureApplied.officialHeadlineHidden === true, `hidden=${result.futureApplied.officialHeadlineHidden} count=${result.futureApplied.brandPhraseVisibleCount}`],
-    ["换随机新前缀后角标仍为 Preview", result.futureApplied.badgeText === "Preview", result.futureApplied.badgeText],
+    ["换随机新前缀后角标仍被隐藏", result.futureApplied.badgeHidden === true, String(result.futureApplied.badgeHidden)],
   ];
 
   console.log(`[acceptance] bundle = ${BUNDLE}`);

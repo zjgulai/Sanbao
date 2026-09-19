@@ -85,7 +85,7 @@
 
 | # | 项 | 实体位置 | 为什么它能自动存活 | 新增护栏 |
 | --- | --- | --- | --- | --- |
-| K1 | **启动加载屏动画** | `.dsh-types/dsh-client-web/lib/boot-page.module.css`：`.spinner` 20×20 圆环、`animation: spin 0.8s linear infinite`、`::after` 用 `conic-gradient(var(--dsw-alias-brand-primary, var(--dsh-boot-brand)) var(--dsh-boot-arc, 72deg), transparent 0)` 经 `radial-gradient` mask 成环 | 弧色取自 `--dsw-alias-brand-primary`，而 ADR-0132 D4 正是覆写这个别名——**动画自动跟随换皮，零改动**。且 boot 页住在基座 `dsh-client-web` 里，按 ADR-0008 我们本来就不碰 | ADR-0136 D6：新增断言校验 `animation-name=spin`、`animation-duration=0.8s`、conic 弧色**解析值**等于品牌源 accent |
+| K1 | **启动加载屏动画** | 基座原始 `.spinner` 为 20×20 圆环，spin 0.8s；2026-09-20 用户授权本仓仅经 bundle 重放改周期 | 保留 keyframes、进度弧与 `--dsw-alias-brand-primary` 主题引用，不改 vendor 源码 | [ADR-0136 D6](../../docs/adr/ADR-0136.md)：spin（含 CSS Modules 派生名）、`animation-duration=2s`、conic 弧色解析值等于品牌源 accent |
 | K2 | 品牌样式表的运动抑制不得扩为全局 | `packages/platform/dsh-root-brand-local/src/client/brand.tsx:180-186` | 实测其作用域是 `[data-plugin="dsh-root-brand"] *`、只压 `transition` 不压 `animation`、且仅在 `prefers-reduced-motion` 下生效——**碰不到 boot spinner** | 同 K1 断言；若有人把选择器放宽，K1 的 `animation-name` 读数会变 |
 | K3 | 承载层几何与 slot 契约 | `sidebar-row-axis`、ADR-0130 的 `main`/`sidebar.panellist` 挂载、ADR-0128 D2 零 z-index | 换皮只改表达不改承载（ADR-0131 D5） | 换皮前后逐字节同形；改默认字体会改字宽，须实测复核 `TARGET_SIDEBAR_WIDTH=264`（ADR-0132 后果 4） |
 

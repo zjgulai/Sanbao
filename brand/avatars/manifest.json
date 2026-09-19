@@ -1,28 +1,575 @@
 {
-  "$comment": "受管头像清单（S3 头像管线，工单 004 示踪弹：仅 AGT-001）。id 与 role-catalog/preset id 同名（agt-001..agt-050），本文件是「岗位↔头像」事实之家。字节判据在 vendor/worldpilot.pin，由 brand-avatars-pin 门禁守护；上游出处见 pin 的 upstream-* 字段，此处不重复（ADR-0009 一份事实一个家）。",
   "format": "lute-avatar-manifest",
-  "version": 1,
-  "presetId": "agt-001",
-  "colorways": ["dark", "light"],
-  "sizes": [32, 48, 64, 80, 128, 256, 512],
-  "assets": {
-    "dark": {
-      "32": "assets/dark/32/AGT-001.webp",
-      "48": "assets/dark/48/AGT-001.webp",
-      "64": "assets/dark/64/AGT-001.webp",
-      "80": "assets/dark/80/AGT-001.webp",
-      "128": "assets/dark/128/AGT-001.webp",
-      "256": "assets/dark/256/AGT-001.webp",
-      "512": "assets/dark/512/AGT-001.webp"
+  "version": 2,
+  "colorways": [
+    "dark",
+    "light"
+  ],
+  "sizes": [
+    128
+  ],
+  "entries": [
+    {
+      "presetId": "agt-001",
+      "assets": {
+        "dark": {
+          "32": "assets/dark/32/AGT-001.webp",
+          "48": "assets/dark/48/AGT-001.webp",
+          "64": "assets/dark/64/AGT-001.webp",
+          "80": "assets/dark/80/AGT-001.webp",
+          "128": "assets/dark/128/AGT-001.webp",
+          "256": "assets/dark/256/AGT-001.webp",
+          "512": "assets/dark/512/AGT-001.webp"
+        },
+        "light": {
+          "32": "assets/light/32/AGT-001.webp",
+          "48": "assets/light/48/AGT-001.webp",
+          "64": "assets/light/64/AGT-001.webp",
+          "80": "assets/light/80/AGT-001.webp",
+          "128": "assets/light/128/AGT-001.webp",
+          "256": "assets/light/256/AGT-001.webp",
+          "512": "assets/light/512/AGT-001.webp"
+        }
+      }
     },
-    "light": {
-      "32": "assets/light/32/AGT-001.webp",
-      "48": "assets/light/48/AGT-001.webp",
-      "64": "assets/light/64/AGT-001.webp",
-      "80": "assets/light/80/AGT-001.webp",
-      "128": "assets/light/128/AGT-001.webp",
-      "256": "assets/light/256/AGT-001.webp",
-      "512": "assets/light/512/AGT-001.webp"
+    {
+      "presetId": "agt-002",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-002.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-002.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-003",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-003.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-003.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-004",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-004.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-004.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-005",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-005.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-005.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-006",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-006.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-006.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-007",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-007.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-007.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-008",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-008.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-008.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-009",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-009.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-009.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-010",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-010.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-010.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-011",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-011.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-011.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-012",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-012.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-012.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-013",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-013.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-013.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-014",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-014.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-014.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-015",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-015.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-015.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-016",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-016.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-016.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-017",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-017.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-017.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-018",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-018.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-018.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-019",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-019.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-019.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-020",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-020.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-020.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-021",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-021.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-021.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-022",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-022.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-022.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-023",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-023.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-023.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-024",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-024.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-024.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-025",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-025.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-025.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-026",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-026.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-026.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-027",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-027.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-027.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-028",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-028.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-028.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-029",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-029.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-029.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-030",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-030.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-030.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-031",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-031.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-031.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-032",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-032.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-032.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-033",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-033.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-033.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-034",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-034.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-034.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-035",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-035.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-035.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-036",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-036.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-036.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-037",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-037.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-037.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-038",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-038.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-038.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-039",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-039.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-039.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-040",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-040.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-040.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-041",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-041.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-041.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-042",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-042.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-042.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-043",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-043.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-043.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-044",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-044.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-044.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-045",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-045.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-045.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-046",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-046.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-046.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-047",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-047.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-047.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-048",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-048.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-048.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-049",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-049.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-049.webp"
+        }
+      }
+    },
+    {
+      "presetId": "agt-050",
+      "assets": {
+        "dark": {
+          "128": "assets/dark/128/AGT-050.webp"
+        },
+        "light": {
+          "128": "assets/light/128/AGT-050.webp"
+        }
+      }
     }
-  }
+  ]
 }
