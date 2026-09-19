@@ -65,8 +65,9 @@
   `gate:dead-instrument`（**开出去给人敲的判据**——发布前清单项、围栏代码块、脚本代码行——
   不得出现读数已知为空的仪器；登记簿每条都带可复现读数与替代物，射程为空/登记簿为空一律判红）、
   `gate:brand-icons`（品牌的两个家里，被 `setIcon()` 覆盖的那一套此前从未被核对；
-  核对表 ↔ 资产目录两向对照，且**资产的像素尺寸必须等于声明**——原来只核了目标那一侧，
-  等于量错了对象）、
+  核对表 ↔ 资产目录两向对照，且**资产的像素尺寸必须等于声明**；同时读取 alpha/透明边角区域，
+  尺寸正确但无 alpha、四角不透明或仅四个点透明的方块仍须判红；生成与实际重放有反例自测，
+  见[图标示踪弹记录](notes/implemented/surface/2026-09-19-sanbao-app-icon-tracer.md)）、
   `gate:patch-anchors`（**射程为空报 `skip`**，与「通过」在读数上分开——「没量到东西」被读成
   「都合格」是本条最便宜的复发路径）、
   `gate:gate-result-selftest`（所有门禁统一记 `expected/discovered/checked/skipped/failed`，空射程 pass、

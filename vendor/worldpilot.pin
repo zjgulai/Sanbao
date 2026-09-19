@@ -1,11 +1,12 @@
 # LUTE vendor pin —— WorldPilot 视觉供体资产（Sanbao 换皮，工单 004 起）
 #
-# 门禁契约：brand-avatars-pin 门禁重算 brand/avatars/ 下已登记资产的 sha256，
-# 与本文件逐档比对，不一致即拒绝（构建期拦截，R8：入仓后与素材源仓分叉即失败）。
+# 门禁契约：brand-avatars-pin 门禁重算本文件已登记的受管品牌资产 sha256，
+# 与本文件逐项比对，不一致即拒绝（构建期拦截，R8：入仓后与素材源仓分叉即失败）。
 # 每次从上游重采资产时：先 bump upstream-sha 与本表，再让门禁过。
 #
 # 供体只是视觉素材来源，不构成运行时依赖；本仓资产以本表 sha256 为准——
 # 上游重画不会静默改变本仓出货面（pin 后分叉是显式决策，不是事故）。
+# brand/logo/placeholder-mark.svg 与 packaging/assets/ 图标为本仓自制派生物，并非 upstream 原文件。
 upstream-url: https://github.com/lillian-maker/WorldPilot
 upstream-sha: 2e676da87999c88fbc70baae9eb5dbf72c2b757e
 upstream-root: digital-employees
@@ -27,3 +28,12 @@ brand/avatars/assets/light/80/AGT-001.webp 3150065be9e8d2a0750135f3efa33093d3988
 brand/avatars/assets/light/128/AGT-001.webp a16544caaac7109c27cea6b05187e5bae7bdfa77e89a3a4509488a91ae010004
 brand/avatars/assets/light/256/AGT-001.webp 592f013034fdf48837a86299aa3402ad1dcd5d901c9bf9ad0154ce2205f6267e
 brand/avatars/assets/light/512/AGT-001.webp 5ee2f7f57163cf1ec9849b6853bfb4e6fecb8aaa2c092172732e74cf9b831b53
+brand/logo/placeholder-mark.svg 7e13e222ac9ed0ac2d111c68fe9d3b356d1f23ea076cb32a224419a6aa00c957
+packaging/assets/app-icon.icns 1472cf9438f1a8ea0c082e5cbe462e56b8c7f43728224052671fb71c8cea0266
+packaging/assets/brand-icons/app-squircle-1024.png bc9e4dfe4a9e62b23d97a7a4063da46010c29cfc0e71804442256b8b7fa2ae57
+packaging/assets/brand-icons/mark-colored-16.png 204d0c46f211c3f9a06861fc5ebd790362db84ff8fe13c53494978ca0a7df4c4
+packaging/assets/brand-icons/mark-colored-20.png 4b7a6affa7d3bf8510a57f3e33dc0345e27ad61ba818303b5524e0b22416fd98
+packaging/assets/brand-icons/mark-colored-24.png 2a516e345dfbaa79bcfa751f705304da8da85037610fdde48c751da6ecda3444
+packaging/assets/brand-icons/mark-colored-32.png f0b74367bf7b2dead779765fb5c9d84a14832cadd07e37315269bc1318a81f23
+packaging/assets/brand-icons/mark-template-16.png 8e835e5bcd3e4e22b38c9e4d938199e59600706a2f1a63d85cac4d0812e2041f
+packaging/assets/brand-icons/mark-template-32.png f63b16d9379b1fc741880d67b25c41101ca0918587f2d9a5982b346e71087160

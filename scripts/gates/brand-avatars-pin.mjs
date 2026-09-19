@@ -1,6 +1,6 @@
 /**
- * 门禁校验项：brand/avatars 入仓资产与 vendor/worldpilot.pin 逐档 sha256 比对
- * （工单 004，S3 头像管线 R8：入仓后与素材源分叉即构建期拦截）。
+ * 门禁校验项：WorldPilot 供体进入本仓的受管品牌资产与 vendor/worldpilot.pin 逐项 sha256 比对
+ * （工单 004 起含头像，工单 005 起含占位 mark 与 app/runtime 图标；入仓后分叉即构建期拦截）。
  *
  * pin 是字节事实之家：上游出处（upstream-*）与逐档 sha256 都在 pin 里，本判据
  * 只做「盘上字节 == pin 声明」的重算，不访问网络。同步形态（runGateChecks

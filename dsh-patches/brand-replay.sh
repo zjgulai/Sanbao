@@ -204,22 +204,23 @@ if [ -f "$PLIST" ]; then
   fi
 fi
 
-# ── 4. app 图标（icon.icns；ROOT 品牌资产为唯一真相源）───────────
-# 真相源：.dsh-root-brand-preview/root-icon/icon.icns（与 packaging/assets/app-icon.icns 同源，2026-09-11 统一）。
-# 优先取脚本同目录随包分发的 app-icon.icns（payload/tools/），动态计算期望 hash；
-# 无随包资产时回退常量（仅 check 用途）。--apply 需随包资产，本脚本不带 icns。
-ICON_ASSET="$(dirname "$0")/app-icon.icns"
+# ── 4. app 图标（icon.icns；Sanbao 受管 squircle 为唯一真相源）───────────
+# 真相源：brand/logo/placeholder-mark.svg → packaging/scripts/build-app-icon.sh →
+# packaging/assets/app-icon.icns。占位标不含 W/P 语义，正式图形标由后置 T1 替换输入。
+# 优先取 BRAND_ICON_ASSET；随包运行时缺省为脚本同目录的 app-icon.icns（payload/tools/），动态计算期望 hash；
+# 无资产时回退常量（仅 check 用途），--apply 必须有资产。
+ICON_ASSET="${BRAND_ICON_ASSET:-$(dirname "$0")/app-icon.icns}"
 BRAND_ICON_SHA="${BRAND_ICON_SHA:-}"
 if [ -f "$ICON_ASSET" ]; then
   BRAND_ICON_SHA="$(shasum "$ICON_ASSET" | awk '{print $1}')"
 elif [ -z "$BRAND_ICON_SHA" ]; then
-  BRAND_ICON_SHA="290286804849af5386b751c9d28b7bd24972f0f8"  # root-icon/icon.icns sha1（真相源）
+  BRAND_ICON_SHA="7679eaf58b6a45ebfb5bb34b7383f916149778f5"  # build-app-icon.sh 受管产物 sha1
 fi
 ICON="$DSH_APP/Contents/Resources/icon.icns"
 if [ -f "$ICON" ]; then
   cur=$(shasum "$ICON" | awk '{print $1}')
   if [ "$cur" = "$BRAND_ICON_SHA" ]; then
-    say "OK   icon.icns ROOT 品牌图标"
+    say "OK   icon.icns Sanbao squircle"
   elif [ "$MODE" = "--apply" ] && [ -f "$ICON_ASSET" ]; then
     cp "$ICON_ASSET" "$ICON"
     say "APPLY icon.icns ← $(basename "$ICON_ASSET")"
@@ -227,7 +228,7 @@ if [ -f "$ICON" ]; then
     say "APPLY icon.icns 失败：随包缺少 app-icon.icns（本脚本不带 icns 资产）"
     fail=1
   else
-    say "DRIFT icon.icns（hash ${cur}）— 与 ROOT 品牌资产不符"
+    say "DRIFT icon.icns（hash ${cur}）— 与 Sanbao 受管 squircle 不符"
     fail=1
   fi
 fi
@@ -244,8 +245,7 @@ fi
 #   症状极具欺骗性：**Finder 里是 ROOT、Dock 里是 DSH 原生**，而本脚本报 ALL VERIFIED
 #   —— 因为「品牌检查」只看了一个家，而图标有两个家（P-07）。
 # 资产：$(dirname "$0")/brand-icons/（随包分发）。入库副本 packaging/assets/brand-icons/，
-#   与第 4 块的 app-icon.icns 同一模式：真相源在 .dsh-root-brand-preview/root-icon/（不进仓库），
-#   仓库里放的是它的可分发副本。
+#   由 brand/logo/placeholder-mark.svg 经 packaging/scripts/build-app-icon.sh 可复现生成。
 # 右侧第三列是**两边必须相同的像素尺寸**：`--apply` 落笔前会真的量一遍并拒绝尺寸不符的资产
 #   （尺寸不符意味着基座换了图标规格，静默覆盖会把 Dock 图标换成一张模糊图）。
 BUILD_DIR="$CHK/build"
@@ -264,14 +264,14 @@ if [ -z "${BRAND_ICONS_DIR:-}" ]; then
 fi
 # 目标（app 侧 build/）:资产（brand-icons/ 内）:尺寸
 ICON_PAIRS=(
-  "app-icon-mac.png:icon-1024.png:1024x1024"
-  "app-icon.png:icon-1024.png:1024x1024"
-  "tray-icon-blue.png:tray-colored-16.png:16x16"
-  "tray-icon-blue@1.25x.png:tray-colored-20.png:20x20"
-  "tray-icon-blue@1.5x.png:tray-colored-24.png:24x24"
-  "tray-icon-blue@2x.png:tray-colored-32.png:32x32"
-  "tray-iconTemplate.png:tray-template-16.png:16x16"
-  "tray-iconTemplate@2x.png:tray-template-32.png:32x32"
+  "app-icon-mac.png:app-squircle-1024.png:1024x1024"
+  "app-icon.png:app-squircle-1024.png:1024x1024"
+  "tray-icon-blue.png:mark-colored-16.png:16x16"
+  "tray-icon-blue@1.25x.png:mark-colored-20.png:20x20"
+  "tray-icon-blue@1.5x.png:mark-colored-24.png:24x24"
+  "tray-icon-blue@2x.png:mark-colored-32.png:32x32"
+  "tray-iconTemplate.png:mark-template-16.png:16x16"
+  "tray-iconTemplate@2x.png:mark-template-32.png:32x32"
 )
 if [ -d "$BUILD_DIR" ]; then
   if [ ! -d "$BRAND_ICONS_DIR" ]; then
@@ -291,7 +291,7 @@ if [ -d "$BUILD_DIR" ]; then
       cur=$(shasum "$tf" | awk '{print $1}')
       want=$(shasum "$af" | awk '{print $1}')
       if [ "$cur" = "$want" ]; then
-        say "OK   build/${tgt} ROOT 品牌图标（${dim}）"
+        say "OK   build/${tgt} Sanbao 受管图标（${dim}）"
       elif [ "$MODE" = "--apply" ]; then
         tdim="$(sips -g pixelWidth -g pixelHeight "$tf" 2>/dev/null | awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{print w"x"h}')"
         if [ "$tdim" != "$dim" ]; then

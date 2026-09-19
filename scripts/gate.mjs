@@ -1320,15 +1320,24 @@ const CHECKS = [
   {
     name: 'brand-icons-selftest',
     remediation:
-      '跑 node --test scripts/gates/brand-icons.test.mjs 看红在哪条：本项必须能说「不」——资产实际像素与声明不符必须判红（M1 恒真桩突变钉住这一条：只比「声明 vs 声明」的实现会放过它，因为那不是从磁盘字节读出来的）、少一个/多一个资产都判红、目标名重复判红、表解析不出任何一行判红、已装 app 缺目标名判红、非 PNG 读不出尺寸判红，而目标侧不在射程时必须报 skip 且静态半照常说话（ADR-0081 / P-02 / P-07）',
+      '跑 node --test scripts/gates/brand-icons.test.mjs scripts/gates/app-icon-build.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '资产实际像素与声明不符、无 alpha、四角不透明的硬边方块都必须判红（M1 恒真桩钉住真实磁盘字节）；'
+      + '少一个/多一个资产、目标名重复、空表、已装 app 缺目标名、非 PNG 都判红；'
+      + '生成器必须可复现、废弃 LUTE_ICON_ENGINE 不得复活、入仓输出与 pin/icns 回退必须同值（ADR-0081 / ADR-0133 / P-02 / P-07）',
     run() {
-      return runNodeTestFile('scripts/gates/brand-icons.test.mjs', '运行时图标资产判据的反向自测失败')
+      return runNodeTestFiles(
+        ['scripts/gates/brand-icons.test.mjs', 'scripts/gates/app-icon-build.test.mjs'],
+        '运行时图标资产与 squircle 生成器的反向自测失败',
+      )
     },
   },
   {
     name: 'brand-replay-selftest',
     remediation:
-      '跑 bash packaging/scripts/brand-replay-test.sh 看红在哪条：第 5 块是**写**路径（把 Dock / 托盘图标从官方原样换成品牌态），静态判据只能守表与资产一致，「落笔写了什么字节」只有真跑一次才知道——R1 报出 8 处 DRIFT、R2 落笔 8 处、**R3 逐字节等于资产（sha256）**、R4 重跑幂等全 OK、R5 目标尺寸与声明不符时**拒绝落笔**（那意味着基座换了图标规格）、R6 资产目录为空时判 MISSING（读不到 ≠ 合格），M1 恒真桩突变证明 R3 比的是真资产。夹具是**不完整**的假 app，故只断言 build/ 那几行、不断言收尾判决行与退出码（原因见脚本头部，ADR-0081）',
+      '跑 bash packaging/scripts/brand-replay-test.sh 看红在哪条：第 4/5 块是**写**路径（icon.icns + Dock / 托盘图标），'
+      + '静态判据只能守表与资产一致，「落笔写了什么字节」只有真跑一次才知道——R1 报出 icns + 8 处 DRIFT、'
+      + 'R2 落笔并逐字节等于资产、R4 重跑幂等全 OK、R5 目标尺寸与声明不符时拒绝落笔、'
+      + 'R6 资产目录为空时判 MISSING，M1 恒真桩证明比较的是真资产（ADR-0081）',
     run() {
       const script = join(repoRoot, 'packaging', 'scripts', 'brand-replay-test.sh')
       const result = runScript(repoRoot, `bash "${script}"`, 120000)
@@ -1937,8 +1946,9 @@ const CHECKS = [
     // 工单 004（S3 头像管线 R8）：入仓头像资产与 vendor/worldpilot.pin 逐档 sha256，
     // 篡改任一字节即构建期拦截——上游重画不得静默改变本仓出货面。
     remediation:
-      '资产被手改或重采未 bump pin：从 pin 的 upstream-* 出处重采（gh api contents raw），'
-      + '重算 sha256 逐档回填 vendor/worldpilot.pin 并人工审查 diff；禁止为了让门禁变绿而回填哈希（P-01）',
+      '资产被手改、上游重采或派生物未重建：头像按 pin 的 upstream-* 出处重采；'
+      + '占位 mark / app/runtime 图标跑 bash packaging/scripts/build-app-icon.sh packaging/assets/app-icon.icns 重建；'
+      + '随后重算 sha256 回填 vendor/worldpilot.pin 并人工审查 diff，禁止只为让门禁变绿而回填哈希（P-01）',
     run() {
       return checkBrandAvatarsPin({ repoRoot })
     },

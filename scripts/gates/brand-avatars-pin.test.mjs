@@ -62,7 +62,7 @@ test('资产缺失 → 红，不得静默跳过', () => {
 
 test('pin 的 sha256 段为空 → 红（恒绿判据不予合入）', () => {
   const { root, pin } = makeFixture()
-  const emptied = pin.split('\n').filter((line) => !/^brand\//.test(line)).join('\n')
+  const emptied = pin.replace(/sha256:\n[\s\S]*$/, 'sha256:\n')
   const result = checkBrandAvatarsPin({ repoRoot: root, pinText: emptied })
   assert.equal(result.passed, false)
   assert.ok(result.violations.join('\n').includes('sha256'))

@@ -1,5 +1,5 @@
 #!/bin/bash
-# refresh-app-brand.sh —— 把 ROOT 品牌补落到**已安装**的 app 上，并重签。
+# refresh-app-brand.sh —— 把 Sanbao 受管品牌资产补落到**已安装**的 app 上，并重签。
 #
 # ## 为什么需要它（2026-09-13 实测）
 #
@@ -34,6 +34,7 @@ set -u
 
 REPO="${DSH_VENDOR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 DSH_APP="${DSH_APP:-/Applications/DSH Desktop.app}"
+BRAND_ICON_ASSET="$REPO/packaging/assets/app-icon.icns"
 ICONS="${BRAND_ICONS_DIR:-$REPO/packaging/assets/brand-icons}"
 REPLAY="$REPO/dsh-patches/brand-replay.sh"
 SIGN_IDENTITY="${LUTE_SIGN_IDENTITY:-LUTE Code Signing}"
@@ -84,9 +85,29 @@ if [ "$MODE" = "--apply" ]; then
   esac
 fi
 
-# ── 2. 品牌核对/落笔 ────────────────────────────────────────────────────────
+# ── 2. 写入前置：签名身份可用 + 备份当前字节 ────────────────────────────────
+if [ "$MODE" = "--apply" ]; then
+  if ! security find-identity -v -p codesigning 2>/dev/null | grep -qF "\"$SIGN_IDENTITY\""; then
+    echo "[brand] 失败：签名身份不可用：$SIGN_IDENTITY" >&2
+    echo "[brand] 建立它：packaging/scripts/ensure-signing-identity.sh —— 这里**不**回退 adhoc，" >&2
+    echo "[brand] 回退等于把 TCC 授权绑回字节哈希（ADR-0063 要消除的那个缺陷）。" >&2
+    exit 1
+  fi
+  STAMP="$(date +%Y%m%d-%H%M%S)"
+  BACKUP="$HOME/Library/Application Support/LUTE/brand-backup/$STAMP"
+  mkdir -p "$BACKUP/runtime-icons" || exit 1
+  BUILD_DIR="$DSH_APP/Contents/Resources/app/build"
+  [ -d "$BUILD_DIR" ] || BUILD_DIR="$DSH_APP/Contents/Resources/app.asar.unpacked/build"
+  for f in "$BUILD_DIR"/app-icon*.png "$BUILD_DIR"/tray-icon*.png; do
+    if [ -f "$f" ]; then cp "$f" "$BACKUP/runtime-icons/" || exit 1; fi
+  done
+  cp "$DSH_APP/Contents/Resources/icon.icns" "$BACKUP/icon.icns" || exit 1
+  say "已备份原字节 → $BACKUP"
+fi
+
+# ── 3. 品牌核对/落笔 ────────────────────────────────────────────────────────
 say "品牌重放（资产：${ICONS}，模式 ${MODE}）"
-BRAND_ICONS_DIR="$ICONS" DSH_APP="$DSH_APP" bash "$REPLAY" "$MODE" || {
+BRAND_ICON_ASSET="$BRAND_ICON_ASSET" BRAND_ICONS_DIR="$ICONS" DSH_APP="$DSH_APP" bash "$REPLAY" "$MODE" || {
   [ "$MODE" = "--check" ] && exit 1
   echo "[brand] 失败：品牌重放未通过（见上），**未做任何签名动作**" >&2
   exit 1
@@ -97,24 +118,7 @@ if [ "$MODE" = "--check" ]; then
   exit 0
 fi
 
-# ── 3. 备份被替换的字节（可回滚；也供事后取证）───────────────────────────────
-STAMP="$(date +%Y%m%d-%H%M%S)"
-BACKUP="$HOME/Library/Application Support/LUTE/brand-backup/$STAMP"
-mkdir -p "$BACKUP/runtime-icons"
-for f in "$DSH_APP/Contents/Resources/app.asar.unpacked/build"/app-icon*.png \
-         "$DSH_APP/Contents/Resources/app.asar.unpacked/build"/tray-icon*.png; do
-  [ -f "$f" ] && cp "$f" "$BACKUP/runtime-icons/" 2>/dev/null || true
-done
-cp "$DSH_APP/Contents/Resources/icon.icns" "$BACKUP/icon.icns" 2>/dev/null || true
-say "已备份原字节 → $BACKUP"
-
 # ── 4. 重签（同一身份；指定要求与字节无关，故 TCC 授权延续）──────────────────
-if ! security find-identity -v -p codesigning 2>/dev/null | grep -qF "\"$SIGN_IDENTITY\""; then
-  echo "[brand] 失败：签名身份不可用：$SIGN_IDENTITY" >&2
-  echo "[brand] 建立它：packaging/scripts/ensure-signing-identity.sh —— 这里**不**回退 adhoc，" >&2
-  echo "[brand] 回退等于把 TCC 授权绑回字节哈希（ADR-0063 要消除的那个缺陷）。" >&2
-  exit 1
-fi
 say "重签（身份：${SIGN_IDENTITY}）"
 codesign --force --deep --sign "$SIGN_IDENTITY" "$DSH_APP" || {
   echo "[brand] 失败：codesign 返回非零" >&2
@@ -135,6 +139,6 @@ touch "$DSH_APP"
 killall Dock 2>/dev/null || true
 say "已刷新 Dock / LaunchServices 图标缓存"
 
-say "完成。重开 DSH Desktop 即可看到 ROOT 图标（Dock 与托盘）。"
+say "完成。重开 DSH Desktop 即可看到 Sanbao 占位 squircle（Dock 与托盘）。"
 say "复核 TCC 是否仍有效：bash packaging/scripts/tcc-grant-status.sh"
 exit 0

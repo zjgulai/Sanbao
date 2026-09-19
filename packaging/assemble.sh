@@ -185,12 +185,12 @@ else
   echo "[assemble] ✗ 未找到 app node_modules（$NM_FORM 布局，NM 补丁中止）"; exit 1
 fi
 
-# 暂存改写：品牌 app 图标（lute-brand-icons 生成引擎产出，替换官方 icon.icns）
+# 暂存改写：Sanbao 受管 squircle 图标（build-app-icon.sh 可复现生成，替换官方 icon.icns）
 if [ -f "$PKG_ROOT/assets/app-icon.icns" ]; then
   cp "$PKG_ROOT/assets/app-icon.icns" "$APP_STAGE/DSH Desktop.app/Contents/Resources/icon.icns"
-  say "app 图标已替换为 LUTE 品牌徽章（icon.icns）"
+  say "app 图标已替换为 Sanbao 占位 squircle（icon.icns）"
 else
-  echo "[assemble] 警告：缺少 assets/app-icon.icns（图标保持官方原样）"
+  echo "[assemble] ✗ 缺少必备资产 assets/app-icon.icns（不能出货官方原样图标）"; exit 1
 fi
 
 # 暂存改写：品牌重放（Info.plist CFBundleName/DisplayName + Helper 重命名 + web index.html 标题）
@@ -516,14 +516,22 @@ cp "$DSH_VENDOR/dsh-patches/brand-payload-wordmark.txt" "$PAYLOAD/tools/" 2>/dev
 mkdir -p "$PAYLOAD/tools/runtime-guards"
 cp "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" "$PAYLOAD/tools/runtime-guards/" 2>/dev/null || true
 # patches-manifest*.md 不随包（内部登记簿；决策 K10 = 剔除内部取证文档）
-# ROOT 品牌图标随包分发（brand-replay --apply 自愈用；真相源 packaging/assets/app-icon.icns）
-cp "$PKG_ROOT/assets/app-icon.icns" "$PAYLOAD/tools/app-icon.icns" 2>/dev/null || true
-# ROOT 运行时图标随包分发（Dock / 托盘）：dsh-plugin-desktop 启动时用 app.dock.setIcon()
+# Sanbao 受管 squircle 随包分发（brand-replay --apply 自愈用；真相源 packaging/assets/app-icon.icns）
+cp "$PKG_ROOT/assets/app-icon.icns" "$PAYLOAD/tools/app-icon.icns"
+# Sanbao 运行时图标随包分发（Dock / 托盘）：dsh-plugin-desktop 启动时用 app.dock.setIcon()
 # 覆盖 Finder 图标，取的是主资源根 build/app-icon-mac.png（2026-09-17 起：no-ASAR 布局
 # Resources/app/build/，旧 2.0.5 是 app.asar.unpacked/build/）——那一套必须一起品牌化，
-# 否则「Finder 里是 ROOT、Dock 里是 DSH 原生」（2026-09-13 实测，见 brand-replay.sh 第 5 块）。
+# 否则「Finder 里是 Sanbao、Dock 里仍是 DSH 原生」（2026-09-13 实测，见 brand-replay.sh 第 5 块）。
 mkdir -p "$PAYLOAD/tools/brand-icons"
-cp "$PKG_ROOT/assets/brand-icons/"*.png "$PAYLOAD/tools/brand-icons/" 2>/dev/null || true
+icon_assets=()
+while IFS= read -r asset; do
+  [ -n "$asset" ] && icon_assets+=("$PKG_ROOT/assets/brand-icons/$asset")
+done < <(sed -n '/^ICON_PAIRS=(/,/^)/ s/^[[:space:]]*"[^:]*:\([^:]*\):[^"]*"$/\1/p' "$DSH_VENDOR/dsh-patches/brand-replay.sh")
+[ "${#icon_assets[@]}" -gt 0 ] || { echo "[assemble] ✗ brand-replay.sh 的 ICON_PAIRS 为空"; exit 1; }
+for asset in "${icon_assets[@]}"; do
+  [ -f "$asset" ] || { echo "[assemble] ✗ 缺少 ICON_PAIRS 必备资产 ${asset#$PKG_ROOT/}"; exit 1; }
+done
+cp "${icon_assets[@]}" "$PAYLOAD/tools/brand-icons/"
 chmod 755 "$PAYLOAD/tools/"*.sh "$PAYLOAD/tools/"*.mjs 2>/dev/null || true
 
 # LUTE Setup.app（GUI 安装器，swiftc 编译；随 payload 根分发）
