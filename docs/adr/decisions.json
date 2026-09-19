@@ -1499,7 +1499,7 @@
       "decisions": [
         {
           "id": "D1",
-          "text": "单品牌收口：出货产品即 WorldPilot，路特创新 / AgenticOS / ROOT / LUTE Agentic System 作为对外表达全部退役，不保留底座名与皮名并存的中间态。",
+          "text": "单品牌收口：出货产品即 WorldPilot，路特创新 / AgenticOS / ROOT / LUTE Agentic System 作为对外表达全部退役，不保留底座名与皮名并存的中间态。〔已被 ADR-0136 D1 取代：收口结构不变，但产品名定为 Sanbao / 三宝，WorldPilot 降为视觉语言供体〕",
           "constraints": [
             "任何出货可见面上不得再出现退役的对外品牌名",
             "退役名可以留在内部面（包名、目录、代码符号、治理字段）",
@@ -1517,10 +1517,10 @@
         },
         {
           "id": "D3",
-          "text": "换皮射程为 16 处出货可见面，含代码签名身份；射程表 .scratch/worldpilot-reskin/surface-map.md 是唯一权威清单。",
+          "text": "换皮射程为 20 处出货可见面，含代码签名身份；射程表 .scratch/sanbao-reskin/surface-map.md 是唯一权威清单。〔初判 16 已按逐落点枚举改判为 20；正文与账本必须同值，此前本块落后于正文，属 P-02〕",
           "constraints": [
             "射程表每条必须写现状值与目标值，不得只写类别名",
-            "签名身份改为 WorldPilot Code Signing，且 ensure-signing-identity.sh 必须能生成该身份",
+            "签名身份改为品牌名源所定的 Code Signing（初为 WorldPilot Code Signing，现按 ADR-0136 为 Sanbao Code Signing），且 ensure-signing-identity.sh 必须能生成该身份",
             "射程表新增一处就要在同一次提交里给出它的拦它的判据，否则等于没纳入射程"
           ]
         },
@@ -1546,7 +1546,7 @@
     },
     {
       "id": "ADR-0132",
-      "title": "ADR-0132 · 色彩与排印契约：钛银单主色、1 套品牌 × 明暗双色道、材质解禁、`--wp-*` 为源并纳入门禁",
+      "title": "ADR-0132 · 色彩与排印契约：钛银单主色、1 套品牌 × 明暗双色道、材质解禁、`--sanbao-*` 为源并纳入门禁",
       "status": "accepted（2026-09-19）",
       "date": "",
       "decisions": [
@@ -1570,7 +1570,7 @@
         },
         {
           "id": "D3",
-          "text": "把「不用渐变或装饰性辉光」这条混装断言拆成两条：材质渐变合法化，带色相的 box-shadow 辉光继续禁止；测试名改判为遵循 WorldPilot 材质契约。",
+          "text": "把「不用渐变或装饰性辉光」这条混装断言拆成两条：材质渐变合法化，带色相的 box-shadow 辉光继续禁止；测试名改判为遵循 Sanbao 材质契约。",
           "constraints": [
             "解禁范围只覆盖材质语义的渐变（metal-fill/metal-line），不得放开任意渐变",
             "彩色辉光禁令保留，且必须能举出现状那个绿光晕作为反例",
@@ -1579,11 +1579,11 @@
         },
         {
           "id": "D4",
-          "text": "双轨 token：--wp-* 为源、官方别名 --dsw-alias-* 与 --dsw-static-deepseek-* 为派生；theme-tokens 门禁的 NAMESPACE 扩为含 wp，并在同一次提交建立 --wp-* 的定义之家。",
+          "text": "双轨 token：--sanbao-* 为源、官方别名 --dsw-alias-* 与 --dsw-static-deepseek-* 为派生；theme-tokens 门禁的 NAMESPACE 扩为含 wp，并在同一次提交建立 --sanbao-* 的定义之家。",
           "constraints": [
-            "同一条值不得在 --wp-* 与别名两处都写字面值——只能一处为源、另一处引用",
+            "同一条值不得在 --sanbao-* 与别名两处都写字面值——只能一处为源、另一处引用",
             "扩 NAMESPACE 与建定义之家必须同一次提交，否则全仓判红",
-            "--wp-* 的定义之家必须唯一，不得沿用 --lute-* 装钛银（名字撒谎）"
+            "--sanbao-* 的定义之家必须唯一，不得沿用 --lute-* 装钛银（名字撒谎）"
           ]
         },
         {
@@ -1731,7 +1731,7 @@
       "decisions": [
         {
           "id": "D1",
-          "text": "建单一品牌源：--wp-* token 定义文件是唯一源，生成物走 shared-sync 派生，测试与校验器改为 import 源做断言；只有源、生成物、补丁锚三类可以合法持有值。",
+          "text": "建单一品牌源：--sanbao-* token 定义文件是唯一源，生成物走 shared-sync 派生，测试与校验器改为 import 源做断言；只有源、生成物、补丁锚三类可以合法持有值。",
           "constraints": [
             "同一条品牌值不得在两个源定义家里各自写字面值（P-07）",
             "生成物必须带 generated-marker，且由 shared-sync 门禁判同步",
@@ -1861,6 +1861,48 @@
             "不得以「简化启动屏」为由删除或冻结动画",
             "断言必须读解析后的真实值，不得复述字面量（ADR-0135 D1）",
             "品牌样式表的运动抑制必须保持作用域限定，不得扩为全局"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0137",
+      "title": "ADR-0137 · 品牌 token 命名空间改判为 `--sanbao-*`；并记录一次「pivot 后未审计已落盘文档」的自伤",
+      "status": "accepted（2026-09-19）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "品牌 token 命名空间定为 --sanbao-* 全拼，取代 --wp-*；theme-tokens 门禁的 NAMESPACE 相应扩为含 sanbao。",
+          "constraints": [
+            "命名空间缩写不得指向已被降级的品牌名（--wp-* 的 wp 即 WorldPilot，与 ADR-0136 D1 冲突）",
+            "不得用 --brand-*：与官方 --dsw-alias-brand-primary 的 brand 字面重叠，grep 易混",
+            "命名空间必须与品牌名源的拉丁形态一致"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "材质测试的新名定为「遵循 Sanbao 材质契约」，不写供体名。",
+          "constraints": [
+            "断言的前提（所遵循的基线名）必须与实际生效的品牌一致——这正是当初判 brand-css.test.ts 旧名作废的理由，不得反过来再犯一次"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "被取代的 ADR 不静默改写历史决定文本，改为在机读块与索引行追加〔已被 ADR-NNNN 取代：…〕前向标注。",
+          "constraints": [
+            "只改正文头部的 supersession 指针不够——账本是 agent 开工前必读面，它读不到那一行",
+            "也不得直接改写历史决定原文，那会让「当时怎么定的」永久失传",
+            "标注必须写清取代了什么、当前生效的是什么"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "改一条品牌事实必须同一次提交扫全部四个传染面：ADR 正文、## 机器可读决策 块、docs/adr/README.md 索引行、派生的 decisions.json，外加文档间路径引用；且不得以 adr-agent-records 绿作为一致性的证据。",
+          "constraints": [
+            "adr-agent-records 只保证「账本 == 源」，源内部自相矛盾时它照样绿（本轮实测复现）",
+            "改数字或名字时必须 grep 该值在机读块与索引行的出现并一起改",
+            "重命名被引用的目录/文件时，grep 其路径字符串并同一次提交更新全部引用"
           ]
         }
       ]

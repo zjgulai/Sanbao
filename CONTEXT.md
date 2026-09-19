@@ -25,7 +25,7 @@
 
 | 术语 | 定义 |
 | --- | --- |
-| **出货可见面** | 客户在安装后可感知的品牌位。全集共 **16 处**，其清单是唯一权威射程表（`.scratch/worldpilot-reskin/surface-map.md`）。 |
+| **出货可见面** | 客户在安装后可感知的品牌位。全集共 **16 处**，其清单是唯一权威射程表（`.scratch/sanbao-reskin/surface-map.md`）。 |
 | **内部面** | 不随皮走：npm 包名、目录名、`luteOrigin`/`luteOwner`/`lutePublish`、bundle 目录名与可执行文件名、`appId`。 |
 | **不可动锚** | 改了就断链的技术事实：`/Applications/DSH Desktop.app` 路径、`ai.deepseek.dsh.desktop`、`file:` 硬链接 inode、CSS-module 哈希。 |
 | **品牌泄漏** | 出货可见面上残留的基座原名（如「请重启 DeepSeek Harness」）。换皮必须清零，且由门禁拦新增。 |

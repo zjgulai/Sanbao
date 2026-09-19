@@ -70,13 +70,13 @@ S6  收口（复述清零 + 判据 + 总账）← 必须在最后；S6 之前不
 
 ## S1 · 品牌源与 token 地基
 
-**目标**：`--wp-*` 成为唯一源，全平台跟皮，`#58B848` 的 10 个源定义家里除派生面外全部消失。
+**目标**：`--sanbao-*` 成为唯一源，全平台跟皮，`#58B848` 的 10 个源定义家里除派生面外全部消失。
 
 | 步 | 动作 | 落点 |
 | --- | --- | --- |
-| 1.1 | 新建 `--wp-*` 定义文件，逐字抄素材源仓契约：暗 `bg #0b1521`（**注意是 191 行的后覆写值，不是 64 行的 `#0c1e30`**）、`surface #142332`、`surface2 #1b3042`、`ink #eef4fa`、`muted #b0c1d1`、`line #2b4256`、`good #8adac4`、`accent #c4d0dc`、`on-accent #122337`、`radius 8px`；亮 `bg #ffffff`、`surface #f6f8fc`、`surface2 #edf2f8`、`ink #16283c`、`muted #526578`、`line #dce5ee`、`good #176c57`、`accent #3d566e`、`on-accent #ffffff`；材质 `--wp-metal-*` 七项双色道；动效 `--wp-fast 160ms`/`base 260ms`/`slow 520ms`/`ease cubic-bezier(.22,1,.36,1)` | 新文件；`shared/client/lute-tokens.ts` 的内容迁入并保留 generated 副本机制 |
+| 1.1 | 新建 `--sanbao-*` 定义文件，逐字抄素材源仓契约：暗 `bg #0b1521`（**注意是 191 行的后覆写值，不是 64 行的 `#0c1e30`**）、`surface #142332`、`surface2 #1b3042`、`ink #eef4fa`、`muted #b0c1d1`、`line #2b4256`、`good #8adac4`、`accent #c4d0dc`、`on-accent #122337`、`radius 8px`；亮 `bg #ffffff`、`surface #f6f8fc`、`surface2 #edf2f8`、`ink #16283c`、`muted #526578`、`line #dce5ee`、`good #176c57`、`accent #3d566e`、`on-accent #ffffff`；材质 `--sanbao-metal-*` 七项双色道；动效 `--sanbao-fast 160ms`/`base 260ms`/`slow 520ms`/`ease cubic-bezier(.22,1,.36,1)` | 新文件；`shared/client/lute-tokens.ts` 的内容迁入并保留 generated 副本机制 |
 | 1.2 | `theme-tokens.mjs:57` 的 `NAMESPACE` 扩为 `--(?:dsw\|ds\|dsh\|wp)-`，**与 1.1 同一次提交** | `scripts/gates/theme-tokens.mjs` |
-| 1.3 | `theme-tokens.ts` 的别名覆写改指 `--wp-accent`：`:237` `--dsw-alias-brand-primary`、`:259-260` `--dsw-alias-state-business-*`、`:301-305` `--dsw-static-deepseek-{500,450,200}` scale | `packages/platform/dsh-theme-local/src/client/theme-tokens.ts` |
+| 1.3 | `theme-tokens.ts` 的别名覆写改指 `--sanbao-accent`：`:237` `--dsw-alias-brand-primary`、`:259-260` `--dsw-alias-state-business-*`、`:301-305` `--dsw-static-deepseek-{500,450,200}` scale | `packages/platform/dsh-theme-local/src/client/theme-tokens.ts` |
 | 1.4 | `DEFAULT_THEME_STUDIO_SETTINGS` 12 个值换成素材源仓中性阶；`uiFont` 默认 `system` → `inter` | `src/theme-settings.ts:102-122` |
 | 1.5 | 删 `LEGACY_EDITORIAL_SIGNATURE` 的**按十六进制字面量做解码期分支**路径，或改判为按显式签名标记 | `src/theme-settings.ts:126-131,193` |
 | 1.6 | 预设墙收敛为 2 条（WorldPilot Dark / Light）；`codex`/`graphite`/`midnight` 移出预设墙但保留可解析；`accent-swatches.ts` 8 组降为 1 组 | `src/client/presets.ts`、`src/client/accent-swatches.ts` |
@@ -123,7 +123,7 @@ Finder/Dock/菜单栏/启动屏四处真机截图；`.icns` 与 `icon-1024.png` 
 | 3.5 | 自研渲染点改吃资产路径 + 主题/尺寸自适应：`RoleMatrixPanel.tsx:467-468`、`collect.ts:237-247,274,304`、能力中枢、详情面板 | 各包 |
 | 3.6 | `role-matrix.module.css:519-530` 的 `object-fit: contain` 改 `cover` + `border-radius: 50%`（素材源仓 README:27 的用法） | 该文件 |
 | 3.7 | 重跑 50 岗生成，逐字节确认**内容零扰动**（只 icon 字段变，`name`/`description`/order 不变） | 生成物 |
-| 3.8 | 官方卡光晕（S11）随 `--wp-metal-*` 改，重切 `client.js.patch:7-8` 与 `verify-patches-v2.sh:105` 锚 | 两处 |
+| 3.8 | 官方卡光晕（S11）随 `--sanbao-metal-*` 改，重切 `client.js.patch:7-8` 与 `verify-patches-v2.sh:105` 锚 | 两处 |
 
 **验收读数**：`verify-lossless` 全 53 层绿且 L10 报「50/50 互异 + MIME 匹配」；
 `live-presets` **不需要重采样**（icon 不在其哈希内）——若它红了说明改错了东西；
@@ -175,7 +175,7 @@ Finder/Dock/菜单栏/启动屏四处真机截图；`.icns` 与 `icon-1024.png` 
 | 6.4 | 视觉基线从 `.dsh-root-brand-preview/visual-baseline/` 搬进受管目录，基线可从仓库重建 |
 | 6.5 | 20 位逐位对照表：每格一张真机截图，行数必须等于 20，少一行即未验收 |
 | 6.6 | `docs/pitfalls-playbook.md` 按根因各加一条：主色 10 家、出货图标形状盲区、从未品牌化面（favicon/PWA）、插件包文案不在 brand-replay 射程 |
-| 6.7 | 按 ADR-0015 补 Note：`docs/notes/implemented/surface/2026-xx-xx-worldpilot-reskin.md`，含 Problem/Decision/Alternatives/Consequences 与真实读数 |
+| 6.7 | 按 ADR-0015 补 Note：`docs/notes/implemented/surface/2026-xx-xx-sanbao-reskin.md`，含 Problem/Decision/Alternatives/Consequences 与真实读数 |
 | 6.8 | 全量 `gate:full` + 真机三件套 + 干净机器安装验收 |
 | 6.9 | **改名可证伪演练**：把名源 `nameLatin` 临时改成一个假名，重跑生成，确认 `git diff` 只落在派生物上、且新名字在 20 处可见面全部生效；然后改回。这一步是 ADR-0136 D2 的唯一真实验收 |
 
