@@ -79,6 +79,24 @@ test('rejects a ranged harness specifier in the seed', () => {
   assert.match(result.violations[0], /dsh-base.*精确版本/u)
 })
 
+test('rejects a ranged harness specifier present only in the shell devDependencies', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({
+      luteOrigin: 'self',
+      luteOwner: 'lute',
+      lutePublish: false,
+      devDependencies: {
+        '@deepseek-ai/dsh-typert': '^0.1.5-rc.2',
+        '@deepseek-ai/cordis': '4.0.2',
+      },
+    }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /壳 devDependencies 里 @deepseek-ai\/dsh-typert.*不是精确版本/u)
+})
+
 test('rejects a version that differs between shell devDeps and seed deps', () => {
   const result = checkLuteShellPin({
     ...good,
@@ -86,6 +104,36 @@ test('rejects a version that differs between shell devDeps and seed deps', () =>
   })
   assert.equal(result.passed, false)
   assert.match(result.violations[0], /dsh-app-boot/)
+})
+
+test('rejects a seed manifest that declares no harness dependency', () => {
+  const renamed = checkLuteShellPin({
+    ...good,
+    seedManifestText: JSON.stringify({ devDependencies: { '@deepseek-ai/dsh-base': '0.1.5-rc.2' } }),
+  })
+  assert.equal(renamed.passed, false)
+  assert.equal(renamed.violations.length, 1)
+  assert.match(renamed.violations[0], /seed 里没有任何 @deepseek-ai\/\* 依赖/u)
+
+  const emptied = checkLuteShellPin({ ...good, seedManifestText: '{}' })
+  assert.equal(emptied.passed, false)
+  assert.equal(emptied.violations.length, 1)
+  assert.match(emptied.violations[0], /seed 里没有任何/u)
+})
+
+test('rejects a shell manifest whose devDependencies hold no harness package', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({
+      luteOrigin: 'self',
+      luteOwner: 'lute',
+      lutePublish: false,
+      devDependencies: { electron: '43.3.0' },
+    }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /devDependencies 里没有任何 @deepseek-ai/u)
 })
 
 test('rejects a missing override for the two unpublished internal packages', () => {
@@ -108,6 +156,17 @@ test('skips the reference comparison when the submodule is not initialized', () 
   const result = checkLuteShellPin({ ...good, referenceWireText: null })
   assert.equal(result.passed, true)
   assert.deepEqual(result.violations, [])
+  assert.match(result.note, /7 项协议常量比对全部未跑/u)
+})
+
+test('notes the per-pair skip count when the reference renamed a constant', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    referenceWireText: referenceWire.replace('DESKTOP_PIPE_CHUNK_BYTES', 'DESKTOP_CHUNK_BYTES'),
+  })
+  assert.equal(result.passed, true)
+  assert.deepEqual(result.violations, [])
+  assert.match(result.note, /1\/7 项协议常量在参照里找不到同名常量/u)
 })
 
 test('fails loud when the shell package is absent', () => {
@@ -124,6 +183,23 @@ test('rejects a shell manifest missing the governance fields', () => {
   assert.equal(result.passed, false)
   assert.equal(result.violations.length, 3)
   assert.match(result.violations[0], /luteOrigin/u)
+})
+
+test('rejects governance fields whose values are not self/lute/false', () => {
+  const result = checkLuteShellPin({
+    ...good,
+    shellManifestText: JSON.stringify({
+      luteOrigin: '',
+      luteOwner: 'someone-else',
+      lutePublish: true,
+      devDependencies: { '@deepseek-ai/cordis': '4.0.2' },
+    }),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 3)
+  assert.match(result.violations[0], /luteOrigin = ""，应为 "self"/u)
+  assert.match(result.violations[1], /luteOwner = "someone-else"，应为 "lute"/u)
+  assert.match(result.violations[2], /lutePublish = true，应为 false/u)
 })
 
 test('rejects a seed user patch that declares a LUTE plugin layer', () => {
