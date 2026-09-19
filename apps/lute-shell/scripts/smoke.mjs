@@ -24,9 +24,20 @@ const check = (label, ok, detail) => {
 }
 
 // profile 不落任何列 layers 的收据文件，package.json 是「空 profile 正常」唯一的就地佐证来源。
-const bundles = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8'))?.dsh?.profile?.bundles
+const manifestPath = join(profileDir, 'package.json')
+if (!existsSync(manifestPath)) {
+  process.stderr.write(`lute shell smoke: no profile manifest at ${manifestPath} — run pnpm run materialize\n`)
+  process.exit(1)
+}
+let bundles
+try {
+  bundles = JSON.parse(readFileSync(manifestPath, 'utf8'))?.dsh?.profile?.bundles
+} catch (error) {
+  process.stderr.write(`lute shell smoke: unreadable profile manifest at ${manifestPath} — ${error instanceof Error ? error.message : String(error)}\n`)
+  process.exit(1)
+}
 check(
-  'profile manifest pins exactly the two upstream bundles — no LUTE plugin layers in the profile this smoke ran against',
+  'profile manifest pins exactly the two upstream bundles',
   Array.isArray(bundles) && bundles.length === 2
     && bundles[0] === '@deepseek-ai/dsh-base' && bundles[1] === '@deepseek-ai/dsh-web-app',
   `bundles=${JSON.stringify(bundles)}`,
@@ -48,6 +59,7 @@ let readyReject
 const readyPromise = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject })
 let exitResolve
 const exited = new Promise((resolve) => { exitResolve = resolve })
+let childExited = false
 
 const failHost = (reason) => {
   readyReject(new Error(String(reason?.message ?? reason)))
@@ -63,6 +75,7 @@ child.on('message', (message) => {
 })
 child.on('error', failHost)
 child.on('exit', (code, signal) => {
+  childExited = true
   failHost(`host exited (code=${String(code)} signal=${String(signal)})`)
   exitResolve({ code, signal })
 })
@@ -121,6 +134,7 @@ const send = (path) => {
   return pending
 }
 
+let phase = 'host became ready'
 try {
   const info = await Promise.race([
     readyPromise,
@@ -131,6 +145,7 @@ try {
   check('host reports ready at protocol v3', info.protocolVersion === 3, `dshVersion=${info.dshVersion}`)
   check('host resolved an installed dsh version', /^\d+\.\d+\.\d+/u.test(info.dshVersion), info.dshVersion)
 
+  phase = 'host survived every request'
   const index = await send('/index.html')
   check(
     'GET /index.html is 200 html',
@@ -168,9 +183,10 @@ try {
     process.stdout.write(`     实际 content-type = ${contentType}\n`)
   }
 } catch (error) {
-  check('host survived every request', false, error instanceof Error ? error.message : String(error))
+  check(phase, false, error instanceof Error ? error.message : String(error))
 }
 
+const exitedBeforeShutdown = childExited
 if (child.connected) child.send({ type: 'shutdown' })
 let killTimer
 const { code: exitCode } = await Promise.race([
@@ -180,7 +196,13 @@ const { code: exitCode } = await Promise.race([
   }),
 ])
 clearTimeout(killTimer)
-check('shutdown IPC exits the host cleanly', exitCode === 0, `code=${String(exitCode)}`)
+check(
+  'shutdown IPC exits the host cleanly',
+  !exitedBeforeShutdown && exitCode === 0,
+  exitedBeforeShutdown
+    ? `host exited (code=${String(exitCode)}) before shutdown IPC — not caused by shutdown`
+    : `code=${String(exitCode)}`,
+)
 
 if (failures.length > 0) {
   process.stderr.write(`lute shell smoke: ${failures.length} failure(s): ${failures.join(', ')}\n${stderr}\n`)
