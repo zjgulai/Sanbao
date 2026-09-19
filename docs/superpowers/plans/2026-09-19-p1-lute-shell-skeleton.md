@@ -270,7 +270,7 @@ apps/lute-shell/lib/
 - [ ] **Step 9: 安装依赖并跑测试**
 
 Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm install`
-Expected: 成功并生成 `pnpm-lock.yaml`；`electron` 的 postinstall 会下载二进制（~100 MB，需网络）。若报 `ERR_PNPM_FETCH_404` 点名 `dsh-type-meta` / `dsh-user-interaction`，说明 Step 4 的 overrides 没生效——核对文件名恰为 `pnpm-workspace.yaml`。
+Expected: 成功并生成 `pnpm-lock.yaml`。**本机 pnpm 用户级配置是 `ignoreScripts: true`，所以 `electron` 的 postinstall 不会跑、install 阶段不下载二进制**（原写法「postinstall 会下载 ~100 MB」在本机为假，且体积也错——实测 `dist/` 是 295 MB）。这不构成阻塞：electron 43.3.0 的 `index.js` 在 **require 时自愈**（`getElectronPath()` 缺 `path.txt`/`dist` 就自己 `spawnSync(install.js)`），`cli.js` 正是 `require('./')`，故首次 `pnpm run dev` 会先静默下载再起 Electron。实测读数：`./node_modules/.bin/electron --version` → `v43.3.0`。**结论：不需要白名单、不需要 `.npmrc`、不需要放宽 `ignoreScripts`**；完整性由包内 `checksums.json`（`@electron/get` 校验）保住。若报 `ERR_PNPM_FETCH_404` 点名 `dsh-type-meta` / `dsh-user-interaction`，说明 Step 4 的 overrides 没生效——核对文件名恰为 `pnpm-workspace.yaml`。
 
 Run: `pnpm exec vitest run test/skeleton.spec.ts`
 Expected: PASS（3 tests）
@@ -2590,6 +2590,8 @@ Expected: PASS（runtime 4 + route 1）
 
 必须逐字保留的行为（协议正确性）：`nextStreamId` 从 1 起且耗尽 `0xffff_ffff` 时抛错；`requestWriteTail` 串行化 + `drain` 背压；`hasBody` 判定为 `method !== 'GET' && method !== 'HEAD' && request.body !== null`；上传按 `SHELL_PIPE_CHUNK_BYTES` 分片；响应 `desiredSize <= 0` 时 `blockedResponses.add` + `responsePipe.pause()`，`pull` 时恢复；`abort` 监听器发 `encodeRequestCancel` 并按 `controller === undefined` 决定 reject 还是 `controller.error`；`stop()` 的三段阶梯（IPC `shutdown` + destroy 请求管道 → 10s → SIGTERM → 5s → SIGKILL → 5s → 抛 `did not exit after SIGKILL`）；`handleResponseFrame` 对未知 streamId 只在 `streamId >= nextStreamId` 时抛错；`fail()` 清 pending 并 `responsePipe.resume()`。
 
+**其中最容易丢、丢了就全瘫的一条（Task 7 实测踩过，务必核对）**：上游 `pumpRequest` 在写完 start 帧后是 `if (!hasBody) return`（参照 `:229`）——**`hasBody:false` 的请求绝不发 end 帧**，end 只用来结束请求体。宿主对多余 end 帧直接 fatal 拆机（上游 `apps/desktop-host/src/index.ts:523`，我们的 `src/host/index.ts:344`）。Task 7 的 smoke 初版正是无条件补了一个 end 帧，结果**第一个 GET 之后宿主就死了**，表现为后续请求永久挂起、Node 报 `Detected unsettled top-level await`。逐段移植会自然带上这行；任何「顺手简化」都会把它弄丢，而丢掉后没有单元测试会红——只有实机才会暴露。
+
 - [ ] **Step 8: 写 `src/main/index.ts`**
 
 ```typescript
@@ -2686,6 +2688,8 @@ Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm run typecheck 
 Expected: 退出码 0（10 个 spec 文件全绿）
 
 - [ ] **Step 10: 实机验收——第一个可见 UI**
+
+**先读这条，否则会把正常行为误判成挂死**：本机 `ignoreScripts: true`，install 阶段**不**下载 Electron 二进制；electron 43.3.0 在 `require()` 时自愈（`index.js` 的 `getElectronPath()` → `spawnSync(install.js)`），所以**新克隆上第一次 `pnpm run dev` 会先静默下载 295 MB 再起窗口**。这台机器已经下过了（实测 `./node_modules/.bin/electron --version` → `v43.3.0`），若在别处首跑请给足网络时间，不要中途 kill。不需要白名单、不需要 `.npmrc`、不需要放宽 `ignoreScripts`。
 
 Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm run build && pnpm run materialize && pnpm run dev`
 Expected:
