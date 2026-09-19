@@ -2211,10 +2211,29 @@ EOF
 - Create: `apps/lute-shell/scripts/README.md`
 
 **Interfaces:**
-- Consumes: `lib/protocol.js` 的 `SHELL_REQUEST_PIPE_FD`/`SHELL_RESPONSE_PIPE_FD`/`HostResponseDecoder`/`encodeRequestStart`/`encodeRequestEnd`；`lib/profile/layout.js` 的 `defaultProfileDir`/`hostEntryPath`。
+- Consumes: `lib/protocol.js` 的 `SHELL_REQUEST_PIPE_FD`/`SHELL_RESPONSE_PIPE_FD`/`HostResponseDecoder`/`encodeRequestStart`；`lib/profile/layout.js` 的 `defaultProfileDir`/`hostEntryPath`。（原列的 `encodeRequestEnd` 已不在出货形态里——见下方 Step 1 的更正说明。）
 - Produces: `pnpm run smoke` —— 不启 GUI、不依赖 Electron，用纯 Node 父进程 spawn 真宿主子进程，走真管道断言真 profile 的响应。这是本期用户选定的「本地 smoke」，**不进 CI**（要装数百个 npm 包）。
 
 - [ ] **Step 1: 写 `scripts/smoke.mjs`**
+
+> **⚠️ 下面这个代码块是初版，已被两轮 fix 取代——不要再照它转写。**
+>
+> 出货形态的家是 `apps/lute-shell/scripts/smoke.mjs`（`6b30938` → `060ec28` → `3708db5`），逐条差异与证据在
+> `.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/task-7-report.md`。初版有两类缺陷，都是**只有真跑真宿主才会暴露**的：
+>
+> 1. **协议错**：`send()` 在 `encodeRequestStart(…, {hasBody:false})` 之后无条件补 `encodeRequestEnd(id)`。
+>    宿主对多余 end 帧直接 fatal 拆机（`src/host/index.ts:344`，与上游 `apps/desktop-host/src/index.ts:523` 同），
+>    于是**第一个 GET 之后宿主就死了**，表现为后续请求永久挂起 + Node 报 `Detected unsettled top-level await`（exit 13）。
+>    正确契约见 Task 8 Step 7 的点名条目：`hasBody:false` 绝不发 end 帧。
+> 2. **仪器会假绿/失语**：64 KiB 分片前提只印在 label 里、没进 predicate；宿主中途死亡时 pending 请求永不 settle、
+>    捕获到的子进程 stderr 只在 `failures.length > 0` 分支打印（即最需要它的场景反而丢弃）；
+>    bundle 断言的 label 声称「profile 里没有 LUTE 插件层」而 predicate 只看 manifest 的 `dsh.profile.bundles`
+>    （真正的挂载点是 `cordis.patch.yml` / `lute-host/shell.cordis.patch.yml`）；profile manifest 缺失或损坏时裸抛栈、
+>    不走本文件自己的 FAIL 词汇；catch 的 label 把 readiness 超时报成「host survived every request」。
+>
+> 出货形态因此比初版多了：宿主死亡的持久监听（`fatal`/`exit`/`error` + 单请求超时 + 10s SIGKILL 兜底）、
+> `exitedBeforeShutdown` 归因守卫、`phase` 变量、manifest 双守卫，以及一条只声称 manifest 的 label。
+> **保留这个初版块是有意为之**——它是「计划里的代码没跑过就不能信」这条教训的实物证据，删掉就只剩结论了。
 
 ```javascript
 import { spawn } from 'node:child_process'
