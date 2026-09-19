@@ -29,6 +29,7 @@
 !shared/**
 !dsh-patches/**
 !dsh-rootoutlet-heal/**
+!apps/**
 
 # —— vendor 嵌套仓库：源码不入库，仅 pin 文件入库 ——
 !vendor/
@@ -44,6 +45,7 @@ __pycache__/
 staging/
 dist/
 generated/
+apps/lute-shell/lib/
 packages/**/eval/out/
 *.tgz
 .env

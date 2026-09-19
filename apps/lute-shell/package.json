@@ -1,0 +1,34 @@
+{
+  "name": "lute-shell",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LUTE 自有 Electron 薄壳：用 npm 上的 harness 运行时启动 cordis host，脱离 dsh-desktop fork",
+  "type": "module",
+  "main": "lib/main/index.js",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run",
+    "materialize": "node scripts/materialize.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "dev": "tsc && electron ."
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/cordis-plugin-include": "1.0.7",
+    "@deepseek-ai/dsh-api-gateway": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-app-boot": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-connection": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-client-modules": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-cmdline": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-launch-environment": "0.1.5-rc.2",
+    "@types/node": "^22.20.2",
+    "electron": "43.3.0",
+    "typescript": "5.6.3",
+    "vitest": "^4.1.11"
+  }
+}
