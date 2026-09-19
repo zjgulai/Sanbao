@@ -2154,6 +2154,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0144",
+      "title": "ADR-0144 · 配色改判为 Qoder CN 中性灰 + 灰绿：立面模型反转、只动主题包（取代 ADR-0132 的配色部分）",
+      "status": "accepted（2026-09-20）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "配色契约改判：暗色道取 Qoder CN 实机实测值（rail #242624 / 画布 #232523 / 面板·顶栏 #191B1A / 卡片·浮层 #131413 / 列边界 #171918），钛银（#C4D0DC / #3D566E）与深海军蓝（#0b1521 / #142332）退役，灰绿 #5C9363（选中 chip #609966）重新登记为品牌强调色；取代 ADR-0132 D1 的配色部分，ADR-0132 其余部分继续有效。",
+          "constraints": [
+            "色值唯一源是 packages/platform/dsh-theme-local/src/theme-settings.ts 的默认值；shared/client/sanbao-tokens.ts 是源面，其副本由 sync-shared 生成，不得手改副本",
+            "明色道必须用 Qoder CN 实机采样真值，不得从暗色道推导；采样前不落亮色道值",
+            "#5C9363 是截屏采样值：落地前须用第二个来源交叉核对，偏差 >2 阶取更可靠者并记录来源",
+            "验收须给实机采样四值（rail/画布/面板/强调）与 WCAG 对比度读数（强调色 on 画布 ≥ 4.5:1、正文 ≥ 7:1）；不达标回采强调色，不得就地放宽阈值"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "立面模型反转为 Qoder 式：画布最亮，面板/卡片/浮层越抬越暗（rail 与画布几乎同色，卡片/浮层最暗）。反转落在 theme-tokens.ts 的派生式（bg-layer-2/3、bg-module-platform、bg-overlay 由提亮改为压暗），token 名与层级数不变。",
+          "constraints": [
+            "不得在消费面逐个写死颜色——立面方向只在 token 派生式里定义",
+            "暗色道与亮色道都走 Qoder 立面方向（画布最亮、面板更暗），亮色道取值以采样真值为准",
+            "反转后必须逐屏实机验收并给对比度读数，防『深色卡片叠深色画布』的对比不足"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "本轮只动主题包 packages/platform/dsh-theme-local（默认色值 + 派生式 + 其单测），官方壳只换 token、不改结构；vendor 只读（ADR-0008），官方 UI 改写锚禁钉哈希（ADR-0019）；不改 TARGET_SIDEBAR_WIDTH=264，不并行动 packages/surfaces/dsh-right-sidebar-local/**。",
+          "constraints": [
+            "不得改 vendor/** 与官方壳结构；官方 UI 只经 token 派生跟皮",
+            "官方 UI 改写锚一律运行时解析，不得把 CSS-module 哈希写进产品代码（ADR-0019）",
+            "TARGET_SIDEBAR_WIDTH=264 与行轴契约不动；真要改宽度须另开一条并同步改门禁 TARGET 与 ADR-0125 D7/D8 的登记",
+            "生效路径必须走两条同步（loadpoint 与 vendor）+ 完整重启，不接受『改了源码就算生效』"
+          ]
+        }
+      ]
     }
   ]
 }
