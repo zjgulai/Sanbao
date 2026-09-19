@@ -3172,6 +3172,7 @@ Expected: 最大号是 `ADR-0130.md` ⇒ 用 0131。若并发会话已占用 013
 - `## Decision`：三条，逐条写清选择与理由——(1) 传输走子进程 + FD3/FD4 DSH3 帧协议（拒绝「主进程内 boot」：AI 运行时与 UI 同生共死会复刻 P-52 那类挂死故障且没有旁路；拒绝「harness 自带 HTTP」：走浏览器客户端路径，诊断技能里登记的两个已知故障都在这条路上）；(2) profile 用「仓库 seed + 运行时物化到 `~/.dsh/profiles/lute-shell/`」（上游同构，P4 不返工，仓库不沾 node_modules）；(3) 宿主运行时就位在 `<profile>/lute-host/`，使其裸导入解析到 profile 唯一一份 hoisted node_modules——否则第二份 cordis 实例会让服务身份跨边界断裂；(4) 门禁只加静态 `lute-shell-pin`，不扩 package collector（`apps/` 进 collector 会牵动 gen-catalog 的分组语义，与本期目标不匹配）。
 - `## Alternatives considered`：把上面 (1)(2)(4) 的被拒选项各写一行，含拒绝理由。
 - `## Consequences`：正面——壳层补丁数为 0，`pnpm update` + 门禁即更新路径的第一段；layers 从 0 到 2 已实测。负面/待办——`apps/` 暂不受 collector 治理（`package-identity`/`catalog-fresh`/`scripts-runnable` 都看不到它），P2 起需要重新评估；`agent-presets` 系统根注入被跳过（npm tarball 无 `config/`，包内已自带 shipped root，但这条要在 P2 用真 preset 复验）；两个 native directory-picker 未插入，P2/P3 若要目录选择器需连壳侧 IPC 一起做；smoke 不进 CI，靠人工跑。正文里必须出现 `ADR-0131` 字样（门禁 `adr-note-links` 要求）。
+- `## 过程裁决（fix rounds）`：执行期的裁决目前只活在 git commit message 与 git-ignored 的 SDD 账本（`.superpowers/sdd/2026-09-19-p1-lute-shell-skeleton/progress.md`）里，**本 Note 是它们第一个正式的家**。逐条写清裁决、理由、若错的代价，并给 commit SHA 指针：(1) Task 4——403 可达性机制的更正（`%2f` 永不做分隔符 + 自有 `decodeURIComponent` 造出 `../`；跨 scheme 的断言必须四种都测，推断不能冒充实测）；(2) Task 6——`defaultInstall` 只修可观测性（stdout `inherit`）不加看门狗；(3) Task 7——Important 不等最终评审现在修、破例折 5 个 Minor、「空 profile 正常」的证据家转移到 seed `cordis.patch.yml`；(4) Task 8——GUI 证据是五件套而非单张截图、共享 `~/.dsh` 的会话显示属 P4 隔离决策；(5) Task 9——空 dep map 判违规、electron 谓词补做（路由项缺席由 fixer 自发现、评审方法论看不见「不在场」）。每条一两句，细节留 commit 与账本链接。
 
 - [ ] **Step 3: 写 `docs/adr/ADR-0131.md`**
 
@@ -3191,8 +3192,8 @@ Expected: 三项全绿；`docs/adr/decisions.json` 出现 ADR-0131 的条目（`
 - 头部：日期、状态（P1 完结/PARTIAL）、关联链接（spec、P1 计划、17 号报告、ADR-0131）。
 - §1 npm 可用性补测：`dsh-desktop-host` 404 的原始输出；`dsh-base`/`dsh-web-app`/`dsh-web-frontend`/`dsh-app-boot` 的 versions 列表；「`latest` tag 指向 `0.0.1-rc.*` 旧线」的实测（`pnpm view @deepseek-ai/dsh-cmdline version` → `0.0.1-rc.1`，而 `dsh-web-app@0.1.5-rc.2` 依赖 `^0.1.5-rc.2`）。
 - §2 layers 从 0 到 2：Task 6 Step 11 的 `loadProfileDirectory` 输出原文 + seed `package.json` 的 `dsh.profile.bundles` 片段；明写「根因是 `dsh.profile.bundles`（`profile.ts:781`），不是 pnpm workspace 结构」。
-- §3 无头 smoke：Task 7 Step 2 的 8 行 PASS 原文。
-- §4 第一个可见 UI：Task 8 Step 10 的截图（`![lute-shell 第一个可见 UI](assets/2026-09-19-lute-shell-first-ui.png)`）+ `host ready, dsh 0.1.5-rc.2` 输出 + 关窗后 `pgrep` 无输出。
+- §3 无头 smoke：Task 7 最终态的 **10 行 PASS 原文**（初版是 8 行、两轮 fix 后为 10 行；以 `apps/lute-shell/scripts/smoke.mjs` 实跑输出为准）。**不得**把 smoke 输出引用为「空 profile 正常 / 零 LUTE 插件」的证据——那条事实的证据家是 seed 的 `cordis.patch.yml`（内容 `[]`，由门禁 `lute-shell-pin` 守）；smoke 证明的是 boot + 服务出 harness 默认 UI + 真管道二进制往返。smoke 的 label 也只声称 manifest 的 bundles，引用时不得超出。
+- §4 第一个可见 UI：Task 8 Step 10 的截图（`![lute-shell 第一个可见 UI](assets/2026-09-19-lute-shell-first-ui.png)`）+ `host ready, dsh 0.1.5-rc.2` 输出 + 关窗后 `pgrep` 无输出。**引证必须给整条证据链而非只给截图**：截图是 CDP `Page.captureScreenshot`（macOS `screencapture` 被 TCC 拒），单凭它只证明 renderer 画了；on-screen 合成由 `CGWindowListCopyWindowInfo` 读数（bounds 恰 1280×840）证明，再加 `show:false`+`ready-to-show` 的代码事实、35/35 network 200、0 `Runtime.exceptionThrown`、quit 后 `pgrep` 空。五件套缺一即不得写「窗口已显示」。
 - §5 与旧壳的对照：壳层补丁 0（旧壳 12）、运行时补丁 0（P3 才引入）、`apps/lute-shell` 自有源码行数（`find apps/lute-shell/src -name '*.ts' | xargs wc -l`）。
 - §6 遗留：`agent-presets` 注入跳过、native directory-picker 未插入、`apps/` 未进 collector、smoke 不进 CI、P4 打包需随附 plain node 或验证 RunAsNode 在签名+公证后仍可用。
 
@@ -3213,10 +3214,10 @@ Expected: 三项全绿；`docs/adr/decisions.json` 出现 ADR-0131 的条目（`
 - [ ] **Step 8: 跑全量门禁**
 
 Run: `cd /Users/lute/project/Magpie-Horch && pnpm run gate 2>&1 | tail -40`
-Expected: 退出码 0。若有红，先归因（并发会话在制品 vs 本 task 引入）；本 task 可能引入的红只有 `adr-*` 与 `docs-link-integrity`（相对链接写错），按报错逐一修链接。
+Expected: **不是退出码 0**——工作树有并发会话在制品，且存在继承红 `profile-bundle-sync`（另一条工作线，**不追、不修、不动 exemptions.json**）。正确读法是逐条归因：本 task 可能引入的红只有 `adr-index` / `adr-note-links` / `adr-agent-records` / `docs-link-integrity`（相对链接写错），这些必须修到绿；其余红逐条点名归属（继承 / 并发噪声）并写进提交信息，不得替别人的在制品背锅，也不得为了让全树绿而放宽任何判定。
 
 Run: `cd /Users/lute/project/Magpie-Horch && pnpm run gate:full 2>&1 | tail -40`
-Expected: 退出码 0，或只剩并发会话噪声（`gate-concurrency-selftest` 之类），需在提交信息里点名说明。
+Expected: 同上读法；只剩继承红与并发噪声（`gate-concurrency-selftest` 之类）即可提交，提交信息里点名说明。
 
 - [ ] **Step 9: 提交**
 
