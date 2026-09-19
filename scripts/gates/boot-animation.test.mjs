@@ -83,9 +83,18 @@ test('真实 BootPage 与 CSS：双色道旋转保留，三类浏览器突变必
     assert.match((await measure()).background, /180deg/)
     await page.evaluate(() => window.__bootPage.setState('second', 'active'))
     assert.match((await measure()).background, /288deg/)
+    // 「圆环在转」必须可证伪，但**不能靠单次 100ms 采样**：机器被并发门禁压满时，
+    // 渲染主线程两帧之间动画时钟可能整段不推进，两次采样都读到初始相位（实测假红：
+    // 两次都是 matrix(1,0,0,1,0,0)）。判据改成**带截止时间的轮询**——真的冻结永不移动，
+    // 3 秒内必然判红；被挤住的时钟等它恢复即可。
     const before = await spinner.evaluate((node) => getComputedStyle(node).transform)
-    await page.waitForTimeout(100)
-    assert.notEqual(await spinner.evaluate((node) => getComputedStyle(node).transform), before)
+    const deadline = Date.now() + 3000
+    let moved = false
+    while (!moved && Date.now() < deadline) {
+      await page.waitForTimeout(100)
+      moved = (await spinner.evaluate((node) => getComputedStyle(node).transform)) !== before
+    }
+    assert.ok(moved, `启动圆环必须在 3 秒内可观测到旋转（采样到的 transform 始终是 ${before}）`)
   }
   for (const [rule, expected] of [
     ['[data-dsh-boot-spinner]{animation-name:none!important}', 'spin'],

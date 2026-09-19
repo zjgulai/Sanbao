@@ -139,15 +139,15 @@ svg[data-plugin="dsh-root-brand"] {
 /* Keyboard focus remains visible on the brand surfaces. */
 .dshro-action:focus-within,
 [data-plugin="dsh-root-brand"].dsh-rb-hero:focus-within {
-  outline: 2px solid var(--dsw-alias-border-focus, #3d566e);
+  outline: 2px solid var(--sanbao-accent, #3d566e);
   outline-offset: 2px;
 }
 .dshro-a:focus-visible {
-  outline: 2px solid var(--dsw-alias-border-focus, #3d566e);
+  outline: 2px solid var(--sanbao-accent, #3d566e);
   outline-offset: 2px;
 }
 .dshro-advanced summary:focus-visible {
-  outline: 2px solid var(--dsw-alias-border-focus, #3d566e);
+  outline: 2px solid var(--sanbao-accent, #3d566e);
   outline-offset: 2px;
   border-radius: 4px;
 }
