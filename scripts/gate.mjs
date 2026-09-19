@@ -41,6 +41,7 @@ import { checkPluginEntryContract } from './gates/plugin-entry-contract.mjs'
 import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/profile-coverage.mjs'
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
+import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
 import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
@@ -1906,6 +1907,28 @@ const CHECKS = [
         baseline: baselineExists ? readBaselineFile(THEME_TOKENS_BASELINE_PATH) : [],
         baselineExists,
       })
+    },
+  },
+  {
+    name: 'brand-derivatives-sync',
+    // 工单 003（ADR-0136 D2）：改名 = 改一个源（S-A shared/client/sanbao-brand-source.ts）+ 重跑生成；
+    // 派生物与名源分叉即判红——「知道该改一处」必须变成「改别处就拦住」。
+    remediation:
+      '名源是唯一可编辑面：改 shared/client/sanbao-brand-source.ts 后跑 node scripts/generate-brand-derivatives.mjs --write，'
+      + '不要手改派生物（dsh-patches/brand-replay.sh 等，清单在 scripts/lib/brand-derivatives.mjs 的 DERIVATIVES）。'
+      + '报「空扫描面」时是锚点行被移走或改形——先回清单核对 pattern 再动判据，禁止为了让门禁变绿而放宽 pattern（P-15）',
+    run() {
+      return checkBrandDerivatives({ repoRoot })
+    },
+  },
+  {
+    name: 'brand-derivatives-sync-selftest',
+    remediation:
+      '跑 node --test scripts/gates/brand-derivatives-sync.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '派生物手改一个字符必须判红且同时点名派生物与名源两处路径（P-01/P-03）；锚点删光必须判红（P-15）；'
+      + '突变后按期望值重写必须能回到绿（生成回路真实可执行）；清单里每个派生物必须声明源字段、落点与 global pattern',
+    run() {
+      return runNodeTestFile('scripts/gates/brand-derivatives-sync.test.mjs', '品牌派生物一致性判据的反向自测失败')
     },
   },
 ]
