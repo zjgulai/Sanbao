@@ -189,7 +189,8 @@ const layers = bundles.map((packageName): ProfileLayer => { … })
 ### 3.1 最终态输出（10 条断言，逐字）
 
 ```
-$ cd apps/lute-shell && pnpm run smoke
+$ cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm run smoke > /tmp/t10-smoke-final.txt 2>&1; echo "EXIT=$?" >> /tmp/t10-smoke-final.txt
+$ cat /tmp/t10-smoke-final.txt
 $ node scripts/smoke.mjs
 PASS profile manifest pins exactly the two upstream bundles — bundles=["@deepseek-ai/dsh-base","@deepseek-ai/dsh-web-app"]
 PASS host reports ready at protocol v3 — dshVersion=0.1.5-rc.2
@@ -206,8 +207,10 @@ lute shell smoke: PASS
 EXIT=0
 ```
 
+条数是数出来的，不是抄来的：
+
 ```
-$ grep -c '^PASS' <上面的输出>
+$ grep -c '^PASS' /tmp/t10-smoke-final.txt   # 即上面那次运行的捕获文件
 10
 ```
 
@@ -246,7 +249,7 @@ $ cat apps/lute-shell/seed/cordis.patch.yml
 ### 3.3 smoke 不进 CI
 
 它要真 profile（274 MB）与网络，靠人工跑。代价是「薄壳还能 boot」这条事实没有常驻读者
-（[Note](../notes/implemented/architecture/2026-09-19-lute-shell-skeleton.md) Consequences 4）。
+（[Note](../notes/implemented/architecture/2026-09-19-lute-shell-skeleton.md) Consequences「负面 / 待办」4）。
 
 ## 4. 第一个可见 UI（引自 Task 8 报告，2026-09-19 实机捕获；本文未重开 GUI）
 
@@ -264,7 +267,7 @@ $ cat apps/lute-shell/seed/cordis.patch.yml
 | # | 证据 | 原始读数（引自 Task 8 报告 §Step 10） |
 |---|---|---|
 | 1 | **on-screen 合成**（窗口服务器层，独立于 renderer） | Swift `CGWindowListCopyWindowInfo`：`41280 Electron bounds=["Height": 840, "Width": 1280, …]`——尺寸恰为规格 1280×840；另有 `41298 Electron bounds=["Height": 600, "Width": 800]`（detach 的 DevTools 窗） |
-| 2 | **代码事实**：窗口不是无条件 show 的 | `src/main/index.ts` 用 `show: false` 建窗，在 `once('ready-to-show')` 里才显示——所以「显示」发生在首帧就绪之后，不是构造即显示 |
+| 2 | **代码事实**：窗口不是无条件 show 的 | `apps/lute-shell/src/main/index.ts:31` 建窗时 `show: false`，`:43` 才 `window.once('ready-to-show', () => { if (!window.isDestroyed()) window.show() })`——所以「显示」发生在首帧就绪之后，不是构造即显示（本次复核行号） |
 | 3 | **宿主就绪** | 主进程 stdout 逐字：`lute shell: host ready, dsh 0.1.5-rc.2` |
 | 4 | **网络与异常面干净** | CDP Network 域 35 行**全部 200**（`dsh-app://app/index.html`、两条 `/plugins/??…client.js` 组合包、`assets/vendor-*.css`/`index-*.css`/`index-*.js`/`vendor-*.js`、十余条 `/api/*` JSON、4 条 `/.dsh/remote-stream` NDJSON），零 `NET-FAIL`；`Runtime.exceptionThrown` 计数 **0** |
 | 5 | **退出后无孤儿子进程** | AppleScript quit 后 `pgrep -f "lute-host/host/index.js"` 空（exit 1），Electron 主进程亦空 |
@@ -278,9 +281,9 @@ Console 里只有 Electron 开发期标准 CSP 安全警告（reload 前后各�
 ### 4.2 截图内容的一条必须说明的事实
 
 **这张 PNG 的侧栏显示的是用户本机 DSH Desktop 的真实会话列表**（Magpie-Horch、agent_cot、
-DTC-Agent…）。机制是 `DSH_HOME` 共享 `~/.dsh`（`src/main/index.ts` 的
-`dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh')`），会话库住在 `~/.dsh` 下而非
-per-profile。
+DTC-Agent…）。机制是 `DSH_HOME` 共享 `~/.dsh`（`apps/lute-shell/src/main/index.ts:52` 的
+`dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh')`，本次复核行号），会话库住在 `~/.dsh`
+下而非 per-profile。
 
 这不是 P1 缺陷：spec §5 的「空 profile 正常」定义是**零 LUTE 插件**（见 §3.2 的证据家），不含
 会话数据隔离；隔离是 **P4 的决策**。图片按原样引用（已入库），本文不新增任何可识别内容，也不
@@ -355,9 +358,11 @@ per-profile。
    `deps-reproducible` 结构上看不到 `apps/lute-shell/`（`scripts/gates/package-layout.mjs` 只下钻
    `packages/<五组>/`）。治理三字段目前由 `lute-shell-pin` 单独守，是第二份实现。P2 起重估收编
    还是长期双轨。
-   另有一条结构事实（Task 6 实测）：三个 profile 门禁的 profile 目录**硬编码**在
-   `scripts/gate.mjs:2477` 为 `~/.dsh/profiles/desktop`，lute-shell profile 结构性地在射程外；
-   若要覆盖必须先参数化那个路径。
+   另有一条结构事实（Task 6 实测，本次复核仍在）：三个 profile 门禁的 profile 目录**硬编码**在
+   `runProfileTarget()`（`scripts/gate.mjs:2502`，其 `:2503` 为
+   `join(process.env.HOME ?? '', '.dsh', 'profiles', 'desktop')`）里，lute-shell profile 结构性地
+   在射程外；若要覆盖必须先参数化那个路径。稳定锚点是函数名 `runProfileTarget`——Task 6 报告记的
+   行号是 `:2477`，Task 9 往 `gate.mjs` 加了 28 行装配后它已经漂到 `:2503`，行号本身不是可靠指针。
 4. **smoke 不进 CI**（要真 profile 与网络），靠人工跑 ⇒ 「薄壳还能 boot」无常驻读者。
 5. **P4 打包**：Electron 43 内置 Node 实测 `24.18.1`（§4.3），已满足 harness engines 下限，故
    **不需要随附 plain node**；但「`ELECTRON_RUN_AS_NODE` 在**签名 + 公证**后仍可用」这一条尚未

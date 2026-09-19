@@ -17,10 +17,10 @@ P0 spike 已经证明「npm 装 harness + 纯 Node 独立 boot」这条路走得
 （[17 号报告](../../../research/17-thin-shell-spike.md)：四项前提三 PASS 一 PARTIAL），但留了
 两个没解决的问题，P1 必须先答：
 
-1. **宿主进程无处可取**。上游把宿主入口放在 `apps/desktop-host/`，而它**没有发布到 npm**——
-   实测 `pnpm view @deepseek-ai/dsh-desktop-host versions` 返回 `ERR_PNPM_FETCH_404`
-   （[18 号报告 §1](../../../research/18-lute-shell-skeleton.md)）。薄壳要么自己写宿主，要么继续
-   依赖 fork。
+1. **宿主进程无处可取**。上游把宿主入口放在 harness submodule 的 `apps/desktop-host/`，而它
+   **没有发布到 npm**——实测 `pnpm view @deepseek-ai/dsh-desktop-host versions` 返回
+   `ERR_PNPM_FETCH_404`（[18 号报告 §1](../../../research/18-lute-shell-skeleton.md)）。薄壳要么
+   自己写宿主，要么继续依赖 fork。
 2. **spike 的 `layers: 0` 归因错了**。17 号报告 §3 把它归给「缺完整 pnpm workspace / `.pnpm`
    store 结构」，并据此给出 P1 解法「用完整 `pnpm install` 而非 symlink」。P1 实测证明真因是
    profile 自己的 `package.json` 缺 `dsh.profile.bundles` 字段——`loadProfileDirectory` 只从
@@ -28,7 +28,7 @@ P0 spike 已经证明「npm 装 harness + 纯 Node 独立 boot」这条路走得
    的 `const bundles = manifest.dsh?.profile?.bundles ?? []`），与 workspace 结构无关。17 号报告
    §3 已就地追加更正行，原文保留。
 
-此外还有三个约束 shaping 了本期形态：`vendor/dsh-desktop` 与 harness submodule 是 pin 的只读
+此外还有三个约束决定了本期形态：`vendor/dsh-desktop` 与 harness submodule 是 pin 的只读
 参照（[ADR-0008](../../../adr/ADR-0008.md)）；旧壳在 P5 之前继续出货，本期不得碰
 `vendor/**`、`~/.dsh/profiles/desktop/`、`/Applications/DSH Desktop.app`；本仓在 2026-09 刚经历过
 一次渲染主线程被微任务级联饿死的黑屏事故（[总账 P-52](../../../pitfalls-playbook.md)），其教训是
@@ -36,8 +36,9 @@ P0 spike 已经证明「npm 装 harness + 纯 Node 独立 boot」这条路走得
 
 ## Decision
 
-四条，逐条是本期实际做的选择与理由。实测读数一律在
-[18 号报告](../../../research/18-lute-shell-skeleton.md)，本文不复述数字（ADR-0009：一份事实只有一个家）。
+四条，逐条是本期实际做的选择与理由。实测读数的家在
+[18 号报告](../../../research/18-lute-shell-skeleton.md)；本文只在结论离不开某个读数时引它一次，
+命令与完整输出不重贴（ADR-0009：一份事实只有一个家）。
 
 **D1 宿主传输走子进程 + FD3/FD4 上的 DSH3 v3 帧协议，不在主进程内 boot、不走 harness 自带 HTTP。**
 薄壳自己写宿主入口（`apps/lute-shell/src/host/`），移植上游 `apps/desktop-host/src/index.ts` 的
@@ -77,7 +78,7 @@ node_modules。** 物化时把 `lib/protocol.js`、`lib/host/*.js`（6 个文件
 
 | 方案 | 为什么未采用 |
 |---|---|
-| **主进程内 boot**（Electron main 直接 `await boot(...)`，省掉子进程与帧协议） | AI 运行时与 UI 同生共死：任一侧重挂就是整窗黑，且**没有旁路**——P-52 的教训是观测通道必须先于挂死建立，进程内形态下不存在「不经过故障现场」的观测点。省掉的是 ~400 行移植，付出的是整类挂死故障不可诊断 |
+| **主进程内 boot**（Electron main 直接 `await boot(...)`，省掉子进程与帧协议） | AI 运行时与 UI 同生共死：任一侧重挂就是整窗黑，且**没有旁路**——P-52 的教训是观测通道必须先于挂死建立，进程内形态下不存在「不经过故障现场」的观测点。省掉的是 390 行移植（`src/main/host-process.ts` 实测行数），付出的是整类挂死故障不可诊断 |
 | **harness 自带 HTTP 服务面**（起 `dsh-host-webserver` 的 HTTP 监听，Electron 用 `loadURL('http://127.0.0.1:…')`） | 走的是浏览器客户端路径，而本机诊断手册（`dsh-desktop-diagnostics`）登记的两个已知客户端故障都在这条路上（`connection invalid server-response failure`、`settings are unavailable in this browser`）；还额外引入本地端口占用、来源栅栏与 CSP 三个面。上游自己也是用 FD3/FD4 管道而不是 HTTP 连宿主 |
 | **profile 直接放仓库内**（`apps/lute-shell/profile/` 连同 `node_modules` 一起） | 仓库沾 274 MB 依赖树与本机绝对路径，lockfile 的可移植性审计（`link:`/`file:`/绝对路径均 0 条）白做；且与上游 profile 形态不同构，P4 打包要重新设计落点 |
 | **物化时用 symlink 代替真 `pnpm install`**（P0 spike 的做法） | spike 就是这么拿到 `layers: 0` 的——虽然真因后来查明是 manifest 缺字段（见 Problem 2），但 symlink 形态下 `nodeLinker: hoisted` 不成立，裸导入解析不到唯一一份 cordis，D3 的单一实例前提直接失效 |
@@ -98,7 +99,8 @@ node_modules。** 物化时把 `lib/protocol.js`、`lib/host/*.js`（6 个文件
 3. **P0 的 PARTIAL 收口**：`layers: 0` → `layers: 2` 已实测（18 号报告 §2），并且根因被换成了
    正确的那个，17 号报告的错误归因不会再被下一个读者继承。
 4. **自有源码体量可控**：`find apps/lute-shell/src -name '*.ts' | xargs wc -l` → 1680 行 / 12 个
-   文件，其中 ~400 行是上游 `host-process.ts` 的逐段移植（差异清单见 Task 8 报告）。
+   文件，其中 390 行（`src/main/host-process.ts`）是上游 `host-process.ts` 的逐段移植（差异清单见
+   [18 号报告 §5](../../../research/18-lute-shell-skeleton.md)）。
 5. **无头验收可重复**：`pnpm run smoke` 走真管道、真 profile、真二进制往返，10 条断言全 PASS
    且退出码 0，不需要 GUI（18 号报告 §3）。
 
