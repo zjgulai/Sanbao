@@ -93,6 +93,44 @@ v2.4.0 / v2.4.1 都比它新——按 Latest 下载的客户拿到的是**一周
 gh release edit v2.4.1 -R zjgulai/Sanbao --latest
 ```
 
+### 3.2 第二条实测：`gh release create` 会在上传中途静默挂住
+
+v2.3.0 的第一次尝试跑到 27 分钟仍未落地。判据不是「慢」，是**它已经不活了**：
+
+| 读数 | 值 |
+| --- | --- |
+| 进程已运行 | 27:22 |
+| 累计 CPU 时间 | **4.43 s**（%CPU 0.0） |
+| `lsof` 里那个 640 MB DMG | **没有被打开** |
+| 服务端已建出的 Release | 一条 `draft=true` 的 `v2.3.0`，资产只有 `SHA256SUMS` |
+
+对照：v2.4.1 与 v2.2.0 分别在 14 分与 12 分完成（≈0.9 MB/s），所以链路是能跑的；
+这一次是连接死了而 `gh` 不带上传超时，**既不报错也不退出**。
+「20 分钟没完成」和「进程已经不干活了」是两件事——只看前者会继续等，看后两者才判得准。
+
+重跑批次的三条加固（`/tmp/mig/finish.sh`，本机无 `timeout`/`gtimeout`，看门狗自己实现）：
+
+1. **`--latest=false`**（补 §3.1 那条）；
+2. **create 与 upload 拆开**：先建 Release 壳，再单独 `gh release upload --clobber`，
+   挂掉只重试上传、不留半成品草稿；
+3. **每个 DMG 上传 900 s 看门狗 + 最多 3 次重试**，每次跑完立刻反查
+   `assets[].digest` 与 `release/<v>.sha256` 比对，不等整批结束再核。
+
 ## 4. 结果
 
-（执行后回填：Sanbao 6/6 已发布且资产摘要与清单同值；旧仓剩 2 条；被删 11 条的 tag 仍在。）
+已执行并回填（2026-09-19 21:21–21:5x）：
+
+- **Sanbao 6/6 已发布且资产摘要与清单同值**（`finish.sh` 每次上传后立刻反查
+  `assets[].digest` 比对 `release/<v>.sha256`，全部 `digest=OK`；`draft=false`；
+  Latest 已用 §3.1 的 `gh release edit v2.4.1 --latest` 钉回最高版本）。
+  上传走「create 壳 + 单独 upload --clobber + 900 s 看门狗 ×3 重试」，期间
+  v2.3.1 / v2.3.3 / v2.4.0 各吃掉 1–2 次 rc=143 看门狗重试后成功——
+  印证 §3.2 的病是 `gh release upload` 无超时的静默挂住，拆开后重试即可穿。
+- **旧仓删除**：按用户裁决删了 v2.2.0 / v2.3.0 / v2.3.1 / v2.3.3 四条 Release
+  （`gh release delete --yes`，不带 `--cleanup`）。执行后旧仓剩 v2.4.0 / v2.4.1
+  两条（§1.1 表里下载 2 次的 v2.4.0 在保留范围）；四个被删版本的 tag
+  经 `git ls-remote` 复核仍在。
+- 最终读数：`gh release list -R zjgulai/Sanbao` = v2.2.0–v2.4.1 六条、Latest=v2.4.1；
+  `gh release list -R zjgulai/lute-dsh-platform` = v2.4.0 / v2.4.1 两条。
+- 遗留待办不变：下一次按 SOP §6 发版前给 `release-published` 补
+  「Latest 必须指向射程内最高版本」断言（§3.1 的口子）。
