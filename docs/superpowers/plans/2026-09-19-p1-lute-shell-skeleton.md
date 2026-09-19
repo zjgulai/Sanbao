@@ -1759,7 +1759,21 @@ overrides:
 []
 ```
 
-`seed/pnpm-lock.yaml` 在 Step 12 由真实 install 生成后拷回，本步不手写。
+`seed/pnpm-lock.yaml` 不在本步手写，由紧接着的 Step 1b 生成——注意顺序是承重的：`SEED_FILES` 含 `pnpm-lock.yaml`，而 `assertPlan` 对缺失的 seed 文件直接抛错，所以 lockfile 必须在 Step 11 跑 `materialize` **之前**就存在于 seed 里。
+
+- [ ] **Step 1b: 生成 seed 的 lockfile（不装 node_modules）**
+
+Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell/seed && pnpm install --lockfile-only`
+Expected: 只写出 `pnpm-lock.yaml`，**不产生 `node_modules/`**。seed 自带 `pnpm-workspace.yaml`，故它自己就是 workspace 根，pnpm 不会向上走到 `apps/lute-shell/` 那个项目。
+
+Run: `ls /Users/lute/project/Magpie-Horch/apps/lute-shell/seed`
+Expected: `cordis.patch.yml  cordis.yml  package.json  pnpm-lock.yaml  pnpm-workspace.yaml`（五个文件，恰好等于 `SEED_FILES`，无 `node_modules`）
+
+Run: `cd /Users/lute/project/Magpie-Horch && git check-ignore apps/lute-shell/seed/pnpm-lock.yaml ; echo "exit=$?"`
+Expected: 无输出、`exit=1`（可入库）。用不带 `-v` 的形式——`-v` 在未提交时会打印命中的否定模式并返回 0，读起来像反的（见 Task 1 Step 10 的说明）。
+
+Run: `grep -c "0.1.5-rc.2" /Users/lute/project/Magpie-Horch/apps/lute-shell/seed/pnpm-lock.yaml`
+Expected: 一个大于 0 的数（锁文件确实按精确版本解析了）。若这里是 0，说明有依赖被解到别的版本线上——停下来查 `pnpm why`，不要继续。
 
 - [ ] **Step 2: 写失败测试 `test/layout.spec.ts`**
 
@@ -2156,19 +2170,18 @@ echo "--- node-addon-system ---"; ls node_modules/@deepseek-ai/node-addon-system
 Run: `cd ~/.dsh/profiles/lute-shell && node --input-type=module -e "import { createRequire } from 'node:module'; import { join } from 'node:path'; const r = createRequire(join(process.cwd(), 'package.json')); console.log(r.resolve('@deepseek-ai/dsh/package.json'))"`
 Expected: 打印出真实路径。这验的是 Task 5 遗留的一个分裂风险——`readDshVersion` 用 `createRequire().resolve('@deepseek-ai/dsh/package.json')`（受 `exports` map 影响），而 `composition.ts` 的 `installAnchor` 用直接 `join`（免疫）。若这里抛 `ERR_PACKAGE_PATH_NOT_EXPORTED`，说明两条机制在真实包上会分裂失败，必须在 report 里点名（届时 Task 5 的那条 Minor 要升级为 Important）。
 
-- [ ] **Step 12: 把生成的 lockfile 收回 seed 并入库**
+- [ ] **Step 12: 验证 install 是锁文件驱动的、且物化幂等**
 
-Step 11 的 `pnpm install` 在 profile 目录里跑，写的是 `~/.dsh/profiles/lute-shell/pnpm-lock.yaml`，不会回写 seed。拷回来，让下次物化是锁定版本的：
+lockfile 从 Step 1b 起就住在 seed 里并随物化拷进 profile，所以这一步不是「把锁文件拷回来」，而是验证真实 install **没有让锁文件漂移**——漂移就意味着 `--lockfile-only` 解析出的图与真装时的图不一致，那 P1 的版本 pin 就是假的。
 
-Run:
-```bash
-cp ~/.dsh/profiles/lute-shell/pnpm-lock.yaml /Users/lute/project/Magpie-Horch/apps/lute-shell/seed/pnpm-lock.yaml
-cd /Users/lute/project/Magpie-Horch && git check-ignore apps/lute-shell/seed/pnpm-lock.yaml ; echo "exit=$?"
-```
-Expected: 无输出、`exit=1`（可入库）。同样用不带 `-v` 的形式。
+Run: `diff ~/.dsh/profiles/lute-shell/pnpm-lock.yaml /Users/lute/project/Magpie-Horch/apps/lute-shell/seed/pnpm-lock.yaml && echo "lockfile 未漂移"`
+Expected: 输出 `lockfile 未漂移`（diff 无差异、退出码 0）。**若有差异**：把 diff 原样贴进 report，不要直接把 profile 的版本覆盖回 seed——先判断是 seed 的 `package.json` 与 lockfile 不同步（该重跑 `--lockfile-only`），还是 install 期间解析出了新版本（那说明精确 pin 没生效，属 Global Constraints 违规，必须停下来报）。
 
-Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && pnpm run materialize && pnpm run test`
-Expected: 第二次物化走 lockfile、秒级完成；测试全绿
+Run: `cd /Users/lute/project/Magpie-Horch && git status --short apps/lute-shell/seed`
+Expected: 只显示 `seed/` 下的新增文件（`??` 或已 staged），**没有** `M apps/lute-shell/seed/pnpm-lock.yaml` 之外的意外改动。
+
+Run: `cd /Users/lute/project/Magpie-Horch/apps/lute-shell && time pnpm run materialize && pnpm run test`
+Expected: 第二次物化因为 node_modules 已就位而明显更快（秒级到十几秒，而不是几分钟）；测试全绿。这条同时验证 `materializeProfile` 的幂等性在真实 profile 上成立，不只是在 mock install 下成立。
 
 - [ ] **Step 13: 提交**
 
