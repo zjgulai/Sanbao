@@ -26,6 +26,8 @@
  *    在浅/深两态各测一遍。
  * 3. 对每个**受管包引用到**的 token 记录：`var()` 是否解析成功、解析成了什么颜色。
  * 4. 与门禁的判据逐条对照，把分歧按「门禁假阳性 / 门禁假阴性」分别点名。
+ * 5. 保留官方-only 报告，另注入真实 SANBAO_TOKEN_CSS 与 buildThemeTokenOverrides，
+ *    三身份逐项解析供给/声明/引用全集；缺失依赖突变必须被负控发现。
  *
  * ## 仪器自检（没有它这片输出不可信）
  *
@@ -42,7 +44,8 @@
  * 而不是「实况页面此刻长什么样」。后者要等重启后的 C4 环节。
  *
  * 用法：`node scripts/acceptance/theme-tokens-live.mjs [--out <dir>]`
- * 退出码：0 = 全部分歧已解释；1 = 存在无法解释的分歧；2 = 前置条件或仪器不可用。
+ * 工具借用：THEME_BROWSER_PACKAGE / --browser-package 指向已有工具包 package.json。
+ * 退出码：0 = 官方对照与三身份供给/解析均成立；1 = 分歧或缺变量；2 = 前置条件或仪器不可用。
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -50,9 +53,10 @@ import { dirname, join, resolve } from 'node:path'
 import { appNodeModules } from '../lib/app-resources.mjs'
 import { fileURLToPath } from 'node:url'
 import { collectDefinedTokens, collectReferencedTokens, collectRepoDefinedTokens } from '../gates/theme-tokens.mjs'
+import { loadThemeSources } from '../lib/theme-source-loader.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const APP_DIR = '/Applications/DSH Desktop.app'
+const APP_DIR = process.env.DSH_APP ?? '/Applications/DSH Desktop.app'
 const THEME_BUNDLE = join(
   appNodeModules(APP_DIR) ?? '', '@deepseek-ai', 'dsh-client-ui-theme', 'lib', 'client.js',
 )
@@ -122,54 +126,23 @@ const gateDefined = new Set([...officialDefined, ...repoDefined])
 require_(officialDefined.size > 100, `门禁口径只认 ${officialDefined.size} 个官方 token——门禁侧提取已失效`)
 require_(repoDefined.size > 0, '本仓库一个供给 token 都没扫到——门禁侧提取已失效')
 
-const THEME_PKG = join(REPO_ROOT, 'packages', 'platform', 'dsh-theme-local')
-
-/**
- * 把「本仓库主题插件会供给哪些 token」从**静态字面量**变成**真实调用结果**。
- *
- * 门禁的判据是「`"--dsw-x":` 这个字面量在 src 里出现过」。但那和「构建函数真的会把
- * `--dsw-x` 放进返回的映射里」是两件事：写在永不进入的分支里、或被后面的展开覆盖掉，
- * 正则照样命中、门禁照样判已定义，页面里却依旧走字面兜底——正是本项要抓的假阳性。
- *
- * 这里不重写实现：直接把仓库自己的 `buildThemeTokenOverrides` 拿来跑（该模块只有
- * `import type`，转译后无运行时依赖）。转译用包内自带的 typescript，不为探针引新依赖。
- * @returns {Set<string>} 真实会被供给的 token 名
- */
-function repoSuppliedTokens() {
-  const tsPath = join(THEME_PKG, 'node_modules', 'typescript')
-  require_(existsSync(tsPath), `找不到 typescript：${tsPath}（先在 dsh-theme-local 内 pnpm install）`)
-  const ts = createRequire(import.meta.url)(tsPath)
-  const load = (file) => {
-    const { outputText } = ts.transpileModule(readFileSync(file, 'utf8'), {
-      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-      fileName: file,
-    })
-    const module = { exports: {} }
-    const deny = () => { throw new Error(`${file} 在运行时 require 了别的模块（本应只有 import type）`) }
-    new Function('exports', 'require', 'module', outputText)(module.exports, deny, module)
-    return module.exports
-  }
-  const settings = load(join(THEME_PKG, 'src', 'theme-settings.ts'))
-  const tokens = load(join(THEME_PKG, 'src', 'client', 'theme-tokens.ts'))
-  require_(typeof tokens.buildThemeTokenOverrides === 'function', 'theme-tokens.ts 里没有 buildThemeTokenOverrides（实现已改名）')
-  require_(settings.DEFAULT_THEME_STUDIO_SETTINGS !== undefined, 'theme-settings.ts 里没有 DEFAULT_THEME_STUDIO_SETTINGS（实现已改名）')
-  const overrides = tokens.buildThemeTokenOverrides(settings.DEFAULT_THEME_STUDIO_SETTINGS)
-  const emitted = new Set(Object.keys(overrides))
-  require_(emitted.size > 0, 'buildThemeTokenOverrides 用默认设置返回了空映射——供给方已失效')
-  return emitted
+let themeSource
+try {
+  themeSource = await loadThemeSources(REPO_ROOT)
+} catch (error) {
+  require_(false, `真实主题模块图加载失败：${error.message}`)
 }
-
-const repoSupplied = repoSuppliedTokens()
+const repoSupplied = new Set(themeSource.identities.flatMap(({ overrides }) => Object.keys(overrides)))
 
 // ── 真实浏览器 ────────────────────────────────────────────────────────────────
-const requireFromBrowserPkg = createRequire(
-  join(REPO_ROOT, 'packages/capabilities/dsh-browser-local/package.json'),
-)
+// 隔离工作树可显式借用工具包；不把开发机主树路径写进默认值。
+const requireFromBrowserPkg = createRequire(resolve(argValue('--browser-package',
+  process.env.THEME_BROWSER_PACKAGE ?? join(REPO_ROOT, 'packages/capabilities/dsh-browser-local/package.json'))))
 let chromium
 try {
   ({ chromium } = requireFromBrowserPkg('playwright-core'))
 } catch (error) {
-  require_(false, `导入 playwright-core 失败：${error.message}（先在该包内 pnpm install）`)
+  require_(false, `导入 playwright-core 失败：${error.message}（可用 THEME_BROWSER_PACKAGE 或 --browser-package 指定已有工具包 package.json）`)
 }
 
 const pageHtml = `<!doctype html><html lang="zh"><head><meta charset="utf-8">
@@ -309,6 +282,87 @@ const falsePositive = [...falsePositiveOfficial, ...falsePositiveRepo]
 // 双主题跟随：只对「真实解析成颜色」的 token 有意义
 const follow = rows.filter((r) => r.followTheme)
 
+// ── 三身份真实供给：保留上面的官方-only 读数，另加共享 CSS 与真实 overrides ─────
+const themeDeclared = new Set(themeSource.sourceFiles.flatMap((file) =>
+  [...readFileSync(file, 'utf8').matchAll(/["'](--(?:dsw|ds|dsh|sanbao)-[a-z0-9-]+)["']\s*:/g)].map((m) => m[1])))
+const sharedDeclared = new Set([...themeSource.shared.SANBAO_TOKEN_CSS.matchAll(/(--sanbao-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))
+const triadTokens = [...new Set([...tokens, ...themeDeclared, ...repoSupplied, ...sharedDeclared])].sort()
+const triad = []
+for (const identity of themeSource.identities) {
+  const measured = await page.evaluate(({ identity, css, tokens, sharedDeclared, themeDeclared }) => {
+    let shared = document.getElementById('triad-shared')
+    if (!shared) {
+      shared = document.createElement('style')
+      shared.id = 'triad-shared'
+      shared.textContent = css
+      document.head.append(shared)
+    }
+    document.getElementById('triad-overrides')?.remove()
+    const sheet = document.createElement('style')
+    sheet.id = 'triad-overrides'
+    sheet.textContent = ['light', 'dark'].map((mode) => {
+      const selector = mode === 'dark' ? 'body[data-ds-dark-theme]' : 'body'
+      return `${selector}{${Object.entries(identity.overrides).map(([token, pair]) => `${token}:${pair[mode]};`).join('')}}`
+    }).join('\n')
+    document.head.append(sheet)
+    document.body.dataset.sanbaoTheme = identity.id
+    document.body.toggleAttribute('data-ds-dark-theme', identity.scheme === 'dark')
+    const probe = document.createElement('div')
+    document.getElementById('host').append(probe)
+    const read = (token) => {
+      probe.style.setProperty('--triad-probe', `var(${token})`)
+      probe.style.backgroundColor = `var(${token})`
+      const computed = getComputedStyle(probe)
+      return { value: computed.getPropertyValue('--triad-probe').trim(), color: computed.backgroundColor }
+    }
+    const rows = tokens.map((token) => {
+      const result = read(token)
+      const supplied = Object.hasOwn(identity.overrides, token)
+      const declared = themeDeclared.includes(token)
+      probe.style.setProperty('--triad-expected', supplied ? identity.overrides[token][identity.scheme] : 'initial')
+      const expectedValue = supplied ? getComputedStyle(probe).getPropertyValue('--triad-expected').trim() : null
+      const matchesSupply = !supplied || expectedValue !== '' && expectedValue === result.value
+      const property = /font-family|font-mono$/.test(token) ? 'font-family'
+        : /-font-/.test(token) ? 'font'
+          : /(?:^|-)radius(?:-|$)/.test(token) ? 'border-radius'
+            : /^--dsw-alias-shadow-/.test(token) ? 'box-shadow'
+              : /^--dsw-(?:alias|specific|static)-/.test(token) || (sharedDeclared.includes(token)
+                && !/(?:fast|base|slow|ease)$/.test(token)) ? 'background-color' : null
+      const usable = result.value !== '' && matchesSupply && (!property || CSS.supports(property, result.value))
+      return { token, ...result, supplied, declared, expectedValue, matchesSupply, property, usable }
+    })
+    const positive = read('--dsw-alias-bg-base')
+    const absent = read('--dsw-alias-zzz-not-a-real-token')
+    // 删掉真实依赖：若只检查 overrides 的键，这条负控不会变红。
+    document.body.style.setProperty('--sanbao-canvas', 'initial')
+    const missingDependency = read('--dsw-alias-bg-base')
+    document.body.style.removeProperty('--sanbao-canvas')
+    const restored = read('--dsw-alias-bg-base')
+    probe.remove()
+    return { rows, positive, absent, missingDependency, restored }
+  }, { identity, css: themeSource.shared.SANBAO_TOKEN_CSS, tokens: triadTokens,
+    sharedDeclared: [...sharedDeclared], themeDeclared: [...themeDeclared] })
+  const missing = measured.rows.filter((row) => !row.usable).map((row) => ({ ...row,
+    files: referenced.get(row.token) ?? [], baselined: baselineTokens.has(row.token) }))
+  const supplyRows = measured.rows.filter((row) => row.supplied)
+  const declaredNotSupplied = [...themeDeclared].filter((token) => !Object.hasOwn(identity.overrides, token))
+  const suppliedNotDeclared = Object.keys(identity.overrides).filter((token) => !themeDeclared.has(token))
+  const controls = [
+    { name: 'positive', ok: measured.positive.value !== '' && measured.positive.color !== 'rgba(0, 0, 0, 0)' },
+    { name: 'absent', ok: measured.absent.value === '' && measured.absent.color === 'rgba(0, 0, 0, 0)' },
+    { name: 'missing-dependency', ok: measured.missingDependency.value === '' && measured.missingDependency.color === 'rgba(0, 0, 0, 0)' },
+    { name: 'restored', ok: measured.restored.value === measured.positive.value },
+  ]
+  triad.push({ id: identity.id, scheme: identity.scheme, expected: triadTokens.length,
+    checked: measured.rows.length, failed: missing.length, missing, declaredNotSupplied, suppliedNotDeclared,
+    supply: { expected: Object.keys(identity.overrides).length, checked: supplyRows.length,
+      failed: supplyRows.filter((row) => !row.usable).length },
+    controls, measurements: measured })
+}
+const triadInstrumentBroken = triad.some((row) => row.controls.some((control) => !control.ok))
+const triadFailed = triad.some((row) => row.failed || row.declaredNotSupplied.length || row.suppliedNotDeclared.length)
+const triadSwitch = new Set(triad.map((row) => row.measurements.positive.color)).size === themeSource.identities.length
+
 // ── 报告 ──────────────────────────────────────────────────────────────────────
 const say = (line) => console.log(line)
 const channelNote = usedChannel === 'chrome' ? '（channel=chrome：真实 Google Chrome）' : '（chrome channel 起不来，退回自带 chromium）'
@@ -368,6 +422,8 @@ writeFileSync(reportPath, `${JSON.stringify({
   officialDefinedTokens: officialDefined.size,
   repoSuppliedTokens: repoSupplied.size,
   referenced: tokens.length,
+  sourceFiles: themeSource.sourceFiles,
+  triad: { expected: triadTokens.length * triad.length, identities: triad, switchDistinct: triadSwitch },
   instrument,
   summary: {
     agreeOfficial: agreeOfficial.length,
@@ -395,14 +451,21 @@ writeFileSync(reportPath, `${JSON.stringify({
   consoleLines,
 }, null, 2)}\n`)
 say(`[theme-live] 报告：${reportPath}`)
+for (const row of triad) say(`[theme-live] ${row.id}: checked=${row.checked}/${row.expected}, unresolved/invalid=${row.failed}, declaration/supply=${row.declaredNotSupplied.length}/${row.suppliedNotDeclared.length}, controls=${row.controls.filter((c) => c.ok).length}/${row.controls.length}`)
 
 await browser.close()
+if (triadInstrumentBroken || !triadSwitch) {
+  console.error('[theme-live] 三身份正负控或切换自检失败')
+  process.exit(2)
+}
 
-if (falsePositive.length > 0 || falseNegative.length > 0 || newappUnresolved.length > 0) {
+if (falsePositive.length > 0 || falseNegative.length > 0 || newappUnresolved.length > 0 || triadFailed) {
   console.error(
     `[theme-live] 存在无法解释的分歧：门禁假阳性 ${falsePositiveOfficial.length}+${falsePositiveRepo.length}、`
-    + `假阴性 ${falseNegative.length}、本包未解析 ${newappUnresolved.length}`,
+    + `假阴性 ${falseNegative.length}、本包未解析 ${newappUnresolved.length}、`
+    + `三身份未解析/无效 ${triad.reduce((sum, row) => sum + row.failed, 0)}/${triadTokens.length * triad.length}、`
+    + `声明/供给分歧 ${triad.reduce((sum, row) => sum + row.declaredNotSupplied.length + row.suppliedNotDeclared.length, 0)}`,
   )
   process.exit(1)
 }
-console.log(`[theme-live] 全部一致：${tokens.length} 个引用 token 的门禁判据在两条供给路径上零分歧`)
+console.log(`[theme-live] 全部一致：${tokens.length} 个引用 token 的官方对照及三身份 ${triadTokens.length * triad.length} 项供给解析成立`)

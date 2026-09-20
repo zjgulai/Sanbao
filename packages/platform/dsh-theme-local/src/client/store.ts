@@ -1,5 +1,5 @@
 import { defineStore, type EngineStoreHandle } from "@deepseek-ai/dsh-client-store";
-import type { ThemePreference } from "@deepseek-ai/dsh-client-ui-theme/client";
+import type { SaveStatus } from "./theme-controller.js";
 
 import {
   DEFAULT_THEME_STUDIO_SETTINGS,
@@ -10,10 +10,7 @@ import {
   type ThemeStudioPrefs,
 } from "./persistence.js";
 
-export type SaveStatus = "idle" | "saving" | "error";
 export interface ThemeStudioState {
-  activeScheme: "light" | "dark";
-  preference: ThemePreference;
   prefs: ThemeStudioPrefs;
   saveStatus: SaveStatus;
   settings: ThemeStudioSettings;
@@ -23,11 +20,6 @@ export interface ThemeStudioState {
 type ThemeStudioActions = {
   syncSettings: (draft: ThemeStudioState, settings: ThemeStudioSettings) => void;
   syncPrefs: (draft: ThemeStudioState, prefs: ThemeStudioPrefs) => void;
-  syncTheme: (
-    draft: ThemeStudioState,
-    preference: ThemePreference,
-    activeScheme: "light" | "dark",
-  ) => void;
   setSaveStatus: (draft: ThemeStudioState, status: SaveStatus) => void;
 };
 
@@ -37,10 +29,8 @@ export function createThemeStudioStore(
 ): EngineStoreHandle<ThemeStudioState, ThemeStudioActions> {
   return defineStore({
     init: (): ThemeStudioState => ({
-      activeScheme: "light",
-      preference: "system",
       prefs: { ...initialPrefs },
-      saveStatus: "idle",
+      saveStatus: "loading",
       settings: { ...initialSettings },
     }),
     actions: {
@@ -52,14 +42,6 @@ export function createThemeStudioStore(
       },
       syncPrefs: (draft, prefs: ThemeStudioPrefs) => {
         draft.prefs = { ...prefs };
-      },
-      syncTheme: (
-        draft,
-        preference: ThemePreference,
-        activeScheme: "light" | "dark",
-      ) => {
-        draft.preference = preference;
-        draft.activeScheme = activeScheme;
       },
       setSaveStatus: (draft, status: SaveStatus) => {
         draft.saveStatus = status;

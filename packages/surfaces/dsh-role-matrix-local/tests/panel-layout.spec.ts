@@ -55,6 +55,18 @@ describe('role matrix close affordance', () => {
 })
 
 describe('role matrix sidebar entry row', () => {
+  it('uses semantic hover borders and selected fills without white highlights or green glow', () => {
+    const hover = css.match(/\.entry:hover,\s*\.entryActive\s*\{([^}]*)\}/)?.[1]
+    const active = [...css.matchAll(/\n\.entryActive\s*\{([^}]*)\}/g)].at(-1)?.[1]
+    const icon = css.match(/\.entry\[data-active\] \.entryIcon\s*\{([^}]*)\}/)?.[1]
+    expect(hover).toContain('border-color: var(--sanbao-border)')
+    expect(hover).toContain('inset 0 1px 0 var(--sanbao-border)')
+    expect(active).toContain('background: var(--sanbao-selected)')
+    expect(active).toContain('color: var(--sanbao-accent)')
+    expect(icon).toContain('color: var(--sanbao-accent)')
+    expect(css.match(/88,\s*184,\s*72|rgba\(255,\s*255,\s*255|drop-shadow/g)).toBeNull()
+  })
+
   it('uses the shared navigation icon dimensions', () => {
     // Same 24px box + 18px glyph ratio the shell's own nav rows use, so the
     // injected row lines up with them instead of drifting by its icon.
@@ -114,14 +126,37 @@ describe('role matrix visual contract', () => {
     expect(css).toMatch(/\.cardEmpNo\s*\{[^}]*font-family:\s*var\(--dsw-font-mono\)/s)
   })
 
-  it('rides the shared five-step type ladder instead of ad-hoc sizes', () => {
-    // 文件头的字号阶梯：每类信息只对应一档 token。旧版把 11–14px 摊在整面板上，
-    // 层级不可辨（用户原话：字号「跟实际页面完全不搭」）。
-    expect(css).toMatch(/\.title\s*\{[^}]*font:\s*var\(--dsw-font-l-20\)/s)
-    expect(css).toMatch(/\.cardName\s*\{[^}]*font:\s*var\(--dsw-font-base-strong-16\)/s)
-    expect(css).toMatch(/\.planeName\s*\{[^}]*font:\s*var\(--dsw-font-base-strong-16\)/s)
-    expect(css).toMatch(/\.cardBrief\s*\{[^}]*font:\s*var\(--dsw-font-xxs-12\)/s)
-    expect(css).toMatch(/\.cardBrief\s*\{[^}]*-webkit-line-clamp:\s*2/s)
+  it.each([
+    ['page', '--dsw-font-xl-24', ['title']],
+    ['section', '--dsw-font-l-20', ['planeName']],
+    ['panel', '--dsw-font-base-strong-16', ['domainName', 'cardName']],
+    ['body', '--dsw-font-s-14', ['subtitle', 'search', 'state', 'planePurpose', 'cardRole', 'cardBrief', 'detail']],
+    ['control', '--dsw-font-s-14', ['retry']],
+    ['meta', '--dsw-font-xs-13', ['total', 'planeCount', 'domainCount', 'cardEmpNo', 'badge', 'detailLabel', 'chip', 'footer']],
+  ] as const)('assigns %s typography by content role without local size overrides', (role: string, fallback: string, selectors: readonly string[]) => {
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const selector of selectors) {
+      const block = code.match(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`))?.[1]
+      expect(block, `missing .${selector}`).toBeDefined()
+      expect(block?.match(/\bfont:\s*([^;]+);/)?.[1], `.${selector} typography`).toBe(
+        `var(--sanbao-font-${role}, var(${fallback}))`,
+      )
+      expect(block, `.${selector} must follow central font preferences`).not.toMatch(/\b(?:font-size|font-weight|line-height)\s*:/)
+    }
+  })
+
+  it('keeps detail values inherited, code identity monospaced and briefs clamped', () => {
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const value = code.match(/\.detailValue\s*\{([^}]*)\}/)?.[1]
+    expect(value).toBeDefined()
+    expect(value).not.toMatch(/\bfont(?:-size|-family|-weight)?\s*:|\bline-height\s*:/)
+    expect(code).toMatch(/\.cardEmpNo\s*\{[^}]*font:[^;]+;\s*font-family:\s*var\(--dsw-font-mono\)/)
+    expect(code).toMatch(/\.cardBrief\s*\{[^}]*-webkit-line-clamp:\s*2/)
+    for (const selector of ['entry', 'entryBadge']) {
+      const block = code.match(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`))?.[1]
+      expect(block).toBeDefined()
+      expect(block).not.toContain('--sanbao-font-')
+    }
   })
 
   it('pins the 180ms motion and reduced-motion fallback', () => {

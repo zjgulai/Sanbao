@@ -1,17 +1,13 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
-  CONTRAST_DEFAULT,
   DEFAULT_THEME_STUDIO_SETTINGS,
+  type ThemeId,
   type ThemeStudioSettings,
+  type ThemeTypographyField,
 } from "../theme-settings.js";
-import { getThemePreset } from "./presets.js";
 import {
-  loadSavedAppearance,
-  saveAppearance,
-  initAppearancePreboot,
-  DEFAULT_SAVED_APPEARANCE,
-  APPEARANCE_STORAGE_KEY,
+  LEGACY_THEME_STUDIO_STORAGE_KEY,
   loadThemeStudioPrefs,
   loadThemeStudioSettings,
   saveThemeStudioPrefs,
@@ -21,15 +17,11 @@ import {
   type ThemeStudioStorage,
 } from "./persistence.js";
 
-function memoryStorage(initial?: Record<string, string>): ThemeStudioStorage & {
+function memoryStorage(initial?: string): ThemeStudioStorage & {
   values: Map<string, string>;
 } {
   const values = new Map<string, string>();
-  if (initial) {
-    for (const [k, v] of Object.entries(initial)) {
-      values.set(k, v);
-    }
-  }
+  if (initial !== undefined) values.set(THEME_STUDIO_STORAGE_KEY, initial);
   return {
     values,
     getItem: (key) => values.get(key) ?? null,
@@ -37,211 +29,75 @@ function memoryStorage(initial?: Record<string, string>): ThemeStudioStorage & {
   };
 }
 
-function createMockDocument() {
-  const htmlAttrs = new Map<string, string>();
-  const htmlStyles = new Map<string, string>();
-  const bodyAttrs = new Map<string, string>();
-  const headElements: any[] = [];
-
-  const documentElement = {
-    getAttribute: (name: string) => htmlAttrs.get(name) ?? null,
-    setAttribute: (name: string, val: string) => { htmlAttrs.set(name, String(val)); },
-    removeAttribute: (name: string) => { htmlAttrs.delete(name); },
-    style: {
-      getPropertyValue: (name: string) => htmlStyles.get(name) ?? "",
-      setProperty: (name: string, val: string) => { htmlStyles.set(name, String(val)); },
-      removeProperty: (name: string) => { htmlStyles.delete(name); },
-    },
-  };
-
-  const body = {
-    getAttribute: (name: string) => bodyAttrs.get(name) ?? null,
-    setAttribute: (name: string, val: string) => { bodyAttrs.set(name, String(val)); },
-    removeAttribute: (name: string) => { bodyAttrs.delete(name); },
-  };
-
-  const head = {
-    append: (el: any) => headElements.push(el),
-    prepend: (el: any) => headElements.unshift(el),
-    appendChild: (el: any) => headElements.push(el),
-    querySelector: (selector: string) => {
-      const parts = selector.split(",").map((s) => s.trim());
-      for (const part of parts) {
-        for (const el of headElements) {
-          if (part.startsWith("style#") && el.id === part.slice("style#".length)) return el;
-          if (part.includes("data-sanbao-preboot") && el.dataset?.sanbaoPreboot) return el;
-          if (part.includes("data-sanbao-tokens") && el.dataset?.sanbaoTokens) return el;
-        }
-      }
-      return null;
-    },
-  };
-
-  const doc = {
-    documentElement,
-    body,
-    head,
-    createElement: (tag: string) => {
-      const el: any = {
-        tagName: tag.toUpperCase(),
-        dataset: {},
-        textContent: "",
-        id: "",
-      };
-      return el;
-    },
-    querySelector: (selector: string) => {
-      return head.querySelector(selector);
-    },
-  };
-
-  (doc as any).head.ownerDocument = doc;
-
-  return doc as unknown as Document;
-}
-
-describe("appearance persistence & preboot", () => {
-  it("loads default appearance when storage is empty or undefined", () => {
-    expect(loadSavedAppearance(undefined)).toEqual(DEFAULT_SAVED_APPEARANCE);
-    const storage = memoryStorage();
-    expect(loadSavedAppearance(storage)).toEqual(DEFAULT_SAVED_APPEARANCE);
-  });
-
-  it("round-trips appearance state correctly", () => {
-    const storage = memoryStorage();
-    const app = {
-      mode: "dark" as const,
-      theme: "parchment" as const,
-      fontScale: 1.1,
-      reducedMotion: true,
-    };
-    expect(saveAppearance(app, storage)).toBe(true);
-    expect(loadSavedAppearance(storage)).toEqual(app);
-  });
-
-  it("handles malformed JSON or partial values gracefully", () => {
-    const storage = memoryStorage({ [APPEARANCE_STORAGE_KEY]: "invalid-json" });
-    expect(loadSavedAppearance(storage)).toEqual(DEFAULT_SAVED_APPEARANCE);
-
-    const storagePartial = memoryStorage({
-      [APPEARANCE_STORAGE_KEY]: JSON.stringify({ mode: "light", theme: "unknown" }),
-    });
-    expect(loadSavedAppearance(storagePartial)).toEqual({
-      mode: "light",
-      theme: "forest-green",
-      fontScale: 1.0,
-      reducedMotion: false,
-    });
-  });
-
-  it("reports false on storage set failure", () => {
-    const brokenStorage: ThemeStudioStorage = {
-      getItem: () => null,
-      setItem: () => {
-        throw new Error("fail");
-      },
-    };
-    expect(saveAppearance(DEFAULT_SAVED_APPEARANCE, brokenStorage)).toBe(false);
-  });
-
-  it("initAppearancePreboot mounts data attributes and styles before DOM render", () => {
-    const storage = memoryStorage();
-    saveAppearance(
-      {
-        mode: "dark",
-        theme: "parchment",
-        fontScale: 1.1,
-        reducedMotion: true,
-      },
-      storage,
-    );
-
-    const mockDoc = createMockDocument();
-    initAppearancePreboot(mockDoc, storage);
-
-    expect(mockDoc.documentElement.getAttribute("data-sanbao-mode")).toBe("dark");
-    expect(mockDoc.documentElement.getAttribute("data-sanbao-theme")).toBe("parchment");
-    expect(mockDoc.documentElement.style.getPropertyValue("--sanbao-font-scale")).toBe("1.1");
-
-    expect(mockDoc.body.getAttribute("data-sanbao-mode")).toBe("dark");
-    expect(mockDoc.body.getAttribute("data-sanbao-theme")).toBe("parchment");
-    expect(mockDoc.body.getAttribute("data-lute-reduce-motion")).toBe("reduce");
-
-    const prebootTag = mockDoc.head.querySelector("style[data-sanbao-preboot]");
-    expect(prebootTag).not.toBeNull();
-    expect(prebootTag?.textContent).toContain("--sanbao-font-scale: 1.1");
-
-    const tokensTag = mockDoc.head.querySelector("style[data-sanbao-tokens]");
-    expect(tokensTag).not.toBeNull();
-  });
-});
-
-describe("theme persistence (legacy compatibility)", () => {
-  it("round-trips a complete theme", () => {
+describe("theme persistence", () => {
+  it.each(["light", "dark", "warm-pink"] as const)("round-trips %s and typography in v2", (themeId: ThemeId) => {
     const storage = memoryStorage();
     const settings: ThemeStudioSettings = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightAccent: "#123456",
+      themeId,
+      uiFont: "avenir",
+      codeFont: "menlo",
       uiFontSize: 16,
+      codeFontSize: 13,
     };
 
     expect(saveThemeStudioSettings(storage, settings)).toBe(true);
     expect(loadThemeStudioSettings(storage)).toEqual(settings);
+    expect(JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!)).toEqual(settings);
+    expect(storage.values.has(LEGACY_THEME_STUDIO_STORAGE_KEY)).toBe(false);
   });
 
   it("uses defaults for missing, malformed, or unavailable storage", () => {
     expect(loadThemeStudioSettings(undefined)).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
-    expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: "not-json" }))).toEqual(
+    expect(loadThemeStudioSettings(memoryStorage("not-json"))).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
-    expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: "{}" }))).toEqual(
+    expect(loadThemeStudioSettings(memoryStorage("{}"))).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
   });
 
-  it("adds inline-code colors to themes saved before the field existed", () => {
-    const proof = getThemePreset("proof").palette;
-    const {
-      lightInlineCode: _lightInlineCode,
-      darkInlineCode: _darkInlineCode,
-      ...legacySettings
-    } = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...proof,
+  it("prefers valid v2 over legacy colors, typography, and the initial scheme", () => {
+    const settings: ThemeStudioSettings = {
+      themeId: "warm-pink",
+      uiFont: "inter",
+      codeFont: "jetbrains",
+      uiFontSize: 15,
+      codeFontSize: 13,
     };
+    const storage = memoryStorage(JSON.stringify(settings));
+    storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+      uiFont: "serif", codeFont: "menlo", uiFontSize: 16, codeFontSize: 15,
+      lightAccent: "broken",
+    }));
+    const reads: string[] = [];
 
-    expect(
-      loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacySettings) })),
-    ).toEqual({
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...proof,
-    });
+    expect(loadThemeStudioSettings({
+      getItem: (key) => {
+        reads.push(key);
+        return storage.getItem(key);
+      },
+      setItem: storage.setItem,
+    }, "dark")).toEqual(settings);
+    expect(reads).toEqual([THEME_STUDIO_STORAGE_KEY]);
   });
 
-  it("migrates the reddish legacy editorial foreground", () => {
-    const legacyEditorial = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...getThemePreset("editorial").palette,
-      lightForeground: "#1F0909",
-      lightSidebar: "#F3F2EE",
-      darkSidebar: "#211C1A",
-      uiFont: "system",
-      codeFont: "sf-mono",
-      uiFontSize: 14,
-      codeFontSize: 14,
-    };
-    const storage = memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacyEditorial) });
+  it.each([undefined, "{", "{}", "null", "[]"])(
+    "preserves legacy typography despite invalid colors when v2 is %s",
+    (cached: string | undefined) => {
+      const storage = memoryStorage(cached);
+      storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+        lightAccent: "broken", darkAccent: null, lightBackground: {}, darkBackground: 42,
+        lightContrast: -1, darkContrast: "100",
+        uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13,
+      }));
 
-    expect(loadThemeStudioSettings(storage)).toEqual({
-      ...legacyEditorial,
-      lightForeground: "#2F2C29",
-    });
-    expect(
-      JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!),
-    ).toMatchObject({ lightForeground: "#2F2C29" });
-  });
+      expect(loadThemeStudioSettings(storage, "dark")).toEqual({
+        themeId: "dark", uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13,
+      });
+    },
+  );
 
   it("reports a rejected write without changing the preview source", () => {
     const storage: ThemeStudioStorage = {
@@ -256,53 +112,54 @@ describe("theme persistence (legacy compatibility)", () => {
     ).toBe(false);
   });
 
-  it("round-trips contrast values", () => {
-    const storage = memoryStorage();
-    const settings: ThemeStudioSettings = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightContrast: 100,
-      darkContrast: 0,
-    };
+  it("leaves legacy, prefs, and unrelated caches byte-for-byte unchanged", () => {
+    const storage = memoryStorage("{");
+    storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({ uiFont: "serif" }));
+    storage.setItem(THEME_PREFS_STORAGE_KEY, '{ "reduceMotion": "off", "fontSmoothing": true }');
+    storage.setItem("other-plugin/cache", "untouched");
+    const before = new Map(storage.values);
 
+    const settings = loadThemeStudioSettings(storage, "dark");
+    expect(settings).toEqual({ ...DEFAULT_THEME_STUDIO_SETTINGS, themeId: "dark", uiFont: "serif" });
+    expect(storage.values).toEqual(before);
     expect(saveThemeStudioSettings(storage, settings)).toBe(true);
-    expect(loadThemeStudioSettings(storage)).toEqual(settings);
+    expect(storage.values).toEqual(new Map([
+      ...before,
+      [THEME_STUDIO_STORAGE_KEY, JSON.stringify(settings)],
+    ]));
   });
 
-  it("defaults contrast for themes saved before the field existed and migrates storage", () => {
-    const {
-      lightContrast: _lightContrast,
-      darkContrast: _darkContrast,
-      ...legacySettings
-    } = DEFAULT_THEME_STUDIO_SETTINGS;
-    const storage = memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacySettings) });
-
-    expect(loadThemeStudioSettings(storage)).toEqual(
-      DEFAULT_THEME_STUDIO_SETTINGS,
-    );
-    expect(
-      JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!),
-    ).toMatchObject({
-      lightContrast: CONTRAST_DEFAULT,
-      darkContrast: CONTRAST_DEFAULT,
+  it("uses the initial scheme when storage reads are blocked and rejects unavailable writes", () => {
+    const storage: ThemeStudioStorage = {
+      getItem: () => { throw new Error("blocked"); },
+      setItem: () => { throw new Error("blocked"); },
+    };
+    expect(loadThemeStudioSettings(storage, "dark")).toEqual({
+      ...DEFAULT_THEME_STUDIO_SETTINGS, themeId: "dark",
     });
+    expect(saveThemeStudioSettings(undefined, DEFAULT_THEME_STUDIO_SETTINGS)).toBe(false);
+    expect(saveThemeStudioSettings(storage, DEFAULT_THEME_STUDIO_SETTINGS)).toBe(false);
   });
 
-  it("falls back to the default contrast for out-of-range or malformed values", () => {
-    for (const bad of [-1, 101, 50.5, "60", null, {}]) {
-      const raw = JSON.stringify({
-        ...DEFAULT_THEME_STUDIO_SETTINGS,
-        lightContrast: bad,
-        darkContrast: bad,
-      });
+  it.each(["uiFont", "codeFont", "uiFontSize", "codeFontSize"] as const)(
+    "defaults only the malformed legacy typography field %s",
+    (field: ThemeTypographyField) => {
+      const typography = { uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13 } as const;
+      for (const bad of [-1, 101, 50.5, "60", null, {}]) {
+        const storage = memoryStorage();
+        storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+          ...typography, [field]: bad, lightAccent: "broken",
+        }));
 
-      expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: raw }))).toEqual(
-        DEFAULT_THEME_STUDIO_SETTINGS,
-      );
-    }
-  });
+        expect(loadThemeStudioSettings(storage), `${field}: ${JSON.stringify(bad)}`).toEqual({
+          themeId: "light", ...typography, [field]: DEFAULT_THEME_STUDIO_SETTINGS[field],
+        });
+      }
+    },
+  );
 });
 
-describe("theme prefs (legacy compatibility)", () => {
+describe("theme prefs", () => {
   it("defaults to system motion and zero-intervention smoothing", () => {
     expect(loadThemeStudioPrefs(undefined)).toEqual({
       reduceMotion: "system",
@@ -312,7 +169,7 @@ describe("theme prefs (legacy compatibility)", () => {
       reduceMotion: "system",
       fontSmoothing: false,
     });
-    expect(loadThemeStudioPrefs(memoryStorage({ [THEME_PREFS_STORAGE_KEY]: "not-json" }))).toEqual({
+    expect(loadThemeStudioPrefs(memoryStorage("not-json"))).toEqual({
       reduceMotion: "system",
       fontSmoothing: false,
     });
@@ -322,15 +179,18 @@ describe("theme prefs (legacy compatibility)", () => {
     const storage = memoryStorage();
     saveThemeStudioSettings(storage, DEFAULT_THEME_STUDIO_SETTINGS);
 
+    // Reading prefs never materializes the key; theme settings never read
+    // or write prefs.
     loadThemeStudioPrefs(storage);
     expect(storage.values.has(THEME_PREFS_STORAGE_KEY)).toBe(false);
 
     const prefs = { reduceMotion: "on" as const, fontSmoothing: true };
     expect(saveThemeStudioPrefs(storage, prefs)).toBe(true);
     expect(loadThemeStudioPrefs(storage)).toEqual(prefs);
-    expect(
-      loadThemeStudioSettings(storage).lightContrast,
-    ).toBe(CONTRAST_DEFAULT);
+    expect(loadThemeStudioSettings(storage)).toEqual(DEFAULT_THEME_STUDIO_SETTINGS);
+    expect(storage.values.get(THEME_STUDIO_STORAGE_KEY)).toBe(
+      JSON.stringify(DEFAULT_THEME_STUDIO_SETTINGS),
+    );
   });
 
   it("falls back to defaults per field for malformed prefs", () => {

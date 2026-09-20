@@ -22,7 +22,10 @@
   ],
   "scripts": {
     "start": "node bin/dsh-team-hub.js start",
-    "test": "node --test test/*.test.mjs",
+    "build": "node scripts/build-appearance.mjs",
+    "check:appearance": "node scripts/build-appearance.mjs --check",
+    "test": "node scripts/build-appearance.mjs --check && node --test test/*.test.mjs",
+    "test:appearance:browser": "node scripts/appearance-browser.mjs",
     "selftest": "node bin/dsh-team-hub.js selftest",
     "acceptance": "node scripts/acceptance.mjs",
     "pack:check": "npm pack --dry-run",

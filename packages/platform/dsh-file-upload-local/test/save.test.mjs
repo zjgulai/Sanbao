@@ -12,6 +12,11 @@ import { saveUpload, sanitizeFilename } from '../lib/index.js'
 let root
 before(async () => { root = await mkdtemp(join(tmpdir(), 'dsh-fu-')) })
 
+test('LoopX 启动按钮使用主题填色和配套前景', async () => {
+  const source = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+  assert.match(source, /background: "var\(--sanbao-accent-fill\)", color: "var\(--sanbao-on-accent\)"/)
+})
+
 test('sanitize：普通文件名原样保留', () => {
   assert.equal(sanitizeFilename('report.pdf'), 'report.pdf')
 })

@@ -58,15 +58,24 @@ export function createShellSyncState(): ShellSyncState {
 /** 设置页 section 的 slot 名。 */
 const SECTION_SLOT = "settings.section";
 
-/** 观察节流：一帧内合并多次 DOM 变更。 */
+/**
+ * 观察节流：一帧内合并多次 DOM 变更。
+ *
+ * rAF 在隐藏窗口里**不跑**（2026-09-20 实测：`visibilityState === "hidden"` 时
+ * requestAnimationFrame 800ms 内零回调）——只挂 rAF 会让观察器回调永远悬在队列里：
+ * 用户随后切回窗口、设置页早已打开，shell 却还停在 `absent`（诊断属性
+ * `data-dsh-settings-shell` 可查），全屏与分组一起失效。故 rAF 与短定时器双保险，
+ * 先到先跑。
+ */
 function scheduleFrame(run: () => void): void {
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(() => {
-      run();
-    });
-    return;
-  }
-  setTimeout(run, 16);
+  let fired = false;
+  const fire = (): void => {
+    if (fired) return;
+    fired = true;
+    run();
+  };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(fire);
+  setTimeout(fire, 64);
 }
 
 /** 从 slots 注册表读 section id（顺序 = 渲染顺序，`entries` 契约保证）。 */

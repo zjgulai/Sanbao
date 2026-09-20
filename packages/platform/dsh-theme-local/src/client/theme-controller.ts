@@ -1,228 +1,141 @@
 import {
-  type AppearanceMode,
-  type SeasonalTheme,
-  APPEARANCE_MODES,
-  SEASONAL_THEMES,
-  ensureSanbaoTokens,
-} from "./sanbao-tokens.js";
-import {
-  loadSavedAppearance,
-  saveAppearance,
-  resolveEffectiveMode,
-  type SavedAppearance,
-  type ThemeStudioStorage,
-  browserThemeStudioStorage,
-} from "./persistence.js";
+  decodeThemeStudioSettings, hasSavedThemeIdentity, THEME_STUDIO_FIELDS, THEME_TYPOGRAPHY_FIELDS,
+  type ThemeStudioField, type ThemeStudioSettings,
+} from "../theme-settings.js";
+import { loadThemeStudioSettings, saveThemeStudioSettings, type ThemeStudioStorage } from "./persistence.js";
 
-export interface AppearanceState {
-  mode: AppearanceMode;
-  theme: SeasonalTheme;
-  effectiveMode: "light" | "dark";
-  fontScale: number;
-  reducedMotion: boolean;
+export interface AppearanceSnapshot {
+  status: "loading" | "ready" | "unavailable";
+  value: ThemeStudioSettings | undefined;
+  base: unknown;
+  user: unknown;
+  revision: number | undefined;
+  writable: boolean;
+  mode: "host" | "memory";
 }
+export interface AppearanceScope {
+  getSnapshot(): AppearanceSnapshot;
+  subscribe(listener: () => void): () => void;
+  mutate(ops: readonly { op: "set"; path: string[]; value: unknown }[], expectedRevision?: number): Promise<void>;
+}
+export type SaveStatus = "loading" | "saving" | "saved" | "error";
+export interface AppearanceState { settings: ThemeStudioSettings; saveStatus: SaveStatus }
+const equal = (a: ThemeStudioSettings | undefined, b: ThemeStudioSettings) =>
+  a !== undefined && THEME_STUDIO_FIELDS.every(field => a[field] === b[field]);
+const writable = (s: AppearanceSnapshot) => s.status === "ready" && s.mode === "host" && s.writable;
 
-export type AppearanceListener = (state: AppearanceState) => void;
-
-export class AppearanceController {
-  private state: AppearanceState;
-  private listeners: Set<AppearanceListener> = new Set();
-  private doc?: Document;
-  private storage?: ThemeStudioStorage;
-  private mediaQuery?: MediaQueryList;
-  private mediaListener?: (e: MediaQueryListEvent) => void;
-
-  constructor(options: {
-    doc?: Document;
-    storage?: ThemeStudioStorage;
-    initialState?: Partial<SavedAppearance>;
-  } = {}) {
-    this.doc = options.doc ?? (typeof document !== "undefined" ? document : undefined);
-    this.storage = options.storage ?? browserThemeStudioStorage();
-
-    const saved = loadSavedAppearance(this.storage);
-    const mode = options.initialState?.mode ?? saved.mode;
-    const theme = options.initialState?.theme ?? saved.theme;
-    const fontScale = options.initialState?.fontScale ?? saved.fontScale;
-    const reducedMotion = options.initialState?.reducedMotion ?? saved.reducedMotion;
-
-    this.state = {
-      mode,
-      theme,
-      effectiveMode: resolveEffectiveMode(mode),
-      fontScale,
-      reducedMotion,
+/** Owns migration and latest-intent confirmation, not the SDK's wire queue. */
+export function createThemeController(options: {
+  scope: AppearanceScope;
+  initialScheme: "light" | "dark";
+  storage: ThemeStudioStorage | undefined;
+  render(settings: ThemeStudioSettings): void;
+}) {
+  const { scope, storage, render } = options;
+  let state: AppearanceState = { settings: loadThemeStudioSettings(storage, options.initialScheme), saveStatus: "loading" };
+  let disposed = false;
+  let initialized = false;
+  let pending = false;
+  const initialEdits = new Set<ThemeStudioField>();
+  const unconfirmedFields = new Set<ThemeStudioField>();
+  let generation = 0;
+  let revision = -1;
+  const listeners = new Set<() => void>();
+  const publish = (settings: ThemeStudioSettings, saveStatus: SaveStatus) => {
+    if (disposed) return;
+    const changed = !equal(state.settings, settings);
+    state = { settings, saveStatus };
+    if (changed) render(settings);
+    listeners.forEach(listener => listener());
+  };
+  const write = (fields: readonly ThemeStudioField[], expectedRevision?: number) => {
+    const ownGeneration = ++generation;
+    const snapshot = scope.getSnapshot();
+    if (!writable(snapshot)) {
+      pending = false;
+      publish(state.settings, snapshot.status === "loading" ? "loading" : "error");
+      return;
+    }
+    pending = true;
+    const requested = state.settings;
+    publish(requested, "saving");
+    const settle = (failed: boolean) => {
+      if (disposed || ownGeneration !== generation) return;
+      pending = false;
+      const accepted = scope.getSnapshot();
+      revision = Math.max(revision, accepted.revision ?? -1);
+      const value = decodeThemeStudioSettings(accepted.value);
+      const user = accepted.user !== null && typeof accepted.user === "object" && !Array.isArray(accepted.user)
+        ? accepted.user as Record<string, unknown> : {};
+      const saved = !failed && writable(accepted) && hasSavedThemeIdentity(user) && value !== undefined &&
+        fields.every(field => Object.hasOwn(user, field) && user[field] === requested[field] && value[field] === requested[field]);
+      if (saved) {
+        fields.forEach(field => unconfirmedFields.delete(field));
+        saveThemeStudioSettings(storage, value);
+      }
+      publish(saved ? value : requested, saved ? "saved" : "error");
     };
-
-    this.setupSystemMediaListener();
-    this.applyToDOM();
-  }
-
-  public getState(): AppearanceState {
-    return { ...this.state };
-  }
-
-  public subscribe(listener: AppearanceListener): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  public setMode(mode: AppearanceMode): void {
-    if (!APPEARANCE_MODES.includes(mode)) return;
-    if (this.state.mode === mode) return;
-
-    this.state.mode = mode;
-    this.state.effectiveMode = resolveEffectiveMode(mode);
-    this.persist();
-    this.applyToDOM();
-    this.notify();
-  }
-
-  public setTheme(theme: SeasonalTheme): void {
-    if (!SEASONAL_THEMES.includes(theme)) return;
-    if (this.state.theme === theme) return;
-
-    this.state.theme = theme;
-    this.persist();
-    this.applyToDOM();
-    this.notify();
-  }
-
-  public setFontScale(scale: number): void {
-    const clamped = Math.min(2.0, Math.max(0.5, Math.round(scale * 100) / 100));
-    if (this.state.fontScale === clamped) return;
-
-    this.state.fontScale = clamped;
-    this.persist();
-    this.applyToDOM();
-    this.notify();
-  }
-
-  public setReducedMotion(reduced: boolean): void {
-    if (this.state.reducedMotion === reduced) return;
-
-    this.state.reducedMotion = reduced;
-    this.persist();
-    this.applyToDOM();
-    this.notify();
-  }
-
-  public updateAppearance(patch: Partial<SavedAppearance>): void {
-    let changed = false;
-
-    if (patch.mode !== undefined && APPEARANCE_MODES.includes(patch.mode) && this.state.mode !== patch.mode) {
-      this.state.mode = patch.mode;
-      this.state.effectiveMode = resolveEffectiveMode(patch.mode);
-      changed = true;
+    // The official scope can resolve after recovering a rejected write. Read back, never infer acceptance.
+    void scope.mutate(fields.map(field => ({ op: "set" as const, path: [field], value: requested[field] })), expectedRevision)
+      .then(() => settle(false), () => settle(true));
+  };
+  const sync = () => {
+    if (disposed) return;
+    const s = scope.getSnapshot();
+    if (s.status !== "ready" || s.mode !== "host") {
+      publish(state.settings, s.status === "loading" ? "loading" : "error");
+      return;
     }
-
-    if (patch.theme !== undefined && SEASONAL_THEMES.includes(patch.theme) && this.state.theme !== patch.theme) {
-      this.state.theme = patch.theme;
-      changed = true;
-    }
-
-    if (patch.fontScale !== undefined) {
-      const clamped = Math.min(2.0, Math.max(0.5, Math.round(patch.fontScale * 100) / 100));
-      if (this.state.fontScale !== clamped) {
-        this.state.fontScale = clamped;
-        changed = true;
-      }
-    }
-
-    if (patch.reducedMotion !== undefined && this.state.reducedMotion !== patch.reducedMotion) {
-      this.state.reducedMotion = patch.reducedMotion;
-      changed = true;
-    }
-
-    if (changed) {
-      this.persist();
-      this.applyToDOM();
-      this.notify();
-    }
-  }
-
-  public applyToDOM(): void {
-    const doc = this.doc;
-    if (!doc) return;
-
-    ensureSanbaoTokens(doc);
-
-    if (doc.documentElement) {
-      doc.documentElement.setAttribute("data-sanbao-mode", this.state.effectiveMode);
-      doc.documentElement.setAttribute("data-sanbao-theme", this.state.theme);
-      doc.documentElement.style.setProperty("--sanbao-font-scale", String(this.state.fontScale));
-    }
-
-    if (doc.body) {
-      doc.body.setAttribute("data-sanbao-mode", this.state.effectiveMode);
-      doc.body.setAttribute("data-sanbao-theme", this.state.theme);
-      if (this.state.reducedMotion) {
-        doc.body.setAttribute("data-lute-reduce-motion", "reduce");
-      } else {
-        doc.body.removeAttribute("data-lute-reduce-motion");
-      }
-    }
-  }
-
-  private persist(): void {
-    saveAppearance(
-      {
-        mode: this.state.mode,
-        theme: this.state.theme,
-        fontScale: this.state.fontScale,
-        reducedMotion: this.state.reducedMotion,
-      },
-      this.storage,
-    );
-  }
-
-  private notify(): void {
-    const snapshot = this.getState();
-    for (const listener of this.listeners) {
-      try {
-        listener(snapshot);
-      } catch {
-        // Prevent listener error from breaking controller
-      }
-    }
-  }
-
-  private setupSystemMediaListener(): void {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-
-    try {
-      this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      this.mediaListener = (e: MediaQueryListEvent | MediaQueryList) => {
-        if (this.state.mode === "system") {
-          const nextEffective = e.matches ? "dark" : "light";
-          if (this.state.effectiveMode !== nextEffective) {
-            this.state.effectiveMode = nextEffective;
-            this.applyToDOM();
-            this.notify();
-          }
+    if ((s.revision ?? -1) < revision) return;
+    if (pending) return;
+    const fresh = (s.revision ?? -1) > revision;
+    revision = Math.max(revision, s.revision ?? -1);
+    if (!initialized) {
+      initialized = true;
+      const fields = [...initialEdits];
+      const edits = Object.fromEntries(fields.map(field => [field, state.settings[field]]));
+      initialEdits.clear();
+      if (!hasSavedThemeIdentity(s.user)) {
+        // Preserve each valid Host typography override without losing cached siblings.
+        const user = s.user !== null && typeof s.user === "object" && !Array.isArray(s.user)
+          ? s.user as Record<string, unknown> : {};
+        let merged = state.settings;
+        for (const field of THEME_TYPOGRAPHY_FIELDS) {
+          if (Object.hasOwn(user, field)) merged = decodeThemeStudioSettings({ ...merged, [field]: user[field] }) ?? merged;
         }
-      };
-
-      if (typeof this.mediaQuery.addEventListener === "function") {
-        this.mediaQuery.addEventListener("change", this.mediaListener);
-      } else if (typeof (this.mediaQuery as any).addListener === "function") {
-        (this.mediaQuery as any).addListener(this.mediaListener);
+        publish(decodeThemeStudioSettings({ ...merged, ...edits }) ?? merged, "loading");
+        write(THEME_STUDIO_FIELDS, s.revision); return;
       }
-    } catch {
-      // Ignore in environments without window.matchMedia
-    }
-  }
-
-  public dispose(): void {
-    if (this.mediaQuery && this.mediaListener) {
-      if (typeof this.mediaQuery.removeEventListener === "function") {
-        this.mediaQuery.removeEventListener("change", this.mediaListener);
-      } else if (typeof (this.mediaQuery as any).removeListener === "function") {
-        (this.mediaQuery as any).removeListener(this.mediaListener);
+      if (fields.length) {
+        const merged = decodeThemeStudioSettings({ ...s.value, ...edits });
+        if (merged) publish(merged, "loading");
+        write(fields); return;
       }
     }
-    this.listeners.clear();
-  }
+    if (!fresh && state.saveStatus === "error") return;
+    const accepted = decodeThemeStudioSettings(s.value);
+    if (accepted && hasSavedThemeIdentity(s.user)) {
+      if (s.writable) saveThemeStudioSettings(storage, accepted);
+      publish(accepted, s.writable ? "saved" : "error");
+    } else publish(state.settings, "error");
+  };
+  render(state.settings);
+  const unsubscribe = scope.subscribe(sync);
+  sync();
+  const set = <Field extends ThemeStudioField>(field: Field, value: ThemeStudioSettings[Field]) => {
+    if (disposed) return;
+    const next = decodeThemeStudioSettings({ ...state.settings, [field]: value });
+    if (!next) return;
+    if (!initialized) initialEdits.add(field);
+    unconfirmedFields.add(field);
+    publish(next, "saving");
+    write([...unconfirmedFields]);
+  };
+  return {
+    getSnapshot: () => state,
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    set,
+    resetColors: () => set("themeId", "light"),
+    dispose: () => { disposed = true; generation++; unsubscribe(); listeners.clear(); },
+  };
 }

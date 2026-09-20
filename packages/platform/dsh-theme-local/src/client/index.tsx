@@ -1,21 +1,17 @@
 import type {} from "@deepseek-ai/dsh-client-locale/client";
-import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
+import type { SettingsScope, SettingsScopeSpec } from "@deepseek-ai/dsh-client-ui-settings/client";
 import type { BoundActions } from "@deepseek-ai/dsh-client-ui-slots";
 import type {
   ThemePreference,
   ThemeSnapshot,
   ThemeTokenOverrides,
 } from "@deepseek-ai/dsh-client-ui-theme/client";
-import type {} from "@deepseek-ai/dsh-client-ui-theme/client";
 
-/**
- * Minimal local context contract. LOCAL ADAPTATION: the upstream
- * `ClientContext` type lived in `@deepseek-ai/dsh-client-runtime`, which
- * does not exist in this Desktop's vendored 0.1.2-alpha.1 client graph.
- * The runtime services below were verified against the live client
- * Service directory (`slots` / `locale` / `theme`).
- */
+/** The service methods consumed by this client, without a runtime plugin import. */
 interface ClientContext {
+  settingsScope: {
+    bind<T>(spec: SettingsScopeSpec<T>): Pick<SettingsScope<T>, "getSnapshot" | "subscribe" | "mutate">;
+  };
   theme: {
     overrideTokens(source: string, tokens: ThemeTokenOverrides): () => void;
     getTheme(): ThemeSnapshot;
@@ -41,31 +37,25 @@ interface ClientContext {
 
 import "./studio.css";
 import {
-  DEFAULT_THEME_STUDIO_SETTINGS,
-  type ThemeColorField,
-  type ThemeContrastField,
-  type ThemeStudioField,
+  decodeThemeStudioSettings,
+  THEME_SETTINGS_NAMESPACE,
+  themeColorScheme,
   type ThemeStudioSettings,
-  type ThemeTypographyField,
 } from "../theme-settings.js";
 import { en, NS, type ThemeStudioKey, zh } from "./locales.js";
 import {
   browserThemeStudioStorage,
   loadThemeStudioPrefs,
-  loadThemeStudioSettings,
   saveThemeStudioPrefs,
-  saveThemeStudioSettings,
   type ThemeStudioPrefs,
 } from "./persistence.js";
-import {
-  PREFS_CSS,
-  REDUCE_MOTION_QUERY,
-  prefsAttributes,
-} from "./prefs-css.js";
-import { themePresetSettings, type ThemePresetId } from "./presets.js";
+import { PREFS_CSS, REDUCE_MOTION_QUERY, prefsAttributes } from "./prefs-css.js";
+import { ensureSanbaoTokens } from "./sanbao-tokens.js";
 import { createThemeStudioStore } from "./store.js";
 import { ThemeStudio, type ThemeStudioInjected } from "./ThemeStudio.js";
+import { createThemeController } from "./theme-controller.js";
 import { buildThemeTokenOverrides } from "./theme-tokens.js";
+import { bindAppearanceEvents } from "./appearance-events.js";
 
 declare module "@deepseek-ai/dsh-client-ui-slots" {
   interface LocaleNamespaceMap {
@@ -75,15 +65,7 @@ declare module "@deepseek-ai/dsh-client-ui-slots" {
 
 const THEME_SOURCE = "dsh-theme";
 
-/**
- * LOCAL ADAPTATION: tokens inside the Desktop's `overrideTokens` contract
- * (verified against the live Theme Inspect token directory) keep using the
- * official stacking API. Every other token the plugin models is applied as
- * a plain CSS custom property through one injected stylesheet, because the
- * 0.1.2-alpha.1 runtime defines the full `--dsw-*` variable surface on
- * `:root` and `body[data-ds-dark-theme]` and the components consume the
- * variables directly.
- */
+/** Only these tokens belong to the official override contract. */
 const CONTRACT_TOKEN_NAMES = new Set([
   "--dsw-alias-bg-base",
   "--dsw-alias-bg-layer-1",
@@ -100,221 +82,172 @@ const CONTRACT_TOKEN_NAMES = new Set([
   "--dsw-specific-sidebar-fill",
 ]);
 
-type TokenPair = { light: string; dark: string };
+type ThemeStudioActions = BoundActions<ReturnType<typeof createThemeStudioStore>>;
 
-type ThemeStudioActions = BoundActions<
-  ReturnType<typeof createThemeStudioStore>
->;
+/** Remove only boot-owned properties still carrying the value and priority boot wrote. */
+function takeOverBootTokens(body: HTMLElement, tokens: ThemeTokenOverrides): void {
+  const marker = body.dataset.sanbaoBootTokens;
+  if (marker === undefined) return;
+  let owned: unknown;
+  try {
+    owned = JSON.parse(marker);
+  } catch {
+    // A malformed ownership marker cannot authorize removal of inline styles.
+    return;
+  }
+  if (owned === null || typeof owned !== "object" || Array.isArray(owned)) return;
+  for (const [key, value] of Object.entries(owned)) {
+    if (key !== "color-scheme" && !Object.hasOwn(tokens, key)) continue;
+    const priority = key === "color-scheme" ? "" : "important";
+    if (typeof value === "string" && body.style.getPropertyValue(key) === value && body.style.getPropertyPriority(key) === priority) {
+      body.style.removeProperty(key);
+    }
+  }
+  delete body.dataset.sanbaoBootTokens;
+}
 
-export const inject = [
-  "slots",
-  "locale",
-  "theme",
-];
+export const inject = ["slots", "locale", "theme", "settingsScope"];
 
 export function apply(ctx: ClientContext): void {
   const storage = browserThemeStudioStorage();
-  let currentSettings = loadThemeStudioSettings(storage);
+  const body = document.body;
+  const bootScheme = body.dataset.sanbaoInitialScheme;
+  const initialScheme = bootScheme === "light" || bootScheme === "dark"
+    ? bootScheme
+    : ctx.theme.getTheme().active.colorScheme;
+  const scope = ctx.settingsScope.bind<ThemeStudioSettings>({
+    namespace: THEME_SETTINGS_NAMESPACE,
+    decode: decodeThemeStudioSettings,
+  });
   let currentPrefs = loadThemeStudioPrefs(storage);
-  const store = createThemeStudioStore(currentSettings, currentPrefs);
   let actions: ThemeStudioActions | undefined;
-  let releaseOverride: () => void = () => {};
-  let cssTag: HTMLStyleElement | undefined;
-  let prefsTag: HTMLStyleElement | undefined;
+  let controller: ReturnType<typeof createThemeController>;
+  let disposed = false;
   let motionQuery: MediaQueryList | undefined;
 
-  const applyCssVars = (tokens: Record<string, TokenPair>): void => {
-    if (cssTag !== undefined) {
-      cssTag.remove();
-      cssTag = undefined;
-    }
-    const names = Object.keys(tokens);
-    if (names.length === 0) return;
-    const light: string[] = [];
-    const dark: string[] = [];
-    for (const name of names) {
-      const pair = tokens[name];
-      if (pair === undefined) continue;
-      light.push(`${name}: ${pair.light};`);
-      dark.push(`${name}: ${pair.dark};`);
-    }
-    const css =
-      `:root { ${light.join(" ")} }` +
-      `body[data-ds-dark-theme] { ${dark.join(" ")} }`;
-    cssTag = document.createElement("style");
-    cssTag.dataset.plugin = THEME_SOURCE;
-    cssTag.dataset.pluginCss = `${THEME_SOURCE}/token-vars`;
-    cssTag.textContent = css;
-    document.head.appendChild(cssTag);
+  const syncStore = () => {
+    const state = controller.getSnapshot();
+    actions?.syncSettings(state.settings);
+    actions?.setSaveStatus(state.saveStatus);
+    actions?.syncPrefs(currentPrefs);
   };
-
-  const applyPrefs = (): void => {
-    const body = document.body;
-    const attributes = prefsAttributes(
-      currentPrefs,
-      motionQuery?.matches ?? false,
-    );
-
+  const applyPrefs = () => {
+    const attributes = prefsAttributes(currentPrefs, motionQuery?.matches ?? false);
     if (attributes.reduceMotion) body.dataset.luteReduceMotion = "reduce";
     else delete body.dataset.luteReduceMotion;
-
     if (attributes.fontSmoothing) body.dataset.luteFontSmoothing = "on";
     else delete body.dataset.luteFontSmoothing;
   };
-
-  const syncStore = () => {
-    actions?.syncSettings(currentSettings);
-    actions?.syncPrefs(currentPrefs);
-  };
-
-  const applyPreview = () => {
-    const overrides = buildThemeTokenOverrides(currentSettings);
-    const contract: ThemeTokenOverrides = {};
-    const cssVars: Record<string, TokenPair> = {};
-    for (const [token, pair] of Object.entries(overrides)) {
-      if (CONTRACT_TOKEN_NAMES.has(token)) {
-        contract[token] = pair;
-      } else {
-        cssVars[token] = pair;
-      }
-    }
-    const nextRelease = ctx.theme.overrideTokens(THEME_SOURCE, contract);
-    releaseOverride();
-    releaseOverride = nextRelease;
-    applyCssVars(cssVars);
-  };
-
-  const persist = () => {
-    actions?.setSaveStatus("saving");
-    actions?.setSaveStatus(
-      saveThemeStudioSettings(storage, currentSettings) ? "idle" : "error",
-    );
-  };
-
-  const setSetting = <Field extends ThemeStudioField>(
-    field: Field,
-    value: ThemeStudioSettings[Field],
-  ) => {
-    currentSettings = { ...currentSettings, [field]: value };
-    syncStore();
-    applyPreview();
-    persist();
-  };
-
-  const setColor = (field: ThemeColorField, value: string) => {
-    setSetting(field, value);
-  };
-
-  const setContrast = (field: ThemeContrastField, value: number) => {
-    setSetting(field, value);
-  };
-
-  const setTypography = <Field extends ThemeTypographyField>(
-    field: Field,
-    value: ThemeStudioSettings[Field],
-  ) => {
-    setSetting(field, value);
-  };
-
-  const applySettings = (settings: ThemeStudioSettings) => {
-    currentSettings = { ...settings };
-    syncStore();
-    applyPreview();
-    persist();
-  };
-
   const setPrefs = (patch: Partial<ThemeStudioPrefs>) => {
+    if (disposed) return;
     currentPrefs = { ...currentPrefs, ...patch };
     syncStore();
     applyPrefs();
     saveThemeStudioPrefs(storage, currentPrefs);
   };
 
-  const applyPreset = (id: ThemePresetId) => {
-    applySettings(themePresetSettings(id));
-  };
-
-  const resetTheme = () => {
-    applySettings(DEFAULT_THEME_STUDIO_SETTINGS);
-  };
-
-  const syncTheme = (snapshot: ThemeSnapshot) => {
-    // LOCAL ADAPTATION: defensive fallback for the stripped 0.1.2-alpha.1
-    // snapshot typings; the UI only needs a valid scheme label.
-    const scheme = snapshot.active?.colorScheme ?? "light";
-    actions?.syncTheme(snapshot.preference, scheme);
-  };
-
-  ctx.effect(
-    () => ctx.locale.register(NS, { zh, en }),
-    "dsh-theme: dictionaries",
-  );
-
-  ctx.on("theme/change", syncTheme);
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), "dsh-theme: dictionaries");
+  ctx.effect(() => ensureSanbaoTokens(document), "dsh-theme: semantic tokens");
   ctx.effect(() => {
-    applyPreview();
-    return () => {
-      releaseOverride();
-      if (cssTag !== undefined) cssTag.remove();
-      cssTag = undefined;
+    const cssTag = document.createElement("style");
+    cssTag.dataset.plugin = THEME_SOURCE;
+    cssTag.dataset.pluginCss = `${THEME_SOURCE}/token-vars`;
+    document.head.appendChild(cssTag);
+    let currentScheme = initialScheme;
+    let renderedTheme: ThemeStudioSettings["themeId"] | undefined;
+    let contractKey: string | undefined;
+    let releaseOverride: (() => void) | undefined;
+    let firstRender = true;
+
+    // Official echoes adapt the presenter only; they never select a product identity.
+    const syncScheme = () => {
+      if (!disposed && ctx.theme.getTheme().preference !== currentScheme) {
+        ctx.theme.setTheme(currentScheme);
+      }
     };
-  }, "dsh-theme: live theme override");
+    const releaseThemeChange = ctx.on("theme/change", syncScheme);
+    controller = createThemeController({
+      scope, storage, initialScheme,
+      render(settings) {
+        const tokens = buildThemeTokenOverrides(settings);
+        if (firstRender) {
+          takeOverBootTokens(body, tokens);
+          firstRender = false;
+        }
+        renderedTheme = settings.themeId;
+        currentScheme = themeColorScheme(settings.themeId);
+        if (body.dataset.sanbaoTheme !== settings.themeId) body.dataset.sanbaoTheme = settings.themeId;
+        const contract: ThemeTokenOverrides = {};
+        const declarations = [`color-scheme: ${currentScheme} !important;`];
+        for (const [key, pair] of Object.entries(tokens)) {
+          if (CONTRACT_TOKEN_NAMES.has(key)) contract[key] = pair;
+          else declarations.push(`${key}: ${pair[currentScheme]} !important;`);
+        }
+        // Body specificity beats defaults; important beats normal presenter inline values.
+        const css = `body[data-sanbao-theme] { ${declarations.join(" ")} }`;
+        if (cssTag.textContent !== css) cssTag.textContent = css;
+        syncScheme();
+        const nextKey = JSON.stringify(contract);
+        if (nextKey !== contractKey) {
+          contractKey = nextKey;
+          const nextRelease = ctx.theme.overrideTokens(THEME_SOURCE, contract);
+          releaseOverride?.();
+          releaseOverride = nextRelease;
+        }
+      },
+    });
+    const unsubscribe = controller.subscribe(syncStore);
+    return () => {
+      disposed = true;
+      releaseThemeChange();
+      unsubscribe();
+      controller.dispose();
+      actions = undefined;
+      releaseOverride?.();
+      cssTag.remove();
+      if (body.dataset.sanbaoTheme === renderedTheme) delete body.dataset.sanbaoTheme;
+    };
+  }, "dsh-theme: Host settings and live override");
+
+  ctx.effect(() => bindAppearanceEvents(document, controller), "dsh-theme: document appearance entrypoints");
 
   ctx.effect(() => {
-    prefsTag = document.createElement("style");
+    const prefsTag = document.createElement("style");
     prefsTag.dataset.plugin = THEME_SOURCE;
     prefsTag.dataset.pluginCss = `${THEME_SOURCE}/prefs`;
     prefsTag.textContent = PREFS_CSS;
     document.head.appendChild(prefsTag);
-
-    motionQuery =
-      typeof window.matchMedia === "function"
-        ? window.matchMedia(REDUCE_MOTION_QUERY)
-        : undefined;
+    motionQuery = typeof window.matchMedia === "function" ? window.matchMedia(REDUCE_MOTION_QUERY) : undefined;
     const onMotionChange = () => applyPrefs();
     motionQuery?.addEventListener("change", onMotionChange);
     applyPrefs();
-
     return () => {
       motionQuery?.removeEventListener("change", onMotionChange);
-      delete document.body.dataset.luteReduceMotion;
-      delete document.body.dataset.luteFontSmoothing;
-      if (prefsTag !== undefined) prefsTag.remove();
-      prefsTag = undefined;
+      delete body.dataset.luteReduceMotion;
+      delete body.dataset.luteFontSmoothing;
+      prefsTag.remove();
       motionQuery = undefined;
     };
   }, "dsh-theme: presentation prefs");
 
+  const store = createThemeStudioStore(controller!.getSnapshot().settings, currentPrefs);
   const injectProps = (bound: ThemeStudioActions): ThemeStudioInjected => {
     actions = bound;
     syncStore();
-    const snapshot = ctx.theme.getTheme();
-    syncTheme(snapshot);
-
     return {
-      applyPreset,
-      applySettings,
-      resetTheme,
-      setColor,
-      setContrast,
+      resetTheme: () => controller.resetColors(),
       setPrefs,
-      setTheme: (preference: ThemePreference) => ctx.theme.setTheme(preference),
-      setTypography,
+      setTheme: themeId => controller.set("themeId", themeId),
+      setTypography: (field, value) => controller.set(field, value),
     };
   };
-
-  ctx.slots.inject("settings.section", () =>
-    ctx.slots.register(
-      {
-        name: "settings.section",
-        id: "dsh-theme",
-        order: 5,
-        label: () => ctx.locale.bind(NS)("nav"),
-        store,
-        locale: NS,
-        inject: injectProps,
-      },
-      ThemeStudio,
-    ),
-  );
+  ctx.slots.inject("settings.section", () => ctx.slots.register({
+    name: "settings.section",
+    id: "dsh-theme",
+    order: 5,
+    label: () => ctx.locale.bind(NS)("nav"),
+    store,
+    locale: NS,
+    inject: injectProps,
+  }, ThemeStudio));
 }

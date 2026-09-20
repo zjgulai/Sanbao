@@ -75,10 +75,7 @@ export function HeroRootBrand({ size = 34, className }: BrandMarkProps): ReactEl
  */
 export const BRAND_CSS = `
 [data-plugin="dsh-root-brand"] {
-  --dsh-rb-accent: #3d566e;
-}
-body[data-ds-dark-theme] [data-plugin="dsh-root-brand"] {
-  --dsh-rb-accent: #c4d0dc;
+  --dsh-rb-accent: var(--sanbao-accent);
 }
 svg[data-plugin="dsh-root-brand"] {
   color: var(--dsh-rb-accent);
@@ -89,23 +86,29 @@ svg[data-plugin="dsh-root-brand"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  max-width: 560px;
-  color: var(--dsw-alias-label-primary, #3d566e);
+  gap: 16px;
+  max-width: 100%;
+  min-width: 0;
+  color: var(--dsw-alias-label-primary, var(--sanbao-accent));
+}
+[data-plugin="dsh-root-brand"].dsh-rb-hero > svg {
+  width: 56px;
+  height: 56px;
 }
 [data-plugin="dsh-root-brand"] .dsh-rb-hero-copy {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: 8px;
 }
 [data-plugin="dsh-root-brand"].dsh-rb-hero .dsh-rb-hero-name {
-  font: var(--dsw-font-m-18, 500 18px/26px var(--dsw-font-family, system-ui, sans-serif));
-  letter-spacing: 0.2px;
-  white-space: nowrap;
+  font: var(--sanbao-font-hero, 600 36px/44px var(--dsw-font-family, system-ui, sans-serif));
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 [data-plugin="dsh-root-brand"] .dsh-rb-hero-slogan {
-  font: var(--dsw-font-xxs-12, 400 12px/18px var(--dsw-font-family, system-ui, sans-serif));
+  font: var(--dsw-font-base-16, 400 16px/24px var(--dsw-font-family, system-ui, sans-serif));
   color: var(--dsw-alias-label-secondary, var(--dsh-rb-accent));
 }
 [data-plugin="dsh-root-brand"].dsh-rb-name {
@@ -131,23 +134,27 @@ svg[data-plugin="dsh-root-brand"] {
   color: var(--dsw-alias-label-secondary, var(--dsh-rb-accent));
 }
 @media (max-width: 640px) {
+  [data-plugin="dsh-root-brand"].dsh-rb-hero > svg {
+    width: 48px;
+    height: 48px;
+  }
   [data-plugin="dsh-root-brand"].dsh-rb-hero .dsh-rb-hero-name {
-    font: var(--dsw-font-s-14, 500 14px/20px var(--dsw-font-family, system-ui, sans-serif));
+    font: var(--sanbao-font-hero-compact, 600 28px/36px var(--dsw-font-family, system-ui, sans-serif));
   }
 }
 
 /* Keyboard focus remains visible on the brand surfaces. */
 .dshro-action:focus-within,
 [data-plugin="dsh-root-brand"].dsh-rb-hero:focus-within {
-  outline: 2px solid var(--sanbao-accent, #3d566e);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
 }
 .dshro-a:focus-visible {
-  outline: 2px solid var(--sanbao-accent, #3d566e);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
 }
 .dshro-advanced summary:focus-visible {
-  outline: 2px solid var(--sanbao-accent, #3d566e);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
   border-radius: 4px;
 }

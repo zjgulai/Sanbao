@@ -16,17 +16,9 @@
  *     business accent token carries the existing LUTE brand green; no new
  *     component colour is introduced here.
  *
- * ── 字号阶梯（2026-09-20 起，五层，只走 `--dsw-font-*`）──────────────────────
- *
- * 旧版把 11–14px 摊在整面板上，层级几乎不可辨（用户原话：字号大小「跟实际页面
- * 完全不搭」）。现在每层只对应一类信息，取值全部来自主题 token 家族：
- *
- *   L1 20/500  面板标题                                    --dsw-font-l-20
- *   L2 16/500  平面名 · 名片姓名                            --dsw-font-base-strong-16
- *   L3 13/500  责任域名 · 详情行标签                        --dsw-font-xs-strong-13
- *     13/400  名片岗位 · 面板副题 · 搜索框 · 详情正文/取值   --dsw-font-xs-13
- *   L4 12/400  职责简介 · 平面用途 · 计数 pill · chip · 页脚 --dsw-font-xxs-12
- *   L5 11/400  工号 · 卡片徽标                              --dsw-font-xxxs-11
+ * Typography consumes the shared Sanbao semantic ladder with official font
+ * shorthands as fallbacks. Page, section and panel headings stay distinct from
+ * body copy, controls and metadata; the theme owns font-family and size scaling.
  *
  * 名片本身是「左栏头像＋工号 / 右栏姓名·岗位·一句话职责」的两栏版式：一行排三张
  * （见 `.cards`），窄窗口降两列、再窄降一列，降列不降字号——头像与文字都被挤小
@@ -134,17 +126,17 @@
   min-width: 0;
 }
 
-/* L1：面板标题。 */
+/* Page heading. */
 .title {
   margin: 0;
-  font: var(--dsw-font-l-20);
+  font: var(--sanbao-font-page, var(--dsw-font-xl-24));
   letter-spacing: 0.2px;
 }
 
-/* L3：面板副题。 */
+/* Introductory body copy. */
 .subtitle {
   margin: 0;
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #666);
 }
 
@@ -212,7 +204,7 @@
   width: 100%;
   height: 34px;
   padding: 0 32px 0 30px;
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: inherit;
   border-radius: 8px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.14));
@@ -276,7 +268,7 @@
   gap: 6px;
 }
 
-/* L4：计数 pill。 */
+/* Totals metadata. */
 .total {
   display: inline-flex;
   align-items: center;
@@ -287,7 +279,7 @@
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.11));
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
   color: var(--dsw-alias-label-secondary, #666);
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   white-space: nowrap;
 }
 
@@ -325,7 +317,7 @@
   min-height: 220px;
   padding: 32px 16px;
   text-align: center;
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #666);
 }
 
@@ -355,7 +347,7 @@
   border: 1px solid var(--dsw-alias-state-business-primary, #347a2f);
   background: var(--dsw-alias-state-business-tertiary, rgba(52, 122, 47, 0.12));
   color: var(--dsw-alias-state-business-primary, #347a2f);
-  font: var(--dsw-font-xxs-strong-12);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   cursor: pointer;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
 }
@@ -411,19 +403,19 @@
   background: var(--dsw-alias-state-business-primary, #347a2f);
 }
 
-/* L2：平面名。 */
+/* Section heading. */
 .planeName {
-  font: var(--dsw-font-base-strong-16);
+  font: var(--sanbao-font-section, var(--dsw-font-l-20));
   letter-spacing: 0.2px;
 }
 
-/* L4：平面用途。 */
+/* Section description. */
 .planePurpose {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-caption, #999);
 }
 
@@ -437,7 +429,7 @@
   border-radius: 999px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1));
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #666);
   white-space: nowrap;
 }
@@ -461,16 +453,16 @@
   flex: none;
 }
 
-/* L3：责任域名。 */
+/* Domain subheading. */
 .domainName {
-  font: var(--dsw-font-xs-strong-13);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   letter-spacing: 0.3px;
   color: var(--dsw-alias-label-secondary, #666);
 }
 
-/* L4：责任域计数。 */
+/* Domain count metadata. */
 .domainCount {
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #999);
 }
 
@@ -591,9 +583,9 @@
   color: var(--dsw-alias-label-caption, #bbb);
 }
 
-/* L5：工号（mono，等宽对齐 AGT-001…AGT-050）。 */
+/* Monospaced employee identity. */
 .cardEmpNo {
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   font-family: var(--dsw-font-mono);
   letter-spacing: 0.4px;
   color: var(--dsw-alias-label-caption, #999);
@@ -607,29 +599,28 @@
   gap: 3px;
 }
 
-/* L2：名片姓名——整张卡最大的一行。 */
+/* Card name: the card's largest text. */
 .cardName {
-  font: var(--dsw-font-base-strong-16);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   letter-spacing: 0.2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* L3：岗位。 */
+/* Role title. */
 .cardRole {
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #666);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* L4：一句话职责，最多两行——文字不能多，超出交给省略号，完整描述在展开里。 */
+/* Body copy remains clamped to two lines; expanded detail carries the full text. */
 .cardBrief {
   margin-top: 3px;
-  font: var(--dsw-font-xxs-12);
-  line-height: 18px;
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #666);
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -662,7 +653,7 @@
   color: var(--dsw-alias-label-caption, #888);
 }
 
-/* L5：卡片徽标。 */
+/* Card metadata badge. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -670,7 +661,7 @@
   padding: 0 7px;
   border-radius: 999px;
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1));
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #666);
 }
 
@@ -698,8 +689,8 @@
   margin-top: 2px;
   padding-top: 10px;
   border-top: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
-  /* L3：展开后的正文——与卡片上的职责简介同一档，读起来不跳。 */
-  font: var(--dsw-font-xs-13);
+  /* Expanded values inherit the same body typography as the card brief. */
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   cursor: default;
 }
 
@@ -710,9 +701,9 @@
   align-items: start;
 }
 
-/* L3：详情行标签。 */
+/* Detail labels remain quieter than the body values. */
 .detailLabel {
-  font: var(--dsw-font-xs-strong-13);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #999);
 }
 
@@ -729,7 +720,7 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
-/* L4：详情 chip。 */
+/* Scannable detail metadata. */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -745,7 +736,7 @@
      shell's "small surface on a bigger surface" token and resolves in both. */
   background: var(--dsw-alias-bg-module-platform, #f5f6f7);
   color: var(--dsw-alias-label-secondary, #555);
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   white-space: nowrap;
 }
 
@@ -764,7 +755,7 @@
   padding: 10px 24px 14px;
   border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.07));
   background: var(--dsw-alias-bg-layer-1, #fff);
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #888);
 }
 
@@ -798,30 +789,34 @@
   height: 36px;
   margin: 2px 0;
   padding: 0 10px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #666);
   cursor: pointer;
   font: var(--dsw-font-xs-13);
   text-align: left;
-  transition: background 180ms ease, color 180ms ease;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .entry:hover,
 .entryActive {
-  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.05));
+  background: var(--sanbao-hover);
+  border-color: var(--sanbao-border);
   color: var(--dsw-alias-label-primary, #111);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), inset 0 1px 0 var(--sanbao-border);
 }
 
 .entryActive {
-  background: var(--dsw-alias-state-business-tertiary, rgba(52, 122, 47, 0.12));
-  color: var(--dsw-alias-state-business-primary, #347a2f);
+  background: var(--sanbao-selected);
+  border-color: var(--sanbao-accent);
+  color: var(--sanbao-accent);
+  box-shadow: inset 0 1px 0 var(--sanbao-border);
 }
 
 .entry:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary, #347a2f);
-  outline-offset: -2px;
+  outline-offset: -1px;
 }
 
 /* 24px box around an 18px glyph: the same ratio the shell's own nav rows use,
@@ -834,6 +829,11 @@
   align-items: center;
   justify-content: center;
   color: var(--dsw-alias-label-primary, #111);
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.entry:hover .entryIcon {
+  transform: scale(1.04);
 }
 
 .entryIcon svg {
@@ -842,7 +842,7 @@
 }
 
 .entry[data-active] .entryIcon {
-  color: var(--dsw-alias-state-business-primary, #3e9b33);
+  color: var(--sanbao-accent);
 }
 
 .entryLabel {

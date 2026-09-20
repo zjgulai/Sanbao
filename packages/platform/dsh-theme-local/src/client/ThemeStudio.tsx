@@ -3,256 +3,255 @@ import type {
   PropsRuntime,
   PropsStore,
 } from "@deepseek-ai/dsh-client-ui-slots";
+import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
 import * as React from "react";
 
 import {
-  APPEARANCE_MODES,
-  SEASONAL_THEMES,
-  SANBAO_PALETTES,
-  type AppearanceMode,
-  type SeasonalTheme,
-} from "./sanbao-tokens.js";
-import {
-  AppearanceController,
-  type AppearanceState,
-} from "./theme-controller.js";
+  CODE_FONT_IDS,
+  CODE_FONT_SIZES,
+  UI_FONT_IDS,
+  UI_FONT_SIZES,
+  type CodeFontId,
+  type CodeFontSize,
+  THEME_IDS,
+  type ThemeId,
+  type ThemeStudioSettings,
+  type ThemeTypographyField,
+  type UiFontId,
+  type UiFontSize,
+} from "../theme-settings.js";
+import { SizeStepper } from "./SizeStepper.js";
+import { buildSanbaoVariables, type ThemeId as PaletteThemeId } from "./sanbao-tokens.js";
+import type { ThemeStudioPrefs } from "./persistence.js";
+import type { createThemeStudioStore } from "./store.js";
+import { CODE_FONT_STACKS, UI_FONT_STACKS } from "./theme-typography.js";
 
-export interface ThemeStudioProps {
-  controller?: AppearanceController;
-  t?: (key: string) => string;
+export interface ThemeStudioInjected {
+  resetTheme: () => void;
+  setPrefs: (patch: Partial<ThemeStudioPrefs>) => void;
+  setTheme: (themeId: ThemeId) => void;
+  setTypography: <Field extends ThemeTypographyField>(
+    field: Field,
+    value: ThemeStudioSettings[Field],
+  ) => void;
 }
 
-export const THEME_METADATA: Record<
-  SeasonalTheme,
-  { title: string; season: string; description: string }
-> = {
-  parchment: {
-    title: "羊皮纸",
-    season: "秋 · 羊皮纸",
-    description: "经典沉浸暖纸风，复古温暖",
-  },
-  "warm-pink": {
-    title: "暖白粉",
-    season: "春 · 暖白粉",
-    description: "三宝品牌原生活力风，温柔晨曦",
-  },
-  "forest-green": {
-    title: "森林绿",
-    season: "夏 · 森林绿",
-    description: "Qoder CN 极客灰绿风，清凉自然",
-  },
-};
+type ThemeStudioProps = PropsRuntime<"settings.section"> &
+  PropsStore<ReturnType<typeof createThemeStudioStore>> &
+  PropsLocale<"dsh.theme"> &
+  ThemeStudioInjected;
 
-export const MODE_LABELS: Record<AppearanceMode, string> = {
-  light: "浅色",
-  dark: "深色",
-  system: "跟随系统",
-};
+interface SettingSelectProps {
+  label: string;
+  onChange: (value: string) => void;
+  options: readonly { fontFamily?: string; label: string; value: string }[];
+  value: string;
+}
 
-export const FONT_SCALE_STEPS = [0.9, 1.0, 1.1, 1.2, 1.3] as const;
+const REDUCE_MOTION_OPTIONS = ["system", "on", "off"] as const;
+
+function SettingSelect({ label, onChange, options, value }: SettingSelectProps) {
+  return (
+    <label data-appearance-setting-row>
+      <span>{label}</span>
+      <select
+        data-appearance-select
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
+        {options.map((option) => (
+          <option
+            key={option.value}
+            style={
+              option.fontFamily === undefined
+                ? undefined
+                : { fontFamily: option.fontFamily }
+            }
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ModePreview({ mode }: { mode: PaletteThemeId }) {
+  return (
+    <span aria-hidden="true" data-appearance-preview data-mode={mode}
+      style={buildSanbaoVariables(mode) as React.CSSProperties}>
+      <span data-appearance-preview-sidebar />
+      <span data-appearance-preview-surface><i /><i /><i /></span>
+    </span>
+  );
+}
 
 export function ThemeStudio({
-  controller: customController,
-  t = (k: string) => k,
+  resetTheme,
+  setPrefs,
+  setTheme,
+  setTypography,
+  t,
+  useStore,
 }: ThemeStudioProps) {
-  const [controller] = React.useState(
-    () => customController ?? new AppearanceController()
-  );
-  const [state, setState] = React.useState<AppearanceState>(() =>
-    controller.getState()
-  );
+  const prefs = useStore((state) => state.prefs);
+  const saveStatus = useStore((state) => state.saveStatus);
+  const settings = useStore((state) => state.settings);
 
-  React.useEffect(() => {
-    return controller.subscribe((next) => {
-      setState(next);
-    });
-  }, [controller]);
+  const uiFontOptions = UI_FONT_IDS.map((value) => ({
+    value,
+    label: t(`font.${value}`),
+    fontFamily: UI_FONT_STACKS[value],
+  }));
+  const codeFontOptions = CODE_FONT_IDS.map((value) => ({
+    value,
+    label: t(`font.${value}`),
+    fontFamily: CODE_FONT_STACKS[value],
+  }));
 
-  const effectiveMode = state.effectiveMode;
-
-  const currentScalePercent = Math.round(state.fontScale * 100);
-  const scaleIndex = FONT_SCALE_STEPS.findIndex(
-    (s) => Math.abs(Math.round(s * 100) - currentScalePercent) < 2
-  );
-
-  const canDecrease = scaleIndex > 0;
-  const canIncrease =
-    scaleIndex >= 0 && scaleIndex < FONT_SCALE_STEPS.length - 1;
-
-  const handleDecreaseScale = () => {
-    if (scaleIndex > 0) {
-      const nextScale = FONT_SCALE_STEPS[scaleIndex - 1];
-      if (nextScale !== undefined) {
-        controller.setFontScale(nextScale);
-      }
-    }
-  };
-
-  const handleIncreaseScale = () => {
-    if (scaleIndex >= 0 && scaleIndex < FONT_SCALE_STEPS.length - 1) {
-      const nextScale = FONT_SCALE_STEPS[scaleIndex + 1];
-      if (nextScale !== undefined) {
-        controller.setFontScale(nextScale);
-      }
-    }
-  };
+  const statusText = t(`status.${saveStatus}`);
 
   return (
     <div data-appearance-studio>
       <header data-appearance-header>
         <div>
-          <h2>外观</h2>
-          <p>自定义界面配色模式、季节主题与阅读排版</p>
+          <h2>{t("title")}</h2>
+          <p>{t("description")}</p>
         </div>
+        <button
+          data-appearance-button
+          data-variant="secondary"
+          type="button"
+          onClick={resetTheme}
+        >
+          {t("action.reset")}
+        </button>
       </header>
 
       <div data-appearance-content>
-        {/* 1. Mode Segmented Control */}
-        <section data-appearance-card data-card="mode">
+        <section data-appearance-card data-card="theme">
           <div data-appearance-card-header>
-            <h3>外观模式</h3>
-            <p>选择浅色、深色或根据操作系统外观自动切换</p>
+            <h3>{t("preset.title")}</h3>
+            <p>{t("preset.description")}</p>
           </div>
+
           <div
-            aria-label="外观模式"
-            data-appearance-mode-segment
+            aria-label={t("mode.title")}
+            data-appearance-mode-grid
             role="radiogroup"
           >
-            {APPEARANCE_MODES.map((mode) => {
-              const selected = state.mode === mode;
-              return (
-                <label
-                  key={mode}
-                  data-appearance-mode-option
-                  data-selected={selected ? "true" : "false"}
-                >
-                  <input
-                    checked={selected}
-                    data-appearance-sr
-                    name="appearance-mode"
-                    type="radio"
-                    value={mode}
-                    onChange={() => controller.setMode(mode)}
-                  />
-                  <span>{MODE_LABELS[mode]}</span>
-                </label>
-              );
-            })}
+            {THEME_IDS.map((mode) => (
+              <label
+                key={mode}
+                data-appearance-mode
+                data-selected={settings.themeId === mode ? "true" : "false"}
+              >
+                <input
+                  checked={settings.themeId === mode}
+                  data-appearance-sr
+                  name="appearance-mode"
+                  type="radio"
+                  value={mode}
+                  onChange={() => setTheme(mode)}
+                />
+                <ModePreview mode={mode} />
+                <span>{t(`mode.${mode}`)}</span>
+              </label>
+            ))}
           </div>
+
         </section>
 
-        {/* 2. Seasonal Theme Card Grid */}
-        <section data-appearance-card data-card="themes">
+        <section data-appearance-card data-card="prefs">
           <div data-appearance-card-header>
-            <h3>季节主题</h3>
-            <p>选择 3 套自然季节主题调色板（羊皮纸·秋 / 暖白粉·春 / 森林绿·夏）</p>
+            <h3>{t("prefs.title")}</h3>
           </div>
-          <div
-            aria-label="季节主题"
-            data-appearance-seasonal-grid
-            role="radiogroup"
-          >
-            {SEASONAL_THEMES.map((themeKey) => {
-              const selected = state.theme === themeKey;
-              const meta = THEME_METADATA[themeKey];
-              const paletteKey = `${themeKey}-${effectiveMode}`;
-              const palette = SANBAO_PALETTES[paletteKey] ?? SANBAO_PALETTES["forest-green-light"];
-              // 4 chips: canvas, panel, accent, foreground
-              const chips = [
-                palette.canvas,
-                palette.panel,
-                palette.accent,
-                palette.foreground,
-              ];
+          <div data-appearance-subheading>
+            <h4>{t("typography.title")}</h4>
+            <p>{t("typography.description")}</p>
+          </div>
+          <div data-appearance-setting-list>
+            <SettingSelect
+              label={t("typography.uiFont")}
+              options={uiFontOptions}
+              value={settings.uiFont}
+              onChange={(value) => setTypography("uiFont", value as UiFontId)}
+            />
+            <SettingSelect
+              label={t("typography.codeFont")}
+              options={codeFontOptions}
+              value={settings.codeFont}
+              onChange={(value) =>
+                setTypography("codeFont", value as CodeFontId)
+              }
+            />
+            <SizeStepper
+              decreaseLabel={t("size.decrease")}
+              increaseLabel={t("size.increase")}
+              label={t("typography.uiFontSize")}
+              value={settings.uiFontSize}
+              values={UI_FONT_SIZES}
+              onChange={(value) =>
+                setTypography("uiFontSize", value as UiFontSize)
+              }
+            />
+            <SizeStepper
+              decreaseLabel={t("size.decrease")}
+              increaseLabel={t("size.increase")}
+              label={t("typography.codeFontSize")}
+              value={settings.codeFontSize}
+              values={CODE_FONT_SIZES}
+              onChange={(value) =>
+                setTypography("codeFontSize", value as CodeFontSize)
+              }
+            />
+          </div>
 
-              return (
-                <label
-                  key={themeKey}
-                  data-appearance-theme-card
-                  data-theme={themeKey}
-                  data-selected={selected ? "true" : "false"}
-                >
-                  <input
-                    checked={selected}
-                    data-appearance-sr
-                    name="seasonal-theme"
-                    type="radio"
-                    value={themeKey}
-                    onChange={() => controller.setTheme(themeKey)}
-                  />
-                  <div data-appearance-theme-card-body>
-                    <div data-appearance-theme-card-header>
-                      <span data-appearance-theme-title>{meta.title}</span>
-                      <span data-appearance-theme-season>{meta.season}</span>
-                    </div>
-                    <div data-appearance-swatch-strip aria-hidden="true">
-                      {chips.map((c, i) => (
-                        <span
-                          key={i}
-                          data-appearance-swatch-chip
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
-                    <span data-appearance-theme-desc>{meta.description}</span>
-                  </div>
-                </label>
-              );
-            })}
+          <div data-appearance-subheading>
+            <h4>{t("prefs.render.title")}</h4>
           </div>
-        </section>
-
-        {/* 3. Typography & Accessibility */}
-        <section data-appearance-card data-card="typography">
-          <div data-appearance-card-header>
-            <h3>字体与排版</h3>
-            <p>调整界面显示缩放比例与动效偏好</p>
-          </div>
-          <div data-appearance-typography data-appearance-setting-list>
+          <div data-appearance-setting-list>
             <div data-appearance-setting-row>
               <div data-appearance-setting-copy>
-                <span>字号缩放</span>
-                <p>调整正文、界面与代码字号比例（90% ~ 130%）</p>
+                <span>{t("prefs.reduceMotion")}</span>
+                <p>{t("prefs.reduceMotion.description")}</p>
               </div>
-              <div data-appearance-stepper-control>
-                <button
-                  aria-label="减小字号"
-                  data-appearance-stepper-button
-                  disabled={!canDecrease}
-                  type="button"
-                  onClick={handleDecreaseScale}
-                >
-                  −
-                </button>
-                <span data-appearance-stepper-value>
-                  {currentScalePercent}%
-                </span>
-                <button
-                  aria-label="增大字号"
-                  data-appearance-stepper-button
-                  disabled={!canIncrease}
-                  type="button"
-                  onClick={handleIncreaseScale}
-                >
-                  +
-                </button>
+              <div
+                aria-label={t("prefs.reduceMotion")}
+                data-appearance-segment
+                role="radiogroup"
+              >
+                {REDUCE_MOTION_OPTIONS.map((option) => (
+                  <label
+                    key={option}
+                    data-selected={prefs.reduceMotion === option ? "true" : "false"}
+                  >
+                    <input
+                      checked={prefs.reduceMotion === option}
+                      data-appearance-sr
+                      name="appearance-reduce-motion"
+                      type="radio"
+                      value={option}
+                      onChange={() => setPrefs({ reduceMotion: option })}
+                    />
+                    <span>{t(`segment.${option}`)}</span>
+                  </label>
+                ))}
               </div>
             </div>
-
             <div data-appearance-setting-row>
               <div data-appearance-setting-copy>
-                <span>减弱动态效果</span>
-                <p>关闭或减少界面过渡动效与动画</p>
+                <span>{t("prefs.fontSmoothing")}</span>
+                <p>{t("prefs.fontSmoothing.description")}</p>
               </div>
               <button
-                aria-checked={state.reducedMotion}
-                aria-label="减弱动态效果"
+                aria-checked={prefs.fontSmoothing}
+                aria-label={t("prefs.fontSmoothing")}
                 data-appearance-switch
                 role="switch"
                 type="button"
-                onClick={() =>
-                  controller.setReducedMotion(!state.reducedMotion)
-                }
+                onClick={() => setPrefs({ fontSmoothing: !prefs.fontSmoothing })}
               >
                 <span aria-hidden="true" data-appearance-switch-thumb />
               </button>
@@ -260,43 +259,9 @@ export function ThemeStudio({
           </div>
         </section>
 
-        {/* 4. Live Preview Card */}
-        <section data-appearance-card data-card="preview">
-          <div data-appearance-card-header>
-            <h3>实时预览</h3>
-            <p>即时感知当前外观模式、季节色彩与排版呈现</p>
-          </div>
-          <div data-appearance-live-preview>
-            <div data-appearance-preview-card>
-              <div data-appearance-preview-banner>
-                <h4 data-appearance-preview-title>LUTE Agentic System</h4>
-                <span data-appearance-preview-badge>已就绪</span>
-              </div>
-              <p data-appearance-preview-desc>
-                当前激活主题：
-                <strong>{THEME_METADATA[state.theme].season}</strong>
-                （{effectiveMode === "dark" ? "暗色模式" : "浅色模式"}）· 缩放比例 {currentScalePercent}%
-              </p>
-              <div data-appearance-preview-actions>
-                <button
-                  data-appearance-button
-                  data-variant="primary"
-                  type="button"
-                >
-                  主要操作
-                </button>
-                <button
-                  data-appearance-button
-                  data-variant="secondary"
-                  type="button"
-                >
-                  次要操作
-                </button>
-                <code data-appearance-preview-code>pnpm run gate</code>
-              </div>
-            </div>
-          </div>
-        </section>
+        <p aria-live="polite" data-appearance-status data-status={saveStatus}>
+          {statusText}
+        </p>
       </div>
     </div>
   );

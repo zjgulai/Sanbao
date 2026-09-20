@@ -59,6 +59,19 @@ async function loadClient(): Promise<ClientExports> {
 }
 
 describe("syncShell", () => {
+  it("为设置标题、正文和导航分别提供共享排版角色", async () => {
+    await loadClient();
+    const css = document.querySelector<HTMLStyleElement>(
+      'style[data-plugin-css="dsh-settings-shell/shell.css"]',
+    )?.textContent ?? "";
+    expect(css).toContain("font: var(--sanbao-font-page");
+    expect(css).toContain("font: var(--sanbao-font-section");
+    expect(css).toContain("font: var(--sanbao-font-panel");
+    expect(css).toContain("font: var(--sanbao-font-body");
+    expect(css).toContain("font: var(--sanbao-font-control");
+    expect(css).not.toContain("font-size: 15px");
+  });
+
   it("把 Settings 视觉契约接到主题 token，并提供 reduced-motion 降级", async () => {
     await loadClient();
     const css = document.querySelector<HTMLStyleElement>(
@@ -68,7 +81,12 @@ describe("syncShell", () => {
     expect(css).toContain("--dsw-alias-bg-layer-1");
     expect(css).toContain("--dsw-specific-sidebar-fill");
     expect(css).toContain("--dsw-alias-label-secondary");
-    expect(css).toContain("--dsh-settings-shell-panel-width");
+    // 「全屏」= 恰好覆盖主页面：fixed + inset:0；100vw/100vh 会被居中容器带偏
+    // （2026-09-20 用户裁决「一模一样、恰好覆盖」，实机 rect 与主页面逐像素一致）。
+    expect(css).toContain("position: fixed");
+    expect(css).toContain("inset: 0");
+    expect(css).not.toContain("100vw");
+    expect(css).not.toContain("100vh");
     expect(css).toContain('[role="presentation"]:has(> [data-dsh-settings-shell-root])');
     expect(css).toContain("--dsh-settings-shell-modal-layer");
     expect(css).toContain("2147483001");

@@ -9,7 +9,7 @@ import { ResearchView } from '../src/client/ResearchView.tsx'
 import type { ResearchViewApi } from '../src/client/view-types.ts'
 import { zh, type DeepResearchKey } from '../src/client/locales.ts'
 import { ResearchEvidenceId, ResearchId, ResearchQuestionId, type ResearchProject } from '../src/types.ts'
-import { themePresetSettings } from '../../../platform/dsh-theme-local/src/client/presets.ts'
+import { DEFAULT_THEME_STUDIO_SETTINGS, THEME_IDS } from '../../../platform/dsh-theme-local/src/theme-settings.ts'
 import { buildThemeTokenOverrides } from '../../../platform/dsh-theme-local/src/client/theme-tokens.ts'
 
 const t = (key: DeepResearchKey, params?: Record<string, unknown>) =>
@@ -74,19 +74,14 @@ describe('Deep Research Codex visual contract', () => {
     expect(visualCss).not.toContain('gradient')
   })
 
-  it('keeps project cards on neutral light/dark surfaces with business emphasis tokens', () => {
-    const settings = themePresetSettings('codex')
-    const tokens = buildThemeTokenOverrides(settings)
-    expect(tokens['--dsw-alias-bg-layer-1']).toEqual({ light: settings.lightSurface, dark: settings.darkSurface })
-    expect(tokens['--dsw-alias-bg-layer-2']).toEqual({
-      light: expect.stringContaining(settings.lightBackground),
-      dark: expect.stringContaining(settings.darkSurface),
-    })
-    expect(tokens['--dsw-alias-state-business-primary']).toEqual({ light: settings.lightAccent, dark: settings.darkAccent })
-    expect(tokens['--dsw-alias-state-business-tertiary']).toEqual({
-      light: expect.stringContaining(settings.lightAccent),
-      dark: expect.stringContaining(settings.darkAccent),
-    })
+  it('keeps project cards on semantic surfaces in all three themes', () => {
+    for (const themeId of THEME_IDS) {
+      const tokens = buildThemeTokenOverrides({ ...DEFAULT_THEME_STUDIO_SETTINGS, themeId })
+      expect(tokens['--dsw-alias-bg-layer-1']).toEqual({ light: 'var(--sanbao-panel)', dark: 'var(--sanbao-panel)' })
+      expect(tokens['--dsw-alias-bg-layer-2']).toEqual({ light: 'var(--sanbao-inset)', dark: 'var(--sanbao-inset)' })
+      expect(tokens['--dsw-alias-state-business-primary']).toEqual({ light: 'var(--sanbao-accent)', dark: 'var(--sanbao-accent)' })
+      expect(tokens['--dsw-alias-state-business-tertiary']).toEqual({ light: 'var(--sanbao-selected)', dark: 'var(--sanbao-selected)' })
+    }
     expect(visualCss).toContain('background: var(--dsw-alias-bg-layer-1)')
     expect(visualCss).toContain('background: var(--dsw-alias-bg-layer-2)')
     expect(visualCss).toContain('var(--dsw-alias-state-business-primary)')

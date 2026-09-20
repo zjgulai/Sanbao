@@ -3,19 +3,28 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { judgeBootAnimation } from './boot-animation.mjs'
 import { createRequire } from 'node:module'
-import { readFileSync, readdirSync, mkdirSync, mkdtempSync, cpSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, mkdirSync, mkdtempSync, cpSync, rmSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { appResourcesRoot } from '../lib/app-resources.mjs'
 import { extractBootPreview } from '../lib/boot-preview.mjs'
-import { SANBAO_TOKEN_CSS } from '../../shared/client/sanbao-tokens.ts'
-import { DEFAULT_THEME_STUDIO_SETTINGS } from '../../packages/platform/dsh-theme-local/src/theme-settings.ts'
-import { buildThemeTokenOverrides } from '../../packages/platform/dsh-theme-local/src/client/theme-tokens.ts'
+import { loadThemeSources } from '../lib/theme-source-loader.mjs'
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url))
-const requireBrowser = createRequire(join(repoRoot, 'packages/capabilities/dsh-browser-local/package.json'))
+const { settings, tokens, shared } = await loadThemeSources(repoRoot)
+const { DEFAULT_THEME_STUDIO_SETTINGS } = settings
+const { buildThemeTokenOverrides } = tokens
+const { SANBAO_TOKEN_CSS } = shared
+const browserPackagePath = process.env.THEME_BROWSER_PACKAGE ?? (
+  existsSync(join(repoRoot, 'packages/capabilities/dsh-browser-local/node_modules/playwright-core'))
+    ? join(repoRoot, 'packages/capabilities/dsh-browser-local/package.json')
+    : existsSync(join(repoRoot, '../../packages/capabilities/dsh-browser-local/package.json'))
+      ? join(repoRoot, '../../packages/capabilities/dsh-browser-local/package.json')
+      : join(repoRoot, 'packages/capabilities/dsh-browser-local/package.json')
+)
+const requireBrowser = createRequire(browserPackagePath)
 const { chromium } = requireBrowser('playwright-core')
 
 test('真实 BootPage 与 CSS：双色道旋转保留，三类浏览器突变必须判红', async (t) => {
@@ -38,7 +47,7 @@ test('真实 BootPage 与 CSS：双色道旋转保留，三类浏览器突变必
   const css = styles.map((name) => readFileSync(join(assets, name), 'utf8')).join('\n')
   const overrides = buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS)
   const toCss = (scheme) => Object.entries(overrides).map(([name, value]) => `${name}:${typeof value === 'string' ? value : value[scheme]};`).join('')
-  const theme = `:root{${toCss('light')}}body[data-ds-dark-theme]{${toCss('dark')}}${SANBAO_TOKEN_CSS}`
+  const theme = `:root, body {${toCss('light')}}body[data-ds-dark-theme]{${toCss('dark')}}${SANBAO_TOKEN_CSS}`
   const html = `<html><head><style>${css}\n${theme}\nhtml,body,#host{height:100%;margin:0}</style></head><body><main id="host"></main><script>${preview}</script></body></html>`
   const server = createServer((_req, res) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html) })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))

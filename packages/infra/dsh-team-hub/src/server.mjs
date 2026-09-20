@@ -30,8 +30,18 @@ import {
 } from "./bounded-body.mjs";
 import { evaluateHttpRoutePolicy } from "./route-guard.mjs";
 import { LoginRateLimiter } from "./login-limiter.mjs";
+import { readAppearance } from "./appearance.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const APPEARANCE_ASSETS = new Map([
+  ["/__teamhub/assets/appearance.generated.css", ["appearance.generated.css", "text/css; charset=utf-8"]],
+  ["/__teamhub/assets/appearance.generated.js", ["appearance.generated.js", "application/javascript; charset=utf-8"]],
+  ["/__teamhub/assets/appearance.js", ["appearance.js", "application/javascript; charset=utf-8"]],
+  ["/__teamhub/assets/styles.css", ["styles.css", "text/css; charset=utf-8"]]
+]);
+const APPEARANCE_HEAD = `<link rel="stylesheet" href="/__teamhub/assets/appearance.generated.css">
+<link rel="stylesheet" href="/__teamhub/assets/styles.css">
+<script type="module" src="/__teamhub/assets/appearance.js"></script>`;
 
 const COOKIE = "dsh_team_hub_session";
 const HOP_BY_HOP = new Set(["connection", "keep-alive", "transfer-encoding", "upgrade", "host", "content-length", "content-encoding"]);
@@ -81,15 +91,15 @@ function collect(req) {
 }
 
 function loginPage(next = "/", error = "") {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>dsh-team-hub 登录</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;display:grid;place-items:center;min-height:100vh}form{background:white;padding:32px;border-radius:14px;box-shadow:0 8px 30px rgb(0 0 0/8%);display:grid;gap:14px;width:320px}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #d1d5db}button{background:#111827;color:white;border:0}.error{color:#b91c1c}</style></head>
-<body><form method="post" action="/login"><h1>dsh-team-hub</h1><input type="hidden" name="next" value="${next}"><input name="username" placeholder="用户名" autocomplete="username" required><input name="password" type="password" placeholder="密码" autocomplete="current-password" required>${error ? `<p class="error">${error}</p>` : ""}<button>登录</button></form></body></html>`;
+  return `<!doctype html><html lang="zh-CN" data-sanbao-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>dsh-team-hub 登录</title>
+${APPEARANCE_HEAD}</head>
+<body class="auth-page" data-sanbao-theme="light" data-appearance-status="unavailable"><form method="post" action="/login"><h1>dsh-team-hub</h1><input type="hidden" name="next" value="${next}"><input name="username" placeholder="用户名" autocomplete="username" required><input name="password" type="password" placeholder="密码" autocomplete="current-password" required>${error ? `<p class="error">${error}</p>` : ""}<button>登录</button></form></body></html>`;
 }
 
 function changePasswordPage(error = "") {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>修改密码</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;display:grid;place-items:center;min-height:100vh}form{background:white;padding:32px;border-radius:14px;box-shadow:0 8px 30px rgb(0 0 0/8%);display:grid;gap:14px;width:340px}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #d1d5db}button{background:#111827;color:white;border:0}.error{color:#b91c1c}</style></head>
-<body><form method="post" action="/change-password"><h1>首次登录，请修改密码</h1><input name="current" type="password" placeholder="当前密码" required><input name="next" type="password" placeholder="新密码（至少 8 位）" required>${error ? `<p class="error">${error}</p>` : ""}<button>保存并继续</button></form></body></html>`;
+  return `<!doctype html><html lang="zh-CN" data-sanbao-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>修改密码</title>
+${APPEARANCE_HEAD}</head>
+<body class="auth-page" data-sanbao-theme="light" data-appearance-status="unavailable"><form method="post" action="/change-password"><h1>首次登录，请修改密码</h1><input name="current" type="password" placeholder="当前密码" required><input name="next" type="password" placeholder="新密码（至少 8 位）" required>${error ? `<p class="error">${error}</p>` : ""}<button>保存并继续</button></form></body></html>`;
 }
 
 /**
@@ -370,6 +380,20 @@ export function createRequestHandler({ context, reloadConfigIfChanged, limiter =
     try {
       reloadConfigIfChanged();
       const url = new URL(req.url ?? "/", "http://local");
+      // Explicit public read surface, separate from (and not an exception in) API authorization.
+      if (url.pathname === "/__teamhub/appearance") {
+        if (req.method !== "GET") return send(res, 405, { error: "method not allowed" }, { allow: "GET", "cache-control": "no-store" });
+        const appearance = await readAppearance(context.config);
+        return send(res, appearance.status === "confirmed" ? 200 : 503, appearance, { "cache-control": "no-store" });
+      }
+      if (url.pathname.startsWith("/__teamhub/assets/")) {
+        const asset = APPEARANCE_ASSETS.get(url.pathname);
+        if (!asset) return send(res, 404, "not found");
+        if (req.method !== "GET") return send(res, 405, "method not allowed", { allow: "GET" });
+        return send(res, 200, fs.readFileSync(path.join(ROOT, "admin-ui", asset[0])), {
+          "content-type": asset[1], "cache-control": "no-cache", "x-content-type-options": "nosniff"
+        });
+      }
       const isHttps = isHttpsRequest(req, context.config);
       const cookies = parseCookies(req);
       const session = resolveSession(home, cookies[COOKIE]);

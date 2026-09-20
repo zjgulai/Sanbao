@@ -1547,7 +1547,7 @@
     {
       "id": "ADR-0132",
       "title": "ADR-0132 · 色彩与排印契约：钛银单主色、1 套品牌 × 明暗双色道、材质解禁、`--sanbao-*` 为源并纳入门禁",
-      "status": "accepted（2026-09-19）",
+      "status": "accepted（2026-09-19）；D2 双色道限制由 [ADR-0145](ADR-0145.md) 取代，配色改判见 [ADR-0144](ADR-0144.md)，以下保留原决定。",
       "date": "",
       "decisions": [
         {
@@ -1561,7 +1561,7 @@
         },
         {
           "id": "D2",
-          "text": "主题收敛为 1 套品牌 × 明暗双色道；codex/graphite/midnight 降为 legacy（不进预设墙，分享串可解析但提示迁移），派生引擎不动。本条取代 capability-hub 计划 D3 的四套清单。",
+          "text": "主题收敛为 1 套品牌 × 明暗双色道；codex/graphite/midnight 降为 legacy（不进预设墙，分享串可解析但提示迁移），派生引擎不动。本条取代 capability-hub 计划 D3 的四套清单。〔已被 ADR-0145 取代：固定亮色/暗色/暖粉白三主题身份与单一语义色板。〕",
           "constraints": [
             "legacy 预设必须仍可被历史分享串解析，不得做成 404",
             "预设墙里的条目数与品牌色道数一致（2），不得残留第三套深色",
@@ -1588,7 +1588,7 @@
         },
         {
           "id": "D5",
-          "text": "默认 uiFont 由 system 改为 inter（基座已内置，零新资产），并把 .tiny 与 .eyebrow 提为共享排印原语、标题收紧字距；不采纳官网的 Arial 字体栈。",
+          "text": "默认 uiFont 由 system 改为 inter（基座已内置，零新资产），并把 .tiny 与 .eyebrow 提为共享排印原语、标题收紧字距；不采纳官网的 Arial 字体栈。〔标题紧缩签名（h1 -.055em、h2 -.045em）已由用户批准的 docs/specs/2026-09-20-qoder-visual-language.md §0.2 取代，前向关系见 ADR-0145；保留用户字体选择与 Inter 回退，排版实施归另一会话，本次不改排版代码。〕",
           "constraints": [
             "不得把 Arial 打头的官网字体栈当品牌规范照抄——它是零依赖静态页的妥协",
             "所有 UI 规则仍必须走 font: var(--dsw-font-…)，不得因换字体而绕过 Law C 断言",
@@ -1856,7 +1856,7 @@
         },
         {
           "id": "D6",
-          "text": "启动加载屏动画必须保留；2026-09-20 用户将周期改为2s，仅经bundle重放修改CSS时长，不改vendor源码。验收animation-name对应spin（允许CSS Modules派生名）、animation-duration=2s、conic弧色解析值等于品牌源accent。",
+          "text": "启动加载屏动画列为必须保留项：不改 dsh-client-web 的 boot 页，弧色经 --dsw-alias-brand-primary 自动跟皮；新增断言校验 animation-name=spin、animation-duration=0.8s、conic 弧色解析值等于品牌源 accent。",
           "constraints": [
             "不得以「简化启动屏」为由删除或冻结动画",
             "断言必须读解析后的真实值，不得复述字面量（ADR-0135 D1）",
@@ -2206,12 +2206,12 @@
     {
       "id": "ADR-0144",
       "title": "ADR-0144 · 配色改判为 Qoder CN 中性灰 + 灰绿：立面模型反转、只动主题包（取代 ADR-0132 的配色部分）",
-      "status": "accepted（2026-09-20）",
+      "status": "accepted（2026-09-20）；D1 的色值源/对比度处置、D2 的亮色立面、D3 的局部交付范围已被 [ADR-0145](ADR-0145.md) 取代；以下保留原决定。",
       "date": "",
       "decisions": [
         {
           "id": "D1",
-          "text": "配色契约改判：暗色道取 Qoder CN 实机实测值（rail #242624 / 画布 #232523 / 面板·顶栏 #191B1A / 卡片·浮层 #131413 / 列边界 #171918），钛银（#C4D0DC / #3D566E）与深海军蓝（#0b1521 / #142332）退役，灰绿 #5C9363（选中 chip #609966）重新登记为品牌强调色；取代 ADR-0132 D1 的配色部分，ADR-0132 其余部分继续有效。",
+          "text": "配色契约改判：暗色道取 Qoder CN 实机实测值（rail #242624 / 画布 #232523 / 面板·顶栏 #191B1A / 卡片·浮层 #131413 / 列边界 #171918），钛银（#C4D0DC / #3D566E）与深海军蓝（#0b1521 / #142332）退役，灰绿 #5C9363（选中 chip #609966）重新登记为品牌强调色；取代 ADR-0132 D1 的配色部分，ADR-0132 其余部分继续有效。〔色值源及对比度处置由 ADR-0145 取代，原 constraints 保留历史。〕",
           "constraints": [
             "色值唯一源是 packages/platform/dsh-theme-local/src/theme-settings.ts 的默认值；shared/client/sanbao-tokens.ts 是源面，其副本由 sync-shared 生成，不得手改副本",
             "明色道必须用 Qoder CN 实机采样真值，不得从暗色道推导；采样前不落亮色道值",
@@ -2221,7 +2221,7 @@
         },
         {
           "id": "D2",
-          "text": "立面模型反转为 Qoder 式：画布最亮，面板/卡片/浮层越抬越暗（rail 与画布几乎同色，卡片/浮层最暗）。反转落在 theme-tokens.ts 的派生式（bg-layer-2/3、bg-module-platform、bg-overlay 由提亮改为压暗），token 名与层级数不变。",
+          "text": "立面模型反转为 Qoder 式：画布最亮，面板/卡片/浮层越抬越暗（rail 与画布几乎同色，卡片/浮层最暗）。反转落在 theme-tokens.ts 的派生式（bg-layer-2/3、bg-module-platform、bg-overlay 由提亮改为压暗），token 名与层级数不变。〔亮色强制压暗部分由 ADR-0145 取代，原 constraints 保留历史。〕",
           "constraints": [
             "不得在消费面逐个写死颜色——立面方向只在 token 派生式里定义",
             "暗色道与亮色道都走 Qoder 立面方向（画布最亮、面板更暗），亮色道取值以采样真值为准",
@@ -2230,12 +2230,73 @@
         },
         {
           "id": "D3",
-          "text": "本轮只动主题包 packages/platform/dsh-theme-local（默认色值 + 派生式 + 其单测），官方壳只换 token、不改结构；vendor 只读（ADR-0008），官方 UI 改写锚禁钉哈希（ADR-0019）；不改 TARGET_SIDEBAR_WIDTH=264，不并行动 packages/surfaces/dsh-right-sidebar-local/**。",
+          "text": "本轮只动主题包 packages/platform/dsh-theme-local（默认色值 + 派生式 + 其单测），官方壳只换 token、不改结构；vendor 只读（ADR-0008），官方 UI 改写锚禁钉哈希（ADR-0019）；不改 TARGET_SIDEBAR_WIDTH=264，不并行动 packages/surfaces/dsh-right-sidebar-local/**。〔仅主题包及分期交付范围由 ADR-0145 取代，基座只读/禁钉哈希/264px约束继续有效。〕",
           "constraints": [
             "不得改 vendor/** 与官方壳结构；官方 UI 只经 token 派生跟皮",
             "官方 UI 改写锚一律运行时解析，不得把 CSS-module 哈希写进产品代码（ADR-0019）",
             "TARGET_SIDEBAR_WIDTH=264 与行轴契约不动；真要改宽度须另开一条并同步改门禁 TARGET 与 ADR-0125 D7/D8 的登记",
             "生效路径必须走两条同步（loadpoint 与 vendor）+ 完整重启，不接受『改了源码就算生效』"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0145",
+      "title": "ADR-0145 · 全站三主题身份与语义颜色单一源",
+      "status": "accepted（2026-09-20）；实施和实机验收未完成",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "固定 light/dark/warm-pink 三主题身份，由 Host sanbao-appearance 保存广播；官方亮暗仅适配。",
+          "constraints": [
+            "warm-pink 不得由 light 反推丢失",
+            "客户端缓存不是第二个权威"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "三主题语义色板以 shared/client/sanbao-tokens.ts 为唯一可编辑源，单向生成 sanbao/dsw 和独立文档 CSS。",
+          "constraints": [
+            "不得在消费面重复保存字面色板",
+            "保留状态颜色语义",
+            "禁止反向别名环"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "配色迁移及重置保留合法字体、字号和非颜色偏好。",
+          "constraints": [
+            "坏旧颜色不得使合法字体丢失",
+            "新版存在后停止旧颜色回灌",
+            "不得清空无关存储"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "参考色与实际语义用途分离验证对比度，亮色不套暗色压暗公式。",
+          "constraints": [
+            "小字至少4.5:1，主体正文目标7:1",
+            "关键控件图形和焦点至少3:1",
+            "不得放宽阈值制造通过"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "全页面及子页面三主题逐叶验收，一次性交付。",
+          "constraints": [
+            "不可访问和缺测计blocked",
+            "不得以首页或纯token测试替代全站验收",
+            "不得删除功能缩小分母"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "遵守内容隔离与开发环境边界。",
+          "constraints": [
+            "pin/vendor源码只读，官方UI锚禁钉哈希",
+            "用户文档及第三方网页不重染，sandbox不放宽",
+            "未经授权不提交推送、不改实际profile、不重启"
           ]
         }
       ]
