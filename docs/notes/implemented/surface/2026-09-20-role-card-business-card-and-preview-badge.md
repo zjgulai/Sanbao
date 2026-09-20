@@ -81,8 +81,11 @@
      预期是「降列不降字号」，不是「永远三列」。
   3. **展开详情会把该行撑高**（grid 行高由最高单元格决定），邻卡留白。这是既有行为，本轮未处理。
   4. **`cardBrief` 的删除规则依赖 description 的既有形状**（前导【…】+（标准产物：…））。
-     上游换写法时它会**原样返回整句**（宁可长，不要空），但这一点**没有门禁盯着**。
-     登记为已知边界：判断依据是 50/50 张卡实测同形，不是「形状不会变」。
+     上游换写法时它会**原样返回整句**（宁可长，不要空）。这条边界**当天补了机制**：
+     门禁 `role-brief-shape` 拿**真机的 53 张卡**问「规则还咬得住吗」——判红口径是
+     「去标点后是否同形」（只清个句号不算剥动，否则兜底会把规则失效伪装成合法值，P-46 同族），
+     射程为空判红（P-02：「没有读数」与「读数为好」不能被读成同一件事），根不在报跳过。配套反向自测
+     `role-brief-shape-selftest` 把判据打成恒真桩后三条形状反例全红。
   5. 官方设置页里的预设卡（同一批头像的**官方渲染面**）仍是圆形头像 + 官方排版，
      与本面板的圆角方形名片不一致——这是「官方面不在本仓射程」的既有残留。
 - **验证读数**（2026-09-20，重启后 runId `5cc8220c-6583-43e4-8902-383ccdfceba1`，
@@ -102,11 +105,22 @@
   - 品牌探针（跑的是**装载点上的真实产物**）：`node scripts/acceptance/root-brand-live-anchors.mjs`
     **22/22 PASS**（含「角标被隐藏」「角标文案仍是官方原文」「React 换掉节点后重新隐藏」
     「结构不唯一时角标仍隐藏」「卸载后角标与标题都还原」「随机新前缀下仍命中」）。
-  - 门禁：`pnpm run gate`（quick）107/111，唯一一条红是**并发假红** `shared-sync`
-    （`sidebar-entry-core.ts` 家族四个文件的 mtime 03:31:40–43 落在门禁读取窗口内，
-    另一会话正在改共享层；本轮未触碰该文件族），按 ADR-0123 D5 标注而不计绿。
+  - 门禁：`pnpm run gate`（quick）110/113，3 项跳过、0 红（其中新增的
+    `role-brief-shape` 读数：`核对 53/53 张带描述的岗位卡`）。上一轮那唯一一条红
+    `shared-sync`（`sidebar-entry-core.ts` 家族四个文件的 mtime 03:31:40–43 落在门禁读取窗口内，
+    另一会话正在改共享层；本轮未触碰该文件族）已随对端落盘消失。
     本轮顺带修掉两条自身漂移：`ui-anchors.json` 改了 purpose 却未同步装载点、
     `docs/catalog/packages.md` 未随新包再生成（两项均为派生/声明面的机械同步）。
+  - 门禁（推送前复跑）：quick 109/113、full 114/121，红**全部**可归因到树外，无一落在本批文件上
+    （`role-brief-shape` 与其自测在两种模式下都绿）——①`theme-tokens`（full-only）：
+    `--dsw-text-primary/secondary/tertiary` 只被 `dsh-right-sidebar-local` 的 6 个模块引用、
+    从未定义（另一会话在制品）；②`scripts-runnable`（full-only）：该包尚无测试文件，
+    加 `dsh-role-matrix-local` 那条既有的 `linear-gradient` 契约红（同上）；
+    ③`repo-attest-selftest`：`.qoder/worktrees/agent-general-purpose-6ca63328/` 是**另一会话
+    12:40 建的活 worktree**（`git worktree list` 可见），快照拒绝把未跟踪目录折叠成单条而抛
+    `SNAPSHOT_SCOPE_COLLAPSED`——该目录不属本批，不擅自删。另有一次复跑期间本会话自己的
+    `git add`/`commit` 被见证仪器当场抓住（`entry-changed` + `.git/index` 变更）：它判得对，
+    那一轮不作有效读数。
   - 门禁在 `0ba6345` 又抓出两处**本轮自身的缺陷**，均已修复并各登记一条总账
     （[P-53](../../../pitfalls-playbook.md)：`brand.tsx` 三处描边引用了**从未定义**的
     `--dsw-alias-border-focus`，`var()` 兜底让它在任何可见读数里都成立 → 改指 `--sanbao-accent`；

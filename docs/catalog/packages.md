@@ -18,7 +18,7 @@
 | surfaces | `packages/surfaces/dsh-capability-hub-local` | `dsh-capability-hub-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-my-quotes` | `dsh-my-quotes` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-newapp-local` | `dsh-newapp-local` | `self` | `lute` | `false` |
-| surfaces | `packages/surfaces/dsh-right-sidebar-local` | `dsh-right-sidebar-local` | `self` | `lute` | `false` |
+| surfaces | `packages/surfaces/dsh-qoder-sidebar-local` | `dsh-qoder-sidebar-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-role-matrix-local` | `dsh-role-matrix-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-skill-center-local` | `dsh-skill-center-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-task-board-local` | `@etony668/dsh-task-board` | `internalized` | `@etony668` | `false` |

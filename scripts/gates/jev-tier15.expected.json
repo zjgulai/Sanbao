@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "identity": "corpus\u0000criteria\u0000model\u0000samples",
+  "corpusEntries": 292,
+  "sampleCount": 9,
+  "components": {
+    "corpus": "dcafdedf8f979baef4b105c82969626af63fbd78b6cd01a91cf3600225f70cca",
+    "criteria": "5d310caeed425c7765cc6078379cc1456be65924a143d2f7b4690c4e6f74b097",
+    "model": "jev-1.13.0",
+    "samples": "9d2935fbc8bbb3dc3d707b3a8357261e11565293d8a1e1c6bf089bc9a47c2cc5"
+  },
+  "fingerprint": "57c17bb112d6d62e54b85cf27146e013c79a3069932603a452b44e380509cb3c",
+  "provenance": "登记于 2026-09-19 基线重跑（q2 召回 10/10 误报 0/5；q3 召回 15/15 误报 0/5；报告 .scratch/jev-tier15/scorecard-baseline.json）。重采前必须先重跑语义轨记分卡并确认判据质量未退化（ADR-0138 D5/D8）。"
+}

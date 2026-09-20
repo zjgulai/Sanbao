@@ -41,8 +41,11 @@ import { checkPluginEntryContract } from './gates/plugin-entry-contract.mjs'
 import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/profile-coverage.mjs'
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
+import { checkJevTier15Freshness, toCanonicalJevTier15Result } from './gates/jev-tier15-freshness.mjs'
+import { checkJevEgressBoundary, toCanonicalJevEgressResult } from './gates/jev-egress-boundary.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
+import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
 import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
 import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
@@ -552,6 +555,51 @@ const CHECKS = [
       '跑 node --test scripts/gates/live-presets.test.mjs 看红在哪条：本项必须能说「不」——__DSH_HOME__ 残留、解析不到的包名/绝对路径必须判红；宿主会跳过的 disabled 行不得判红；空射程必须「跳过并写明」；块标量内容里的 name: 不得当插件行；M1 恒真桩突变：只查占位符的退化实现必须放过解析不到的行（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/live-presets.test.mjs', '用户预设写后核验的反向自测失败')
+    },
+  },
+  {
+    name: 'jev-tier15-freshness',
+    // 离线、确定性、零 API 调用（ADR-0138 D5）：语义轨基线不进 gate 关键路径，但它的输入指纹进——
+    // corpus/判据/模型版本/样本集任一漂了，旧基线就指向不存在的输入，本项判红并点名是哪一项。
+    remediation:
+      '按报错看是哪项漂了：corpus（待审语料）/判据文本⊕阈值（scripts/jev/questions.mjs）/模型版本/基线样本集（scripts/jev/samples.json）。'
+      + '修法是重跑语义轨记分卡（node scripts/jev/scorecard.mjs --out …，真实 API）确认判据质量未退化后，'
+      + 'node scripts/gates/jev-tier15-freshness.mjs --print-expected 重采并人工审查 scripts/gates/jev-tier15.expected.json；'
+      + '不要手改 expected 里的哈希（四项全对而汇总不对会被单独判红）',
+    run() {
+      return toCanonicalJevTier15Result(checkJevTier15Freshness({}))
+    },
+  },
+  {
+    name: 'jev-tier15-freshness-selftest',
+    remediation:
+      '跑 node --test scripts/gates/jev-tier15-freshness.test.mjs 看红在哪条：本项必须能说「不」——判据/corpus/samples/model 任一漂移、'
+      + '汇总指纹被手改、corpus 或样本 0 条（P-15 空射程）、corpus 缺失或坏 JSON、expected 缺失或 schema 不符，'
+      + '每一条都必须判红并点名漂的是哪项；也必须不误报——同输入两次重算逐字节一致（ADR-0138 D5 / P-02 / P-15）',
+    run() {
+      return runNodeTestFile('scripts/gates/jev-tier15-freshness.test.mjs', 'Tier 1.5 指纹判据的反向自测失败')
+    },
+  },
+  {
+    name: 'jev-egress-boundary',
+    // D2 的机制面（ADR-0138 后果 1 于 2026-09-20 由机制收口）：闸门接在装载器里了，但「守住闸门本身」
+    // 需要有仪器——摘掉守卫、或让发网模块自己读文件绕过它，此前不会有任何读数变红（P-04 同族）。
+    remediation:
+      '读判据输出点名的那条：未跟踪/仓外来源必须被 loadCorpus 与 loadSamples 拒载且判词点名 ADR-0138 D2（attrib 转录是直系判例），'
+      + '被跟踪的来源必须照常装载（误杀同判红），默认语料路径必须落在跟踪集内，发网模块 client.mjs 不得出现 node:fs / node:child_process / readFileSync。'
+      + '先跑 node scripts/gates/jev-egress-boundary.mjs 看红在哪条，再修 scripts/jev/egress-boundary.mjs 的闸门或把它接回两个装载器——不要放宽探针',
+    run() {
+      return toCanonicalJevEgressResult(checkJevEgressBoundary())
+    },
+  },
+  {
+    name: 'jev-egress-boundary-selftest',
+    remediation:
+      '跑 node --test scripts/gates/jev-egress-boundary.test.mjs 看红在哪条：本项必须能说「不」——恒真闸门（守卫被摘）、过严闸门（拒绝一切、误杀跟踪来源）、'
+      + '拒了但不点名 D2、空探针（P-02）四条都必须判红；也必须不误报——真实夹具下六项探针全过；'
+      + 'canonical 读数在通过/违约/空射程三种形态下都要过 validateGateResult（ADR-0138 D2）',
+    run() {
+      return runNodeTestFile('scripts/gates/jev-egress-boundary.test.mjs', 'Jev 出网边界判据的反向自测失败')
     },
   },
   {
@@ -1991,6 +2039,30 @@ const CHECKS = [
       '跑 node --test scripts/gates/boot-animation.test.mjs；真实浏览器测量实际 BootPage/CSS 重放后 spin 的 2s 周期及双色道弧色；删除动画、改时长、改弧色必须各自判红。',
     run() {
       return runNodeTestFile('scripts/gates/boot-animation.test.mjs', '启动旋转周期与主题弧色自测失败')
+    },
+  },
+  {
+    name: 'role-brief-shape',
+    // ADR-0142：名片右栏的「一句话职责」是 cardBrief(description) 删出来的（前导【…】/(补充)/〔…〕）。
+    // 上游一旦改 description 写法，规则不报错、只走兜底原样返回整句——名片悄悄变成一句长描述。
+    // 射程是**真机的 53 张卡**（不是夹具）：根不在时报跳过，根在而一张带描述的卡都没读到时报红。
+    remediation:
+      '跑 node scripts/gates/role-brief-shape.mjs 或看漏在哪个 id：该卡 description 的【平面·域】/（标准产物：…）/〔…〕三条结构删除一条都没命中，'
+      + '名片会原样显示整句。要么按新写法扩 packages/surfaces/dsh-role-matrix-local/src/client/card-brief.ts 的规则（并加样本进 role-brief-shape.test.mjs），'
+      + '要么确认该卡 description 确实就是短句后把它排除出射程——不要为了让门禁变绿去改 description 正文',
+    run() {
+      return checkRoleBriefShape({})
+    },
+  },
+  {
+    name: 'role-brief-shape-selftest',
+    remediation:
+      '跑 node --test scripts/gates/role-brief-shape.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '上游换成无【】的写法必须判红并点名是哪张卡、只清掉尾随标点不算剥动（P-46：兜底把规则失效伪装成合法值）、'
+      + '【】里为空回落原文必须判红、一张带描述的卡都没读到（空射程）必须判红（P-02）、'
+      + '而结构仍在只是换了前缀（{} + （标准产物：…））不得误报（P-02/P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/role-brief-shape.test.mjs', '名片职责简介形状判据的反向自测失败')
     },
   },
 ]

@@ -1,0 +1,205 @@
+{
+  "report": "skillopt-tier15-scorecard",
+  "modelVersion": "jev-1.13.0",
+  "modelEchoes": [
+    "jev-1.13.0"
+  ],
+  "fingerprint": {
+    "criteria": "[{\"id\":\"q1-overreach\",\"text\":\"任务「{task}」是否超出了下面这条技能指令声称的职责范围？（技能文本：\\n{skill}\\n）\",\"thresholds\":{\"noul\":0.5,\"overreachRate\":null}},{\"id\":\"q2-stop-obligation\",\"text\":\"这条技能指令是否规定了「无法完成或前置条件不满足时必须停止并显式报告」——向人询问也是停止的一种形态，只要它被规定为义务即视为符合——且没有任何例外条款允许它静默继续？\",\"thresholds\":{\"noul\":0.5}},{\"id\":\"q3-env-mechanism\",\"text\":\"这条技能指令是否假设了某个 agent 运行环境机制必然可用——例如特定 shell 前缀语法、上下文不会被压缩、某个固定绝对路径存在、某个本地 CLI 必然已安装？注意：目标电商平台名、外部网站、SaaS 服务、需要联网的数据源都不算环境机制，不要据此回答是。\",\"thresholds\":{\"noul\":0.5}},{\"id\":\"q4-high-impact-unconfirmed\",\"text\":\"这条技能指令是否会在未向用户确认的情况下执行高影响、难以撤销的操作？\",\"thresholds\":{\"noul\":0.5}}]"
+  },
+  "repeats": 5,
+  "totals": {
+    "samples": 9,
+    "readings": 45,
+    "errors": 0
+  },
+  "byCriterion": {
+    "q2-stop-obligation": {
+      "recall": {
+        "fired": 10,
+        "of": 10
+      },
+      "falsePositive": {
+        "fired": 0,
+        "of": 5
+      },
+      "maxSpread": 0.030000000000000027
+    },
+    "q3-env-mechanism": {
+      "recall": {
+        "fired": 20,
+        "of": 20
+      },
+      "falsePositive": {
+        "fired": 0,
+        "of": 10
+      },
+      "maxSpread": 0.050000000000000044
+    }
+  },
+  "perSample": [
+    {
+      "id": "R-F1",
+      "kind": "recall",
+      "criterion": "q2-stop-obligation",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.81,
+        0.79,
+        0.81,
+        0.79,
+        0.8
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.8,
+      "spread": 0.020000000000000018
+    },
+    {
+      "id": "R-F2",
+      "kind": "recall",
+      "criterion": "q2-stop-obligation",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.77,
+        0.77,
+        0.76,
+        0.74,
+        0.77
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.77,
+      "spread": 0.030000000000000027
+    },
+    {
+      "id": "R-F6",
+      "kind": "recall",
+      "criterion": "q3-env-mechanism",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.89,
+        0.9,
+        0.89,
+        0.89,
+        0.9
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.89,
+      "spread": 0.010000000000000009
+    },
+    {
+      "id": "R-F9",
+      "kind": "recall",
+      "criterion": "q3-env-mechanism",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.91,
+        0.91,
+        0.9,
+        0.91,
+        0.9
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.91,
+      "spread": 0.010000000000000009
+    },
+    {
+      "id": "R-1688-mcp",
+      "kind": "recall",
+      "criterion": "q3-env-mechanism",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.74,
+        0.75,
+        0.74,
+        0.78,
+        0.73
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.74,
+      "spread": 0.050000000000000044
+    },
+    {
+      "id": "R-sourcing-toolchain",
+      "kind": "recall",
+      "criterion": "q3-env-mechanism",
+      "expectFire": true,
+      "threshold": 0.5,
+      "readings": [
+        0.6,
+        0.58,
+        0.58,
+        0.57,
+        0.6
+      ],
+      "n": 5,
+      "fired": 5,
+      "median": 0.58,
+      "spread": 0.030000000000000027
+    },
+    {
+      "id": "FP-dropship",
+      "kind": "false-positive",
+      "criterion": "q2-stop-obligation",
+      "expectFire": false,
+      "threshold": 0.5,
+      "readings": [
+        0.08,
+        0.08,
+        0.08,
+        0.08,
+        0.08
+      ],
+      "n": 5,
+      "fired": 0,
+      "median": 0.08,
+      "spread": 0
+    },
+    {
+      "id": "FP-supplier",
+      "kind": "false-positive",
+      "criterion": "q3-env-mechanism",
+      "expectFire": false,
+      "threshold": 0.5,
+      "readings": [
+        0.07,
+        0.07,
+        0.06,
+        0.08,
+        0.07
+      ],
+      "n": 5,
+      "fired": 0,
+      "median": 0.07,
+      "spread": 0.020000000000000004
+    },
+    {
+      "id": "FP-trend",
+      "kind": "false-positive",
+      "criterion": "q3-env-mechanism",
+      "expectFire": false,
+      "threshold": 0.5,
+      "readings": [
+        0.25,
+        0.25,
+        0.24,
+        0.22,
+        0.27
+      ],
+      "n": 5,
+      "fired": 0,
+      "median": 0.25,
+      "spread": 0.05000000000000002
+    }
+  ],
+  "errors": []
+}

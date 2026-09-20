@@ -1,0 +1,7 @@
+# dsh-qoder-sidebar bundle patch
+#
+# 本包装进 profile 后由 loader 合并这一行：右栏（原生 ui-sidebar-right）里
+# 登记「本会话活动」标签类型与标签体。行 id 是卸载/停用时的点名键。
+- insert:
+    - id: ui-qoder-sidebar-local
+      name: 'dsh-qoder-sidebar-local'
