@@ -41,6 +41,7 @@ const STUDIO = `<div data-role="studio"><div>主题</div><div role="radiogroup">
 
 const work = mkdtempSync(join(here, '.suppressor-'))
 let browser
+let bundle
 const servers = []
 async function serve(body) {
   const server = createServer((_, res) => {
@@ -62,10 +63,10 @@ try {
     platform: 'browser',
     output: { format: 'iife', name: '__suppressor' },
   })
-  const out = await built.generate({ format: 'iife', codeSplitting: false, inlineDynamicImports: true })
+  const { output } = await built.generate({ format: 'iife', name: '__suppressor', codeSplitting: false })
   await built.close()
   // 页面里不写任何期望值：断言全在 Node 侧，浏览器只负责把 DOM 真实跑出来。
-  const bundle = `${out[0].code}\nwindow.__make = (root) => __suppressor.createOfficialAppearanceSuppressor(root);\nwindow.__ATTR = __suppressor.OFFICIAL_ROW_ATTR;`
+  bundle = `${output[0].code}\nwindow.__make = (root) => __suppressor.createOfficialAppearanceSuppressor(root);\nwindow.__ATTR = __suppressor.OFFICIAL_ROW_ATTR;`
 
   browser = await chromium.launch({ channel: 'chrome' })
   const page = await browser.newPage()
