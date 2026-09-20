@@ -1,7 +1,7 @@
 # DA-04 · 清场清单「先查承诺」序机制化
 
 - 优先级：P0
-- 状态：`open`
+- 状态：`local-done`（2026-09-21，批次 A 落地，待提交）
 - 依赖：无
 - 估算：M
 - 来源：docs/pitfalls-playbook.md P-49；报告 TOP20 #4

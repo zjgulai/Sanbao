@@ -36,6 +36,15 @@
       "reading": "同一个 DSH 进程、同一份代码，实测两态：窗口在后台时 CG 层报 on_screen:false，AX 树 **1 个节点**（只剩 AXApplication，连 AXWindow 都没有）；执行 set frontmost（osascript 按 bundle id ai.deepseek.dsh.desktop）之后，**同一进程** AX 树变 **1323 个节点**，窗口、导航、几何读数全部齐全。Chromium 的 Accessibility 子树是懒建的，且只对**屏上**的窗口建。",
       "why": "2026-09-15 被它误导过一次：读到「AX 树只有 1 个节点」，于是写下「app 的 Accessibility 子树没有内容」，据此让用户**重启 DSH Desktop**。重启当然没用——重启后新窗口照样不在前台，同一条读数原样复现，一整轮工作挂在「等你重启」上。真正的原因（窗口不在前台）一行 set frontmost 就能自愈。属 P-04：错误报告路径给出了一个**自信但错误**的归因，把真实原因盖住。",
       "useInstead": "先自愈再判：set frontmost + 轮询到「树里有 AXWindow 且拿得到触发器或对话框」为止（见 scripts/acceptance/settings-shell-live.mjs 的 ensureOnScreen）。自愈不成时报「窗口拉不到前台」这条**具体**读数，不要断言 Accessibility 坏了；「仪器坏没坏」的家是 harness-alive 那条判据（macos-harness doctor 的 permissions.accessibility）。"
+    },
+    {
+      "id": "in-page-probe-logging-as-liveness-proof",
+      "pattern": "探针打点|代码内观测",
+      "provenOn": "2026-09-19",
+      "matchScope": "任何把「页面内打点（console.log / setTimeout 探针）有没有输出」当作「代码有没有执行 / app 是否活着 / 修好没修好」的判据、清单项或结论",
+      "reading": "黑屏事故（2026-09-19）实测：挂死期间探针代码内打点同样被饿死——40 秒里探针的 setTimeout 一次都没跑，「探针没输出」当场被读成「代码没执行」。同一事故里 `document.querySelectorAll('[data-dsh-workbench-container]').length` 数到 **2** 就能暴露挂载竞态，而 40 小时没有一方去数它（复盘原文见 docs/notes/implemented/process/2026-09-19-boot-blackout-triage-retrospective.md）。",
+      "why": "观测通道本身依赖渲染主线程存活，于是**仪器失效被误读成对象没动作**，诊断被推向 JIT / CLI / 版本玄学（P-04 / P-52）。它是「空读数被当成结论」的教科书形态：读数确实是空的，而空的原因在仪器一侧。",
+      "useInstead": "旁路通道取热栈（铸 cookie + 独立 Chrome + 预启用 Debugger 的 pause 中断，完整路径见 dsh-desktop-diagnostics 技能）；**单例元素计数**用 script:scripts/acceptance/singleton-count-live.mjs（挂在 CDP 上读数，不经过被观测的渲染主线程；数到 2 即报「重复挂载」）。"
     }
   ]
 }

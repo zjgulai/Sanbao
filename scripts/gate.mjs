@@ -7,6 +7,13 @@
  *
  * 用法：node scripts/gate.mjs [--mode quick|full] [--list] [--json] [--require-no-skip]
  *   quick（默认）提交前使用；full 推送前使用（含变更包 typecheck/test，二期接入 git 钩子后启用）。
+ *
+ * `--require-no-skip` 是**发布前那一次运行**用的开关，两种语义分开说清：
+ *   · 日常开发（不加开关）：skip 是宽容的第三态——「射程为空 / 环境读不到」不判红，
+ *     否则断网环境里门禁直接不可用；但汇总行会独立成句地点名「未核对 N 项（不是通过）」，
+ *     读的人不会把它与「都核对了」混同（P-17 / ADR-0075）。
+ *   · 发布前 / 想拿严格结论时（`pnpm run gate:strict`）：skip 一律计为非零退出——
+ *     「有一项没核对」不允许被写成「发布面合格」（P-17 的聚合层收口，ADR-0148）。
  */
 import { existsSync, lstatSync, readFileSync, readlinkSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
@@ -46,7 +53,7 @@ import { checkJevEgressBoundary, toCanonicalJevEgressResult } from './gates/jev-
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
 import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
-import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
+import { assertRemediationDeclared, computeNotCovered, isCheckActive, renderGateSummary, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
 import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
 import { identical as snapshotIdentical, snapshotRepo } from './lib/repo-snapshot.mjs'
@@ -113,7 +120,9 @@ import { GUARD_BUNDLE_GLOB, checkUpdateGuard } from './gates/update-guard.mjs'
 import { runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectManagedManifests, collectPackages } from './gates/package-collect.mjs'
-import { LOCAL_BASE_REF, createGitRunner, resolveChangedScope } from './gates/changed-packages.mjs'
+import { CHANGE_SOURCES, LOCAL_BASE_REF, createGitRunner, resolveChangedScope } from './gates/changed-packages.mjs'
+import { checkPermissionBits } from './gates/permission-bits.mjs'
+import { INTAKE_SURFACE_FILES, scanIntakeSurface } from './gates/intake-placeholders.mjs'
 import { renderCatalog } from './gen-catalog.mjs'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -1445,6 +1454,90 @@ const CHECKS = [
       '跑 node --test scripts/gates/changed-packages.test.mjs 看红在哪条：本项必须能说「不」——本地 main 超前 origin/main 时 `main...HEAD` 自比较恒为空（MUT 关掉 untracked 来源后有 5 条判红）、untracked 新包必须进射程、base 不可解析必须判红而不是返回空集、rename 必须同时映射旧包与新包、分叉的事件 base 必须被拒；也必须不误报——路径按分段边界归属（`packages/a/b` 不得冒领 `packages/a/bc`）、只有被证明为空的完整并集才算空射程、未登记治理规则的根级改动只进读数桶。`L2` 一节对当前仓库**只读**对账 `git status`，证明没有路径在中间消失（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/changed-packages.test.mjs', '改动射程判据的反向自测失败')
+    },
+  },
+  {
+    name: 'permission-bits',
+    // 射程复用 changed-packages 的四类来源（同一份 resolveChangedScope），刻意不扩到
+    // 全仓：日常权限差异变噪声后，判据会被「太吵」关掉（P-07）。判的是「谁都读不了」
+    // 与「读位齐备但 R_OK 被拒」两种形态，记账单位是**可判文件**（P-45 收口，ADR-0148）。
+    remediation:
+      '把改动面里不可读的文件恢复成 chmod 644——**先 stat 看权限位、属主与 mtime 再怀疑任何人**：'
+      + '2026-09-18 实测，编辑工具改写路径曾把含 scripts/gate.mjs 在内的三个文件留成 000，'
+      + '该形态会被 git 静默提交，且会冒充「并发写入污染」这个更贵的结论（P-45）',
+    run() {
+      const scope = resolveChangedScope({
+        git: createGitRunner({ cwd: repoRoot }),
+        env: process.env,
+        packages: [],
+      })
+      if (!scope.ok) {
+        // 射程未知时不得退化成空集：空集会让本项少看几个文件，而读数上与
+        // 「都读过且合格」完全同形（P-02）。与 changed-packages 同一处置。
+        return {
+          status: 'fail',
+          expected: 1,
+          discovered: 0,
+          checked: 0,
+          skipped: 0,
+          failed: 1,
+          typedSkips: [],
+          reason: '改动射程未知',
+          violations: [scope.reason],
+        }
+      }
+      const paths = [...new Set(CHANGE_SOURCES.flatMap((name) => scope.sources[name] ?? []))]
+      return checkPermissionBits({ root: repoRoot, paths })
+    },
+  },
+  {
+    name: 'permission-bits-selftest',
+    remediation:
+      '跑 node --test scripts/gates/permission-bits.test.mjs 看红在哪条：本项必须能说「不」——'
+      + 'chmod 000 必须判红并点名「文件 + 权限位」、写-only（020）与 R_OK 被拒（040）同样判红、'
+      + '恒真桩突变（violations 清空）下上述用例必须失效；也必须不误报——644/755 静默、'
+      + '已删除与非普通文件只进 note 读数、射程无可判文件时给 skip 而不是 pass（P-45 / P-02 / P-15）',
+    run() {
+      return runNodeTestFile('scripts/gates/permission-bits.test.mjs', '权限位判据的反向自测失败')
+    },
+  },
+  {
+    name: 'intake-placeholders',
+    // 射程刻意只有两份清单：它们是 P-48 实测被「受认可的命令」写脏的那两份。
+    // 别扩成全仓扫描——噪声会把校验变成被关掉的校验（P-07）。这是备选修法之外的
+    // 「判据读入库面」那一半：写入者已直写占位符（intake-install / scan-runtime-deps），
+    // 本项守的是「有人用旧版脚本或手工把路径写回来」这条缝。
+    remediation:
+      '把入库面清单里的构建机路径改回占位符（`__SKILL_INTAKE_SOURCE__` / `__DSH_HOME__`）并重跑写入者：'
+      + '环境值只在运行期读取处解析；一次「受认可的命令」把路径写回来时 diff 里只像新增了一条技能（P-48 / ADR-0148）',
+    run() {
+      const files = INTAKE_SURFACE_FILES.map((relPath) => {
+        const abs = join(repoRoot, relPath)
+        return { relPath, text: existsSync(abs) ? readFileSync(abs, 'utf8') : null }
+      })
+      const verdict = scanIntakeSurface({ files })
+      return {
+        status: verdict.passed ? 'pass' : 'fail',
+        expected: 1,
+        discovered: 1,
+        checked: verdict.passed ? 1 : 0,
+        skipped: 0,
+        failed: verdict.passed ? 0 : 1,
+        typedSkips: [],
+        reason: verdict.passed ? '入库面全部是占位符形态' : `入库面出现构建机路径：${verdict.violations.length} 处`,
+        violations: verdict.violations,
+        note: verdict.note,
+      }
+    },
+  },
+  {
+    name: 'intake-placeholders-selftest',
+    remediation:
+      '跑 node --test scripts/gates/intake-placeholders.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '构建机路径写回必须判红并点名「文件 + 行」、字面 `$HOME` 同样判红、读不到与射程为空都必须判红；'
+      + '恒真桩突变（不报违规）下负例必须失效（2026-09-21 实测 3/7 用例变红）；占位符形态必须放行（P-48 / P-15）',
+    run() {
+      return runNodeTestFile('scripts/gates/intake-placeholders.test.mjs', '入库面占位化判据的反向自测失败')
     },
   },
   {
@@ -3052,21 +3145,14 @@ function main() {
       }
     }
 
-    const summary = report.summary
-    const skipTail = summary.skipped > 0 ? `，跳过 ${summary.skipped}` : ''
-    const strictTail = requireNoSkip ? '，strict=no-skip' : ''
-    const prefix = report.exitCode === 0 ? 'ok' : 'fail'
-    process.stdout.write(
-      `${prefix} ${summary.passed}/${summary.total} 项通过（mode=${mode}${skipTail}${strictTail}；`
-      + `objects: expected=${summary.expected}, discovered=${summary.discovered}, checked=${summary.checked}, skipped=${summary.skippedObjects}, failed=${summary.failedObjects}）\n`,
-    )
-    // 分母的另一半：这个模式没跑到的那些，逐条点名。用 `MODES` 的反集而不是写死
-    // 「full」，是因为射程随模式集合变化，写死会在加第三个模式时静默说谎（P-06）。
-    if (summary.notCovered.length > 0) {
-      const otherModes = MODES.filter((candidate) => candidate !== mode).join('/')
-      process.stdout.write(
-        `     本次未覆盖 ${summary.notCovered.length} 条（仅 ${otherModes}）：${summary.notCovered.join('、')}\n`,
-      )
+    // 汇总行（含「未核对 N 项（不是通过）」的独立句）由 `gate-result.mjs` 渲染：
+    // 写在本文件里的逻辑**没有任何门禁测得到**（导入即执行 `main()`），P-17 的
+    // 修复必须由 `gate-result-selftest` 守着，否则下一次被顺手删掉时不会有红灯。
+    // 分母的另一半（本模式没跑到的项）用 `MODES` 的反集算，而不是写死「full」——
+    // 射程随模式集合变化，写死会在加第三个模式时静默说谎（P-06）。
+    const otherModes = MODES.filter((candidate) => candidate !== mode).join('/')
+    for (const line of renderGateSummary(report.summary, { mode, otherModes })) {
+      process.stdout.write(`${line}\n`)
     }
   }
   process.exitCode = report.exitCode

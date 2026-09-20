@@ -214,7 +214,9 @@ export function runGateChecks(checks, { requireNoSkip = false, notCovered = [] }
 export function summarizeGateResults(results, { requireNoSkip = false, notCovered = [] } = {}) {
   const normalized = (Array.isArray(results) ? results : []).map((result, index) => {
     const name = isRecord(result) && typeof result.name === 'string' ? result.name : `summary-result-${index + 1}`
-    return normalizeGateResult(result, { name })
+    // `name` 跟着归一化结果一起走：`skippedChecks` 要把它点名到项（P-17 的
+    // 汇总行修复要求「N 项未核对」后面必须有名字，否则读的人还得回看逐项行）。
+    return { name, ...normalizeGateResult(result, { name }) }
   })
   const passed = normalized.filter((result) => result.status === 'pass').length
   const skipped = normalized.filter((result) => result.status === 'skip').length
@@ -240,12 +242,53 @@ export function summarizeGateResults(results, { requireNoSkip = false, notCovere
     checked: sum(normalized, 'checked'),
     skippedObjects: sum(normalized, 'skipped'),
     failedObjects: sum(normalized, 'failed'),
+    skippedChecks: normalized.filter((result) => result.status === 'skip').map((result) => result.name),
     requireNoSkip,
     exitCode,
     notCovered: uncovered,
     ...(empty ? { reason: 'no gate checks were supplied' } : {}),
     ...(strictSkipFailure ? { reason: 'requireNoSkip rejected one or more skipped checks' } : {}),
   }
+}
+
+/**
+ * 把摘要（以及它背后的逐项结果）渲染成给人读的几行。
+ *
+ * 为什么这条渲染逻辑必须住在这里、而不是留在 `gate.mjs` 的 `main()` 里：
+ * `scripts/gate.mjs` 导入即执行 `main()`，写在那里的逻辑**没有任何门禁测得到**
+ * （`scripts/gate.test.mjs` 那一族 CLI 测试只挂在 `pnpm run test:gate` 上，不在
+ * `pnpm run gate` 的射程内——2026-09-17 实测：83 个注册项里没有一条跑它）。
+ * P-17 的处置如果只改 `main()`，下一次有人把「未核对」句顺手删掉时不会有任何红灯。
+ *
+ * 三态在**汇总行**上的分工（P-17 / ADR-0075）：
+ *  - 「N/M 项通过」只说通过的那部分——`skipped` **不再**混在这句话里（那是旧形态，
+ *    `ok 54/55 项通过（…，跳过 1）` 读起来仍像全过）；
+ *  - 「未核对 N 项（不是通过）：<逐项点名>」独立成句——它对应「跑了但没核对到」，
+ *    `requireNoSkip`（发布前那次运行）下退出码为 1，前缀也会变 `fail`；
+ *  - 「本次未覆盖 N 条（仅 <其他模式>）」是**另一件事**：这个模式根本没跑它
+ *    （分母的另一半，ADR-0102），不改变退出码，也不该和「未核对」共用一句话。
+ *
+ * @param {ReturnType<typeof summarizeGateResults>} summary
+ * @param {{mode: string, otherModes: string}} options `otherModes` 由调用方从
+ *   `MODES` 的补集算出（写死「full」会在加第三个模式时静默说谎，P-06）。
+ * @returns {string[]} 按渲染顺序排列的行（不含换行符）
+ */
+export function renderGateSummary(summary, { mode, otherModes }) {
+  const lines = []
+  const strictTail = summary.requireNoSkip ? '，strict=no-skip' : ''
+  const prefix = summary.exitCode === 0 ? 'ok' : 'fail'
+  lines.push(
+    `${prefix} ${summary.passed}/${summary.total} 项通过（mode=${mode}${strictTail}；`
+    + `objects: expected=${summary.expected}, discovered=${summary.discovered}, checked=${summary.checked}, `
+    + `skipped=${summary.skippedObjects}, failed=${summary.failedObjects}）`,
+  )
+  if (summary.skipped > 0) {
+    lines.push(`     未核对 ${summary.skipped} 项（不是通过）：${summary.skippedChecks.join('、')}`)
+  }
+  if (summary.notCovered.length > 0) {
+    lines.push(`     本次未覆盖 ${summary.notCovered.length} 条（仅 ${otherModes}）：${summary.notCovered.join('、')}`)
+  }
+  return lines
 }
 
 /**

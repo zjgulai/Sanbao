@@ -1,7 +1,7 @@
 # DA-06 · observer 乒乓最小探针：单例计数进可执行判据
 
 - 优先级：P0
-- 状态：`open`
+- 状态：`local-done`（2026-09-21，批次 A 落地，待提交）
 - 依赖：无
 - 估算：M
 - 来源：docs/pitfalls-playbook.md P-52；报告 TOP20 #6

@@ -26,7 +26,7 @@ import { join, dirname, basename, extname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { collectUnits as collectUnitsFrom, listUnit, readEntry, innerPath } from "./intake-lib.mjs";
+import { collectUnits as collectUnitsFrom, listUnit, readEntry, innerPath, INTAKE_SOURCE_PLACEHOLDER, dshHomePlaceholder } from "./intake-lib.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -519,12 +519,13 @@ if (!CHECK && !PROBE) {
     _meta: {
       generated: new Date().toISOString(),
       generator: "scripts/scan-runtime-deps.mjs",
-      from: FROM,
+      // 占位符而不是 FROM / 家目录：构建机事实不进已提交清单（P-48；判据 gate:intake-placeholders）。
+      from: INTAKE_SOURCE_PLACEHOLDER,
       partialScan: partial || undefined,
       note: partial
         ? "本次是局部扫描（--skills），已并入既有 manifest。全量重扫请不带 --skills。"
         : "自动抽取的基线。人工核对过的以 manifest/runtime-deps.overrides.json 为准（替换而非合并）。",
-      venvPython: VENV_PY,
+      venvPython: dshHomePlaceholder(VENV_PY),
     },
     scan: { units: scanned.length, withDeps: withDeps.length, overridden: scanned.filter((s) => s.overridden).length,
             broken: scanned.filter((s) => (s.broken || []).length).length, preserved },

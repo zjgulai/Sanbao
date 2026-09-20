@@ -5,6 +5,7 @@ import {
   assertRemediationDeclared,
   computeNotCovered,
   normalizeGateResult,
+  renderGateSummary,
   runGateChecks,
   summarizeGateResults,
   validateGateResult,
@@ -361,4 +362,75 @@ test('纯 legacy 读数仍然按 legacy 解释（上面的收紧不得误伤它�
   const legacy = normalizeGateResult({ passed: true, violations: [], note: 'ok' })
   assert.equal(legacy.status, 'pass')
   assert.equal(legacy.reason, 'legacy checker passed')
+})
+
+// ── 聚合层的三态：skip 必须在**汇总行**上也有自己的句子（P-17 收口） ───────────
+//
+// P-17 的症状是「逐项诚实、汇总说谎」：`ok 54/55 项通过（…，跳过 1）` 这句话里
+// 藏着「有一项从未被核对」，而退出码与之同形。逐项行已经诚实（skip 不计入通过数、
+// note 必渲染），但汇总行对状态做了**有损投影**。修法是把「未核对 N 项」从
+// 「项通过」那句里**分离**出来，并且点名到项——读汇总行的人不必再回看逐项行。
+// 这几条用例住在本文件，因此由 `gate-result-selftest` 守着（P-17 的原始处置
+// 唯一不能做的事，就是只改 gate.mjs —— 那里导入即执行 main()，没有任何门禁测得到）。
+
+test('skipped > 0 时「未核对」独立成句并点名，不混进「项通过」句', () => {
+  // 名字由调用方贴在结果上（`runGateChecks` 就是这么做的）；汇总把名字带到 skip 句里。
+  const skipFixture = {
+    ...normalizeGateResult({ passed: true, skipped: true, violations: [], note: 'fixture 环境缺失' }),
+    name: 'skip-fixture',
+  }
+  const summary = summarizeGateResults([PASS, skipFixture])
+
+  const lines = renderGateSummary(summary, { mode: 'quick', otherModes: 'full' })
+  const head = lines[0]
+  const skipLine = lines.find((line) => line.includes('未核对'))
+
+  assert.match(head, /1\/2 项通过（mode=quick/)
+  assert.doesNotMatch(head, /跳过/, '「跳过 N」不得再混在「项通过」那一句里')
+  assert.ok(skipLine, '必须有一句独立的「未核对」')
+  assert.match(skipLine, /未核对 1 项（不是通过）：skip-fixture/)
+})
+
+test('skipped = 0 时不渲染「未核对」句（正常态不添噪）', () => {
+  const summary = summarizeGateResults([PASS])
+
+  const lines = renderGateSummary(summary, { mode: 'quick', otherModes: 'full' })
+
+  assert.equal(lines.filter((line) => line.includes('未核对')).length, 0)
+  assert.equal(lines.length, 1)
+})
+
+test('requireNoSkip + skip > 0：汇总前缀为 fail，且行上留下 strict 标记', () => {
+  const skipFixture = {
+    ...normalizeGateResult({ passed: true, skipped: true, violations: [], note: 'fixture 环境缺失' }),
+    name: 'skip-fixture',
+  }
+  const summary = summarizeGateResults([PASS, skipFixture], { requireNoSkip: true })
+
+  assert.equal(summary.exitCode, 1, 'strict 语义：skip 计为非零退出')
+  const lines = renderGateSummary(summary, { mode: 'full', otherModes: 'quick' })
+  assert.match(lines[0], /^fail /)
+  assert.match(lines[0], /strict=no-skip/)
+  assert.match(lines.find((line) => line.includes('未核对')), /skip-fixture/)
+})
+
+test('「本次未覆盖」（没跑它）与「未核对」（跑了但没核对到）各说各的句子', () => {
+  const skipFixture = {
+    ...normalizeGateResult({ passed: true, skipped: true, violations: [], note: 'fixture 环境缺失' }),
+    name: 'skip-fixture',
+  }
+  const summary = summarizeGateResults([PASS, skipFixture], { notCovered: ['scripts-runnable'] })
+
+  const lines = renderGateSummary(summary, { mode: 'quick', otherModes: 'full' })
+
+  assert.ok(lines.some((line) => /未核对 1 项（不是通过）：skip-fixture/.test(line)))
+  assert.ok(lines.some((line) => /本次未覆盖 1 条（仅 full）：scripts-runnable/.test(line)))
+})
+
+test('renderGateSummary 的行与 JSON 摘要同源：skippedChecks 进摘要且恒为数组', () => {
+  const withSkip = summarizeGateResults([PASS, { ...PASS, name: 'skip-a', status: 'skip', checked: 0, skipped: 2, typedSkips: [{ type: 'x', count: 2, reason: 'y' }], note: 'z' }])
+  const bare = summarizeGateResults([PASS])
+
+  assert.deepEqual(withSkip.skippedChecks, ['skip-a'])
+  assert.deepEqual(bare.skippedChecks, [], '没传就是空数组——读数要有稳定形状')
 })

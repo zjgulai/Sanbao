@@ -12,12 +12,12 @@
 
 | ID | 事项 | 机制缺口（来源） | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [DA-01](tasks/DA-01-gate-aggregate-tri-state.md) | gate.mjs 聚合层三态收口（skip 显式渲染 + `--strict`） | P-17「两处尚未落地」 | M | 无 | `open` |
-| [DA-02](tasks/DA-02-permission-bit-gate.md) | 权限位判据：000 文件不得进提交 | P-45「尚无——约定，无强制」 | S | 无 | `open` |
-| [DA-03](tasks/DA-03-intake-placeholders.md) | 入库面占位化收口（写入者直写占位符或加判据） | P-48「入库面占位化仍是流程」 | M | 无 | `open` |
-| [DA-04](tasks/DA-04-cleanup-commitment-first.md) | 清场清单「先查承诺」序机制化 | P-49「第一步只有纪律」 | M | 无 | `open` |
+| [DA-01](tasks/DA-01-gate-aggregate-tri-state.md) | gate.mjs 聚合层三态收口（skip 显式渲染 + `--strict`） | P-17「两处尚未落地」 | M | 无 | `local-done` |
+| [DA-02](tasks/DA-02-permission-bit-gate.md) | 权限位判据：000 文件不得进提交 | P-45「尚无——约定，无强制」 | S | 无 | `local-done` |
+| [DA-03](tasks/DA-03-intake-placeholders.md) | 入库面占位化收口（写入者直写占位符或加判据） | P-48「入库面占位化仍是流程」 | M | 无 | `local-done` |
+| [DA-04](tasks/DA-04-cleanup-commitment-first.md) | 清场清单「先查承诺」序机制化 | P-49「第一步只有纪律」 | M | 无 | `local-done` |
 | [DA-05](tasks/DA-05-architecture-base-facts.md) | architecture.md §1 基座事实节更新（已核实落后一次迁移） | 本次实测（pin v2.0.10 vs 文档 2.0.5/rc.1） | S | 与 DA-12 同批 | `open` |
-| [DA-06](tasks/DA-06-observer-singleton-probe.md) | observer 乒乓最小探针：单例计数进可执行判据 | P-52「缺口不是成绩」 | M | 无 | `open` |
+| [DA-06](tasks/DA-06-observer-singleton-probe.md) | observer 乒乓最小探针：单例计数进可执行判据 | P-52「缺口不是成绩」 | M | 无 | `local-done` |
 
 ## 3. P1 · 结构热点与在飞工作（9 项）
 

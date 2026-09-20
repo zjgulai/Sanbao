@@ -606,6 +606,14 @@ export function mountSidebarGroup(options: SidebarGroupOptions): () => void {
       // before the sidebar exists — every instance passes it, and each inserts
       // its own container once the shell appears. The first instance to reach
       // a live root wins; later instances retire instead of fighting it.
+      //
+      // Reading guide (P-52, 2026-09-21): before touching either observer,
+      // count the singletons on a live app first —
+      //   document.querySelectorAll('[data-dsh-workbench-container]').length
+      // must be 1 (same for [data-dsh-workbench-group]). A reading of 2 is the
+      // mount race showing itself; the 2026-09-19 blackout ran 40 hours of
+      // triage without anyone taking that one count. Executable probe:
+      //   node scripts/acceptance/singleton-count-live.mjs
       const foreign = root.querySelector(options.groupSelector)
       if (foreign !== null) {
         retire()

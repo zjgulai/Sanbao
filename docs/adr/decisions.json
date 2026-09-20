@@ -2398,6 +2398,58 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0148",
+      "title": "ADR-0148 · 深度分析 TOP20 批次 A：五条机制债收口（聚合层三态 / 权限位判据 / 入库面占位化 / 清场先查承诺 / 单例计数探针）",
+      "status": "accepted（2026-09-21）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "P-17 收口：汇总行渲染迁进 scripts/gates/gate-result.mjs 的 renderGateSummary()（gate.mjs 导入即执行 main()，写在那里的逻辑没有任何注册项测得到）；skipped > 0 时独立成句「未核对 N 项（不是通过）：<逐项点名>」，不再混进「项通过」句；--require-no-skip（pnpm run gate:strict）与日常宽容语义分开写清；两态由 gate-result-selftest 守（恒真桩突变下必红）。",
+          "constraints": [
+            "「未核对」（跑了但没核对到）与「本次未覆盖」（这个模式没跑它）必须是两句独立的话，不共享措辞",
+            "不得用新增豁免 / 放宽阈值 / 隐藏 skip 换取表面变绿（ADR-0014 / P-02）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "P-45 收口：新增 gate:permission-bits——射程 = 本轮改动面（changed-packages 同一份 resolveChangedScope 的四类来源并集），判「三个读位全空」（000/020/040/060）与「读位齐备但 R_OK 被拒」两形态，判红点名「文件 + 权限位」并把「先 stat 再怀疑任何人」写进文案。",
+          "constraints": [
+            "刻意不全仓扫描：日常权限差异变噪声会把判据变成被关掉的判据（P-07）",
+            "记账单位是可判文件；已删除 / 非普通文件只进 note 读数；射程无可判文件时给 skip 而不是 pass（P-15）",
+            "判据加进 CHECKS 后必须有 -selftest 兄弟项（chmod 000 判红、644/755 静默、恒真桩突变必红）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "P-48 收口：写入者直写占位符（intake-install.mjs 的 _meta.from/sourceUnit、scan-runtime-deps.mjs 的 _meta.from/venvPython，helper 在 intake-lib.mjs），并新增 gate:intake-placeholders 读两份清单逐行判 /Users/… 与字面 $HOME。",
+          "constraints": [
+            "__DSH_HOME__ 的语义 = ~/.dsh 本身（与已提交值一致，不是裸 $HOME）",
+            "gate 射程只有 intake-provenance.json 与 runtime-deps.json 两份清单；与出货链 rewrite-build-paths.mjs（ADR-0073）划清、不双写",
+            "读不到 / 射程为空判红：读不到 ≠ 干净（P-15）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "P-49 收口：清场三步序固化为 scripts/cleanup-inventory.mjs——①承诺（发布清单 SHA256SUMS/*.sha256、uchg、门禁射程、ADR 决策段）→②引用（git grep 代码目录）→③体积；①②任一命中即出局（证据面），只有都为否才按体积排优先级。",
+          "constraints": [
+            "顺序是结论的一部分：先量体积再问承诺，结论会整个翻转（P-44 同族）",
+            "工具是读数不是门禁：不判红、不删除；与 gate:object-store-hygiene（管没有承诺的对象）分工不重叠",
+            "输出必须带三步各自的读数（不是只给结论）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "P-52 收口：新增 scripts/acceptance/singleton-count-live.mjs——覆盖 workbench 容器 / 组行 / 设置壳根三类单例（恰好 1 / 至多 1），数到 2 点名「重复挂载」；读不到（CDP 不通、选择器求值失败、必需单例数到 0）一律 exit 2 并点名；共享层 sidebar-entry-core.ts 不变量注释加「改 observer 前先数单例」的读数指引；被证伪仪器（探针打点/代码内观测当存活证明）登记进 dead-instruments.json。",
+          "constraints": [
+            "探针不进 pnpm run gate（需要 CDP 端口，实机读数由人在实况验收轮跑）；这层边界如实写在账本里",
+            "--self-test 必须覆盖每类单例的红绿一对 + 三类 typed unavailable，恒真桩突变下必须失效",
+            "共享层注释改动必须跑 node scripts/sync-shared.mjs --write（gate:shared-sync 守副本一致）"
+          ]
+        }
+      ]
     }
   ]
 }

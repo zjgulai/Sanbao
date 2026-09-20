@@ -12,12 +12,38 @@
  *   MinMaxDesign  目录      MinMaxDesign/<name>/
  */
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
-import { join, basename, extname, relative } from "node:path";
+import { join, basename, extname, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 export const SKILLS_DIR = process.env.DSH_SKILLS_DIR || join(homedir(), ".dsh", "skills");
+
+/**
+ * 入库面占位符（P-48 收口）：构建机路径**永不**写进已提交清单，环境值只在运行期解析。
+ *
+ * 2026-09-18 实测：跑一次受认可的入库命令，`manifest/intake-provenance.json` 的 `_meta.from`
+ * 就从 `__SKILL_INTAKE_SOURCE__` 被还原成 `/Users/lute/…/Downloads/skills`（`sourceUnit` 与
+ * `runtime-deps.json` 的 `venvPython` 同样）——退出码 0、输出全绿、diff 里只像「新增了一条技能」。
+ * 写入者在这里直接写占位符，还原这件事就不可能再发生；判据侧由 `gate:intake-placeholders` 守。
+ */
+export const INTAKE_SOURCE_PLACEHOLDER = "__SKILL_INTAKE_SOURCE__";
+export const DSH_HOME_PLACEHOLDER = "__DSH_HOME__";
+
+/** 来件路径 → 占位符形态（相对来件根；越界时退化为裸占位符，不泄露任何本机事实）。 */
+export function sourceUnitPlaceholder(absPath, from) {
+  const rel = relative(from, absPath);
+  if (rel === "" || rel.startsWith("..")) return INTAKE_SOURCE_PLACEHOLDER;
+  return `${INTAKE_SOURCE_PLACEHOLDER}/${rel.split(sep).join("/")}`;
+}
+
+/** `~/.dsh` 下的路径 → `__DSH_HOME__` 形态（语义与已提交清单一致：占位符指 `~/.dsh` 本身）。 */
+export function dshHomePlaceholder(absPath, home = homedir()) {
+  const dshHome = join(home, ".dsh");
+  return absPath === dshHome || absPath.startsWith(dshHome + sep)
+    ? DSH_HOME_PLACEHOLDER + absPath.slice(dshHome.length).split(sep).join("/")
+    : absPath;
+}
 
 /**
  * 来件批次清单：`<DSH_INTAKE_FROM>/<dir>/<nested>/<单元名>`。

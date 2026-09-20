@@ -1,7 +1,7 @@
 # DA-01 · gate.mjs 聚合层三态收口：skip 显式渲染 + --strict 开关
 
 - 优先级：P0
-- 状态：`open`
+- 状态：`local-done`（2026-09-21，批次 A 落地，待提交）
 - 依赖：无
 - 估算：M
 - 来源：docs/pitfalls-playbook.md P-17；报告 TOP20 #1

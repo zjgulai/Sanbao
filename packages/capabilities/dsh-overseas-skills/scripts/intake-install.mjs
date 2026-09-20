@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import {
   SKILLS_DIR, collectUnits, listUnit, readEntry, readEntryRaw, sha256, innerPath,
   parseFrontmatter, buildFrontmatter, buildFrontmatterFlat,
+  INTAKE_SOURCE_PLACEHOLDER, sourceUnitPlaceholder,
 } from "./intake-lib.mjs";
 import { lintUnit } from "./intake-lint.mjs";
 
@@ -158,7 +159,8 @@ function main() {
   const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : { _meta: {}, skills: {} };
   provenance._meta = {
     purpose: "第三方技能来源留底（SOP §12.2）：批次 / 原始单元 / 逐文件 sha256 / 许可证结论 / 已应用的修补。失去 .git 内置版本控制后，靠它做升级比对与回滚。",
-    from: FROM,
+    // 占位符而不是 FROM：来件根是构建机事实，写进已提交清单就是 P-48 的还原事故（判据 gate:intake-placeholders）。
+    from: INTAKE_SOURCE_PLACEHOLDER,
     updated: new Date().toISOString(),
   };
 
@@ -270,7 +272,8 @@ function main() {
     provenance.skills[m.name] = {
       batch: m.source,
       line: m.catalog || "overseas",
-      sourceUnit: unit.unit,
+      // 占位符形态：`__SKILL_INTAKE_SOURCE__/<批次内相对路径>`——升级比对与回滚只需要相对位置（P-48）。
+      sourceUnit: sourceUnitPlaceholder(unit.unit, FROM),
       license: m.license || "unknown",
       licenseBasis: m.license === "internal-only" ? "无 LICENSE 文件且 frontmatter 未声明" : "实测 LICENSE 文件或 frontmatter 声明",
       installedAt: new Date().toISOString(),
