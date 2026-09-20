@@ -30,8 +30,8 @@ window.__ModuleLoader__.load({
 		let react = require("react");
 		react = __toESM(react, 1);
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region \0dsh-theme-css:/Users/lute/project/Magpie-Horch/packages/platform/dsh-theme-local/src/client/studio.css.mjs
-		const css = "[data-appearance-studio],\n[data-appearance-studio] * {\n  box-sizing: border-box;\n}\n\n[data-appearance-studio] {\n  --appearance-accent: var(--dsw-alias-state-business-primary);\n  --appearance-background: var(--dsw-alias-bg-base);\n  --appearance-surface: var(--dsw-alias-bg-layer-1);\n  --appearance-surface-raised: var(--dsw-alias-bg-layer-2);\n  --appearance-hover: var(--dsw-alias-interactive-bg-hover);\n  --appearance-border: var(--dsw-alias-border-l2);\n  --appearance-border-strong: var(--dsw-alias-border-l3);\n  --appearance-text: var(--dsw-alias-label-primary);\n  --appearance-text-muted: var(--dsw-alias-label-tertiary);\n  display: flex;\n  width: 100%;\n  max-width: 720px;\n  flex-direction: column;\n  gap: 20px;\n  padding-bottom: 24px;\n  color: var(--appearance-text);\n  font-family: var(--dsw-font-family);\n}\n\n[data-appearance-studio] button,\n[data-appearance-studio] input,\n[data-appearance-studio] select,\n[data-appearance-studio] textarea {\n  font: inherit;\n}\n\n[data-appearance-sr] {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  overflow: hidden;\n  border: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  white-space: nowrap;\n}\n\n[data-appearance-header] {\n  display: flex;\n  align-items: flex-start;\n  justify-content: space-between;\n  gap: 16px;\n  padding-bottom: 16px;\n  border-bottom: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-header] > div {\n  min-width: 0;\n}\n\n[data-appearance-header] h2 {\n  margin: 0;\n  color: var(--appearance-text);\n  font-size: 16px;\n  font-weight: 600;\n  line-height: 24px;\n}\n\n[data-appearance-header] p,\n[data-appearance-subheading] p,\n[data-appearance-card-header] p {\n  margin: 3px 0 0;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-header] p {\n  font-size: 14px;\n  line-height: 22px;\n}\n\n[data-appearance-button] {\n  min-height: 34px;\n  padding: 5px 12px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-md, 8px);\n  color: var(--appearance-text);\n  background: var(--appearance-surface);\n  cursor: pointer;\n}\n\n[data-appearance-button]:hover {\n  background: var(--appearance-hover);\n}\n\n[data-appearance-button][data-variant=\"primary\"] {\n  border-color: transparent;\n  color: var(--dsw-alias-label-primary-inverted);\n  background: var(--appearance-accent);\n}\n\n[data-appearance-button]:disabled,\n[data-appearance-stepper-button]:disabled {\n  opacity: 0.45;\n  cursor: default;\n}\n\n[data-appearance-button]:focus-visible,\n[data-appearance-stepper-button]:focus-visible,\n[data-appearance-stepper-value]:focus-visible,\n[data-appearance-chip-hex]:focus-visible,\n[data-appearance-chip-swatch]:focus-visible,\n[data-appearance-select]:focus-visible,\n[data-appearance-slider]:focus-visible,\n[data-appearance-share-input]:focus-visible,\n[data-appearance-advanced-toggle]:focus-visible,\n[data-appearance-switch]:focus-visible {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-content] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 18px;\n}\n\n/* Cards keep the two decisions apart: the theme itself, then reader prefs. */\n[data-appearance-card] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 12px;\n  padding: 14px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-lg, 12px);\n  background: var(--appearance-surface);\n}\n\n[data-appearance-card-header] h3 {\n  margin: 0;\n  color: var(--appearance-text);\n  font-size: 14px;\n  font-weight: 600;\n  line-height: 22px;\n}\n\n[data-appearance-subheading] h4 {\n  margin: 0;\n  color: var(--appearance-text);\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 20px;\n}\n\n[data-appearance-subheading] {\n  display: flex;\n  flex-direction: column;\n  gap: 0;\n}\n\n/* Share --------------------------------------------------------------- */\n\n[data-appearance-share] {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n}\n\n[data-appearance-share-actions] {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 8px;\n}\n\n[data-appearance-share-status] {\n  margin-right: auto;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-share-panel] {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  padding: 10px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-md, 10px);\n  background: var(--appearance-surface-raised);\n}\n\n[data-appearance-share-input] {\n  width: 100%;\n  padding: 7px 9px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-sm, 8px);\n  color: var(--appearance-text);\n  background: var(--appearance-background);\n  font-family: var(--ds-font-family-code);\n  font-size: 12px;\n  line-height: 18px;\n  resize: vertical;\n}\n\n[data-appearance-share-error] {\n  margin: 0;\n  color: var(--dsw-alias-state-error-primary);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-share-submit] {\n  display: flex;\n  justify-content: flex-end;\n  gap: 8px;\n}\n\n/* Mode cards ---------------------------------------------------------- */\n\n[data-appearance-mode-grid] {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 10px;\n}\n\n[data-appearance-mode] {\n  display: flex;\n  min-width: 0;\n  height: auto;\n  flex-direction: column;\n  gap: 8px;\n  padding: 7px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-md, 10px);\n  color: var(--appearance-text-muted);\n  background: var(--appearance-surface);\n  cursor: pointer;\n}\n\n[data-appearance-mode]:hover {\n  border-color: var(--appearance-border-strong);\n  background: var(--appearance-hover);\n}\n\n[data-appearance-mode]:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-mode][data-selected=\"true\"] {\n  border-color: var(--appearance-accent);\n  color: var(--appearance-text);\n  background: var(--appearance-surface-raised);\n  box-shadow: 0 0 0 2px\n    color-mix(in oklch, var(--appearance-accent) 18%, transparent);\n}\n\n[data-appearance-mode] > span:last-child {\n  color: inherit;\n  font-size: 13px;\n  font-weight: 500;\n  line-height: 20px;\n}\n\n[data-appearance-preview] {\n  position: relative;\n  display: flex;\n  width: 100%;\n  aspect-ratio: 1.8;\n  overflow: hidden;\n  border: 0.5px solid #0000001f;\n  border-radius: var(--dsw-alias-radius-md, 8px);\n  background: #fff;\n}\n\n[data-appearance-preview][data-mode=\"dark\"] {\n  border-color: #ffffff2e;\n  background: #18181b;\n}\n\n[data-appearance-preview][data-mode=\"system\"] {\n  background: linear-gradient(90deg, #fff 0 50%, #18181b 50%);\n}\n\n[data-appearance-preview-sidebar] {\n  width: 28%;\n  background: #f2f2f3;\n}\n\n[data-mode=\"dark\"] [data-appearance-preview-sidebar] {\n  background: #27272a;\n}\n\n[data-mode=\"system\"] [data-appearance-preview-sidebar] {\n  background: linear-gradient(90deg, #f2f2f3 0 50%, #27272a 50%);\n}\n\n[data-appearance-preview-surface] {\n  position: absolute;\n  right: 8%;\n  bottom: 12%;\n  display: grid;\n  width: 56%;\n  gap: 5px;\n  padding: 8px;\n  border-radius: var(--dsw-alias-radius-sm, 6px);\n  background: #f7f7f8;\n  box-shadow: var(--dsw-alias-shadow-md, 0 2px 8px #00000017);\n}\n\n[data-mode=\"dark\"] [data-appearance-preview-surface] {\n  background: #303034;\n}\n\n[data-mode=\"system\"] [data-appearance-preview-surface] {\n  background: linear-gradient(90deg, #f7f7f8 0 50%, #303034 50%);\n}\n\n[data-appearance-preview-surface] i {\n  height: 4px;\n  border-radius: 999px;\n  background: #c7c7cc;\n}\n\n[data-appearance-preview-surface] i:nth-child(2) {\n  width: 78%;\n}\n\n[data-appearance-preview-surface] i:nth-child(3) {\n  width: 48%;\n}\n\n/* Preset grid --------------------------------------------------------- */\n\n[data-appearance-preset-grid] {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 8px;\n}\n\n[data-appearance-preset] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 6px;\n  padding: 6px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-md, 10px);\n  background: var(--appearance-surface);\n  cursor: pointer;\n}\n\n[data-appearance-preset]:hover {\n  border-color: var(--appearance-border-strong);\n  background: var(--appearance-hover);\n}\n\n[data-appearance-preset]:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-preset][data-selected=\"true\"] {\n  border-color: var(--appearance-accent);\n  box-shadow: 0 0 0 2px\n    color-mix(in oklch, var(--appearance-accent) 18%, transparent);\n}\n\n[data-appearance-preset] > span:last-child {\n  padding: 0 2px;\n  overflow: hidden;\n  color: var(--appearance-text);\n  font-size: 12px;\n  font-weight: 500;\n  line-height: 18px;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n[data-appearance-preset][data-custom=\"true\"] {\n  align-items: center;\n  justify-content: center;\n  border-style: dashed;\n  cursor: default;\n}\n\n[data-appearance-preset-custom] {\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-theme-colors] {\n  display: grid;\n  width: 100%;\n  height: 24px;\n  grid-template-columns: repeat(6, 1fr);\n  overflow: hidden;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-sm, 6px);\n  background: var(--appearance-surface);\n}\n\n[data-appearance-theme-colors] i {\n  display: block;\n  min-width: 0;\n}\n\n/* Stacked variants ---------------------------------------------------- */\n\n[data-appearance-variant] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 8px;\n}\n\n[data-appearance-fields],\n[data-appearance-accent-group],\n[data-appearance-setting-list] {\n  display: grid;\n  min-width: 0;\n  overflow: hidden;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-md, 10px);\n  background: var(--appearance-surface);\n}\n\n[data-appearance-fields][hidden],\n[data-appearance-advanced-panel][hidden] {\n  display: none;\n}\n\n[data-appearance-chip],\n[data-appearance-accent],\n[data-appearance-contrast],\n[data-appearance-setting-row] {\n  display: grid;\n  grid-template-columns: minmax(7rem, 1fr) minmax(10rem, 15rem);\n  align-items: center;\n  min-height: 52px;\n  gap: 12px;\n  padding: 8px 12px;\n  border-bottom: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-chip]:last-child,\n[data-appearance-accent]:last-child,\n[data-appearance-contrast]:last-child,\n[data-appearance-setting-row]:last-child {\n  border-bottom: 0;\n}\n\n[data-appearance-chip-label],\n[data-appearance-setting-row] > span,\n[data-appearance-setting-copy] > span {\n  font-size: 13px;\n  font-weight: 500;\n}\n\n[data-appearance-chip-control] {\n  display: grid;\n  grid-template-columns: 28px minmax(0, 1fr);\n  align-items: center;\n  gap: 8px;\n}\n\n[data-appearance-chip-swatch] {\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  overflow: hidden;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: 999px;\n  background: transparent;\n  cursor: pointer;\n}\n\n[data-appearance-chip-swatch]::-webkit-color-swatch-wrapper {\n  padding: 2px;\n}\n\n[data-appearance-chip-swatch]::-webkit-color-swatch {\n  border: 0;\n  border-radius: 999px;\n}\n\n[data-appearance-chip-hex] {\n  width: 100%;\n  min-width: 0;\n  height: 30px;\n  padding: 4px 9px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-sm, 8px);\n  color: var(--appearance-text);\n  background: var(--appearance-background);\n  font-family: var(--ds-font-family-code);\n  font-size: 12px;\n}\n\n[data-appearance-chip-hex][aria-invalid=\"true\"] {\n  border-color: var(--dsw-alias-state-error-primary);\n}\n\n[data-appearance-chip-error] {\n  grid-column: 2;\n  margin-top: -6px;\n  color: var(--dsw-alias-state-error-primary);\n  font-size: 12px;\n}\n\n/* Accent swatches ----------------------------------------------------- */\n\n[data-appearance-swatches] {\n  display: flex;\n  flex-wrap: wrap;\n  align-items: center;\n  gap: 6px;\n}\n\n/*\n * The one border on this sheet that stays at 1px: the selected state below\n * swaps border-color only, so this stroke is the sole cue for \"chosen\". Every\n * other line here is a container hairline and matches the app's 0.5px\n * language — see the appearance revamp note for the measurement behind it.\n */\n[data-appearance-swatch-chip] {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  min-height: 30px;\n  padding: 2px;\n  border: 1px solid transparent;\n  border-radius: 999px;\n  cursor: pointer;\n}\n\n[data-appearance-swatch-chip][data-selected=\"true\"] {\n  border-color: var(--appearance-accent);\n}\n\n[data-appearance-swatch-chip]:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-swatch-chip][data-custom=\"true\"] {\n  padding: 2px 10px;\n  border-color: var(--appearance-border);\n  border-style: dashed;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  cursor: default;\n}\n\n[data-appearance-swatch-dot] {\n  display: block;\n  width: 24px;\n  height: 24px;\n  border: 0.5px solid #0000001f;\n  border-radius: 999px;\n}\n\n/* Contrast slider ----------------------------------------------------- */\n\n[data-appearance-contrast-copy] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 1px;\n}\n\n[data-appearance-contrast-copy] p,\n[data-appearance-setting-copy] p {\n  margin: 0;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-contrast-control] {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) 2.4rem;\n  align-items: center;\n  gap: 10px;\n}\n\n[data-appearance-slider] {\n  width: 100%;\n  height: 6px;\n  margin: 0;\n  border-radius: 999px;\n  background: linear-gradient(\n    90deg,\n    var(--appearance-accent) var(--appearance-contrast-fill, 50%),\n    var(--appearance-border) var(--appearance-contrast-fill, 50%)\n  );\n  cursor: pointer;\n  appearance: none;\n  -webkit-appearance: none;\n}\n\n[data-appearance-slider]::-webkit-slider-thumb {\n  width: 16px;\n  height: 16px;\n  border: 0.5px solid var(--appearance-border-strong);\n  border-radius: 999px;\n  margin-top: -5px;\n  background: var(--appearance-surface);\n  box-shadow: var(--dsw-shadow-lv1, 0 1px 3px #00000012);\n  appearance: none;\n  -webkit-appearance: none;\n}\n\n[data-appearance-slider]::-webkit-slider-runnable-track {\n  height: 6px;\n  border-radius: 999px;\n  background: transparent;\n}\n\n[data-appearance-slider-value] {\n  color: var(--appearance-text-muted);\n  font-family: var(--ds-font-family-code);\n  font-size: 12px;\n  text-align: right;\n}\n\n/* Advanced disclosure ------------------------------------------------- */\n\n[data-appearance-advanced] {\n  display: block;\n}\n\n[data-appearance-advanced-toggle] {\n  display: flex;\n  width: 100%;\n  align-items: flex-start;\n  gap: 8px;\n  padding: 12px;\n  border: 0;\n  color: var(--appearance-text);\n  background: transparent;\n  cursor: pointer;\n  text-align: left;\n}\n\n[data-appearance-advanced-toggle]:hover {\n  background: var(--appearance-hover);\n}\n\n[data-appearance-chevron] {\n  width: 0;\n  height: 0;\n  margin-top: 6px;\n  border-top: 4px solid transparent;\n  border-bottom: 4px solid transparent;\n  border-left: 5px solid var(--appearance-text-muted);\n}\n\n[data-appearance-chevron][data-open=\"true\"] {\n  transform: rotate(90deg);\n}\n\n[data-appearance-advanced-copy] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n}\n\n[data-appearance-advanced-copy] > span {\n  font-size: 13px;\n  font-weight: 500;\n}\n\n[data-appearance-advanced-copy] p {\n  margin: 0;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-advanced-panel] {\n  display: grid;\n  border-top: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-advanced-panel] [data-appearance-chip] {\n  padding-left: 24px;\n}\n\n/* Prefs rows ---------------------------------------------------------- */\n\n[data-appearance-setting-copy] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n}\n\n[data-appearance-select] {\n  width: 100%;\n  min-width: 0;\n  height: 30px;\n  padding: 4px 26px 4px 9px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-sm, 8px);\n  color: var(--appearance-text);\n  background: var(--appearance-background);\n  cursor: pointer;\n}\n\n[data-appearance-stepper] {\n  display: grid;\n  grid-template-columns: minmax(7rem, 1fr) minmax(10rem, 15rem);\n  align-items: center;\n  min-height: 52px;\n  gap: 12px;\n  padding: 8px 12px;\n  border-bottom: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-stepper]:last-child {\n  border-bottom: 0;\n}\n\n[data-appearance-stepper-control] {\n  display: inline-flex;\n  align-items: center;\n  justify-self: start;\n  gap: 2px;\n  padding: 2px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--dsw-alias-radius-sm, 8px);\n  background: var(--appearance-background);\n}\n\n[data-appearance-stepper-button] {\n  width: 26px;\n  height: 26px;\n  border: 0;\n  border-radius: var(--dsw-alias-radius-sm, 6px);\n  color: var(--appearance-text);\n  background: transparent;\n  cursor: pointer;\n}\n\n[data-appearance-stepper-button]:hover:not(:disabled) {\n  background: var(--appearance-hover);\n}\n\n[data-appearance-stepper-value] {\n  width: 2.6rem;\n  height: 26px;\n  border: 0;\n  color: var(--appearance-text);\n  background: transparent;\n  font-family: var(--ds-font-family-code);\n  font-size: 12px;\n  text-align: center;\n}\n\n[data-appearance-segment] {\n  display: inline-flex;\n  padding: 3px;\n  border-radius: var(--dsw-alias-radius-md, 8px);\n  background: var(--appearance-surface-raised);\n}\n\n[data-appearance-segment] label {\n  display: inline-flex;\n  align-items: center;\n  min-height: 26px;\n  padding: 3px 10px;\n  border-radius: var(--dsw-alias-radius-sm, 6px);\n  color: var(--appearance-text-muted);\n  cursor: pointer;\n  font-size: 12px;\n}\n\n[data-appearance-segment] label[data-selected=\"true\"] {\n  color: var(--appearance-text);\n  background: var(--appearance-surface);\n  box-shadow: var(--dsw-shadow-lv1, 0 1px 3px #00000012);\n}\n\n[data-appearance-segment] label:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-switch] {\n  position: relative;\n  width: 40px;\n  height: 24px;\n  flex: none;\n  justify-self: start;\n  padding: 0;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: 999px;\n  background: var(--appearance-surface-raised);\n  cursor: pointer;\n}\n\n[data-appearance-switch][aria-checked=\"true\"] {\n  border-color: transparent;\n  background: var(--appearance-accent);\n}\n\n[data-appearance-switch-thumb] {\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 18px;\n  height: 18px;\n  border-radius: 999px;\n  background: var(--appearance-surface);\n  box-shadow: var(--dsw-shadow-lv1, 0 1px 3px #00000012);\n}\n\n[data-appearance-switch][aria-checked=\"true\"] [data-appearance-switch-thumb] {\n  left: 19px;\n}\n\n[data-appearance-status] {\n  min-height: 18px;\n  margin: -7px 2px 0;\n  color: var(--appearance-text-muted);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n[data-appearance-status][data-status=\"error\"] {\n  color: var(--dsw-alias-state-error-primary);\n}\n\n@media (prefers-reduced-motion: no-preference) {\n  [data-appearance-button],\n  [data-appearance-mode],\n  [data-appearance-preset],\n  [data-appearance-swatch-chip],\n  [data-appearance-switch-thumb],\n  [data-appearance-segment] label,\n  [data-appearance-chip-swatch],\n  [data-appearance-select] {\n    transition:\n      border-color 180ms ease,\n      background-color 180ms ease,\n      color 180ms ease,\n      box-shadow 180ms ease,\n      left 180ms ease;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  [data-appearance-button],\n  [data-appearance-mode],\n  [data-appearance-preset],\n  [data-appearance-swatch-chip],\n  [data-appearance-switch-thumb],\n  [data-appearance-segment] label,\n  [data-appearance-chip-swatch],\n  [data-appearance-select] {\n    transition: none;\n  }\n}\n\n@media (max-width: 620px) {\n  [data-appearance-mode-grid] {\n    grid-template-columns: 1fr;\n  }\n\n  [data-appearance-mode] {\n    display: grid;\n    grid-template-columns: minmax(7rem, 10rem) 1fr;\n    align-items: center;\n  }\n\n  [data-appearance-preset-grid] {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n\n  [data-appearance-chip],\n  [data-appearance-accent],\n  [data-appearance-contrast],\n  [data-appearance-setting-row],\n  [data-appearance-stepper] {\n    grid-template-columns: 1fr;\n  }\n\n  [data-appearance-chip-error] {\n    grid-column: 1;\n  }\n}\n";
+		//#region \0dsh-theme-css:/Users/lute/project/Magpie-Horch/.worktrees/appearance-plugin/packages/platform/dsh-theme-local/src/client/studio.css.mjs
+		const css = "[data-appearance-studio],\n[data-appearance-studio] * {\n  box-sizing: border-box;\n}\n\n[data-appearance-studio] {\n  --appearance-accent: var(--sanbao-accent, var(--dsw-alias-state-business-primary));\n  --appearance-background: var(--sanbao-canvas, var(--dsw-alias-bg-base));\n  --appearance-surface: var(--sanbao-panel, var(--dsw-alias-bg-layer-1));\n  --appearance-surface-raised: var(--sanbao-inset, var(--dsw-alias-bg-layer-2));\n  --appearance-hover: var(--sanbao-hover, var(--dsw-alias-interactive-bg-hover));\n  --appearance-border: var(--sanbao-border, var(--dsw-alias-border-l2));\n  --appearance-border-strong: var(--sanbao-control-border, var(--dsw-alias-border-l3));\n  --appearance-text: var(--sanbao-foreground, var(--dsw-alias-label-primary));\n  --appearance-text-muted: var(--sanbao-secondary, var(--dsw-alias-label-tertiary));\n  display: flex;\n  width: 100%;\n  max-width: 760px;\n  flex-direction: column;\n  gap: 20px;\n  padding-bottom: 24px;\n  color: var(--appearance-text);\n  font-family: var(--dsw-font-family, system-ui, -apple-system, sans-serif);\n}\n\n[data-appearance-studio] button,\n[data-appearance-studio] input,\n[data-appearance-studio] select,\n[data-appearance-studio] textarea {\n  font: inherit;\n}\n\n[data-appearance-sr] {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  overflow: hidden;\n  border: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  white-space: nowrap;\n}\n\n[data-appearance-header] {\n  display: flex;\n  align-items: flex-start;\n  justify-content: space-between;\n  gap: 16px;\n  padding-bottom: 16px;\n  border-bottom: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-header] > div {\n  min-width: 0;\n}\n\n[data-appearance-header] h2 {\n  margin: 0;\n  color: var(--appearance-text);\n  font-size: 18px;\n  font-weight: 600;\n  line-height: 26px;\n}\n\n[data-appearance-header] p,\n[data-appearance-card-header] p {\n  margin: 4px 0 0;\n  color: var(--appearance-text-muted);\n  font-size: 13px;\n  line-height: 18px;\n}\n\n[data-appearance-content] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 20px;\n}\n\n/* Cards */\n[data-appearance-card] {\n  display: flex;\n  min-width: 0;\n  flex-direction: column;\n  gap: 14px;\n  padding: 16px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 10px);\n  background: var(--appearance-surface);\n}\n\n[data-appearance-card-header] h3 {\n  margin: 0;\n  color: var(--appearance-text);\n  font-size: 15px;\n  font-weight: 600;\n  line-height: 22px;\n}\n\n/* 1. Mode Segmented Control */\n[data-appearance-mode-segment] {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 6px;\n  padding: 4px;\n  border-radius: var(--sanbao-radius, 8px);\n  background: var(--appearance-surface-raised);\n}\n\n[data-appearance-mode-option] {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  min-height: 34px;\n  padding: 6px 14px;\n  border-radius: calc(var(--sanbao-radius, 8px) - 2px);\n  color: var(--appearance-text-muted);\n  cursor: pointer;\n  font-size: 13px;\n  font-weight: 500;\n  user-select: none;\n  transition: all 160ms ease;\n}\n\n[data-appearance-mode-option]:hover {\n  color: var(--appearance-text);\n}\n\n[data-appearance-mode-option][data-selected=\"true\"] {\n  color: var(--appearance-text);\n  background: var(--appearance-surface);\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);\n}\n\n[data-appearance-mode-option]:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 1px;\n}\n\n/* 2. Seasonal Theme Card Grid */\n[data-appearance-seasonal-grid] {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 12px;\n}\n\n[data-appearance-theme-card] {\n  display: flex;\n  flex-direction: column;\n  border: 1px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 10px);\n  background: var(--appearance-surface);\n  cursor: pointer;\n  overflow: hidden;\n  transition: border-color 180ms ease, box-shadow 180ms ease;\n}\n\n[data-appearance-theme-card]:hover {\n  border-color: var(--appearance-border-strong);\n}\n\n[data-appearance-theme-card][data-selected=\"true\"] {\n  border-color: var(--appearance-accent);\n  box-shadow: 0 0 0 2px color-mix(in srgb, var(--appearance-accent) 25%, transparent);\n}\n\n[data-appearance-theme-card]:has(input:focus-visible) {\n  outline: 2px solid var(--appearance-accent);\n  outline-offset: 2px;\n}\n\n[data-appearance-theme-card-body] {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 14px;\n}\n\n[data-appearance-theme-card-header] {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n}\n\n[data-appearance-theme-title] {\n  font-size: 14px;\n  font-weight: 600;\n  color: var(--appearance-text);\n}\n\n[data-appearance-theme-season] {\n  font-size: 12px;\n  color: var(--appearance-text-muted);\n}\n\n[data-appearance-swatch-strip] {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  height: 24px;\n  border-radius: 6px;\n  overflow: hidden;\n  border: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-swatch-chip] {\n  display: block;\n  width: 100%;\n  height: 100%;\n}\n\n[data-appearance-theme-desc] {\n  font-size: 12px;\n  line-height: 16px;\n  color: var(--appearance-text-muted);\n}\n\n/* 3. Typography & Setting Rows */\n[data-appearance-setting-list] {\n  display: flex;\n  flex-direction: column;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 10px);\n  background: var(--appearance-surface);\n  overflow: hidden;\n}\n\n[data-appearance-setting-row] {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  min-height: 54px;\n  gap: 16px;\n  padding: 10px 16px;\n  border-bottom: 0.5px solid var(--appearance-border);\n}\n\n[data-appearance-setting-row]:last-child {\n  border-bottom: 0;\n}\n\n[data-appearance-setting-copy] {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n[data-appearance-setting-copy] > span {\n  font-size: 13px;\n  font-weight: 500;\n  color: var(--appearance-text);\n}\n\n[data-appearance-setting-copy] p {\n  margin: 0;\n  font-size: 12px;\n  color: var(--appearance-text-muted);\n}\n\n/* Stepper */\n[data-appearance-stepper-control] {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  padding: 3px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 8px);\n  background: var(--appearance-surface-raised);\n}\n\n[data-appearance-stepper-button] {\n  width: 28px;\n  height: 28px;\n  border: 0;\n  border-radius: calc(var(--sanbao-radius, 8px) - 2px);\n  color: var(--appearance-text);\n  background: transparent;\n  cursor: pointer;\n  font-size: 16px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n\n[data-appearance-stepper-button]:hover:not(:disabled) {\n  background: var(--appearance-hover);\n}\n\n[data-appearance-stepper-button]:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\n\n[data-appearance-stepper-value] {\n  min-width: 48px;\n  text-align: center;\n  font-size: 13px;\n  font-weight: 500;\n  color: var(--appearance-text);\n}\n\n/* Switch Toggle */\n[data-appearance-switch] {\n  position: relative;\n  width: 42px;\n  height: 24px;\n  flex: none;\n  padding: 0;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: 999px;\n  background: var(--appearance-surface-raised);\n  cursor: pointer;\n  transition: background-color 180ms ease, border-color 180ms ease;\n}\n\n[data-appearance-switch][aria-checked=\"true\"] {\n  border-color: transparent;\n  background: var(--appearance-accent);\n}\n\n[data-appearance-switch-thumb] {\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 18px;\n  height: 18px;\n  border-radius: 999px;\n  background: #ffffff;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);\n  transition: transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);\n}\n\n[data-appearance-switch][aria-checked=\"true\"] [data-appearance-switch-thumb] {\n  transform: translateX(18px);\n}\n\n/* 4. Live Preview Card */\n[data-appearance-live-preview] {\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 10px);\n  background: var(--sanbao-canvas, var(--appearance-background));\n  padding: 16px;\n}\n\n[data-appearance-preview-card] {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 16px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 8px);\n  background: var(--sanbao-panel, var(--appearance-surface));\n}\n\n[data-appearance-preview-banner] {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n}\n\n[data-appearance-preview-title] {\n  margin: 0;\n  font-size: 15px;\n  font-weight: 600;\n  color: var(--sanbao-foreground, var(--appearance-text));\n}\n\n[data-appearance-preview-badge] {\n  font-size: 11px;\n  padding: 2px 8px;\n  border-radius: 999px;\n  background: var(--sanbao-success, #356b42);\n  color: #ffffff;\n  font-weight: 500;\n}\n\n[data-appearance-preview-desc] {\n  margin: 0;\n  font-size: 13px;\n  line-height: 20px;\n  color: var(--sanbao-secondary, var(--appearance-text-muted));\n}\n\n[data-appearance-preview-actions] {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n}\n\n[data-appearance-button] {\n  min-height: 32px;\n  padding: 4px 14px;\n  border: 0.5px solid var(--appearance-border);\n  border-radius: var(--sanbao-radius, 6px);\n  color: var(--sanbao-foreground, var(--appearance-text));\n  background: var(--sanbao-panel, var(--appearance-surface));\n  cursor: pointer;\n  font-size: 13px;\n  font-weight: 500;\n  transition: background-color 160ms ease;\n}\n\n[data-appearance-button]:hover {\n  background: var(--sanbao-hover, var(--appearance-hover));\n}\n\n[data-appearance-button][data-variant=\"primary\"] {\n  border-color: transparent;\n  color: var(--sanbao-on-accent, #ffffff);\n  background: var(--sanbao-accent, var(--appearance-accent));\n}\n\n[data-appearance-preview-code] {\n  padding: 4px 8px;\n  border-radius: 4px;\n  font-size: 12px;\n  font-family: var(--sanbao-font-mono, monospace);\n  background: var(--sanbao-inset, var(--appearance-surface-raised));\n  color: var(--sanbao-foreground, var(--appearance-text));\n}\n\n/* Reduced motion media rules */\n@media (prefers-reduced-motion: reduce) {\n  [data-appearance-mode-option],\n  [data-appearance-theme-card],\n  [data-appearance-switch],\n  [data-appearance-switch-thumb],\n  [data-appearance-button] {\n    transition: none !important;\n  }\n}\n\n@media (max-width: 640px) {\n  [data-appearance-seasonal-grid] {\n    grid-template-columns: 1fr;\n  }\n}\n";
 		const tagId = "dsh-theme/studio.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -103,7 +103,7 @@ window.__ModuleLoader__.load({
 			"uiFontSize",
 			"codeFontSize"
 		];
-		const THEME_STUDIO_FIELDS = [
+		[
 			...THEME_COLOR_FIELDS,
 			...THEME_CONTRAST_FIELDS,
 			...THEME_TYPOGRAPHY_FIELDS
@@ -368,12 +368,260 @@ window.__ModuleLoader__.load({
 			"input.invalid": "Enter a six-digit hex color"
 		};
 		//#endregion
+		//#region src/client/sanbao-tokens.ts
+		/**
+		* 品牌 token 源 `--sanbao-*`（单一事实源 Single Source of Truth）。
+		*
+		* 矩阵结构：2 模式（light / dark）× 3 季节主题（parchment / warm-pink / forest-green）共 6 态调色板。
+		* 遵循 ADR-0144 / ADR-0145 与设计规格书 Section 2.3 定义。
+		*
+		* 经 `scripts/sync-shared.mjs` 分发（副本首行带生成标记）；改这里后跑
+		* `node scripts/sync-shared.mjs --write`。
+		*/
+		const APPEARANCE_MODES = [
+			"light",
+			"dark",
+			"system"
+		];
+		const SEASONAL_THEMES = [
+			"parchment",
+			"warm-pink",
+			"forest-green"
+		];
+		const SANBAO_PALETTES = Object.freeze({
+			"parchment-light": Object.freeze({
+				canvas: "#FBF7EE",
+				sidebar: "#F3EEE3",
+				rightSidebar: "#F3EEE3",
+				panel: "#FFFFFF",
+				inset: "#EFE9DC",
+				overlay: "#FFFFFF",
+				foreground: "#2A2723",
+				secondary: "#6B595B",
+				accent: "#8C6534",
+				accentFill: "#8C6534",
+				onAccent: "#FFFFFF",
+				hover: "#EFE6D5",
+				pressed: "#E5DAC4",
+				selected: "#EFE6D5",
+				disabled: "#A09A8F",
+				border: "#E2DAC9",
+				controlBorder: "#8D8474",
+				success: "#356B42",
+				warning: "#8C6014",
+				error: "#A83B3B"
+			}),
+			"parchment-dark": Object.freeze({
+				canvas: "#1F1E1B",
+				sidebar: "#1A1917",
+				rightSidebar: "#161513",
+				panel: "#161513",
+				inset: "#121110",
+				overlay: "#121110",
+				foreground: "#EAE5DB",
+				secondary: "#A8A195",
+				accent: "#D19F5B",
+				accentFill: "#B88542",
+				onAccent: "#1A150D",
+				hover: "#292723",
+				pressed: "#302E29",
+				selected: "#2D2922",
+				disabled: "#787267",
+				border: "#33302B",
+				controlBorder: "#787163",
+				success: "#7EA885",
+				warning: "#D6A865",
+				error: "#DF8282"
+			}),
+			"warm-pink-light": Object.freeze({
+				canvas: "#FFF8F7",
+				sidebar: "#F7EEEC",
+				rightSidebar: "#F7EEEC",
+				panel: "#FFFDFC",
+				inset: "#F3E6E4",
+				overlay: "#FFFDFC",
+				foreground: "#382E30",
+				secondary: "#6B595E",
+				accent: "#8F5361",
+				accentFill: "#8F5361",
+				onAccent: "#FFFFFF",
+				hover: "#EFE1DF",
+				pressed: "#E9D8D6",
+				selected: "#EDDBDE",
+				disabled: "#A48F94",
+				border: "#DCC8CD",
+				controlBorder: "#A2838B",
+				success: "#406748",
+				warning: "#80501F",
+				error: "#A53945"
+			}),
+			"warm-pink-dark": Object.freeze({
+				canvas: "#211C1D",
+				sidebar: "#1C1819",
+				rightSidebar: "#181415",
+				panel: "#181415",
+				inset: "#120E0F",
+				overlay: "#120E0F",
+				foreground: "#F0E5E7",
+				secondary: "#B8A4A8",
+				accent: "#E28D9E",
+				accentFill: "#C46D80",
+				onAccent: "#1F0F13",
+				hover: "#2A2325",
+				pressed: "#332B2D",
+				selected: "#332328",
+				disabled: "#7D6B70",
+				border: "#382A2E",
+				controlBorder: "#7F676D",
+				success: "#87B58E",
+				warning: "#DDA675",
+				error: "#DE7A88"
+			}),
+			"forest-green-light": Object.freeze({
+				canvas: "#F7F9F7",
+				sidebar: "#EEF2EE",
+				rightSidebar: "#EEF2EE",
+				panel: "#FFFFFF",
+				inset: "#E6EDE6",
+				overlay: "#FFFFFF",
+				foreground: "#1E241F",
+				secondary: "#5A665C",
+				accent: "#386940",
+				accentFill: "#386940",
+				onAccent: "#FFFFFF",
+				hover: "#E3ECE3",
+				pressed: "#D7E3D7",
+				selected: "#E2EFE3",
+				disabled: "#939E94",
+				border: "#D1DDD2",
+				controlBorder: "#78877A",
+				success: "#2F6B3D",
+				warning: "#855D18",
+				error: "#A94040"
+			}),
+			"forest-green-dark": Object.freeze({
+				canvas: "#232523",
+				sidebar: "#242624",
+				rightSidebar: "#191B1A",
+				panel: "#191B1A",
+				inset: "#131413",
+				overlay: "#131413",
+				foreground: "#ECEDEB",
+				secondary: "#AFB5AF",
+				accent: "#8FBC99",
+				accentFill: "#5C9363",
+				onAccent: "#101C12",
+				hover: "#2E332F",
+				pressed: "#343C35",
+				selected: "#293A2D",
+				disabled: "#737D75",
+				border: "#3E463F",
+				controlBorder: "#818E84",
+				success: "#8FBC99",
+				warning: "#DAB879",
+				error: "#E49393"
+			})
+		});
+		const kebab = (key) => key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+		/**
+		* 根据主题与模式构建 CSS 变量字典。
+		* 支持 buildSanbaoVariables(theme, mode) 与向后兼容单入参 buildSanbaoVariables(themeKey)。
+		*/
+		function buildSanbaoVariables(themeOrCombined, mode) {
+			let key;
+			if (mode !== void 0) key = `${themeOrCombined}-${mode}`;
+			else if (themeOrCombined.includes("-light") || themeOrCombined.includes("-dark")) key = themeOrCombined;
+			else key = `${themeOrCombined}-light`;
+			const palette = SANBAO_PALETTES[key] ?? SANBAO_PALETTES["forest-green-light"];
+			return Object.fromEntries(Object.entries(palette).map(([k, value]) => [`--sanbao-${kebab(k)}`, value]));
+		}
+		/** 供体契约十键 + 材质七项向后兼容映射表 */
+		const COMPATIBILITY_VARIABLES = {
+			bg: "canvas",
+			surface: "panel",
+			surface2: "inset",
+			ink: "foreground",
+			muted: "secondary",
+			line: "border",
+			good: "success",
+			"metal-ink": "foreground",
+			"metal-border": "border",
+			"metal-fill": "panel",
+			"metal-line": "border",
+			"metal-highlight": "hover",
+			"metal-pressed": "pressed"
+		};
+		function formatDeclarations(theme, mode) {
+			const vars = buildSanbaoVariables(theme, mode);
+			return Object.entries(vars).map(([k, v]) => `${k}: ${v};`).join("\n    ");
+		}
+		const SANBAO_TOKEN_CSS = `:root {
+  ${Object.entries(COMPATIBILITY_VARIABLES).map(([key, value]) => `--sanbao-${key}: var(--sanbao-${value});`).join("\n  ")}
+  --sanbao-on-accent: #FFFFFF;
+  --sanbao-radius: var(--lute-radius-row, 8px);
+  --sanbao-metal-shadow: transparent;
+  --sanbao-success-surface: color-mix(in srgb, var(--sanbao-success) 10%, var(--sanbao-canvas));
+  --sanbao-warning-surface: color-mix(in srgb, var(--sanbao-warning) 10%, var(--sanbao-canvas));
+  --sanbao-error-surface: color-mix(in srgb, var(--sanbao-error) 10%, var(--sanbao-canvas));
+  --sanbao-fast: 160ms;
+  --sanbao-base: 260ms;
+  --sanbao-slow: 520ms;
+  --sanbao-ease: cubic-bezier(.22,1,.36,1);
+
+  /* 默认兜底：森林绿 light */
+  ${formatDeclarations("forest-green", "light")}
+}
+
+body[data-ds-dark-theme] {
+  /* 默认暗色兜底：森林绿 dark */
+  ${formatDeclarations("forest-green", "dark")}
+}
+
+/* 6 态选择器矩阵 [data-sanbao-theme][data-sanbao-mode] */
+${SEASONAL_THEMES.map((theme) => `
+html[data-sanbao-theme="${theme}"][data-sanbao-mode="light"],
+body[data-sanbao-theme="${theme}"][data-sanbao-mode="light"] {
+  color-scheme: light;
+  ${formatDeclarations(theme, "light")}
+}
+
+html[data-sanbao-theme="${theme}"][data-sanbao-mode="dark"],
+body[data-sanbao-theme="${theme}"][data-sanbao-mode="dark"] {
+  color-scheme: dark;
+  ${formatDeclarations(theme, "dark")}
+}
+`).join("\n")}
+`;
+		/** 注入 style 标签的 data 锚（幂等判据，也是浏览器探针可观察的自报面）。 */
+		const STYLE_ANCHOR = "sanbaoTokens";
+		/**
+		* 幂等注入 `--sanbao-*` token（与 ensureLuteTokens 同一形状）。
+		* @returns 注入的标签（本次未注入时返回既有标签；无 document 时返回 undefined）。
+		*/
+		function ensureSanbaoTokens(doc = typeof document !== "undefined" ? document : void 0) {
+			if (!doc) return void 0;
+			const existing = doc.querySelector(`style[data-sanbao-tokens="${STYLE_ANCHOR}"]`);
+			if (existing !== null) return existing;
+			const style = doc.createElement("style");
+			style.dataset.sanbaoTokens = STYLE_ANCHOR;
+			style.textContent = SANBAO_TOKEN_CSS;
+			doc.head.append(style);
+			return style;
+		}
+		//#endregion
 		//#region src/client/persistence.ts
 		const THEME_STUDIO_STORAGE_KEY = "dsh-theme/settings/v1";
 		const THEME_PREFS_STORAGE_KEY = "dsh-theme/prefs/v1";
+		const APPEARANCE_STORAGE_KEY = "dsh-theme/appearance/v1";
 		const DEFAULT_THEME_STUDIO_PREFS = {
 			reduceMotion: "system",
 			fontSmoothing: false
+		};
+		const DEFAULT_SAVED_APPEARANCE = {
+			mode: "system",
+			theme: "forest-green",
+			fontScale: 1,
+			reducedMotion: false
 		};
 		function browserThemeStudioStorage() {
 			try {
@@ -381,6 +629,45 @@ window.__ModuleLoader__.load({
 			} catch {
 				return;
 			}
+		}
+		function loadSavedAppearance(storage = browserThemeStudioStorage()) {
+			const fallback = { ...DEFAULT_SAVED_APPEARANCE };
+			if (storage === void 0) return fallback;
+			try {
+				const raw = storage.getItem(APPEARANCE_STORAGE_KEY);
+				if (raw === null) return fallback;
+				const parsed = JSON.parse(raw);
+				if (parsed === null || typeof parsed !== "object") return fallback;
+				const record = parsed;
+				return {
+					mode: record.mode === "light" || record.mode === "dark" || record.mode === "system" ? record.mode : fallback.mode,
+					theme: record.theme === "parchment" || record.theme === "warm-pink" || record.theme === "forest-green" ? record.theme : fallback.theme,
+					fontScale: typeof record.fontScale === "number" && !Number.isNaN(record.fontScale) && record.fontScale >= .5 && record.fontScale <= 2 ? record.fontScale : fallback.fontScale,
+					reducedMotion: typeof record.reducedMotion === "boolean" ? record.reducedMotion : fallback.reducedMotion
+				};
+			} catch {
+				return fallback;
+			}
+		}
+		function saveAppearance(appearance, storage = browserThemeStudioStorage()) {
+			if (storage === void 0) return false;
+			try {
+				storage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(appearance));
+				return true;
+			} catch {
+				return false;
+			}
+		}
+		function resolveSystemMode() {
+			try {
+				if (typeof window !== "undefined" && typeof window.matchMedia === "function") return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+			} catch {}
+			return "light";
+		}
+		function resolveEffectiveMode(mode) {
+			if (mode === "light") return "light";
+			if (mode === "dark") return "dark";
+			return resolveSystemMode();
 		}
 		function loadThemeStudioSettings(storage) {
 			if (storage === void 0) return { ...DEFAULT_THEME_STUDIO_SETTINGS };
@@ -837,20 +1124,6 @@ body[data-lute-font-smoothing="on"] {
 				...preset.typography
 			};
 		}
-		function themePresetIdOf(settings) {
-			return THEME_PRESETS.find((preset) => {
-				const expected = {
-					lightContrast: 50,
-					darkContrast: 50,
-					...preset.palette,
-					...preset.typography
-				};
-				return Object.entries(expected).every(([field, value]) => {
-					const actual = settings[field];
-					return typeof value === "string" && value.startsWith("#") ? typeof actual === "string" && actual.toUpperCase() === value : actual === value;
-				});
-			})?.id;
-		}
 		//#endregion
 		//#region src/client/store.ts
 		function createThemeStudioStore(initialSettings = DEFAULT_THEME_STUDIO_SETTINGS, initialPrefs = DEFAULT_THEME_STUDIO_PREFS) {
@@ -880,457 +1153,427 @@ body[data-lute-font-smoothing="on"] {
 			});
 		}
 		//#endregion
-		//#region src/client/accent-swatches.ts
-		/**
-		* Curated brand-led accent pairs. Each pair is a two-variant decision:
-		* the light value carries the accent on the light canvas, the dark value on
-		* the charcoal one. accent-swatches.test.ts verifies every pair against the
-		* default LUTE canvas (WCAG 1.4.11 wants 3:1 for non-text UI; the shipped
-		* set clears it with room to spare, so the chip also reads at a glance).
-		*/
-		const ACCENT_SWATCHES = [
-			{
-				id: "lute",
-				light: "#347A2F",
-				dark: "#58B848"
-			},
-			{
-				id: "blue",
-				light: "#2D65A3",
-				dark: "#6FB3E8"
-			},
-			{
-				id: "teal",
-				light: "#3D755D",
-				dark: "#83B69D"
-			},
-			{
-				id: "violet",
-				light: "#6046B0",
-				dark: "#A99BF0"
-			},
-			{
-				id: "amber",
-				light: "#8A5A00",
-				dark: "#D9A441"
-			},
-			{
-				id: "rose",
-				light: "#A8415F",
-				dark: "#E58FA6"
-			},
-			{
-				id: "slate",
-				light: "#4C5A6B",
-				dark: "#A9B4C4"
-			},
-			{
-				id: "red",
-				light: "#A5342F",
-				dark: "#E08A85"
+		//#region src/client/theme-controller.ts
+		var AppearanceController = class {
+			state;
+			listeners = /* @__PURE__ */ new Set();
+			doc;
+			storage;
+			mediaQuery;
+			mediaListener;
+			constructor(options = {}) {
+				this.doc = options.doc ?? (typeof document !== "undefined" ? document : void 0);
+				this.storage = options.storage ?? browserThemeStudioStorage();
+				const saved = loadSavedAppearance(this.storage);
+				const mode = options.initialState?.mode ?? saved.mode;
+				const theme = options.initialState?.theme ?? saved.theme;
+				const fontScale = options.initialState?.fontScale ?? saved.fontScale;
+				const reducedMotion = options.initialState?.reducedMotion ?? saved.reducedMotion;
+				this.state = {
+					mode,
+					theme,
+					effectiveMode: resolveEffectiveMode(mode),
+					fontScale,
+					reducedMotion
+				};
+				this.setupSystemMediaListener();
+				this.applyToDOM();
 			}
-		];
-		/**
-		* Both variants must match one pair, because the swatch sets them together:
-		* a half-applied pair would render the chip as active while the canvas
-		* carries a mixed accent.
-		*/
-		function activeAccentSwatchId(settings) {
-			const light = settings.lightAccent.toUpperCase();
-			const dark = settings.darkAccent.toUpperCase();
-			return ACCENT_SWATCHES.find((swatch) => swatch.light.toUpperCase() === light && swatch.dark.toUpperCase() === dark)?.id;
-		}
-		//#endregion
-		//#region src/client/AccentSwatches.tsx
-		/**
-		* Picking a swatch is one decision that writes both variants' accents, so the
-		* chip shows the pair as a diagonal split: the light value leads on the light
-		* canvas, the dark value takes over on charcoal.
-		*/
-		function AccentSwatches({ activeId, customLabel, label, labelOf, onSelect }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-accent": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					"data-appearance-chip-label": true,
-					children: label
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"aria-label": label,
-					"data-appearance-swatches": true,
-					role: "radiogroup",
-					children: [ACCENT_SWATCHES.map((swatch) => {
-						const name = labelOf(swatch.id);
-						const selected = activeId === swatch.id;
-						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-							"data-appearance-swatch-chip": true,
-							"data-selected": selected ? "true" : "false",
-							title: name,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									checked: selected,
-									"data-appearance-sr": true,
-									name: "appearance-accent",
-									type: "radio",
-									value: swatch.id,
-									onChange: () => onSelect(swatch.id)
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									"aria-hidden": "true",
-									"data-appearance-swatch-dot": true,
-									style: { background: `linear-gradient(135deg, ${swatch.light} 0 50%, ${swatch.dark} 50% 100%)` }
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									"data-appearance-sr": true,
-									children: name
-								})
-							]
-						}, swatch.id);
-					}), activeId === void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						"data-appearance-swatch-chip": true,
-						"data-custom": "true",
-						"data-selected": "true",
-						children: customLabel
-					})]
-				})]
-			});
-		}
-		//#endregion
-		//#region src/client/AdvancedDisclosure.tsx
-		/**
-		* Secondary colors live behind one disclosure so the default view shows the
-		* three decisions most readers make (accent, background, text) without
-		* hiding the rest. Collapsed by default keeps the settings section short in
-		* the 720px column.
-		*/
-		function AdvancedDisclosure({ children, description, title }) {
-			const [open, setOpen] = react.useState(false);
-			const panelId = react.useId();
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-advanced": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					"aria-controls": panelId,
-					"aria-expanded": open,
-					"data-appearance-advanced-toggle": true,
-					type: "button",
-					onClick: () => setOpen((current) => !current),
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						"aria-hidden": "true",
-						"data-appearance-chevron": true,
-						"data-open": open ? "true" : "false"
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						"data-appearance-advanced-copy": true,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: title }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: description })]
-					})]
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					"data-appearance-advanced-panel": true,
-					hidden: !open,
-					id: panelId,
-					children
-				})]
-			});
-		}
-		//#endregion
-		//#region src/client/ColorChip.tsx
-		/**
-		* Compact color control: a swatch that opens the platform picker plus an
-		* inline hex field for keyboard and paste workflows. The picker itself is the
-		* native one on purpose — it already owns focus handling, keyboard support and
-		* a screen-reader contract, so P1 spends no risk budget on a custom popover.
-		*/
-		function ColorChip({ field, invalidMessage, label, onChange, value }) {
-			const [draft, setDraft] = react.useState(value);
-			const valid = isHexColor(draft);
-			react.useEffect(() => setDraft(value), [value]);
-			const commit = (next) => {
-				const normalized = next.toUpperCase();
-				setDraft(normalized);
-				if (isHexColor(normalized)) onChange(field, normalized);
-			};
-			const inputId = `appearance-${field}`;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-chip": true,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
-						"data-appearance-chip-label": true,
-						htmlFor: inputId,
-						children: label
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						"data-appearance-chip-control": true,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-							"aria-label": label,
-							"data-appearance-chip-swatch": true,
-							type: "color",
-							value,
-							onChange: (event) => commit(event.currentTarget.value)
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-							id: inputId,
-							"aria-describedby": valid ? void 0 : `${inputId}-error`,
-							"aria-invalid": !valid,
-							autoComplete: "off",
-							"data-appearance-chip-hex": true,
-							inputMode: "text",
-							maxLength: 7,
-							pattern: "#[0-9A-Fa-f]{6}",
-							spellCheck: false,
-							value: draft,
-							onBlur: () => {
-								if (!valid) setDraft(value);
-							},
-							onChange: (event) => commit(event.currentTarget.value)
-						})]
-					}),
-					!valid && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						id: `${inputId}-error`,
-						"data-appearance-chip-error": true,
-						children: invalidMessage
-					})
-				]
-			});
-		}
-		//#endregion
-		//#region src/client/ContrastSlider.tsx
-		/**
-		* The slider drives the neutral blend strength behind borders, raised
-		* surfaces and secondary labels. The numeric readout is the source of truth;
-		* the qualitative aria-valuetext keeps the ramp meaningful without inventing
-		* a second scale.
-		*/
-		function ContrastSlider({ description, highLabel, label, lowLabel, onChange, standardLabel, value }) {
-			const valueText = value <= 35 ? lowLabel : value >= 65 ? highLabel : standardLabel;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-contrast": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-contrast-copy": true,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						"data-appearance-chip-label": true,
-						children: label
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: description })]
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-contrast-control": true,
-					style: { "--appearance-contrast-fill": `${value}%` },
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-						"aria-label": label,
-						"aria-valuetext": valueText,
-						"data-appearance-slider": true,
-						max: 100,
-						min: 0,
-						step: 1,
-						type: "range",
-						value,
-						onChange: (event) => onChange(Number(event.currentTarget.value))
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("output", {
-						"data-appearance-slider-value": true,
-						children: value
-					})]
-				})]
-			});
-		}
-		//#endregion
-		//#region src/client/share-string.ts
-		/**
-		* The share string is the complete theme — colors, contrast, typography —
-		* as compact JSON. The payload is projected through THEME_STUDIO_FIELDS, so
-		* presentation preferences (reduce motion, font smoothing) can never leak
-		* into it: they describe the reader's machine, not the palette, and
-		* importing a shared theme must not flip them.
-		*/
-		function encodeThemeStudioSettings(settings) {
-			const payload = Object.fromEntries(THEME_STUDIO_FIELDS.map((field) => [field, settings[field]]));
-			return JSON.stringify(payload);
-		}
-		/**
-		* Accepts any text a reader might paste. Field-level validation and legacy
-		* migration are delegated to decodeThemeStudioSettings, which rejects records
-		* that do not carry a full color set — so `{}` or a truncated paste reports
-		* as unreadable instead of silently resetting the theme to defaults.
-		*/
-		function decodeShareString(raw) {
-			const trimmed = raw.trim();
-			if (trimmed === "") return void 0;
-			try {
-				return decodeThemeStudioSettings(JSON.parse(trimmed));
-			} catch {
-				return;
+			getState() {
+				return { ...this.state };
 			}
-		}
-		//#endregion
-		//#region src/client/ShareString.tsx
-		/**
-		* Copy and import share one panel: a copy whose clipboard write is refused
-		* falls back to the same textarea, so a reader always ends up with the
-		* string in hand instead of a silent failure.
-		*/
-		function ShareString({ onImport, settings, t }) {
-			const [open, setOpen] = react.useState(false);
-			const [payload, setPayload] = react.useState("");
-			const [error, setError] = react.useState(void 0);
-			const [copied, setCopied] = react.useState(false);
-			const timer = react.useRef(void 0);
-			react.useEffect(() => () => {
-				if (timer.current !== void 0) window.clearTimeout(timer.current);
-			}, []);
-			const copy = async () => {
-				const text = encodeThemeStudioSettings(settings);
+			subscribe(listener) {
+				this.listeners.add(listener);
+				return () => {
+					this.listeners.delete(listener);
+				};
+			}
+			setMode(mode) {
+				if (!APPEARANCE_MODES.includes(mode)) return;
+				if (this.state.mode === mode) return;
+				this.state.mode = mode;
+				this.state.effectiveMode = resolveEffectiveMode(mode);
+				this.persist();
+				this.applyToDOM();
+				this.notify();
+			}
+			setTheme(theme) {
+				if (!SEASONAL_THEMES.includes(theme)) return;
+				if (this.state.theme === theme) return;
+				this.state.theme = theme;
+				this.persist();
+				this.applyToDOM();
+				this.notify();
+			}
+			setFontScale(scale) {
+				const clamped = Math.min(2, Math.max(.5, Math.round(scale * 100) / 100));
+				if (this.state.fontScale === clamped) return;
+				this.state.fontScale = clamped;
+				this.persist();
+				this.applyToDOM();
+				this.notify();
+			}
+			setReducedMotion(reduced) {
+				if (this.state.reducedMotion === reduced) return;
+				this.state.reducedMotion = reduced;
+				this.persist();
+				this.applyToDOM();
+				this.notify();
+			}
+			updateAppearance(patch) {
+				let changed = false;
+				if (patch.mode !== void 0 && APPEARANCE_MODES.includes(patch.mode) && this.state.mode !== patch.mode) {
+					this.state.mode = patch.mode;
+					this.state.effectiveMode = resolveEffectiveMode(patch.mode);
+					changed = true;
+				}
+				if (patch.theme !== void 0 && SEASONAL_THEMES.includes(patch.theme) && this.state.theme !== patch.theme) {
+					this.state.theme = patch.theme;
+					changed = true;
+				}
+				if (patch.fontScale !== void 0) {
+					const clamped = Math.min(2, Math.max(.5, Math.round(patch.fontScale * 100) / 100));
+					if (this.state.fontScale !== clamped) {
+						this.state.fontScale = clamped;
+						changed = true;
+					}
+				}
+				if (patch.reducedMotion !== void 0 && this.state.reducedMotion !== patch.reducedMotion) {
+					this.state.reducedMotion = patch.reducedMotion;
+					changed = true;
+				}
+				if (changed) {
+					this.persist();
+					this.applyToDOM();
+					this.notify();
+				}
+			}
+			applyToDOM() {
+				const doc = this.doc;
+				if (!doc) return;
+				ensureSanbaoTokens(doc);
+				if (doc.documentElement) {
+					doc.documentElement.setAttribute("data-sanbao-mode", this.state.effectiveMode);
+					doc.documentElement.setAttribute("data-sanbao-theme", this.state.theme);
+					doc.documentElement.style.setProperty("--sanbao-font-scale", String(this.state.fontScale));
+				}
+				if (doc.body) {
+					doc.body.setAttribute("data-sanbao-mode", this.state.effectiveMode);
+					doc.body.setAttribute("data-sanbao-theme", this.state.theme);
+					if (this.state.reducedMotion) doc.body.setAttribute("data-lute-reduce-motion", "reduce");
+					else doc.body.removeAttribute("data-lute-reduce-motion");
+				}
+			}
+			persist() {
+				saveAppearance({
+					mode: this.state.mode,
+					theme: this.state.theme,
+					fontScale: this.state.fontScale,
+					reducedMotion: this.state.reducedMotion
+				}, this.storage);
+			}
+			notify() {
+				const snapshot = this.getState();
+				for (const listener of this.listeners) try {
+					listener(snapshot);
+				} catch {}
+			}
+			setupSystemMediaListener() {
+				if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
 				try {
-					if (navigator.clipboard === void 0) throw new Error("no clipboard");
-					await navigator.clipboard.writeText(text);
-					setCopied(true);
-					if (timer.current !== void 0) window.clearTimeout(timer.current);
-					timer.current = window.setTimeout(() => setCopied(false), 2e3);
-				} catch {
-					setPayload(text);
-					setError(t("share.copyFallback"));
-					setOpen(true);
-				}
-			};
-			const submit = () => {
-				const decoded = decodeShareString(payload);
-				if (decoded === void 0) {
-					setError(t("share.invalid"));
-					return;
-				}
-				setError(void 0);
-				setPayload("");
-				setOpen(false);
-				onImport(decoded);
-			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-share": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-share-actions": true,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							"aria-live": "polite",
-							"data-appearance-share-status": true,
-							children: copied ? t("share.copied") : ""
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							"data-appearance-button": true,
-							"data-variant": "secondary",
-							type: "button",
-							onClick: () => void copy(),
-							children: t("share.copy")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							"aria-expanded": open,
-							"data-appearance-button": true,
-							"data-variant": "secondary",
-							type: "button",
-							onClick: () => {
-								setError(void 0);
-								setOpen((current) => !current);
-							},
-							children: t("share.import")
-						})
-					]
-				}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-share-panel": true,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("textarea", {
-							"aria-describedby": error === void 0 ? void 0 : "appearance-share-error",
-							"aria-label": t("share.paste"),
-							"data-appearance-share-input": true,
-							placeholder: t("share.paste"),
-							rows: 3,
-							spellCheck: false,
-							value: payload,
-							onChange: (event) => setPayload(event.currentTarget.value)
-						}),
-						error !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							id: "appearance-share-error",
-							"data-appearance-share-error": true,
-							children: error
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							"data-appearance-share-submit": true,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								"data-appearance-button": true,
-								"data-variant": "primary",
-								type: "button",
-								onClick: submit,
-								children: t("share.submit")
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								"data-appearance-button": true,
-								"data-variant": "secondary",
-								type: "button",
-								onClick: () => {
-									setError(void 0);
-									setPayload("");
-									setOpen(false);
-								},
-								children: t("share.cancel")
-							})]
-						})
-					]
-				})]
-			});
-		}
-		//#endregion
-		//#region src/client/SizeStepper.tsx
-		/**
-		* Steps only through the curated size list, so the control can never commit a
-		* value the token layer does not model. Typed input commits on Enter or blur
-		* and snaps to the nearest allowed size.
-		*/
-		function SizeStepper({ decreaseLabel, increaseLabel, label, onChange, value, values }) {
-			const [draft, setDraft] = react.useState(String(value));
-			react.useEffect(() => setDraft(String(value)), [value]);
-			const index = values.indexOf(value);
-			const first = values[0];
-			const last = values[values.length - 1];
-			const step = (delta) => {
-				if (index < 0) return;
-				const next = values[index + delta];
-				if (next !== void 0) onChange(next);
-			};
-			const commit = (raw) => {
-				const parsed = Number.parseInt(raw, 10);
-				if (!Number.isFinite(parsed)) {
-					setDraft(String(value));
-					return;
-				}
-				const nearest = values.reduce((best, candidate) => Math.abs(candidate - parsed) < Math.abs(best - parsed) ? candidate : best, value);
-				setDraft(String(nearest));
-				if (nearest !== value) onChange(nearest);
-			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-stepper": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					"data-appearance-chip-label": true,
-					children: label
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-stepper-control": true,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							"aria-label": `${decreaseLabel} ${label}`,
-							"data-appearance-stepper-button": true,
-							disabled: first !== void 0 && value <= first,
-							type: "button",
-							onClick: () => step(-1),
-							children: "−"
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-							"aria-label": label,
-							autoComplete: "off",
-							"data-appearance-stepper-value": true,
-							inputMode: "numeric",
-							value: draft,
-							onBlur: (event) => commit(event.currentTarget.value),
-							onChange: (event) => setDraft(event.currentTarget.value),
-							onKeyDown: (event) => {
-								if (event.key === "Enter") {
-									commit(event.currentTarget.value);
-									event.currentTarget.blur();
-								}
+					this.mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+					this.mediaListener = (e) => {
+						if (this.state.mode === "system") {
+							const nextEffective = e.matches ? "dark" : "light";
+							if (this.state.effectiveMode !== nextEffective) {
+								this.state.effectiveMode = nextEffective;
+								this.applyToDOM();
+								this.notify();
 							}
+						}
+					};
+					if (typeof this.mediaQuery.addEventListener === "function") this.mediaQuery.addEventListener("change", this.mediaListener);
+					else if (typeof this.mediaQuery.addListener === "function") this.mediaQuery.addListener(this.mediaListener);
+				} catch {}
+			}
+			dispose() {
+				if (this.mediaQuery && this.mediaListener) {
+					if (typeof this.mediaQuery.removeEventListener === "function") this.mediaQuery.removeEventListener("change", this.mediaListener);
+					else if (typeof this.mediaQuery.removeListener === "function") this.mediaQuery.removeListener(this.mediaListener);
+				}
+				this.listeners.clear();
+			}
+		};
+		//#endregion
+		//#region src/client/ThemeStudio.tsx
+		const THEME_METADATA = {
+			parchment: {
+				title: "羊皮纸",
+				season: "秋 · 羊皮纸",
+				description: "经典沉浸暖纸风，复古温暖"
+			},
+			"warm-pink": {
+				title: "暖白粉",
+				season: "春 · 暖白粉",
+				description: "三宝品牌原生活力风，温柔晨曦"
+			},
+			"forest-green": {
+				title: "森林绿",
+				season: "夏 · 森林绿",
+				description: "Qoder CN 极客灰绿风，清凉自然"
+			}
+		};
+		const MODE_LABELS = {
+			light: "浅色",
+			dark: "深色",
+			system: "跟随系统"
+		};
+		const FONT_SCALE_STEPS = [
+			.9,
+			1,
+			1.1,
+			1.2,
+			1.3
+		];
+		function ThemeStudio({ controller: customController, t = (k) => k }) {
+			const [controller] = react.useState(() => customController ?? new AppearanceController());
+			const [state, setState] = react.useState(() => controller.getState());
+			react.useEffect(() => {
+				return controller.subscribe((next) => {
+					setState(next);
+				});
+			}, [controller]);
+			const effectiveMode = state.effectiveMode;
+			const currentScalePercent = Math.round(state.fontScale * 100);
+			const scaleIndex = FONT_SCALE_STEPS.findIndex((s) => Math.abs(Math.round(s * 100) - currentScalePercent) < 2);
+			const canDecrease = scaleIndex > 0;
+			const canIncrease = scaleIndex >= 0 && scaleIndex < FONT_SCALE_STEPS.length - 1;
+			const handleDecreaseScale = () => {
+				if (scaleIndex > 0) {
+					const nextScale = FONT_SCALE_STEPS[scaleIndex - 1];
+					if (nextScale !== void 0) controller.setFontScale(nextScale);
+				}
+			};
+			const handleIncreaseScale = () => {
+				if (scaleIndex >= 0 && scaleIndex < FONT_SCALE_STEPS.length - 1) {
+					const nextScale = FONT_SCALE_STEPS[scaleIndex + 1];
+					if (nextScale !== void 0) controller.setFontScale(nextScale);
+				}
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				"data-appearance-studio": true,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("header", {
+					"data-appearance-header": true,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: "外观" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "自定义界面配色模式、季节主题与阅读排版" })] })
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					"data-appearance-content": true,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+							"data-appearance-card": true,
+							"data-card": "mode",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								"data-appearance-card-header": true,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: "外观模式" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "选择浅色、深色或根据操作系统外观自动切换" })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								"aria-label": "外观模式",
+								"data-appearance-mode-segment": true,
+								role: "radiogroup",
+								children: APPEARANCE_MODES.map((mode) => {
+									const selected = state.mode === mode;
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+										"data-appearance-mode-option": true,
+										"data-selected": selected ? "true" : "false",
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+											checked: selected,
+											"data-appearance-sr": true,
+											name: "appearance-mode",
+											type: "radio",
+											value: mode,
+											onChange: () => controller.setMode(mode)
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: MODE_LABELS[mode] })]
+									}, mode);
+								})
+							})]
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							"aria-label": `${increaseLabel} ${label}`,
-							"data-appearance-stepper-button": true,
-							disabled: last !== void 0 && value >= last,
-							type: "button",
-							onClick: () => step(1),
-							children: "+"
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+							"data-appearance-card": true,
+							"data-card": "themes",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								"data-appearance-card-header": true,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: "季节主题" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "选择 3 套自然季节主题调色板（羊皮纸·秋 / 暖白粉·春 / 森林绿·夏）" })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								"aria-label": "季节主题",
+								"data-appearance-seasonal-grid": true,
+								role: "radiogroup",
+								children: SEASONAL_THEMES.map((themeKey) => {
+									const selected = state.theme === themeKey;
+									const meta = THEME_METADATA[themeKey];
+									const paletteKey = `${themeKey}-${effectiveMode}`;
+									const palette = SANBAO_PALETTES[paletteKey] ?? SANBAO_PALETTES["forest-green-light"];
+									const chips = [
+										palette.canvas,
+										palette.panel,
+										palette.accent,
+										palette.foreground
+									];
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+										"data-appearance-theme-card": true,
+										"data-theme": themeKey,
+										"data-selected": selected ? "true" : "false",
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+											checked: selected,
+											"data-appearance-sr": true,
+											name: "seasonal-theme",
+											type: "radio",
+											value: themeKey,
+											onChange: () => controller.setTheme(themeKey)
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											"data-appearance-theme-card-body": true,
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+													"data-appearance-theme-card-header": true,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														"data-appearance-theme-title": true,
+														children: meta.title
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														"data-appearance-theme-season": true,
+														children: meta.season
+													})]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													"data-appearance-swatch-strip": true,
+													"aria-hidden": "true",
+													children: chips.map((c, i) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														"data-appearance-swatch-chip": true,
+														style: { backgroundColor: c }
+													}, i))
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													"data-appearance-theme-desc": true,
+													children: meta.description
+												})
+											]
+										})]
+									}, themeKey);
+								})
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+							"data-appearance-card": true,
+							"data-card": "typography",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								"data-appearance-card-header": true,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: "字体与排版" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "调整界面显示缩放比例与动效偏好" })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								"data-appearance-typography": true,
+								"data-appearance-setting-list": true,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									"data-appearance-setting-row": true,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										"data-appearance-setting-copy": true,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "字号缩放" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "调整正文、界面与代码字号比例（90% ~ 130%）" })]
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										"data-appearance-stepper-control": true,
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												"aria-label": "减小字号",
+												"data-appearance-stepper-button": true,
+												disabled: !canDecrease,
+												type: "button",
+												onClick: handleDecreaseScale,
+												children: "−"
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+												"data-appearance-stepper-value": true,
+												children: [currentScalePercent, "%"]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												"aria-label": "增大字号",
+												"data-appearance-stepper-button": true,
+												disabled: !canIncrease,
+												type: "button",
+												onClick: handleIncreaseScale,
+												children: "+"
+											})
+										]
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									"data-appearance-setting-row": true,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										"data-appearance-setting-copy": true,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "减弱动态效果" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "关闭或减少界面过渡动效与动画" })]
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										"aria-checked": state.reducedMotion,
+										"aria-label": "减弱动态效果",
+										"data-appearance-switch": true,
+										role: "switch",
+										type: "button",
+										onClick: () => controller.setReducedMotion(!state.reducedMotion),
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											"aria-hidden": "true",
+											"data-appearance-switch-thumb": true
+										})
+									})]
+								})]
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+							"data-appearance-card": true,
+							"data-card": "preview",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								"data-appearance-card-header": true,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: "实时预览" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "即时感知当前外观模式、季节色彩与排版呈现" })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								"data-appearance-live-preview": true,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									"data-appearance-preview-card": true,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											"data-appearance-preview-banner": true,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", {
+												"data-appearance-preview-title": true,
+												children: "LUTE Agentic System"
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												"data-appearance-preview-badge": true,
+												children: "已就绪"
+											})]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+											"data-appearance-preview-desc": true,
+											children: [
+												"当前激活主题：",
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: THEME_METADATA[state.theme].season }),
+												"（",
+												effectiveMode === "dark" ? "暗色模式" : "浅色模式",
+												"）· 缩放比例 ",
+												currentScalePercent,
+												"%"
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											"data-appearance-preview-actions": true,
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													"data-appearance-button": true,
+													"data-variant": "primary",
+													type: "button",
+													children: "主要操作"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													"data-appearance-button": true,
+													"data-variant": "secondary",
+													type: "button",
+													children: "次要操作"
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+													"data-appearance-preview-code": true,
+													children: "pnpm run gate"
+												})
+											]
+										})
+									]
+								})
+							})]
 						})
 					]
 				})]
@@ -1545,351 +1788,6 @@ body[data-lute-font-smoothing="on"] {
 				"--dsw-static-deepseek-450": pair((colors) => colors.accent),
 				"--dsw-static-deepseek-200": pair((colors) => mix(colors.accent, 36, colors.background))
 			};
-		}
-		//#endregion
-		//#region src/client/ThemeStudio.tsx
-		const MODE_OPTIONS = [
-			"system",
-			"light",
-			"dark"
-		];
-		const REDUCE_MOTION_OPTIONS = [
-			"system",
-			"on",
-			"off"
-		];
-		const VARIANTS = ["light", "dark"];
-		const ADVANCED_SUFFIXES = [
-			"surface",
-			"inlineCode",
-			"sidebar"
-		];
-		function colorFieldOf(mode, suffix) {
-			return `${mode}${suffix.charAt(0).toUpperCase()}${suffix.slice(1)}`;
-		}
-		function contrastFieldOf(mode) {
-			return mode === "light" ? "lightContrast" : "darkContrast";
-		}
-		function SettingSelect({ label, onChange, options, value }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-				"data-appearance-setting-row": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: label }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-					"data-appearance-select": true,
-					value,
-					onChange: (event) => onChange(event.currentTarget.value),
-					children: options.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-						style: option.fontFamily === void 0 ? void 0 : { fontFamily: option.fontFamily },
-						value: option.value,
-						children: option.label
-					}, option.value))
-				})]
-			});
-		}
-		function ModePreview({ mode }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				"aria-hidden": "true",
-				"data-appearance-preview": true,
-				"data-mode": mode,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { "data-appearance-preview-sidebar": true }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					"data-appearance-preview-surface": true,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {})
-					]
-				})]
-			});
-		}
-		function PalettePreview({ mode, settings }) {
-			const prefix = mode === "light" ? "light" : "dark";
-			const colors = [
-				settings[`${prefix}Accent`],
-				settings[`${prefix}Background`],
-				settings[`${prefix}Foreground`],
-				settings[`${prefix}Surface`],
-				settings[`${prefix}InlineCode`],
-				settings[`${prefix}Sidebar`]
-			];
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				"aria-hidden": "true",
-				"data-appearance-theme-colors": true,
-				children: colors.map((color, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", { style: { backgroundColor: color } }, `${color}-${index}`))
-			});
-		}
-		function ThemeStudio({ applyPreset, applySettings, resetTheme, setColor, setContrast, setPrefs, setTheme, setTypography, t, useStore }) {
-			const activeScheme = useStore((state) => state.activeScheme);
-			const preference = useStore((state) => state.preference);
-			const prefs = useStore((state) => state.prefs);
-			const saveStatus = useStore((state) => state.saveStatus);
-			const settings = useStore((state) => state.settings);
-			const activePreset = themePresetIdOf(settings);
-			const activeAccent = activeAccentSwatchId(settings);
-			const uiFontOptions = UI_FONT_IDS.map((value) => ({
-				value,
-				label: t(`font.${value}`),
-				fontFamily: UI_FONT_STACKS[value]
-			}));
-			const codeFontOptions = CODE_FONT_IDS.map((value) => ({
-				value,
-				label: t(`font.${value}`),
-				fontFamily: CODE_FONT_STACKS[value]
-			}));
-			const applyAccentSwatch = (id) => {
-				const swatch = ACCENT_SWATCHES.find((candidate) => candidate.id === id);
-				if (swatch === void 0) return;
-				applySettings({
-					...settings,
-					lightAccent: swatch.light,
-					darkAccent: swatch.dark
-				});
-			};
-			const statusText = saveStatus === "saving" ? t("status.saving") : saveStatus === "error" ? t("status.error") : t("status.saved");
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				"data-appearance-studio": true,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
-					"data-appearance-header": true,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: t("title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("description") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						"data-appearance-button": true,
-						"data-variant": "secondary",
-						type: "button",
-						onClick: resetTheme,
-						children: t("action.reset")
-					})]
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					"data-appearance-content": true,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							"data-appearance-card": true,
-							"data-card": "theme",
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									"data-appearance-card-header": true,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("preset.title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("preset.description") })]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShareString, {
-									settings,
-									t,
-									onImport: applySettings
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									"aria-label": t("mode.title"),
-									"data-appearance-mode-grid": true,
-									role: "radiogroup",
-									children: MODE_OPTIONS.map((mode) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-										"data-appearance-mode": true,
-										"data-selected": preference === mode ? "true" : "false",
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-												checked: preference === mode,
-												"data-appearance-sr": true,
-												name: "appearance-mode",
-												type: "radio",
-												value: mode,
-												onChange: () => setTheme(mode)
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ModePreview, { mode }),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`mode.${mode}`) })
-										]
-									}, mode))
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									"aria-label": t("preset.title"),
-									"data-appearance-preset-grid": true,
-									role: "radiogroup",
-									children: [THEME_PRESETS.map((preset) => {
-										const selected = activePreset === preset.id;
-										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-											"data-appearance-preset": true,
-											"data-selected": selected ? "true" : "false",
-											children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-													checked: selected,
-													"data-appearance-sr": true,
-													name: "appearance-preset",
-													type: "radio",
-													value: preset.id,
-													onChange: () => applyPreset(preset.id)
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PalettePreview, {
-													mode: activeScheme,
-													settings: {
-														...settings,
-														...preset.palette
-													}
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`preset.${preset.id}`) })
-											]
-										}, preset.id);
-									}), activePreset === void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										"data-appearance-preset": true,
-										"data-custom": "true",
-										"data-selected": "true",
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											"data-appearance-preset-custom": true,
-											children: t("preset.custom")
-										})
-									})]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									"data-appearance-accent-group": true,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AccentSwatches, {
-										activeId: activeAccent,
-										customLabel: t("accent.custom"),
-										label: t("accent.label"),
-										labelOf: (id) => t(`accent.${id}`),
-										onSelect: applyAccentSwatch
-									})
-								}),
-								VARIANTS.map((mode) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-									"aria-labelledby": `appearance-variant-${mode}`,
-									"data-appearance-variant": true,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", {
-										id: `appearance-variant-${mode}`,
-										children: t(`variant.${mode}`)
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										"data-appearance-fields": true,
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ColorChip, {
-												field: colorFieldOf(mode, "background"),
-												invalidMessage: t("input.invalid"),
-												label: t("color.background"),
-												value: settings[colorFieldOf(mode, "background")],
-												onChange: setColor
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ColorChip, {
-												field: colorFieldOf(mode, "foreground"),
-												invalidMessage: t("input.invalid"),
-												label: t("color.foreground"),
-												value: settings[colorFieldOf(mode, "foreground")],
-												onChange: setColor
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ContrastSlider, {
-												description: t("contrast.description"),
-												highLabel: t("contrast.high"),
-												label: t("contrast.label"),
-												lowLabel: t("contrast.low"),
-												standardLabel: t("contrast.standard"),
-												value: settings[contrastFieldOf(mode)],
-												onChange: (value) => setContrast(contrastFieldOf(mode), value)
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(AdvancedDisclosure, {
-												description: t("advanced.description"),
-												title: t("advanced.title"),
-												children: ADVANCED_SUFFIXES.map((suffix) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ColorChip, {
-													field: colorFieldOf(mode, suffix),
-													invalidMessage: t("input.invalid"),
-													label: t(`color.${suffix}`),
-													value: settings[colorFieldOf(mode, suffix)],
-													onChange: setColor
-												}, suffix))
-											})
-										]
-									})]
-								}, mode))
-							]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-							"data-appearance-card": true,
-							"data-card": "prefs",
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									"data-appearance-card-header": true,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("prefs.title") })
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									"data-appearance-subheading": true,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("typography.title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("typography.description") })]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									"data-appearance-setting-list": true,
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingSelect, {
-											label: t("typography.uiFont"),
-											options: uiFontOptions,
-											value: settings.uiFont,
-											onChange: (value) => setTypography("uiFont", value)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingSelect, {
-											label: t("typography.codeFont"),
-											options: codeFontOptions,
-											value: settings.codeFont,
-											onChange: (value) => setTypography("codeFont", value)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SizeStepper, {
-											decreaseLabel: t("size.decrease"),
-											increaseLabel: t("size.increase"),
-											label: t("typography.uiFontSize"),
-											value: settings.uiFontSize,
-											values: UI_FONT_SIZES,
-											onChange: (value) => setTypography("uiFontSize", value)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SizeStepper, {
-											decreaseLabel: t("size.decrease"),
-											increaseLabel: t("size.increase"),
-											label: t("typography.codeFontSize"),
-											value: settings.codeFontSize,
-											values: CODE_FONT_SIZES,
-											onChange: (value) => setTypography("codeFontSize", value)
-										})
-									]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									"data-appearance-subheading": true,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("prefs.render.title") })
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									"data-appearance-setting-list": true,
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										"data-appearance-setting-row": true,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-											"data-appearance-setting-copy": true,
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("prefs.reduceMotion") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("prefs.reduceMotion.description") })]
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-											"aria-label": t("prefs.reduceMotion"),
-											"data-appearance-segment": true,
-											role: "radiogroup",
-											children: REDUCE_MOTION_OPTIONS.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-												"data-selected": prefs.reduceMotion === option ? "true" : "false",
-												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-													checked: prefs.reduceMotion === option,
-													"data-appearance-sr": true,
-													name: "appearance-reduce-motion",
-													type: "radio",
-													value: option,
-													onChange: () => setPrefs({ reduceMotion: option })
-												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`segment.${option}`) })]
-											}, option))
-										})]
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										"data-appearance-setting-row": true,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-											"data-appearance-setting-copy": true,
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("prefs.fontSmoothing") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("prefs.fontSmoothing.description") })]
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-											"aria-checked": prefs.fontSmoothing,
-											"aria-label": t("prefs.fontSmoothing"),
-											"data-appearance-switch": true,
-											role: "switch",
-											type: "button",
-											onClick: () => setPrefs({ fontSmoothing: !prefs.fontSmoothing }),
-											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												"aria-hidden": "true",
-												"data-appearance-switch-thumb": true
-											})
-										})]
-									})]
-								})
-							]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							"aria-live": "polite",
-							"data-appearance-status": true,
-							"data-status": saveStatus,
-							children: statusText
-						})
-					]
-				})]
-			});
 		}
 		//#endregion
 		//#region src/client/index.tsx
