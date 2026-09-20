@@ -25,14 +25,12 @@ test("admin UI keeps visual styles out of inline HTML attributes", () => {
   assert.doesNotMatch(html, /\sstyle\s*=\s*["'][^"']*["']/i, "visual inline styles are not allowed");
 });
 
-test("admin UI keeps the Codex visual contract in its standalone stylesheet", () => {
+test("admin UI uses Host semantic colors while retaining interactive and reduced-motion states", () => {
   const css = fs.readFileSync(path.join(root, "admin-ui", "styles.css"), "utf8");
-  assert.match(css, /--dsw-accent/);
-  assert.match(css, /data-theme="light"/);
-  assert.match(css, /data-theme="dark"/);
+  assert.match(css, /--dsw-accent: var\(--sanbao-accent\)/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|prefers-color-scheme|data-theme=/i);
   assert.match(css, /:disabled/);
   assert.match(css, /user-invalid/);
-  assert.match(css, /@media \(prefers-color-scheme: dark\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /focus-visible/);
   assert.match(css, /180ms/);

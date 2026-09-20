@@ -58,17 +58,16 @@ describe("brand CSS 不再钉住官方哈希", () => {
     expect(BRAND_CSS).toContain(".dsh-rb-hero-slogan");
   });
 
-  it("uses neutral titanium accents instead of the old business green", () => {
-    expect(BRAND_CSS).toContain("#3d566e");
-    expect(BRAND_CSS).toContain("#c4d0dc");
-    expect(BRAND_CSS).toContain('body[data-ds-dark-theme]');
-    expect(BRAND_CSS).not.toMatch(/#58b848|88,\s*184,\s*72|--dsw-alias-state-business/i);
+  it("follows the global accent in light, dark and warm-pink without local overrides", () => {
+    expect(BRAND_CSS).toContain("--dsh-rb-accent: var(--sanbao-accent)");
+    expect(BRAND_CSS).not.toContain('body[data-ds-dark-theme]');
+    expect(BRAND_CSS).not.toMatch(/#3d566e|#c4d0dc|#58b848|88,\s*184,\s*72|--dsw-alias-state-business/i);
   });
 
   it("品牌强调遵循 Codex 视觉基线，不使用渐变或装饰性辉光", () => {
     expect(BRAND_CSS).not.toContain("linear-gradient");
     expect(BRAND_CSS).not.toContain("box-shadow");
-    expect(BRAND_CSS).toContain("--dsw-font-m-18");
+    expect(BRAND_CSS).toContain("--sanbao-font-hero");
     expect(BRAND_CSS).toContain("prefers-reduced-motion");
     expect(BRAND_CSS).toContain("transition: none !important");
   });

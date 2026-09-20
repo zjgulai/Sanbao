@@ -16,10 +16,9 @@
  *   4. 兜底：同一 token 带多少种互不相同的字面兜底（**这是「同屏多种蓝色」的直接来源**）。
  *   5. 深浅不对称：深色专用整改层条数 vs 浅色对应层条数。
  *
- * 外加一项**真实引擎解析**：把 `theme-tokens.ts` 里 `--dsw-alias-bg-layer-*` 的 `color-mix`
- * 派生式取出来，交给真实 Chromium 求值，回答「浅色层级方向是不是真的与深色相反」。
- * 这一项在 ADR-0115 里被标为「未用真实 CSS 引擎复核」的尾债，本探针把它收掉——
- * 派生式是**就地读**的，所以 theme-local 改了百分比，这里跟着变，不会变成一个过期的断言。
+ * 外加一项**真实引擎解析**：运行 settings/shared/主题生成器取得四个背景层表达式，
+ * 携带真实 SANBAO_TOKEN_CSS，交给 Chromium 在 light/dark/warm-pink 三身份下求值。
+ * 不在验收脚本中重写调色板或 color-mix 算法。
  *
  * ## 仪器自检（没有它这片输出不可信）
  *
@@ -43,11 +42,11 @@
  *
  * - 本探针**不打开** `127.0.0.1:43120` 的实况 GUI（那条路要配对凭证），所以它证明的是
  *   「仓库与产物里的颜色事实」，不是「此刻页面长什么样」。后者属 ADR-0115 的 B4。
- * - 真实引擎那一段在 **contrast=50** 下求值（此时 `scale()` 为恒等，见 `palette()` 的
- *   `0.6 + 0.8 * (contrast / 100)`）。非 50 的对比度不在这里的射程内。
+ * - 真实引擎使用默认排版设置，颜色由三身份决定；旧版 contrast 调色器已退役。
  * - 各组的扫描口径写在各 `SECTION` 常量旁；改动口径就是改动判据，必须同时改 ADR-0115。
  *
- * 用法：`node scripts/acceptance/theme-palette-audit.mjs [--out <dir>] [--no-browser] [--break <name>]`
+ * 用法：`node scripts/acceptance/theme-palette-audit.mjs [--out <dir>] [--no-browser] [--break <split|blue|scan|layer>]`
+ * 工具借用：THEME_BROWSER_PACKAGE / --browser-package 指向已有工具包 package.json。
  * 退出码：0 = 五组均已测量且仪器自检全过；2 = 前置条件缺失或仪器自检不成立。
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
@@ -55,6 +54,7 @@ import { createRequire } from 'node:module'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { appNodeModules } from '../lib/app-resources.mjs'
+import { loadThemeSources } from '../lib/theme-source-loader.mjs'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const APP_DIR = process.env.DSH_APP ?? '/Applications/DSH Desktop.app'
@@ -83,16 +83,22 @@ require_(APP_NM && existsSync(APP_NM), `探测不到应用内的 node_modules（
 const THEME_BUNDLE = join(APP_NM, '@deepseek-ai', 'dsh-client-ui-theme', 'lib', 'client.js')
 const FRONTEND_ASSETS = join(APP_NM, '@deepseek-ai', 'dsh-web-frontend', 'dist', 'assets')
 const THEME_TOKENS_TS = join(REPO_ROOT, 'packages/platform/dsh-theme-local/src/client/theme-tokens.ts')
-const PRESETS_TS = join(REPO_ROOT, 'packages/platform/dsh-theme-local/src/client/presets.ts')
 
 for (const [label, path] of [
   ['官方主题包', THEME_BUNDLE],
   ['官方前端产物', FRONTEND_ASSETS],
   ['theme-local 的 theme-tokens.ts', THEME_TOKENS_TS],
-  ['theme-local 的 presets.ts', PRESETS_TS],
 ]) {
   require_(existsSync(path), `读不到${label}：${path}`)
 }
+let themeSource
+try {
+  themeSource = await loadThemeSources(REPO_ROOT)
+} catch (error) {
+  require_(false, `真实主题模块图加载失败：${error.message}`)
+}
+const identities = themeSource.identities.map(({ id }) => id)
+const themeCss = themeSource.shared.SANBAO_TOKEN_CSS
 
 // ── 颜色数学 ────────────────────────────────────────────────────────────────
 // 只用 WCAG 2.x 的定义，不做近似：对比度必须能和浏览器 DevTools 对上，否则数字没有裁判价值。
@@ -286,7 +292,10 @@ check('正控：官方前端 CSS 里有 var(--dsw-alias-*) 引用',
 
 // ── 本仓接管集合 ────────────────────────────────────────────────────────────
 const themeTokensSrc = readFileSync(THEME_TOKENS_TS, 'utf8')
-const OWNED = new Set([...themeTokensSrc.matchAll(/["'](--dsw-[a-z0-9-]+)["']\s*:/g)].map((m) => m[1]))
+const DECLARED = new Set([...themeTokensSrc.matchAll(/["'](--dsw-[a-z0-9-]+)["']\s*:/g)].map((m) => m[1]))
+const OWNED = new Set(Object.keys(themeSource.identities[0].overrides)
+  .filter((token) => themeSource.identities.every(({ overrides }) => Object.hasOwn(overrides, token))))
+check('声明的接管项在每个身份均实际供给', [...DECLARED].every((token) => OWNED.has(token)), `${DECLARED.size} 个声明 / ${OWNED.size} 个供给`)
 check('正控：theme-local 接管集合非空且含 bg-layer-1', OWNED.has('--dsw-alias-bg-layer-1'), `${OWNED.size} 个 token`)
 
 // ── 仓库扫描 ────────────────────────────────────────────────────────────────
@@ -505,58 +514,20 @@ function buildAsymmetry() {
 }
 const asymmetry = buildAsymmetry()
 
-// ── §6 真实引擎：层级方向的 color-mix 求值 ─────────────────────────────────
-/**
- * 从 `theme-tokens.ts` 里就地取 `--dsw-alias-bg-*` 的派生式，把符号名替换成 **codex 预设**的
- * palette 字面量（`scale(n)` 在 contrast=50 下为恒等，见 `palette()` 的 `0.6 + 0.8 * (c/100)`），
- * 再交给真实 Chromium 求值。
- *
- * 两处刻意的选择，都是被实测撞出来的：
- *
- *  1. **不**在 Node 里实现 oklch 混合。那等于自己造一个可能与浏览器不一致的仪器，而这一项
- *     要回答的恰恰是「浏览器里到底是什么颜色」。
- *  2. **不**读自定义属性的计算值。CSS 自定义属性在计算值阶段**不做颜色替换**：实测
- *     `getComputedStyle(el).getPropertyValue('--tok')` 原样返回 `color-mix(in oklch, …)` 字符串。
- *     必须把表达式用在**真实属性**上（`background-color`）再读回来，才拿得到解析后的颜色。
- *     本节的第一版就栽在这里——它把 `color-mix(…)` 串当成颜色去算亮度，于是整节落进
- *     `<unavailable>`，而退出码依旧是 0。这正是「仪器坏了却产出绿字」的形态。
- */
+// ── §6 真实引擎：四层 × 三身份，不解析/重抄主题生成算法 ─────────────────────
+const LAYER_TOKENS = ['--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2', '--dsw-alias-bg-layer-3']
 function extractLayerExpressions() {
-  const presetMatch = readFileSync(PRESETS_TS, 'utf8').match(/id:\s*"codex",\s*palette:\s*\{([\s\S]*?)\}/)
-  if (!presetMatch) return { palette: null, expressions: new Map() }
-  const palette = new Map()
-  for (const m of presetMatch[1].matchAll(/(light|dark)([A-Z][A-Za-z]+)\s*:\s*"(#[0-9a-fA-F]{3,8})"/g)) {
-    palette.set(`${m[1]}.${m[2].charAt(0).toLowerCase()}${m[2].slice(1)}`, m[3])
-  }
-  const substitute = (expr, mode) => {
-    let out = expr.trim().replace(/,$/, '')
-    out = out.replace(new RegExp(`${mode}\\.scale\\((\\d+)\\)`, 'g'), (_, n) => n)
-    out = out.replace(new RegExp(`${mode}\\.([a-zA-Z]+)`, 'g'), (_, field) => palette.get(`${mode}.${field}`) ?? `__MISSING_${mode}.${field}__`)
-    return out.replace(/"([^"]*)"/g, '$1')
-  }
-  const wanted = ['--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2', '--dsw-alias-bg-layer-3']
   const expressions = new Map()
-  for (const token of wanted) {
-    // 形态一：pair((colors) => colors.<field>) —— 两态各取自己那一侧的 palette 字段
-    const pairForm = themeTokensSrc.match(new RegExp(`"${escapeRe(token)}":\\s*pair\\(\\(colors\\)\\s*=>\\s*colors\\.([a-zA-Z]+)\\)`))
-    if (pairForm) {
-      expressions.set(token, { light: palette.get(`light.${pairForm[1]}`) ?? null, dark: palette.get(`dark.${pairForm[1]}`) ?? null })
-      continue
+  for (const token of LAYER_TOKENS) {
+    const byIdentity = {}
+    for (const { id, scheme, overrides } of themeSource.identities) {
+      const expr = overrides[token]?.[scheme]
+      if (typeof expr !== 'string' || !expr.trim()) throw new Error(`Missing layer expression: ${id}/${token}`)
+      byIdentity[id] = expr
     }
-    // 形态二：{ light: mix(...), dark: mix(...) }
-    const objectForm = themeTokensSrc.match(new RegExp(`"${escapeRe(token)}":\\s*\\{\\s*light:\\s*([\\s\\S]*?),\\s*dark:\\s*([\\s\\S]*?),?\\s*\\}`))
-    if (!objectForm) {
-      expressions.set(token, { light: null, dark: null })
-      continue
-    }
-    const norm = (raw) => {
-      const t = raw.trim().replace(/,$/, '')
-      const mixArgs = t.match(/^mix\(\s*([^,]+),\s*([^,]+),\s*([^)]+)\s*\)$/)
-      return mixArgs ? `color-mix(in oklch, ${mixArgs[1].trim()} ${mixArgs[2].trim()}%, ${mixArgs[3].trim()})` : t
-    }
-    expressions.set(token, { light: substitute(norm(objectForm[1]), 'light'), dark: substitute(norm(objectForm[2]), 'dark') })
+    expressions.set(token, byIdentity)
   }
-  return { palette, expressions }
+  return { expressions }
 }
 
 /**
@@ -568,7 +539,9 @@ function extractLayerExpressions() {
  * 跨引擎对照见 `scripts/acceptance/theme-engine-crosscheck.mjs`。
  */
 async function evaluateEntries(entries) {
-  const requireFromBrowserPkg = createRequire(join(REPO_ROOT, 'packages/capabilities/dsh-browser-local/package.json'))
+  if (entries.length === 0) throw new Error('No expressions to measure')
+  const requireFromBrowserPkg = createRequire(resolve(argValue('--browser-package',
+    process.env.THEME_BROWSER_PACKAGE ?? join(REPO_ROOT, 'packages/capabilities/dsh-browser-local/package.json'))))
   const { chromium } = requireFromBrowserPkg('playwright-core')
   const browser = await chromium.launch({ channel: 'chrome' }).catch((error) => {
     console.warn(`[palette-audit] channel=chrome 起不来（${error.message.split('\n')[0]}），退回自带 chromium`)
@@ -576,65 +549,75 @@ async function evaluateEntries(entries) {
   })
   try {
     const page = await browser.newPage({ viewport: { width: 400, height: 300 } })
-    const probes = entries
-    // 表达式必须落在**真实属性**上，canvas 才有得画（见本节文档注释第 2 条）。
-    const html = `<!doctype html><html><body>${probes.map((p, k) => `<div id="p${k}" style="background-color:${p.expr}"></div>`).join('')}</body></html>`
-    await page.setContent(html, { waitUntil: 'load' })
-    // 取回 sRGB 字节必须在 canvas 上做：Chrome 把 `color-mix` 的计算值序列化成
-    // `oklch(0.992357 0.0012611 none)`（实测），那既不是 sRGB 也不是 WCAG 亮度；
-    // 而 `color-mix(in srgb, X 50%, X 50%)` 又只能给出 `color(srgb …)`。canvas 的
-    // fillStyle/getImageData 走浏览器自己的色彩管线，拿回的就是最终 sRGB 字节——
-    // 于是仪器始终是浏览器，不在 Node 里手搓 OKLab→sRGB 矩阵。
-    const measured = await page.evaluate(
-      (probeList) => {
-        const canvas = document.createElement('canvas')
-        canvas.width = 1
-        canvas.height = 1
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        return probeList.map((p, k) => {
-          ctx.clearRect(0, 0, 1, 1)
-          ctx.fillStyle = '#000000'
-          ctx.fillStyle = p.expr
-          ctx.fillRect(0, 0, 1, 1)
-          const d = ctx.getImageData(0, 0, 1, 1).data
-          return {
-            cssComputed: getComputedStyle(document.getElementById(`p${k}`)).backgroundColor,
-            rgb: [d[0], d[1], d[2]],
-            alpha: d[3],
-          }
-        })
-      },
-      probes,
-    )
-    const values = {}
-    probes.forEach((p, k) => {
-      values[p.key] = { expr: p.expr, ...measured[k] }
+    await page.setContent('<!doctype html><html><body></body></html>', { waitUntil: 'load' })
+    await page.addStyleTag({ content: themeCss })
+    const controls = themeSource.identities.flatMap(({ id, scheme }) => [
+      { key: `${id}:positive`, id, scheme, expr: 'var(--sanbao-canvas)', expectValid: true },
+      { key: `${id}:negative`, id, scheme, expr: 'var(--sanbao-zzz-not-a-real-token)', expectValid: false },
+    ])
+    const probes = [...entries, ...controls]
+    // 自定义属性先经真实 background-color 解析；canvas 只读其计算色，不能直接填 var()。
+    const measured = await page.evaluate((probeList) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 1
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      const probe = document.createElement('div')
+      document.body.append(probe)
+      const values = probeList.map((p) => {
+        document.body.dataset.sanbaoTheme = p.id
+        document.body.toggleAttribute('data-ds-dark-theme', p.scheme === 'dark')
+        probe.style.setProperty('--audit-value', p.expr)
+        probe.style.backgroundColor = ''
+        probe.style.backgroundColor = p.expr
+        const computed = getComputedStyle(probe)
+        const resolvedExpression = computed.getPropertyValue('--audit-value').trim()
+        const cssComputed = computed.backgroundColor
+        const valid = resolvedExpression !== '' && CSS.supports('background-color', resolvedExpression)
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = cssComputed
+        ctx.fillRect(0, 0, 1, 1)
+        const d = ctx.getImageData(0, 0, 1, 1).data
+        return { resolvedExpression, cssComputed, valid, rgb: [d[0], d[1], d[2]], alpha: d[3] }
+      })
+      probe.remove()
+      return values
+    }, probes)
+    const values = Object.fromEntries(entries.map((p, k) => [p.key, { ...p, ...measured[k] }]))
+    const controlResults = controls.map((p, k) => {
+      const result = measured[entries.length + k]
+      return { ...p, ...result, ok: result.valid === p.expectValid && result.alpha === (p.expectValid ? 255 : 0) }
     })
-    return { engine: browser.version(), values }
+    return { engine: browser.version(), values, controls: controlResults }
   } finally {
     await browser.close()
   }
 }
 
-/** §6 的入口：把 token×mode 网格摊平成 entries，再把结果还原成 `mode:token` 字典。 */
+/** Four required layers for every declared identity; missing expressions never shrink the denominator. */
 async function evaluateInRealEngine(expressions) {
   const entries = []
-  for (const [token, pair] of expressions) {
-    for (const mode of ['light', 'dark']) {
-      if (pair[mode] && !pair[mode].includes('__MISSING_')) entries.push({ key: `${mode}:${token}`, expr: pair[mode] })
+  for (const [token, byIdentity] of expressions) {
+    for (const { id, scheme } of themeSource.identities) {
+      entries.push({ key: `${id}:${token}`, id, scheme, expr: byIdentity[id] })
     }
   }
+  if (BROKEN('layer')) entries[0].expr = 'var(--sanbao-zzz-not-a-real-token)'
   return evaluateEntries(entries)
 }
 
-let layerEngine = { available: false, reason: 'not attempted', engine: null, values: {}, direction: {}, palette: null, expressions: {} }
+let layerEngine = { available: false, reason: 'explicit --no-browser', engine: null, values: {}, direction: {}, expressions: {} }
 if (USE_BROWSER) {
   try {
-    const { palette, expressions } = extractLayerExpressions()
-    const { engine, values } = await evaluateInRealEngine(expressions)
-    const order = ['--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2', '--dsw-alias-bg-layer-3']
+    const { expressions } = extractLayerExpressions()
+    const { engine, values, controls } = await evaluateInRealEngine(expressions)
+    const order = LAYER_TOKENS
+    const expected = order.length * identities.length
+    const failed = Object.entries(values).filter(([, row]) => !row.valid || row.alpha !== 255)
+    check('引擎：四层 × 三身份完整解析', Object.keys(values).length === expected && failed.length === 0,
+      `${Object.keys(values).length}/${expected}，无效 ${failed.map(([key]) => key).join(', ') || 0}`)
+    for (const control of controls) check(`引擎对照：${control.key}`, control.ok, control.cssComputed)
     const direction = {}
-    for (const mode of ['light', 'dark']) {
+    for (const mode of identities) {
       const series = order.map((token) => {
         const entry = values[`${mode}:${token}`]
         return {
@@ -657,8 +640,14 @@ if (USE_BROWSER) {
       available: true,
       reason: 'ok',
       engine,
-      palette: palette ? Object.fromEntries(palette) : null,
-      expressions: Object.fromEntries([...expressions].map(([k, v]) => [k, v])),
+      expected,
+      checked: Object.keys(values).length,
+      failed: failed.map(([key]) => key),
+      identities: themeSource.identities.map(({ id, scheme }) => ({ id, scheme })),
+      themeCss,
+      sourceFiles: themeSource.sourceFiles,
+      controls,
+      expressions: Object.fromEntries(expressions),
       values,
       direction,
     }
@@ -669,8 +658,8 @@ if (USE_BROWSER) {
 
 // ── §7 派生层是否保住基色的冷暖方向（本次落仓时新发现）──────────────────────
 /**
- * `theme-tokens.ts` 里所有「向白提亮」的派生式都写成 `mix("#FFFFFF", n, base)`，即
- * `color-mix(in oklch, #FFFFFF n%, base)`。实测（Chrome 153，可复跑）：
+ * 历史故障：旧版 `theme-tokens.ts` 的「向白提亮」写成 `mix("#FFFFFF", n, base)`，即
+ * `color-mix(in oklch, #FFFFFF n%, base)`。当时实测（Chrome 153）：
  *
  *   color-mix(in oklch, #FFFFFF 6%, #202420) → rgb(50, 44, 45)   R>G（暖）
  *   color-mix(in srgb,  #FFFFFF 6%, #202420) → rgb(45, 49, 45)   R<G（冷，= 基色方向）
@@ -696,12 +685,12 @@ function buildHueIntegrityCases() {
   const cases = []
   for (const [token, pair] of Object.entries(layerEngine.expressions ?? {})) {
     if (!/layer-[23]$/.test(token)) continue
-    for (const mode of ['light', 'dark']) {
-      const expr = pair[mode]
-      if (!expr || !expr.startsWith('color-mix')) continue
+    for (const mode of identities) {
+      const expr = layerEngine.values[`${mode}:${token}`]?.resolvedExpression ?? pair[mode]
+      if (!expr || !/color-mix\(\s*in oklch\b/.test(expr)) continue
       const operands = expr.match(/#[0-9a-fA-F]{3,8}/g) ?? []
       const reference = operands.find((hex) => !/^#(fff|ffffff)$/i.test(hex))
-      if (!reference) continue
+      require_(reference, `存在 oklch 层级表达式却无法提取参照色：${mode}/${token}；不得当成空射程`)
       cases.push({ token, mode, reference, oklch: expr, srgb: expr.replace('in oklch', 'in srgb') })
     }
   }
@@ -711,16 +700,25 @@ function buildHueIntegrityCases() {
 const hueIntegrity = []
 // 提升到块外：块内 `const` 在报告组装处不可见（写成块内 `const` 会 ReferenceError）。
 let hueIntegrityEngine = null
+const hueIntegrityScope = { status: 'skipped', expected: 0, checked: 0, reason: 'explicit --no-browser' }
 if (USE_BROWSER && layerEngine.available) {
   const cases = buildHueIntegrityCases()
+  Object.assign(hueIntegrityScope, { status: cases.length ? 'measured' : 'no-scope', expected: cases.length,
+    reason: cases.length ? 'real layer oklch expressions' : '当前四层 × 三身份无可比较的 oklch 混合项；不合成案例' })
   const entries = []
   for (const c of cases) {
-    entries.push({ key: `${c.mode}|${c.token}|ref`, expr: c.reference })
-    entries.push({ key: `${c.mode}|${c.token}|oklch`, expr: c.oklch })
-    entries.push({ key: `${c.mode}|${c.token}|srgb`, expr: c.srgb })
+    const identity = themeSource.identities.find(({ id }) => id === c.mode)
+    const context = { id: identity.id, scheme: identity.scheme }
+    entries.push({ ...context, key: `${c.mode}|${c.token}|ref`, expr: c.reference })
+    entries.push({ ...context, key: `${c.mode}|${c.token}|oklch`, expr: c.oklch })
+    entries.push({ ...context, key: `${c.mode}|${c.token}|srgb`, expr: c.srgb })
   }
-  const { engine: hueEngine, values: rgbByKey } = await evaluateEntries(entries)
+  const { engine: hueEngine, values: rgbByKey, controls = [] } = entries.length
+    ? await evaluateEntries(entries) : { engine: null, values: {} }
   hueIntegrityEngine = hueEngine
+  if (entries.length) check('色相引擎：全部表达式与对照可用', controls.every((c) => c.ok)
+    && Object.values(rgbByKey).every((v) => v.valid && v.alpha === 255), `${Object.keys(rgbByKey).length}/${entries.length}`)
+  hueIntegrityScope.checked = cases.length
   const tint = (rgb) => (rgb ? Math.sign(rgb[0] - rgb[1]) : null)
   const spread = (rgb) => (rgb ? Math.max(...rgb) - Math.min(...rgb) : null)
   const channelDelta = (a, b) => (a && b ? Math.max(...a.map((v, k) => Math.abs(v - b[k]))) : null)
@@ -737,6 +735,7 @@ if (USE_BROWSER && layerEngine.available) {
       token: c.token,
       mode: c.mode,
       reference: c.reference,
+      expressions: { ref: c.reference, oklch: c.oklch, srgb: c.srgb },
       referenceRgb: refRgb,
       referenceChannelSpread: spread(refRgb),
       oklchRgb,
@@ -846,6 +845,7 @@ const report = {
   asymmetry,
   hueIntegrity,
   hueIntegrityEngine,
+  hueIntegrityScope,
   contrast: contrastTable,
   layerEngine,
   drift: buildDrift(),
@@ -899,7 +899,7 @@ line(`  求值引擎：${layerEngine.engine ?? '<未记录>'}（产品跑在 Ele
 if (!layerEngine.available) {
   line(`  未测量：${layerEngine.reason}`)
 } else {
-  for (const mode of ['light', 'dark']) {
+  for (const mode of identities) {
     const d = layerEngine.direction[mode]
     line(`  ${mode}：从 base 起单调递增 = ${d.monotonicIncreasingFromBase}`)
     for (const s of d.series) {
@@ -915,7 +915,7 @@ if (!layerEngine.available) {
 line('')
 line('=== §7 派生层冷暖方向（color-mix 是否保住基色方向）===')
 if (hueIntegrity.length === 0) {
-  line('  未测量（§6 不可用时连带跳过）')
+  line(`  ${hueIntegrityScope.status}：${hueIntegrityScope.reason}（${hueIntegrityScope.checked}/${hueIntegrityScope.expected}）`)
 } else {
   for (const r of hueIntegrity) {
     const fmt = (rgb) => (rgb ? `rgb(${rgb.join(', ')})` : '<unresolved>')

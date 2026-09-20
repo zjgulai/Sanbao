@@ -12,9 +12,9 @@
  *  2. **Every colour is a harness token that the live engine resolves.** See
  *     "the three token laws" below — each one is a failure this file has
  *     already paid for once.
- *  3. **Type rides the official font shorthands**, never a hand-paired
- *     `font-size` + `line-height`: the pairing *is* the design decision, and
- *     the shell already made it.
+ *  3. **Type rides shared semantic font shorthands with official fallbacks**,
+ *     never a hand-paired `font-size` + `line-height`. The theme owns the
+ *     pairing, font family and user-size scaling.
  *
  * The two launch rows (「新建会话」and「新应用」) are plain nav rows of one
  * column (locked decision D2, 2026-09-19): the core marks the official button
@@ -34,58 +34,19 @@
  * is why this file stopped using `--dsw-font-mono`: the name is defined by *our*
  * theme plugin but never lands in the page (it is supplied on the non-contract
  * path), so it resolves to nothing in both themes while a static gate reads it
- * as "defined". **Only names the official theme bundle declares are safe here**
- * — measured: 29/29 of the names in this file.
+ * as "defined". Colours use official theme tokens; typography additionally
+ * consumes the shared Sanbao ladder, always with an official font fallback.
  *
  * **Law 2 — a fallback literal must be the value the token really resolves to**
  * (light theme), so a missing token degrades to the truth instead of to a
  * guess. Every literal below is the light-theme reading from
  * `pnpm run accept:theme-tokens`.
  *
- * **Law 3 — brand colour is not a theme colour.** LUTE green stays a literal,
- * because a brand does not flip with the theme; everything that expresses
- * *state* uses the shell's state family instead. Both halves live in the single
- * declaration block below, and a test asserts no colour literal appears outside
- * it (tests/stylesheet.spec.ts). The tints are written as `rgba()` on purpose:
- * `color-mix()` would be terser, but its failure mode is silent (an unsupported
- * function makes the whole declaration invalid-at-computed-time and the `var()`
- * fallback does *not* rescue it), and silent colour failure is the exact bug
- * class this file keeps meeting.
+ * **Law 3 — theme-owned accents are semantic, not a private brand palette.**
+ * Text and focus use `--sanbao-accent`; solid primary actions pair
+ * `--sanbao-accent-fill` with `--sanbao-on-accent`. Quiet surfaces use selected
+ * or hover tokens, while status keeps the shell's state family.
  */
-
-/* ── Brand block ────────────────────────────────────────────────────────────
- *
- * The one home for every literal in this file. The selector list carries both
- * roots on purpose: the drawer (`.root`) and the sidebar row (`.entry`) are
- * separate DOM subtrees — the row is injected into the shell's sidebar, not
- * into the drawer — so there is no shared ancestor to hang these on, and
- * duplicating the block would be the second home Law 3 exists to prevent.
- */
-.root,
-.entry {
-  /* LUTE brand green. Fixed by brand, not by theme. */
-  --lute-brand: #58b848;
-  --lute-brand-deep: #3e9b33;
-  --lute-brand-soft: #8fd48a;
-  /* Tints of the same green, alpha-composed here so no rule below repeats a
-     channel value. */
-  --lute-brand-tint: rgba(88, 184, 72, 0.08);
-  --lute-brand-line: rgba(88, 184, 72, 0.45);
-  --lute-brand-line-strong: rgba(88, 184, 72, 0.7);
-  /* Text-safe brand greens — the same brand, measured rather than assumed.
-     The identity greens above are for fills, borders and glyphs. At 11–12px on
-     the card surface they resolve to 3.1–3.4:1, under the 4.5:1 floor for body
-     text, and a brand colour that cannot be *read* is not brand consistency —
-     it is a legibility bug wearing the brand. Two values, because one cannot
-     serve both surfaces: light needs the green darkened, dark needs it
-     lightened. Both readings come from `scripts/design-probe.mjs`. */
-  --lute-brand-ink: #2a722e;
-  --lute-brand-ink-dark: var(--lute-brand-soft);
-  /* Text on a *fixed* brand fill must be white in both themes, so it rides the
-     shell's static (non-flipping) white rather than an inverted-label alias —
-     an alias would go dark in the dark theme and vanish on the green tile. */
-  --lute-on-brand: var(--dsw-static-neutral-bluish-00, #fff);
-}
 
 /* ── Drawer shell ─────────────────────────────────────────────────────────── */
 
@@ -150,7 +111,7 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: var(--lute-brand);
+  background: var(--sanbao-accent);
 }
 
 .titleRow {
@@ -168,10 +129,10 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--lute-brand-line);
+  border: 1px solid var(--sanbao-border);
   border-radius: 10px;
-  color: var(--lute-brand-deep);
-  background: var(--lute-brand-tint);
+  color: var(--sanbao-accent);
+  background: var(--sanbao-selected);
 }
 
 .mark svg {
@@ -185,17 +146,16 @@
   min-width: 0;
 }
 
-/* `--dsw-font-m-18` is really 500 16px/28px — the official names carry a size
-   that does not always match their value, so this file reads the value. */
+/* The page heading remains above section and card headings at every font scale. */
 .title {
   margin: 0;
-  font: var(--dsw-font-m-18);
+  font: var(--sanbao-font-page, var(--dsw-font-xl-24));
   letter-spacing: 0.2px;
 }
 
 .subtitle {
   margin: 0;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
@@ -215,7 +175,7 @@
   border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.1));
   background: transparent;
   color: var(--dsw-alias-label-secondary, #61666b);
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
@@ -249,12 +209,12 @@
 .ghost:focus-visible,
 .close:focus-visible,
 .primary:focus-visible {
-  outline: 2px solid var(--lute-brand);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
 }
 
 .search:focus-visible {
-  outline: 2px solid var(--lute-brand);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 1px;
 }
 
@@ -268,7 +228,7 @@
    `bg-layer-2` is the same white as the panel, so a chip built on it has *no*
    fill in light mode — the measured reason these moved to the module token. */
 .total {
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   padding: 2px 10px;
   border-radius: 999px;
   color: var(--dsw-alias-label-secondary, #61666b);
@@ -289,7 +249,7 @@
 
 .state {
   margin: 0;
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
   overflow-wrap: anywhere;
 }
@@ -301,7 +261,7 @@
   gap: 10px;
   min-width: 0;
   margin: 0;
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-state-error-primary, #ec1313);
 }
 
@@ -318,14 +278,14 @@
 }
 
 .noticeTitle {
-  font: var(--dsw-font-xxs-strong-12);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
 .noticeList {
   margin: 0;
   padding-left: 18px;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
   overflow-wrap: anywhere;
 }
@@ -339,7 +299,7 @@
 
 .sectionTitle {
   margin: 0;
-  font: var(--dsw-font-xs-strong-13);
+  font: var(--sanbao-font-section, var(--dsw-font-l-20));
   color: var(--dsw-alias-label-primary, #0f1115);
 }
 
@@ -347,7 +307,7 @@
   flex: none;
   box-sizing: border-box;
   width: min(280px, 46vw);
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   min-height: 32px;
   padding: 6px 10px;
   border-radius: 8px;
@@ -394,7 +354,7 @@
   border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.1));
   background: var(--dsw-alias-bg-module-platform, #f5f6f7);
   color: var(--dsw-alias-label-secondary, #61666b);
-  font: var(--dsw-font-xs-13);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   cursor: pointer;
   transition: background 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
 }
@@ -434,7 +394,7 @@
 
 .card:hover {
   transform: translateY(-2px);
-  border-color: var(--lute-brand-soft);
+  border-color: var(--sanbao-accent);
 }
 
 .cardHead {
@@ -446,7 +406,7 @@
 
 .cardLabel {
   margin: 0;
-  font: var(--dsw-font-base-strong-16);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   color: var(--dsw-alias-label-primary, #0f1115);
 }
 
@@ -458,10 +418,8 @@
    own theme plugin on the non-contract path and never reaches the page, so the
    declaration silently fell through to a literal stack while looking themed. */
 .cardDir {
-  /* The pair comes from the official ladder (11px/14px) and only the *face* is
-     overridden — so this is the second place the "override after the shorthand"
-     rule applies: `font:` resets font-family too. */
-  font: var(--dsw-font-xxxs-11);
+  /* Keep the code face after the metadata shorthand, which resets font-family. */
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);
   color: var(--dsw-alias-label-caption, #adb2b8);
   overflow: hidden;
@@ -472,7 +430,7 @@
 
 .cardSummary {
   margin: 0;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
@@ -481,20 +439,20 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #adb2b8);
 }
 
 .cardNote {
   margin: 0;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
 .productFeatures {
   margin: 0;
   padding-left: 16px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
@@ -508,23 +466,21 @@
   gap: 6px;
 }
 
-/* The launch action is the one business-colour primary control in this drawer.
-   Secondary and close actions stay neutral, so the green consistently means
-   identity, selection, primary action, or status rather than decoration. */
+/* Primary action fill and foreground are a theme-owned pair. */
 .primary {
   padding: 6px 14px;
-  border: 1px solid var(--lute-brand);
+  border: 1px solid var(--sanbao-accent-fill);
   border-radius: 8px;
-  font: var(--dsw-font-xxs-strong-12);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   cursor: pointer;
-  color: var(--lute-on-brand);
-  background: var(--lute-brand);
+  color: var(--sanbao-on-accent);
+  background: var(--sanbao-accent-fill);
   transition: background 180ms ease-out, border-color 180ms ease-out, opacity 180ms ease-out;
 }
 
 .primary:hover:not(:disabled) {
-  border-color: var(--lute-brand-deep);
-  background: var(--lute-brand-deep);
+  border-color: var(--sanbao-accent-fill);
+  background: var(--sanbao-accent-fill);
 }
 
 .primary:disabled {
@@ -535,12 +491,12 @@
 }
 
 .primary:focus-visible {
-  outline: 2px solid var(--lute-brand);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
 }
 
 .blocked {
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   text-align: right;
   color: var(--dsw-alias-label-caption, #adb2b8);
 }
@@ -550,7 +506,7 @@
    that only ever reports "it worked". */
 .outcome {
   margin: 0;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-state-success-primary, #22c55e);
 }
 
@@ -569,7 +525,7 @@
   margin: 0;
   padding: 10px 24px 14px;
   border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.04));
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #adb2b8);
 }
 
@@ -639,12 +595,12 @@
 
 /* Open state: the brand green as a 3px leading bar (never a row fill). */
 .entry[data-active] {
-  box-shadow: inset 3px 0 0 0 var(--lute-brand);
+  box-shadow: inset 3px 0 0 0 var(--sanbao-accent);
   color: var(--dsw-alias-label-primary);
 }
 
 .entry:focus-visible {
-  outline: 2px solid var(--lute-brand);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: -2px;
 }
 
@@ -777,7 +733,7 @@ button[class*="newSession"][data-lute-navrow] svg {
   flex-direction: column;
   gap: 2px;
   margin: 0;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #adb2b8);
 }
 
@@ -806,7 +762,7 @@ button[class*="newSession"][data-lute-navrow] svg {
   width: 3px;
   height: 26px;
   border-radius: 999px;
-  background: var(--lute-brand);
+  background: var(--sanbao-accent);
 }
 
 .roleTitles {
@@ -818,13 +774,13 @@ button[class*="newSession"][data-lute-navrow] svg {
 
 .roleTitle {
   margin: 0;
-  font: var(--dsw-font-xs-strong-13);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   color: var(--dsw-alias-label-primary, #0f1115);
 }
 
 .rolePath {
   margin: 0;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
@@ -835,7 +791,7 @@ button[class*="newSession"][data-lute-navrow] svg {
   flex: none;
   padding: 1px 8px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-static-amber-900, #27241f);
   background: var(--dsw-alias-state-warn-tertiary, #fef5e7);
 }
@@ -848,7 +804,7 @@ body[data-ds-dark-theme] .roleUnknown {
   flex: none;
   padding: 2px 10px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #adb2b8);
   background: var(--dsw-alias-bg-module-platform, #f5f6f7);
 }
@@ -894,19 +850,19 @@ body[data-ds-dark-theme] .roleUnknown {
   background: var(--dsw-alias-bg-module-platform, #f5f6f7);
   color: inherit;
   cursor: pointer;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   transition: border-color 180ms ease-out, background 180ms ease-out;
 }
 
 /* Hover is a quiet affordance: the semantic card keeps its boundary and uses a
  * restrained brand tint instead of a lift or decorative shadow. */
 .sysCard:hover:not(:disabled) {
-  border-color: var(--lute-brand-line);
-  background: var(--lute-brand-tint);
+  border-color: var(--sanbao-border);
+  background: var(--sanbao-hover);
 }
 
 .sysCard:focus-visible {
-  outline: 2px solid var(--lute-brand);
+  outline: 2px solid var(--sanbao-accent);
   outline-offset: 2px;
 }
 
@@ -933,14 +889,14 @@ body[data-ds-dark-theme] .roleUnknown {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  color: var(--lute-brand-deep);
-  background: var(--lute-brand-tint);
+  color: var(--sanbao-accent);
+  background: var(--sanbao-selected);
   transition: background 180ms ease-out, color 180ms ease-out;
 }
 
 .sysCard:hover:not(:disabled) .sysIcon {
-  color: var(--lute-on-brand);
-  background: var(--lute-brand);
+  color: var(--sanbao-accent);
+  background: var(--sanbao-selected);
 }
 
 .sysTitles {
@@ -952,7 +908,7 @@ body[data-ds-dark-theme] .roleUnknown {
 }
 
 .sysName {
-  font: var(--dsw-font-s-strong-14);
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
   color: var(--dsw-alias-label-primary, #0f1115);
 }
 
@@ -960,7 +916,7 @@ body[data-ds-dark-theme] .roleUnknown {
  * system is named in the material and in conversation, so it is kept but
  * demoted. */
 .sysNameEn {
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   /* Not the shell's caption grey: measured, `label-caption` on the card surface
      is 1.97:1 in the light theme, which is unreadable rather than subtle. The
      English name is how a system is named in the material, so it is read. */
@@ -972,7 +928,7 @@ body[data-ds-dark-theme] .roleUnknown {
   flex: none;
   padding: 1px 8px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #61666b);
   background: var(--dsw-alias-bg-base, #fff);
 }
@@ -986,7 +942,7 @@ body[data-ds-dark-theme] .roleUnknown {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
-  font: var(--dsw-font-xxs-12);
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
   color: var(--dsw-alias-label-secondary, #61666b);
 }
 
@@ -999,7 +955,7 @@ body[data-ds-dark-theme] .roleUnknown {
 .sysTag {
   padding: 1px 7px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   /* Content, not decoration: a technology tag is read. The shell's caption grey
      measures 2.13:1 here, which is why this is the secondary label. */
   color: var(--dsw-alias-label-secondary, #61666b);
@@ -1023,15 +979,15 @@ body[data-ds-dark-theme] .roleUnknown {
 .sysRole {
   padding: 1px 8px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
-  color: var(--lute-brand-ink);
-  background: var(--lute-brand-tint);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
+  color: var(--sanbao-accent);
+  background: var(--sanbao-selected);
 }
 
 .sysRoleMore {
   padding: 1px 7px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-secondary, #61666b);
   background: var(--dsw-alias-bg-base, #fff);
 }
@@ -1052,7 +1008,7 @@ body[data-ds-dark-theme] .roleUnknown {
 .sysFlag {
   padding: 1px 8px;
   border-radius: 999px;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   /* The shell's warn pair is a *surface* pair — `state-warn-tertiary` behind
      `state-warn-primary` — and measured on the light theme it reads 1.99:1 for
      11px text, which is a warning nobody can read. Dark ink on the warn surface
@@ -1070,17 +1026,9 @@ body[data-ds-dark-theme] .sysFlag {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--lute-brand-ink);
-  font: var(--dsw-font-xxs-strong-12);
+  color: var(--sanbao-accent);
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   transition: color 180ms ease-out;
-}
-
-/* The shell toggles the dark theme by putting this attribute on `<body>`
-   (verbatim from `dsh-client-ui-theme`'s own switch), so one selector is enough
-   to swap the ink without a second colour rule per component. */
-body[data-ds-dark-theme] .sysRole,
-body[data-ds-dark-theme] .sysAction {
-  color: var(--lute-brand-ink-dark);
 }
 
 /* The portal's own call to action, not a generic 「打开」: each system names the
@@ -1098,13 +1046,13 @@ body[data-ds-dark-theme] .sysAction {
 }
 
 .sysCard:hover:not(:disabled) .sysAction svg {
-  color: var(--lute-brand-deep);
+  color: var(--sanbao-accent);
   transform: translateX(2px);
 }
 
 .sysNote {
   margin: 0;
-  font: var(--dsw-font-xxxs-11);
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   color: var(--dsw-alias-label-caption, #adb2b8);
 }
 

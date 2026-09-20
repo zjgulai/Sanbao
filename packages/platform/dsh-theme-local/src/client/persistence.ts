@@ -1,10 +1,11 @@
 import {
   decodeThemeStudioSettings,
-  DEFAULT_THEME_STUDIO_SETTINGS,
+  migrateLegacyThemeSettings,
   type ThemeStudioSettings,
 } from "../theme-settings.js";
 
-export const THEME_STUDIO_STORAGE_KEY = "dsh-theme/settings/v1";
+export const THEME_STUDIO_STORAGE_KEY = "dsh-theme/settings/v2";
+export const LEGACY_THEME_STUDIO_STORAGE_KEY = "dsh-theme/settings/v1";
 export const THEME_PREFS_STORAGE_KEY = "dsh-theme/prefs/v1";
 
 export interface ThemeStudioStorage {
@@ -41,21 +42,20 @@ export function browserThemeStudioStorage(): ThemeStudioStorage | undefined {
 
 export function loadThemeStudioSettings(
   storage: ThemeStudioStorage | undefined,
+  initialScheme: "light" | "dark" = "light",
 ): ThemeStudioSettings {
-  if (storage === undefined) return { ...DEFAULT_THEME_STUDIO_SETTINGS };
+  const decoded = decodeThemeStudioSettings(readSettingsCache(storage, THEME_STUDIO_STORAGE_KEY));
+  if (decoded !== undefined) return decoded;
+  return migrateLegacyThemeSettings(readSettingsCache(storage, LEGACY_THEME_STUDIO_STORAGE_KEY), initialScheme);
+}
 
+function readSettingsCache(storage: ThemeStudioStorage | undefined, key: string): unknown {
   try {
-    const raw = storage.getItem(THEME_STUDIO_STORAGE_KEY);
-    if (raw === null) return { ...DEFAULT_THEME_STUDIO_SETTINGS };
-    const parsed = JSON.parse(raw);
-    const decoded = decodeThemeStudioSettings(parsed);
-    if (decoded === undefined) return { ...DEFAULT_THEME_STUDIO_SETTINGS };
-    if (JSON.stringify(decoded) !== JSON.stringify(parsed)) {
-      saveThemeStudioSettings(storage, decoded);
-    }
-    return decoded;
+    const raw = storage?.getItem(key);
+    return raw == null ? undefined : JSON.parse(raw);
   } catch {
-    return { ...DEFAULT_THEME_STUDIO_SETTINGS };
+    // Malformed or inaccessible browser caches cannot establish saved state.
+    return undefined;
   }
 }
 

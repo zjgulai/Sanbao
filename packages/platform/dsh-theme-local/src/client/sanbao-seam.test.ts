@@ -32,7 +32,7 @@ describe('S-A 品牌名源（002 骨架：形状齐全，值 = 现状）', () =>
   })
 })
 
-const EXPECTED_KEYS = [
+const REQUIRED_ALIAS_KEYS = [
   // 色板十键（供体 body.v1 契约：bg/surface/surface2/ink/muted/line/good/accent/on-accent/radius）
   '--sanbao-bg',
   '--sanbao-surface',
@@ -57,6 +57,18 @@ const EXPECTED_KEYS = [
   '--sanbao-base',
   '--sanbao-slow',
   '--sanbao-ease',
+  // 三态官方语义投影还消费状态背景 alias。
+  '--sanbao-success-surface',
+  '--sanbao-warning-surface',
+  '--sanbao-error-surface',
+] as const
+
+const REQUIRED_COLOR_KEYS = [
+  '--sanbao-canvas', '--sanbao-sidebar', '--sanbao-right-sidebar', '--sanbao-panel',
+  '--sanbao-inset', '--sanbao-overlay', '--sanbao-foreground', '--sanbao-secondary',
+  '--sanbao-accent', '--sanbao-accent-fill', '--sanbao-on-accent', '--sanbao-hover',
+  '--sanbao-pressed', '--sanbao-selected', '--sanbao-disabled', '--sanbao-border',
+  '--sanbao-control-border', '--sanbao-success', '--sanbao-warning', '--sanbao-error',
 ] as const
 
 function collectDeclarations(css: string): Record<string, string> {
@@ -70,38 +82,87 @@ function collectDeclarations(css: string): Record<string, string> {
   return out
 }
 
-describe('S-B token 源（002 骨架：键名齐全，值 = 现状）', () => {
-  const declarations = collectDeclarations(SANBAO_TOKEN_CSS)
+const rules = new Map(
+  Array.from(SANBAO_TOKEN_CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g), match => [
+    match[1]!.trim(), match[2]!,
+  ] as const),
+)
 
-  it('供体契约 21 个键全部声明，且没有多余键', () => {
-    for (const key of EXPECTED_KEYS) {
-      expect(declarations[key], key).toBeDefined()
+function rule(selector: string): string {
+  const css = rules.get(selector)
+  expect(css, selector).toBeDefined()
+  return css!
+}
+
+function themeDeclarations(id: string): Record<string, string> {
+  return {
+    ...collectDeclarations(rule('body')),
+    ...collectDeclarations(rule(`body[data-sanbao-theme="${id}"]`)),
+  }
+}
+
+describe('S-B token 源（三主题及兼容 alias 契约）', () => {
+  it.each(['light', 'dark', 'warm-pink'])('%s 保留必要 alias 并独立声明完整色板', (id: string) => {
+    const palette = collectDeclarations(rule(`body[data-sanbao-theme="${id}"]`))
+    for (const key of REQUIRED_COLOR_KEYS) {
+      expect(palette[key], `${id} ${key}`).toMatch(/^#[0-9a-f]{6}$/i)
     }
-    expect(Object.keys(declarations).sort()).toEqual([...EXPECTED_KEYS].sort())
-  })
-
-  it('没有 undefined / 空值', () => {
+    const declarations = themeDeclarations(id)
+    for (const key of REQUIRED_ALIAS_KEYS) {
+      expect(declarations[key], `${id} ${key}`).toBeDefined()
+    }
     for (const [key, value] of Object.entries(declarations)) {
-      expect(value.length, key).toBeGreaterThan(0)
-      expect(value, key).not.toMatch(/undefined/)
+      expect(value.length, `${id} ${key}`).toBeGreaterThan(0)
+      expect(value, `${id} ${key}`).not.toMatch(/undefined/)
     }
   })
 
-  it('只声明 --sanbao-* 命名空间；对 --dsw-* / --lute-* 只允许 var() 引用', () => {
+  it('只声明 --sanbao-* 命名空间', () => {
     const declaredNames = SANBAO_TOKEN_CSS.match(/--[a-z0-9-]+\s*:/g) ?? []
-    expect(declaredNames.length, '应至少声明 21 个键').toBeGreaterThanOrEqual(EXPECTED_KEYS.length)
+    expect(declaredNames.length).toBeGreaterThanOrEqual(REQUIRED_ALIAS_KEYS.length)
     for (const raw of declaredNames) {
       expect(raw.trim().replace(/\s*:$/, ''), raw).toMatch(/^--sanbao-/)
     }
   })
 
-  it('现状锚：accent 是 LUTE 绿（亮 #347A2F / 暗 #58B848）', () => {
-    expect(SANBAO_TOKEN_CSS).toContain('--sanbao-accent: #347A2F')
-    expect(SANBAO_TOKEN_CSS).toContain('--sanbao-accent: #58B848')
+  it.each(['light', 'dark', 'warm-pink'])('%s 的 alias 图无环、无悬空引用，也不反向依赖 dsw', (id: string) => {
+    const declarations = themeDeclarations(id)
+    const visit = (key: string, path: string[]) => {
+      expect(path, `${id}: ${[...path, key].join(' -> ')}`).not.toContain(key)
+      const value = declarations[key]
+      expect(value, `${id} ${key}`).toBeDefined()
+      for (const match of value!.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) {
+        const dependency = match[1]!
+        if (dependency.startsWith('--sanbao-')) {
+          visit(dependency, [...path, key])
+        } else {
+          // The only external alias is optional geometry, never a color dependency.
+          expect(key).toBe('--sanbao-radius')
+          expect(dependency).toBe('--lute-radius-row')
+          expect(value).toMatch(/var\(--lute-radius-row,\s*8px\)/)
+        }
+      }
+    }
+    for (const key of Object.keys(declarations)) visit(key, [])
+    expect(SANBAO_TOKEN_CSS).not.toMatch(/var\(\s*--dsw-/)
   })
 
-  it('亮暗两态用本仓既有约定（:root 亮 / body[data-ds-dark-theme] 暗）', () => {
-    expect(SANBAO_TOKEN_CSS).toMatch(/:root\s*\{/)
-    expect(SANBAO_TOKEN_CSS).toMatch(/body\[data-ds-dark-theme\]\s*\{/)
+  it('三种身份独立选中，暖粉使用 light scheme；仅无身份时兼容旧亮暗标记', () => {
+    expect([...rules.keys()].filter(selector => selector.startsWith('body[data-sanbao-theme='))).toEqual([
+      'body[data-sanbao-theme="light"]',
+      'body[data-sanbao-theme="dark"]',
+      'body[data-sanbao-theme="warm-pink"]',
+    ])
+    for (const [id, scheme] of [['light', 'light'], ['dark', 'dark'], ['warm-pink', 'light']]) {
+      expect(rule(`body[data-sanbao-theme="${id}"]`)).toContain(`color-scheme: ${scheme};`)
+    }
+    expect(collectDeclarations(rule('body:not([data-sanbao-theme])'))).toEqual(
+      collectDeclarations(rule('body[data-sanbao-theme="light"]')),
+    )
+    expect(collectDeclarations(rule('body[data-ds-dark-theme]:not([data-sanbao-theme])'))).toEqual(
+      collectDeclarations(rule('body[data-sanbao-theme="dark"]')),
+    )
+    const canvases = ['light', 'dark', 'warm-pink'].map(id => themeDeclarations(id)['--sanbao-canvas'])
+    expect(new Set(canvases).size).toBe(3)
   })
 })

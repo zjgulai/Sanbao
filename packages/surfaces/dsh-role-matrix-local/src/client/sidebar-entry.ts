@@ -12,16 +12,10 @@
  */
 import { tt } from './panel-helpers.ts'
 import css from './role-matrix.module.css'
-import {
-  mountSidebarEntry as mountSharedSidebarEntry,
-  mountSidebarGroup,
-} from './sidebar-entry-core.ts'
+import { mountSidebarEntry as mountSharedSidebarEntry } from './sidebar-entry-core.ts'
 
 /** Stable data attribute identifying the injected entry row. */
 export const ENTRY_SELECTOR = '[data-dsh-role-matrix-entry]'
-
-/** Stable attribute identifying the Workbench group row. */
-export const WORKBENCH_GROUP_SELECTOR = '[data-dsh-workbench-group]'
 
 /** Inline 4-quadrant grid glyph normalized to the shell's 18px navigation size. */
 const ICON = '<svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.7" y="1.7" width="5.2" height="5.2" rx="1.3"/><rect x="9.1" y="1.7" width="5.2" height="5.2" rx="1.3"/><rect x="1.7" y="9.1" width="5.2" height="5.2" rx="1.3"/><rect x="9.1" y="9.1" width="5.2" height="5.2" rx="1.3"/></svg>'
@@ -37,37 +31,6 @@ export interface SidebarEntrySignals {
 }
 
 /**
- * Mount the Workbench collapsible group (ADR-0125 D4).
- * Idempotently creates the L1 group row and L2 container for capability entries.
- */
-export function mountWorkbenchGroup(): () => void {
-  return mountSidebarGroup({
-    groupAttribute: 'data-dsh-workbench-group',
-    groupSelector: WORKBENCH_GROUP_SELECTOR,
-    containerAttribute: 'data-dsh-workbench-container',
-    containerSelector: '[data-dsh-workbench-container]',
-    storageKey: 'dsh-workbench:collapsed',
-    label: () => tt('workbench.group.label'),
-    tooltip: () => tt('workbench.group.tooltip'),
-    css,
-    position: 'after',
-    familySelectors: [
-      '[data-dsh-workbench-group]',
-      '[data-dsh-taskboard-entry]',
-      '[data-dsh-ssh-entry]',
-      '[data-dsh-role-matrix-entry]',
-      '[data-dsh-skill-center-entry]',
-    ],
-    memberSelectors: [
-      '[data-dsh-taskboard-entry]',
-      '[data-dsh-ssh-entry]',
-      '[data-dsh-role-matrix-entry]',
-      '[data-dsh-skill-center-entry]',
-    ],
-  })
-}
-
-/**
  * Mount the sidebar entry, waiting for the shell to render and self-healing on
  * later React re-renders.
  * @param onClick - toggles the role matrix panel.
@@ -75,7 +38,6 @@ export function mountWorkbenchGroup(): () => void {
  * @returns disposer removing the entry and its observers.
  */
 export function mountSidebarEntry(onClick: () => void, signals: SidebarEntrySignals): () => void {
-  const disposeGroup = mountWorkbenchGroup()
   const dispose = mountSharedSidebarEntry({
     rowAttribute: 'data-dsh-role-matrix-entry',
     rowSelector: ENTRY_SELECTOR,
@@ -132,6 +94,5 @@ export function mountSidebarEntry(onClick: () => void, signals: SidebarEntrySign
   return () => {
     window.clearInterval(timer)
     dispose()
-    disposeGroup()
   }
 }

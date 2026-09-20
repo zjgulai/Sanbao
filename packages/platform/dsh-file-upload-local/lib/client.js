@@ -315,7 +315,7 @@ window.__ModuleLoader__.load({
 					jsx("button", {
 						style: {
 							padding: "8px 0", borderRadius: "8px", border: "none", cursor: launching ? "default" : "pointer",
-							background: "var(--dsw-alias-state-business-primary,#1677ff)", color: "#fff",
+							background: "var(--sanbao-accent-fill)", color: "var(--sanbao-on-accent)",
 							fontSize: "13px", fontWeight: 500, opacity: launching ? 0.6 : 1,
 						},
 						disabled: launching || !goalText.trim(),

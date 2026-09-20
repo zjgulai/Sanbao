@@ -130,7 +130,7 @@ window.__ModuleLoader__.load({
 			'[data-plugin="dsh-overseas-skills"] .ovsCredStateOn { color:var(--dsw-alias-state-success-primary); background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent); }',
 			'[data-plugin="dsh-overseas-skills"] .ovsCredInput { box-sizing:border-box; width:100%; height:32px; padding:0 12px; border:1px solid var(--dsw-alias-border-l1); border-radius:8px; background:var(--dsw-alias-bg-base); color:var(--dsw-alias-label-primary); font-size:13px; line-height:20px; outline:none; }',
 			'[data-plugin="dsh-overseas-skills"] .ovsCredInput:focus { border-color:var(--dsw-alias-brand-primary); }',
-			'[data-plugin="dsh-overseas-skills"] .ovsCredBtn { align-self:flex-start; border:none; cursor:pointer; border-radius:8px; padding:6px 14px; font-size:13px; line-height:18px; color:#fff; background:var(--dsw-alias-brand-primary); }',
+			'[data-plugin="dsh-overseas-skills"] .ovsCredBtn { align-self:flex-start; border:none; cursor:pointer; border-radius:8px; padding:6px 14px; font-size:13px; line-height:18px; color:var(--sanbao-on-accent); background:var(--sanbao-accent-fill); }',
 			'[data-plugin="dsh-overseas-skills"] .ovsCredBtn:hover:not(:disabled) { filter:brightness(1.08); }',
 			'[data-plugin="dsh-overseas-skills"] .ovsCredBtn:disabled { opacity:.55; cursor:default; }',
 			'[data-plugin="dsh-overseas-skills"] .ovsHint { font-size:11px; line-height:16px; color:var(--dsw-alias-label-secondary); }',

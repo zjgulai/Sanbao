@@ -62,6 +62,7 @@ export default defineConfig([
     fixedExtension: false,
     dts: false,
     clean: false,
+    deps: { neverBundle: ["@deepseek-ai/schemastery"] },
   },
   {
     name: `${PLUGIN_ID}/client`,

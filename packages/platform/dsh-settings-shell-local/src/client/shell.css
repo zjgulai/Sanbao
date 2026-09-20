@@ -45,26 +45,34 @@ body:has([data-dsh-settings-shell-root]) > #root {
   z-index: var(--dsh-settings-shell-root-layer);
 }
 
-/* ── 面板尺寸：保守档 ──────────────────────────────────────────────
- * 官方是 width:800px / height:min(800px, 100vh - 48px) —— 只保护小屏、
- * 不放大屏（1580px 窗口里面板仅占 60.6%）。这里把上限提到 960px 并把
- * 纵向边距从 48px 收到 32px；小屏保护原样保留。 */
-[data-dsh-settings-shell-root] {
-  --dsh-settings-shell-panel-width: min(960px, max(0px, calc(100vw - 48px)));
-  width: var(--dsh-settings-shell-panel-width);
-  min-width: var(--dsh-settings-shell-panel-width);
-  max-width: var(--dsh-settings-shell-panel-width);
-  height: min(920px, max(0px, calc(100vh - 32px)));
+/* ── 面板尺寸：恰好覆盖主页面 ──────────────────────────────────────
+ * 用户 2026-09-20 拍板：设置页点开即全屏（Qoder 式极简整页），且必须与主页面
+ * **逐像素同框**（原话「你一大一小的多丑呀」）。官方面板是 width:800px 的居中
+ * dialog，挂在满视口的 `[role="presentation"]` flex 容器里——按视口尺寸写死宽高
+ * 会受该容器的对齐与内距影响而错位。改 `position: fixed; inset: 0`：包含块就是
+ * 应用根（`#root` 是 transform 层），2026-09-20 实机实测 rect = (0,0,1376,923)，
+ * 与主页面逐像素一致。圆角与边框一并去掉；面板盖满后遮罩不可见。
+ *
+ * 选择器**必须双属性**（本文件第 10 行的优先级契约）：官方面板是单类选择器
+ * (0,1,0)，本文件的 style 标签注入在 head 前部，单属性锚 (0,1,0) 会因先后次序
+ * 输给官方——实测 800×800 原样不动就是这个原因。 */
+[role="dialog"][data-dsh-settings-shell-root] {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  margin: 0;
   box-sizing: border-box;
   display: flex;
   overflow: hidden;
-  border: 1px solid var(--dsh-settings-shell-border);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 0;
   background: var(--dsh-settings-shell-panel);
   color: var(--dsh-settings-shell-text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font: var(--sanbao-font-body, var(--dsw-font-s-14));
 }
 
 /* 内容列只负责分配高度；不要让它成为第二个滚动容器。 */
@@ -112,16 +120,26 @@ body:has([data-dsh-settings-shell-root]) > #root {
   border-top: 1px solid var(--dsh-settings-shell-border);
 }
 
-/* Keep this fallback low-specificity so a section-owned error/heading style
- * remains authoritative. */
-:where([data-dsh-settings-shell-root] > nav + * > :nth-child(2) h1,
-  [data-dsh-settings-shell-root] > nav + * > :nth-child(2) h2,
-  [data-dsh-settings-shell-root] > nav + * > :nth-child(2) h3) {
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h1,
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h2,
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h3,
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h4 {
   margin: 0 0 12px;
-  color: var(--dsh-settings-shell-text);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 22px;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h1 {
+  font: var(--sanbao-font-page, var(--dsw-font-xl-24));
+}
+
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h2 {
+  font: var(--sanbao-font-section, var(--dsw-font-l-20));
+}
+
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h3,
+[data-dsh-settings-shell-root] > nav + * > :nth-child(2) h4 {
+  font: var(--sanbao-font-panel, var(--dsw-font-base-strong-16));
 }
 
 /* Paragraphs inherit by default; this muted fallback must not override
@@ -212,6 +230,7 @@ body:has([data-dsh-settings-shell-root]) > #root {
  * 因此当前项只用一条左侧指示条表达归属。 */
 [data-dsh-settings-shell-root] nav button {
   position: relative;
+  font: var(--sanbao-font-control, var(--dsw-font-s-14));
   transition:
     background var(--dsh-settings-shell-motion),
     color var(--dsh-settings-shell-motion);
@@ -252,10 +271,9 @@ body:has([data-dsh-settings-shell-root]) > #root {
  * 互不干扰。 */
 [data-dsh-settings-shell-root] [data-dsh-ss-group] {
   padding: 13px 12px 3px;
-  font-size: 11px;
+  font: var(--sanbao-font-meta, var(--dsw-font-xs-13));
   font-weight: 600;
-  line-height: 16px;
-  letter-spacing: 0.3px;
+  letter-spacing: normal;
   color: var(--dsh-settings-shell-muted);
   pointer-events: none;
   user-select: none;
@@ -279,27 +297,16 @@ body:has([data-dsh-settings-shell-root]) > #root {
 }
 
 @media (max-width: 720px) {
-  [data-dsh-settings-shell-root] {
-    --dsh-settings-shell-panel-width: min(960px, max(0px, calc(100vw - 24px)));
-    width: var(--dsh-settings-shell-panel-width);
-    min-width: var(--dsh-settings-shell-panel-width);
-    max-width: var(--dsh-settings-shell-panel-width);
-    height: min(920px, max(0px, calc(100vh - 24px)));
-  }
-
+  /* 覆盖不随断点变化（fixed + inset: 0）；保留断点只为收窄内容区留白。 */
   [data-dsh-settings-shell-root] > nav + * > :nth-child(2) {
     padding: 20px;
   }
 }
 
 @media (max-width: 560px) {
-  [data-dsh-settings-shell-root] {
+  [role="dialog"][data-dsh-settings-shell-root] {
     display: flex;
     flex-direction: column;
-    width: calc(100vw - 16px);
-    min-width: calc(100vw - 16px);
-    max-width: calc(100vw - 16px);
-    height: calc(100vh - 16px);
   }
 
   [data-dsh-settings-shell-root] > nav {

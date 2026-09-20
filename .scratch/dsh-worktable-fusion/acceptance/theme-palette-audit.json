@@ -1,0 +1,2144 @@
+{
+  "generatedAt": "2026-09-20T11:22:00.882Z",
+  "appDir": "/Applications/DSH Desktop.app",
+  "scope": {
+    "hexScope": "packages + shared + dsh-patches，扩展名 css/ts/tsx/js/mjs，排除 node_modules/dist/lib/build/coverage/staging/*.patched/*.min.*。与一次性脚本 colors.mjs 的唯一差别：本探针接受 4 位 #rgba（7 个不同值），colors.mjs 只认 3/6/8 位",
+    "hardcodedScope": "packages + shared，扩展名 css/ts/tsx，额外排除 presets.ts 与 *.test.*/*.spec.*；硬编码 = hex 出现数 − token 定义数",
+    "fallbackScope": "packages + shared，扩展名 css/ts/tsx，额外排除 presets.ts 与 *.test.*/*.spec.*",
+    "bluePredicate": {
+      "hueMin": 185,
+      "hueMax": 275,
+      "satMin": 0.1,
+      "lightMin": 0.05,
+      "lightMax": 0.96
+    }
+  },
+  "selfTest": [
+    {
+      "name": "颜色数学：#000/#fff 对比度 = 21:1",
+      "ok": true,
+      "detail": "21.00:1"
+    },
+    {
+      "name": "颜色数学：#4176e6 判为蓝",
+      "ok": true,
+      "detail": "DeepSeek 蓝的负控/正控"
+    },
+    {
+      "name": "颜色数学：#f7f7f7 判为中性",
+      "ok": true,
+      "detail": "真中性灰"
+    },
+    {
+      "name": "切分#1：锚点同时找到浅色块与深色块",
+      "ok": true,
+      "detail": "body@49213(90) body[data-ds-dark-theme]@54503(90)"
+    },
+    {
+      "name": "切分#2：浅侧 alias ≥ 50",
+      "ok": true,
+      "detail": "79 个"
+    },
+    {
+      "name": "切分#3：深侧 alias ≥ 50",
+      "ok": true,
+      "detail": "79 个"
+    },
+    {
+      "name": "切分#4：浅深两侧确有差异（≥20 个 alias 取值不同）",
+      "ok": true,
+      "detail": "67 个不同"
+    },
+    {
+      "name": "切分#5：浅色块里没有混进静态尺度定义",
+      "ok": true,
+      "detail": "混进静态尺度说明括号配平读到了错误的块"
+    },
+    {
+      "name": "正控：--dsw-alias-link 在浅色集合内",
+      "ok": true,
+      "detail": "var(--dsw-static-deepseek-500)"
+    },
+    {
+      "name": "正控：--dsw-alias-link 判为蓝",
+      "ok": true,
+      "detail": "var(--dsw-static-deepseek-500) → #4176e6"
+    },
+    {
+      "name": "正控：--dsw-static-deepseek-500 = #4176e6",
+      "ok": true,
+      "detail": "#4176e6"
+    },
+    {
+      "name": "负控：不存在的 token 不在集合内",
+      "ok": true,
+      "detail": "不得恒真"
+    },
+    {
+      "name": "正控：官方前端 CSS 里有 var(--dsw-alias-*) 引用",
+      "ok": true,
+      "detail": "81233 字节"
+    },
+    {
+      "name": "声明的接管项在每个身份均实际供给",
+      "ok": true,
+      "detail": "88 个声明 / 129 个供给"
+    },
+    {
+      "name": "正控：theme-local 接管集合非空且含 bg-layer-1",
+      "ok": true,
+      "detail": "129 个 token"
+    },
+    {
+      "name": "扫描#1：口径 A 扫到源码文件",
+      "ok": true,
+      "detail": "598 个文件"
+    },
+    {
+      "name": "扫描#2：口径 A 抓到 hex 字面量",
+      "ok": true,
+      "detail": "1451 处"
+    },
+    {
+      "name": "引擎：四层 × 三身份完整解析",
+      "ok": true,
+      "detail": "12/12，无效 0"
+    },
+    {
+      "name": "引擎对照：light:positive",
+      "ok": true,
+      "detail": "rgb(253, 253, 253)"
+    },
+    {
+      "name": "引擎对照：light:negative",
+      "ok": true,
+      "detail": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "引擎对照：dark:positive",
+      "ok": true,
+      "detail": "rgb(35, 37, 35)"
+    },
+    {
+      "name": "引擎对照：dark:negative",
+      "ok": true,
+      "detail": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "引擎对照：warm-pink:positive",
+      "ok": true,
+      "detail": "rgb(255, 248, 247)"
+    },
+    {
+      "name": "引擎对照：warm-pink:negative",
+      "ok": true,
+      "detail": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "coverage": {
+    "officialLightAlias": 79,
+    "officialLightCustomProperties": 90,
+    "consumed": 44,
+    "consumedIncludingSpecific": 45,
+    "owned": 43,
+    "notOwned": [
+      {
+        "name": "--dsw-alias-bg-mask-1",
+        "declared": "#0000003d",
+        "resolved": "#0000003d",
+        "family": "literal",
+        "uses": 1,
+        "blue": false
+      }
+    ]
+  },
+  "neutralTracks": {
+    "families": [
+      [
+        "neutral-bluish",
+        37
+      ],
+      [
+        "literal",
+        22
+      ],
+      [
+        "other-static",
+        10
+      ],
+      [
+        "deepseek(blue)",
+        5
+      ],
+      [
+        "neutral(true)",
+        5
+      ]
+    ],
+    "nearWhiteDistinct": 38,
+    "pureWhite": 2,
+    "nearWhite": [
+      [
+        "#e8e6dc",
+        {
+          "hsl": [
+            50.00000000000002,
+            0.20689655172413762,
+            0.8862745098039215
+          ],
+          "sites": [
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp-en.css:19",
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp.css:31"
+          ]
+        }
+      ],
+      [
+        "#fef3c7",
+        {
+          "hsl": [
+            47.999999999999986,
+            0.9649122807017545,
+            0.888235294117647
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:116",
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:137"
+          ]
+        }
+      ],
+      [
+        "#eddbde",
+        {
+          "hsl": [
+            349.99999999999994,
+            0.3333333333333337,
+            0.8941176470588235
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:127",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:27",
+            "shared/client/sanbao-tokens.ts:26"
+          ]
+        }
+      ],
+      [
+        "#d1fae5",
+        {
+          "hsl": [
+            149.26829268292687,
+            0.8039215686274511,
+            0.8999999999999999
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:104",
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:167"
+          ]
+        }
+      ],
+      [
+        "#efe1df",
+        {
+          "hsl": [
+            7.499999999999973,
+            0.3333333333333333,
+            0.9058823529411765
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:125",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:26",
+            "shared/client/sanbao-tokens.ts:25"
+          ]
+        }
+      ],
+      [
+        "#e5e7eb",
+        {
+          "hsl": [
+            220,
+            0.1304347826086951,
+            0.9098039215686274
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:65",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:170",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:214"
+          ]
+        }
+      ],
+      [
+        "#e4ece4",
+        {
+          "hsl": [
+            120,
+            0.17391304347826095,
+            0.9098039215686275
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:39",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:81",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:13"
+          ]
+        }
+      ],
+      [
+        "#e9ebe7",
+        {
+          "hsl": [
+            90,
+            0.0909090909090905,
+            0.9137254901960784
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:37",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:79",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:12"
+          ]
+        }
+      ],
+      [
+        "#fbdcd9",
+        {
+          "hsl": [
+            5.294117647058855,
+            0.8095238095238095,
+            0.9176470588235294
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:407",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:468",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:524"
+          ]
+        }
+      ],
+      [
+        "#e7f2e3",
+        {
+          "hsl": [
+            103.99999999999994,
+            0.36585365853658525,
+            0.9196078431372549
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:12",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:151",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:287"
+          ]
+        }
+      ],
+      [
+        "#f3e6e4",
+        {
+          "hsl": [
+            7.999999999999985,
+            0.38461538461538397,
+            0.9235294117647059
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:118",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:25",
+            "shared/client/sanbao-tokens.ts:24"
+          ]
+        }
+      ],
+      [
+        "#ecedeb",
+        {
+          "hsl": [
+            89.99999999999957,
+            0.05263157894736897,
+            0.9254901960784314
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:52",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:97",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:18"
+          ]
+        }
+      ],
+      [
+        "#dbeafe",
+        {
+          "hsl": [
+            214.2857142857143,
+            0.9459459459459462,
+            0.9274509803921569
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:265",
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:152"
+          ]
+        }
+      ],
+      [
+        "#e6faed",
+        {
+          "hsl": [
+            141.00000000000003,
+            0.6666666666666666,
+            0.9411764705882353
+          ],
+          "sites": [
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:329"
+          ]
+        }
+      ],
+      [
+        "#fee2e2",
+        {
+          "hsl": [
+            0,
+            0.9333333333333336,
+            0.9411764705882353
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:128",
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:247"
+          ]
+        }
+      ],
+      [
+        "#f1f1f0",
+        {
+          "hsl": [
+            60,
+            0.03448275862068952,
+            0.9431372549019608
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:27",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:69",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:10"
+          ]
+        }
+      ],
+      [
+        "#f5f4ed",
+        {
+          "hsl": [
+            52.50000000000003,
+            0.28571428571428614,
+            0.9450980392156862
+          ],
+          "sites": [
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp-en.css:11",
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp.css:23"
+          ]
+        }
+      ],
+      [
+        "#f7eeec",
+        {
+          "hsl": [
+            10.909090909090882,
+            0.4074074074074076,
+            0.9470588235294117
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:115",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:116",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:24"
+          ]
+        }
+      ],
+      [
+        "#f1f4ef",
+        {
+          "hsl": [
+            96.00000000000014,
+            0.18518518518518584,
+            0.9470588235294117
+          ],
+          "sites": [
+            "packages/platform/dsh-settings-shell-local/src/client/shell.css:19"
+          ]
+        }
+      ],
+      [
+        "#f1f4f0",
+        {
+          "hsl": [
+            105.00000000000011,
+            0.1538461538461546,
+            0.9490196078431372
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:660",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:690"
+          ]
+        }
+      ],
+      [
+        "#eef2f7",
+        {
+          "hsl": [
+            213.33333333333343,
+            0.3600000000000003,
+            0.9509803921568627
+          ],
+          "sites": [
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp-en.css:18",
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp.css:30"
+          ]
+        }
+      ],
+      [
+        "#fef5e7",
+        {
+          "hsl": [
+            36.521739130434796,
+            0.9200000000000003,
+            0.9509803921568627
+          ],
+          "sites": [
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:796",
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:1018"
+          ]
+        }
+      ],
+      [
+        "#f3e8ff",
+        {
+          "hsl": [
+            268.695652173913,
+            1,
+            0.9549019607843137
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:213"
+          ]
+        }
+      ],
+      [
+        "#f2f3f5",
+        {
+          "hsl": [
+            220.00000000000017,
+            0.13043478260869656,
+            0.9549019607843137
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:89",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:125",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:283"
+          ]
+        }
+      ],
+      [
+        "#feeceb",
+        {
+          "hsl": [
+            3.1578947368421804,
+            0.9047619047619051,
+            0.9588235294117646
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:405",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:458",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:528"
+          ]
+        }
+      ],
+      [
+        "#ecfdf5",
+        {
+          "hsl": [
+            151.76470588235293,
+            0.8095238095238101,
+            0.9588235294117647
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:399",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:534"
+          ]
+        }
+      ],
+      [
+        "#f6f6f6",
+        {
+          "hsl": [
+            0,
+            0,
+            0.9647058823529412
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:28",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:30",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:70"
+          ]
+        }
+      ],
+      [
+        "#f5f6f7",
+        {
+          "hsl": [
+            210,
+            0.11111111111111094,
+            0.9647058823529412
+          ],
+          "sites": [
+            "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:57",
+            "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:121",
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:235"
+          ]
+        }
+      ],
+      [
+        "#fff7ed",
+        {
+          "hsl": [
+            33.33333333333332,
+            1,
+            0.9647058823529412
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:202"
+          ]
+        }
+      ],
+      [
+        "#eff6ff",
+        {
+          "hsl": [
+            213.75,
+            1,
+            0.9686274509803922
+          ],
+          "sites": [
+            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:191"
+          ]
+        }
+      ],
+      [
+        "#faf9f5",
+        {
+          "hsl": [
+            48,
+            0.3333333333333327,
+            0.9705882352941176
+          ],
+          "sites": [
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp-en.css:12",
+            "packages/capabilities/dsh-overseas-skills/backup/intake-2026-09/overwritten/kami/assets/templates/marp/slides-marp.css:24"
+          ]
+        }
+      ],
+      [
+        "#f7f8f7",
+        {
+          "hsl": [
+            120,
+            0.06666666666666654,
+            0.9705882352941176
+          ],
+          "sites": [
+            "packages/platform/dsh-settings-shell-local/src/client/shell.css:20"
+          ]
+        }
+      ],
+      [
+        "#f7f8fa",
+        {
+          "hsl": [
+            220,
+            0.23076923076923025,
+            0.9745098039215686
+          ],
+          "sites": [
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:32",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:75",
+            "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:161"
+          ]
+        }
+      ],
+      [
+        "#fff8f7",
+        {
+          "hsl": [
+            7.499999999999973,
+            1,
+            0.9843137254901961
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:114",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:24",
+            "shared/client/sanbao-tokens.ts:23"
+          ]
+        }
+      ],
+      [
+        "#fdfdfd",
+        {
+          "hsl": [
+            0,
+            0,
+            0.9921568627450981
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:26",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:68",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:10"
+          ]
+        }
+      ],
+      [
+        "#fffdfc",
+        {
+          "hsl": [
+            20,
+            1,
+            0.9941176470588236
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:117",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:119",
+            "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:24"
+          ]
+        }
+      ],
+      [
+        "#ffffff",
+        {
+          "hsl": [
+            0,
+            0,
+            1
+          ],
+          "sites": [
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:29",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:31",
+            "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:36"
+          ]
+        }
+      ],
+      [
+        "#fff",
+        {
+          "hsl": [
+            0,
+            0,
+            1
+          ],
+          "sites": [
+            "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:17",
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:63",
+            "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:89"
+          ]
+        }
+      ]
+    ]
+  },
+  "hue": {
+    "occurrences": 1451,
+    "distinct": 350,
+    "buckets": [
+      [
+        0,
+        46
+      ],
+      [
+        30,
+        23
+      ],
+      [
+        60,
+        2
+      ],
+      [
+        90,
+        18
+      ],
+      [
+        120,
+        31
+      ],
+      [
+        150,
+        8
+      ],
+      [
+        180,
+        11
+      ],
+      [
+        210,
+        79
+      ],
+      [
+        240,
+        10
+      ],
+      [
+        270,
+        1
+      ],
+      [
+        300,
+        2
+      ],
+      [
+        330,
+        14
+      ]
+    ],
+    "byFamily": {
+      "BLUE": 84,
+      "neutral": 73,
+      "green/teal": 78,
+      "warm": 88,
+      "other": 27,
+      "unparsable": 0
+    }
+  },
+  "hardcoded": {
+    "hexOccurrences": 571,
+    "tokenDefs": 124,
+    "varRefs": 1757,
+    "hardcoded": 447,
+    "tokenizationRate": 79.7
+  },
+  "fallbacks": {
+    "tokensWithLiteralFallback": 30,
+    "totalVariants": 88,
+    "conflicting": [
+      {
+        "token": "--dsw-alias-border-l1",
+        "variants": [
+          {
+            "value": "rgb(0 0 0 / 8%)",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:21"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.04)",
+            "count": 6,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:35",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:161"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.07)",
+            "count": 5,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:85",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:362"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.08)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:170"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.11)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:279"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.1)",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:430",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:663"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.09)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:496"
+            ]
+          },
+          {
+            "value": "#e5e7eb",
+            "count": 5,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:65",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:170"
+            ]
+          },
+          {
+            "value": "#d7dae0",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:240",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:268"
+            ]
+          },
+          {
+            "value": "rgba(255, 255, 255, 0.1)",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:635",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:668"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-label-primary",
+        "variants": [
+          {
+            "value": "#1e221f",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:22"
+            ]
+          },
+          {
+            "value": "#0f1115",
+            "count": 12,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:44",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:66"
+            ]
+          },
+          {
+            "value": "#111",
+            "count": 6,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:71",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:171"
+            ]
+          },
+          {
+            "value": "#1c1e26",
+            "count": 6,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:33",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:196"
+            ]
+          },
+          {
+            "value": "#3a3f4b",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:76",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:115"
+            ]
+          },
+          {
+            "value": "#2f3542",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:307"
+            ]
+          },
+          {
+            "value": "#111827",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:365"
+            ]
+          },
+          {
+            "value": "#f1f4f0",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:660",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:690"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-label-secondary",
+        "variants": [
+          {
+            "value": "#5d645e",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:23"
+            ]
+          },
+          {
+            "value": "#61666b",
+            "count": 20,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:58",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:122"
+            ]
+          },
+          {
+            "value": "#666",
+            "count": 13,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:583",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:659"
+            ]
+          },
+          {
+            "value": "#555",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:738"
+            ]
+          },
+          {
+            "value": "#8a8f9c",
+            "count": 7,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:106",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:160"
+            ]
+          },
+          {
+            "value": "#6b7280",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:270",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:295"
+            ]
+          },
+          {
+            "value": "#5f6672",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:549"
+            ]
+          },
+          {
+            "value": "rgba(255, 255, 255, 0.62)",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:655",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:677"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-border-l2",
+        "variants": [
+          {
+            "value": "rgba(0, 0, 0, 0.1)",
+            "count": 10,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:15",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:55"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.14)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:210"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.12)",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:559",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:691"
+            ]
+          },
+          {
+            "value": "#d7dae0",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:74",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:113"
+            ]
+          },
+          {
+            "value": "#d1d5db",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:427"
+            ]
+          },
+          {
+            "value": "rgba(255, 255, 255, 0.16)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:689"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-label-caption",
+        "variants": [
+          {
+            "value": "#adb2b8",
+            "count": 10,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:335",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:424"
+            ]
+          },
+          {
+            "value": "#999",
+            "count": 8,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:199",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:249"
+            ]
+          },
+          {
+            "value": "#9a9aa0",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:216"
+            ]
+          },
+          {
+            "value": "#bbb",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:452",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:583"
+            ]
+          },
+          {
+            "value": "#aaa",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:638",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:716"
+            ]
+          },
+          {
+            "value": "#888",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:653",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:759"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-bg-layer-1",
+        "variants": [
+          {
+            "value": "#ffffff",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:18"
+            ]
+          },
+          {
+            "value": "#fff",
+            "count": 11,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:17",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:63"
+            ]
+          },
+          {
+            "value": "#fdfdfd",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:195"
+            ]
+          },
+          {
+            "value": "#f7f8fa",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:556"
+            ]
+          },
+          {
+            "value": "#202420",
+            "count": 5,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:622",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:626"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-bg-layer-2",
+        "variants": [
+          {
+            "value": "#f7f8f7",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:20"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.03)",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:280",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:363"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.04)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:330"
+            ]
+          },
+          {
+            "value": "#f7f8fa",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:161",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:171"
+            ]
+          },
+          {
+            "value": "#292d29",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:630"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-interactive-bg-hover",
+        "variants": [
+          {
+            "value": "rgba(38, 49, 72, 0.06)",
+            "count": 8,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:65",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:105"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.06)",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:169",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:255"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.05)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:506"
+            ]
+          },
+          {
+            "value": "#f2f3f5",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:89",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:125"
+            ]
+          },
+          {
+            "value": "rgba(255, 255, 255, 0.07)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:694"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-bg-base",
+        "variants": [
+          {
+            "value": "#fff",
+            "count": 5,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:315",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:933"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.015)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:211"
+            ]
+          },
+          {
+            "value": "rgba(0, 0, 0, 0.04)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:558"
+            ]
+          },
+          {
+            "value": "#f7f8fa",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:32",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:75"
+            ]
+          },
+          {
+            "value": "#171a17",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:667",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:672"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-state-success-primary",
+        "variants": [
+          {
+            "value": "#22c55e",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:328",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:510"
+            ]
+          },
+          {
+            "value": "#0f7a50",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:400",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:504"
+            ]
+          },
+          {
+            "value": "#10b981",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:446"
+            ]
+          },
+          {
+            "value": "#0f9d6e",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:533"
+            ]
+          },
+          {
+            "value": "#30d158",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:646",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:647"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-state-business-tertiary",
+        "variants": [
+          {
+            "value": "rgba(52, 122, 47, 0.12)",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:115",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:289"
+            ]
+          },
+          {
+            "value": "rgba(52, 122, 47, 0.16)",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:230",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:250"
+            ]
+          },
+          {
+            "value": "rgba(52, 122, 47, 0.32)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:505"
+            ]
+          },
+          {
+            "value": "#e7f2e3",
+            "count": 5,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:12",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:151"
+            ]
+          },
+          {
+            "value": "rgba(88, 184, 72, 0.18)",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:639",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:682"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-state-business-primary",
+        "variants": [
+          {
+            "value": "#3d8a33",
+            "count": 1,
+            "sample": [
+              "packages/platform/dsh-settings-shell-local/src/client/shell.css:17"
+            ]
+          },
+          {
+            "value": "#347a2f",
+            "count": 43,
+            "sample": [
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:95",
+              "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css:113"
+            ]
+          },
+          {
+            "value": "#58b848",
+            "count": 6,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:603",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:640"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-label-tertiary",
+        "variants": [
+          {
+            "value": "#8a919c",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:49",
+              "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:72"
+            ]
+          },
+          {
+            "value": "#a2a7b3",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:213",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:371"
+            ]
+          },
+          {
+            "value": "#a0a5b1",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:613"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-state-error-primary",
+        "variants": [
+          {
+            "value": "#ec1313",
+            "count": 3,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:265",
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:514"
+            ]
+          },
+          {
+            "value": "#b42318",
+            "count": 4,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:406",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:457"
+            ]
+          },
+          {
+            "value": "#ff6b61",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:703",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:704"
+            ]
+          }
+        ]
+      },
+      {
+        "token": "--dsw-alias-state-success-tertiary",
+        "variants": [
+          {
+            "value": "#e6faed",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:329"
+            ]
+          },
+          {
+            "value": "#c9f0dd",
+            "count": 2,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:401",
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:532"
+            ]
+          },
+          {
+            "value": "rgba(48, 209, 88, 0.15)",
+            "count": 1,
+            "sample": [
+              "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css:645"
+            ]
+          }
+        ]
+      }
+    ],
+    "conflictingCount": 19
+  },
+  "asymmetry": {
+    "darkScoped": 18,
+    "darkMentions": 25,
+    "lightScoped": 0,
+    "perFile": [
+      [
+        "packages/surfaces/dsh-skill-center-local/src/client/skill-panel.module.css",
+        {
+          "darkScoped": 18,
+          "lightScoped": 0,
+          "any": 20
+        }
+      ],
+      [
+        "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css",
+        {
+          "darkScoped": 0,
+          "lightScoped": 0,
+          "any": 2
+        }
+      ],
+      [
+        "packages/surfaces/dsh-role-matrix-local/src/client/role-matrix.module.css",
+        {
+          "darkScoped": 0,
+          "lightScoped": 0,
+          "any": 2
+        }
+      ],
+      [
+        "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css",
+        {
+          "darkScoped": 0,
+          "lightScoped": 0,
+          "any": 1
+        }
+      ]
+    ]
+  },
+  "hueIntegrity": [],
+  "hueIntegrityEngine": null,
+  "hueIntegrityScope": {
+    "status": "no-scope",
+    "expected": 0,
+    "checked": 0,
+    "reason": "当前四层 × 三身份无可比较的 oklch 混合项；不合成案例"
+  },
+  "contrast": [
+    {
+      "token": "--dsw-alias-link",
+      "officialDeclared": "var(--dsw-static-deepseek-500)",
+      "officialResolved": "#4176e6",
+      "officialFamily": "deepseek(blue)",
+      "official on #FFFFFF": 4.234920265946941,
+      "品牌绿 on #FFFFFF": 5.288508930603365,
+      "official on 皮肤浅色底 #F6F7F4": 3.9383150225862686,
+      "品牌绿 on 皮肤浅色底 #F6F7F4": 4.918112469779809
+    },
+    {
+      "token": "--dsw-alias-brand-primary",
+      "officialDeclared": "var(--dsw-static-neutral-bluish-1000)",
+      "officialResolved": "#0f1115",
+      "officialFamily": "neutral-bluish",
+      "official on #FFFFFF": 18.896452054380127,
+      "品牌绿 on #FFFFFF": 5.288508930603365,
+      "official on 皮肤浅色底 #F6F7F4": 17.572982801532355,
+      "品牌绿 on 皮肤浅色底 #F6F7F4": 4.918112469779809
+    }
+  ],
+  "layerEngine": {
+    "available": true,
+    "reason": "ok",
+    "engine": "153.0.8010.50",
+    "expected": 12,
+    "checked": 12,
+    "failed": [],
+    "identities": [
+      {
+        "id": "light",
+        "scheme": "light"
+      },
+      {
+        "id": "dark",
+        "scheme": "dark"
+      },
+      {
+        "id": "warm-pink",
+        "scheme": "light"
+      }
+    ],
+    "themeCss": "body {\n  --sanbao-bg: var(--sanbao-canvas);\n  --sanbao-surface: var(--sanbao-panel);\n  --sanbao-surface2: var(--sanbao-inset);\n  --sanbao-ink: var(--sanbao-foreground);\n  --sanbao-muted: var(--sanbao-secondary);\n  --sanbao-line: var(--sanbao-border);\n  --sanbao-good: var(--sanbao-success);\n  --sanbao-metal-ink: var(--sanbao-foreground);\n  --sanbao-metal-border: var(--sanbao-border);\n  --sanbao-metal-fill: var(--sanbao-panel);\n  --sanbao-metal-line: var(--sanbao-border);\n  --sanbao-metal-highlight: var(--sanbao-hover);\n  --sanbao-metal-pressed: var(--sanbao-pressed);\n  --sanbao-radius: var(--lute-radius-row, 8px);\n  --sanbao-metal-shadow: transparent;\n  --sanbao-success-surface: color-mix(in srgb, var(--sanbao-success) 10%, var(--sanbao-canvas));\n  --sanbao-warning-surface: color-mix(in srgb, var(--sanbao-warning) 10%, var(--sanbao-canvas));\n  --sanbao-error-surface: color-mix(in srgb, var(--sanbao-error) 10%, var(--sanbao-canvas));\n  --sanbao-fast: 160ms;\n  --sanbao-base: 260ms;\n  --sanbao-slow: 520ms;\n  --sanbao-ease: cubic-bezier(.22,1,.36,1);\n}\nbody:not([data-sanbao-theme]) { --sanbao-canvas: #FDFDFD;\n  --sanbao-sidebar: #F1F1F0;\n  --sanbao-right-sidebar: #F6F6F6;\n  --sanbao-panel: #FFFFFF;\n  --sanbao-inset: #F6F6F6;\n  --sanbao-overlay: #FFFFFF;\n  --sanbao-foreground: #202120;\n  --sanbao-secondary: #60635E;\n  --sanbao-accent: #386940;\n  --sanbao-accent-fill: #386940;\n  --sanbao-on-accent: #FFFFFF;\n  --sanbao-hover: #E9EBE7;\n  --sanbao-pressed: #DDE3DC;\n  --sanbao-selected: #E4ECE4;\n  --sanbao-disabled: #959A93;\n  --sanbao-border: #D7DBD4;\n  --sanbao-control-border: #788076;\n  --sanbao-success: #2F6B3D;\n  --sanbao-warning: #855D18;\n  --sanbao-error: #A94040; }\nbody[data-ds-dark-theme]:not([data-sanbao-theme]) { --sanbao-canvas: #232523;\n  --sanbao-sidebar: #242624;\n  --sanbao-right-sidebar: #191B1A;\n  --sanbao-panel: #191B1A;\n  --sanbao-inset: #131413;\n  --sanbao-overlay: #131413;\n  --sanbao-foreground: #ECEDEB;\n  --sanbao-secondary: #AFB5AF;\n  --sanbao-accent: #8FBC99;\n  --sanbao-accent-fill: #5C9363;\n  --sanbao-on-accent: #101C12;\n  --sanbao-hover: #2E332F;\n  --sanbao-pressed: #343C35;\n  --sanbao-selected: #293A2D;\n  --sanbao-disabled: #737D75;\n  --sanbao-border: #3E463F;\n  --sanbao-control-border: #818E84;\n  --sanbao-success: #8FBC99;\n  --sanbao-warning: #DAB879;\n  --sanbao-error: #E49393; }\nbody[data-sanbao-theme=\"light\"] {\n  color-scheme: light;\n  --sanbao-canvas: #FDFDFD;\n  --sanbao-sidebar: #F1F1F0;\n  --sanbao-right-sidebar: #F6F6F6;\n  --sanbao-panel: #FFFFFF;\n  --sanbao-inset: #F6F6F6;\n  --sanbao-overlay: #FFFFFF;\n  --sanbao-foreground: #202120;\n  --sanbao-secondary: #60635E;\n  --sanbao-accent: #386940;\n  --sanbao-accent-fill: #386940;\n  --sanbao-on-accent: #FFFFFF;\n  --sanbao-hover: #E9EBE7;\n  --sanbao-pressed: #DDE3DC;\n  --sanbao-selected: #E4ECE4;\n  --sanbao-disabled: #959A93;\n  --sanbao-border: #D7DBD4;\n  --sanbao-control-border: #788076;\n  --sanbao-success: #2F6B3D;\n  --sanbao-warning: #855D18;\n  --sanbao-error: #A94040;\n}\nbody[data-sanbao-theme=\"dark\"] {\n  color-scheme: dark;\n  --sanbao-canvas: #232523;\n  --sanbao-sidebar: #242624;\n  --sanbao-right-sidebar: #191B1A;\n  --sanbao-panel: #191B1A;\n  --sanbao-inset: #131413;\n  --sanbao-overlay: #131413;\n  --sanbao-foreground: #ECEDEB;\n  --sanbao-secondary: #AFB5AF;\n  --sanbao-accent: #8FBC99;\n  --sanbao-accent-fill: #5C9363;\n  --sanbao-on-accent: #101C12;\n  --sanbao-hover: #2E332F;\n  --sanbao-pressed: #343C35;\n  --sanbao-selected: #293A2D;\n  --sanbao-disabled: #737D75;\n  --sanbao-border: #3E463F;\n  --sanbao-control-border: #818E84;\n  --sanbao-success: #8FBC99;\n  --sanbao-warning: #DAB879;\n  --sanbao-error: #E49393;\n}\nbody[data-sanbao-theme=\"warm-pink\"] {\n  color-scheme: light;\n  --sanbao-canvas: #FFF8F7;\n  --sanbao-sidebar: #F7EEEC;\n  --sanbao-right-sidebar: #F7EEEC;\n  --sanbao-panel: #FFFDFC;\n  --sanbao-inset: #F3E6E4;\n  --sanbao-overlay: #FFFDFC;\n  --sanbao-foreground: #382E30;\n  --sanbao-secondary: #6B595E;\n  --sanbao-accent: #874958;\n  --sanbao-accent-fill: #8F5361;\n  --sanbao-on-accent: #FFFFFF;\n  --sanbao-hover: #EFE1DF;\n  --sanbao-pressed: #E9D8D6;\n  --sanbao-selected: #EDDBDE;\n  --sanbao-disabled: #A48F94;\n  --sanbao-border: #DCC8CD;\n  --sanbao-control-border: #91717B;\n  --sanbao-success: #406748;\n  --sanbao-warning: #80501F;\n  --sanbao-error: #A53945;\n}",
+    "sourceFiles": [
+      "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts",
+      "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/theme-settings.ts",
+      "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/client/theme-typography.ts",
+      "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/client/theme-tokens.ts",
+      "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/shared/client/sanbao-tokens.ts"
+    ],
+    "controls": [
+      {
+        "key": "light:positive",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-canvas)",
+        "expectValid": true,
+        "resolvedExpression": "#FDFDFD",
+        "cssComputed": "rgb(253, 253, 253)",
+        "valid": true,
+        "rgb": [
+          253,
+          253,
+          253
+        ],
+        "alpha": 255,
+        "ok": true
+      },
+      {
+        "key": "light:negative",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-zzz-not-a-real-token)",
+        "expectValid": false,
+        "resolvedExpression": "",
+        "cssComputed": "rgba(0, 0, 0, 0)",
+        "valid": false,
+        "rgb": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 0,
+        "ok": true
+      },
+      {
+        "key": "dark:positive",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-canvas)",
+        "expectValid": true,
+        "resolvedExpression": "#232523",
+        "cssComputed": "rgb(35, 37, 35)",
+        "valid": true,
+        "rgb": [
+          35,
+          37,
+          35
+        ],
+        "alpha": 255,
+        "ok": true
+      },
+      {
+        "key": "dark:negative",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-zzz-not-a-real-token)",
+        "expectValid": false,
+        "resolvedExpression": "",
+        "cssComputed": "rgba(0, 0, 0, 0)",
+        "valid": false,
+        "rgb": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 0,
+        "ok": true
+      },
+      {
+        "key": "warm-pink:positive",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-canvas)",
+        "expectValid": true,
+        "resolvedExpression": "#FFF8F7",
+        "cssComputed": "rgb(255, 248, 247)",
+        "valid": true,
+        "rgb": [
+          255,
+          248,
+          247
+        ],
+        "alpha": 255,
+        "ok": true
+      },
+      {
+        "key": "warm-pink:negative",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-zzz-not-a-real-token)",
+        "expectValid": false,
+        "resolvedExpression": "",
+        "cssComputed": "rgba(0, 0, 0, 0)",
+        "valid": false,
+        "rgb": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 0,
+        "ok": true
+      }
+    ],
+    "expressions": {
+      "--dsw-alias-bg-base": {
+        "light": "var(--sanbao-canvas)",
+        "dark": "var(--sanbao-canvas)",
+        "warm-pink": "var(--sanbao-canvas)"
+      },
+      "--dsw-alias-bg-layer-1": {
+        "light": "var(--sanbao-panel)",
+        "dark": "var(--sanbao-panel)",
+        "warm-pink": "var(--sanbao-panel)"
+      },
+      "--dsw-alias-bg-layer-2": {
+        "light": "var(--sanbao-inset)",
+        "dark": "var(--sanbao-inset)",
+        "warm-pink": "var(--sanbao-inset)"
+      },
+      "--dsw-alias-bg-layer-3": {
+        "light": "var(--sanbao-overlay)",
+        "dark": "var(--sanbao-overlay)",
+        "warm-pink": "var(--sanbao-overlay)"
+      }
+    },
+    "values": {
+      "light:--dsw-alias-bg-base": {
+        "key": "light:--dsw-alias-bg-base",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-canvas)",
+        "resolvedExpression": "#FDFDFD",
+        "cssComputed": "rgb(253, 253, 253)",
+        "valid": true,
+        "rgb": [
+          253,
+          253,
+          253
+        ],
+        "alpha": 255
+      },
+      "dark:--dsw-alias-bg-base": {
+        "key": "dark:--dsw-alias-bg-base",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-canvas)",
+        "resolvedExpression": "#232523",
+        "cssComputed": "rgb(35, 37, 35)",
+        "valid": true,
+        "rgb": [
+          35,
+          37,
+          35
+        ],
+        "alpha": 255
+      },
+      "warm-pink:--dsw-alias-bg-base": {
+        "key": "warm-pink:--dsw-alias-bg-base",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-canvas)",
+        "resolvedExpression": "#FFF8F7",
+        "cssComputed": "rgb(255, 248, 247)",
+        "valid": true,
+        "rgb": [
+          255,
+          248,
+          247
+        ],
+        "alpha": 255
+      },
+      "light:--dsw-alias-bg-layer-1": {
+        "key": "light:--dsw-alias-bg-layer-1",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-panel)",
+        "resolvedExpression": "#FFFFFF",
+        "cssComputed": "rgb(255, 255, 255)",
+        "valid": true,
+        "rgb": [
+          255,
+          255,
+          255
+        ],
+        "alpha": 255
+      },
+      "dark:--dsw-alias-bg-layer-1": {
+        "key": "dark:--dsw-alias-bg-layer-1",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-panel)",
+        "resolvedExpression": "#191B1A",
+        "cssComputed": "rgb(25, 27, 26)",
+        "valid": true,
+        "rgb": [
+          25,
+          27,
+          26
+        ],
+        "alpha": 255
+      },
+      "warm-pink:--dsw-alias-bg-layer-1": {
+        "key": "warm-pink:--dsw-alias-bg-layer-1",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-panel)",
+        "resolvedExpression": "#FFFDFC",
+        "cssComputed": "rgb(255, 253, 252)",
+        "valid": true,
+        "rgb": [
+          255,
+          253,
+          252
+        ],
+        "alpha": 255
+      },
+      "light:--dsw-alias-bg-layer-2": {
+        "key": "light:--dsw-alias-bg-layer-2",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-inset)",
+        "resolvedExpression": "#F6F6F6",
+        "cssComputed": "rgb(246, 246, 246)",
+        "valid": true,
+        "rgb": [
+          246,
+          246,
+          246
+        ],
+        "alpha": 255
+      },
+      "dark:--dsw-alias-bg-layer-2": {
+        "key": "dark:--dsw-alias-bg-layer-2",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-inset)",
+        "resolvedExpression": "#131413",
+        "cssComputed": "rgb(19, 20, 19)",
+        "valid": true,
+        "rgb": [
+          19,
+          20,
+          19
+        ],
+        "alpha": 255
+      },
+      "warm-pink:--dsw-alias-bg-layer-2": {
+        "key": "warm-pink:--dsw-alias-bg-layer-2",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-inset)",
+        "resolvedExpression": "#F3E6E4",
+        "cssComputed": "rgb(243, 230, 228)",
+        "valid": true,
+        "rgb": [
+          243,
+          230,
+          228
+        ],
+        "alpha": 255
+      },
+      "light:--dsw-alias-bg-layer-3": {
+        "key": "light:--dsw-alias-bg-layer-3",
+        "id": "light",
+        "scheme": "light",
+        "expr": "var(--sanbao-overlay)",
+        "resolvedExpression": "#FFFFFF",
+        "cssComputed": "rgb(255, 255, 255)",
+        "valid": true,
+        "rgb": [
+          255,
+          255,
+          255
+        ],
+        "alpha": 255
+      },
+      "dark:--dsw-alias-bg-layer-3": {
+        "key": "dark:--dsw-alias-bg-layer-3",
+        "id": "dark",
+        "scheme": "dark",
+        "expr": "var(--sanbao-overlay)",
+        "resolvedExpression": "#131413",
+        "cssComputed": "rgb(19, 20, 19)",
+        "valid": true,
+        "rgb": [
+          19,
+          20,
+          19
+        ],
+        "alpha": 255
+      },
+      "warm-pink:--dsw-alias-bg-layer-3": {
+        "key": "warm-pink:--dsw-alias-bg-layer-3",
+        "id": "warm-pink",
+        "scheme": "light",
+        "expr": "var(--sanbao-overlay)",
+        "resolvedExpression": "#FFFDFC",
+        "cssComputed": "rgb(255, 253, 252)",
+        "valid": true,
+        "rgb": [
+          255,
+          253,
+          252
+        ],
+        "alpha": 255
+      }
+    },
+    "direction": {
+      "light": {
+        "series": [
+          {
+            "token": "--dsw-alias-bg-base",
+            "expr": "var(--sanbao-canvas)",
+            "cssComputed": "rgb(253, 253, 253)",
+            "rgb": [
+              253,
+              253,
+              253
+            ],
+            "luminance": 0.9822505503331171
+          },
+          {
+            "token": "--dsw-alias-bg-layer-1",
+            "expr": "var(--sanbao-panel)",
+            "cssComputed": "rgb(255, 255, 255)",
+            "rgb": [
+              255,
+              255,
+              255
+            ],
+            "luminance": 1
+          },
+          {
+            "token": "--dsw-alias-bg-layer-2",
+            "expr": "var(--sanbao-inset)",
+            "cssComputed": "rgb(246, 246, 246)",
+            "rgb": [
+              246,
+              246,
+              246
+            ],
+            "luminance": 0.9215818562772946
+          },
+          {
+            "token": "--dsw-alias-bg-layer-3",
+            "expr": "var(--sanbao-overlay)",
+            "cssComputed": "rgb(255, 255, 255)",
+            "rgb": [
+              255,
+              255,
+              255
+            ],
+            "luminance": 1
+          }
+        ],
+        "monotonicIncreasingFromBase": false
+      },
+      "dark": {
+        "series": [
+          {
+            "token": "--dsw-alias-bg-base",
+            "expr": "var(--sanbao-canvas)",
+            "cssComputed": "rgb(35, 37, 35)",
+            "rgb": [
+              35,
+              37,
+              35
+            ],
+            "luminance": 0.018018098050239486
+          },
+          {
+            "token": "--dsw-alias-bg-layer-1",
+            "expr": "var(--sanbao-panel)",
+            "cssComputed": "rgb(25, 27, 26)",
+            "rgb": [
+              25,
+              27,
+              26
+            ],
+            "luminance": 0.010651203258462024
+          },
+          {
+            "token": "--dsw-alias-bg-layer-2",
+            "expr": "var(--sanbao-inset)",
+            "cssComputed": "rgb(19, 20, 19)",
+            "rgb": [
+              19,
+              20,
+              19
+            ],
+            "luminance": 0.006857760823663111
+          },
+          {
+            "token": "--dsw-alias-bg-layer-3",
+            "expr": "var(--sanbao-overlay)",
+            "cssComputed": "rgb(19, 20, 19)",
+            "rgb": [
+              19,
+              20,
+              19
+            ],
+            "luminance": 0.006857760823663111
+          }
+        ],
+        "monotonicIncreasingFromBase": false
+      },
+      "warm-pink": {
+        "series": [
+          {
+            "token": "--dsw-alias-bg-base",
+            "expr": "var(--sanbao-canvas)",
+            "cssComputed": "rgb(255, 248, 247)",
+            "rgb": [
+              255,
+              248,
+              247
+            ],
+            "luminance": 0.9511020369677871
+          },
+          {
+            "token": "--dsw-alias-bg-layer-1",
+            "expr": "var(--sanbao-panel)",
+            "cssComputed": "rgb(255, 253, 252)",
+            "rgb": [
+              255,
+              253,
+              252
+            ],
+            "luminance": 0.9853883435650108
+          },
+          {
+            "token": "--dsw-alias-bg-layer-2",
+            "expr": "var(--sanbao-inset)",
+            "cssComputed": "rgb(243, 230, 228)",
+            "rgb": [
+              243,
+              230,
+              228
+            ],
+            "luminance": 0.8124975156157841
+          },
+          {
+            "token": "--dsw-alias-bg-layer-3",
+            "expr": "var(--sanbao-overlay)",
+            "cssComputed": "rgb(255, 253, 252)",
+            "rgb": [
+              255,
+              253,
+              252
+            ],
+            "luminance": 0.9853883435650108
+          }
+        ],
+        "monotonicIncreasingFromBase": false
+      }
+    }
+  },
+  "drift": [
+    {
+      "metric": "officialLightAlias",
+      "recorded": 79,
+      "measured": 79,
+      "delta": 0
+    },
+    {
+      "metric": "officialLightCustomProperties",
+      "recorded": 90,
+      "measured": 90,
+      "delta": 0
+    },
+    {
+      "metric": "consumed",
+      "recorded": 44,
+      "measured": 44,
+      "delta": 0
+    },
+    {
+      "metric": "consumedIncludingSpecific",
+      "recorded": 45,
+      "measured": 45,
+      "delta": 0
+    },
+    {
+      "metric": "owned",
+      "recorded": 19,
+      "measured": 43,
+      "delta": 24
+    },
+    {
+      "metric": "notOwned",
+      "recorded": 25,
+      "measured": 1,
+      "delta": -24
+    },
+    {
+      "metric": "nearWhiteDistinct",
+      "recorded": 29,
+      "measured": 38,
+      "delta": 9
+    },
+    {
+      "metric": "hardcodedHexScopeB",
+      "recorded": 335,
+      "measured": 447,
+      "delta": 112
+    },
+    {
+      "metric": "hexOccurrencesScopeA",
+      "recorded": 948,
+      "measured": 1451,
+      "delta": 503
+    },
+    {
+      "metric": "hexDistinctScopeA",
+      "recorded": 364,
+      "measured": 350,
+      "delta": -14
+    },
+    {
+      "metric": "blueFamilyDistinct",
+      "recorded": 90,
+      "measured": 79,
+      "delta": -11
+    },
+    {
+      "metric": "greenFamilyDistinct",
+      "recorded": 34,
+      "measured": 49,
+      "delta": 15
+    },
+    {
+      "metric": "conflictingFallbackTokens",
+      "recorded": 18,
+      "measured": 19,
+      "delta": 1
+    },
+    {
+      "metric": "darkScopedSkinLayers",
+      "recorded": 18,
+      "measured": 18,
+      "delta": 0
+    },
+    {
+      "metric": "darkMentions",
+      "recorded": 24,
+      "measured": 25,
+      "delta": 1
+    },
+    {
+      "metric": "lightScopedSkinLayers",
+      "recorded": 0,
+      "measured": 0,
+      "delta": 0
+    }
+  ]
+}

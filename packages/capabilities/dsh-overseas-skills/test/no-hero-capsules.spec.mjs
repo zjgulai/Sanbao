@@ -97,6 +97,12 @@ function capture() {
   return { registered, injected }
 }
 
+test('凭据操作按钮成对消费主题填色与前景', () => {
+  const css = readFileSync(CLIENT_BUNDLE, 'utf8').match(/\.ovsCredBtn \{[^}]+\}/)?.[0]
+  assert.ok(css)
+  assert.match(css, /color:var\(--sanbao-on-accent\); background:var\(--sanbao-accent-fill\)/)
+})
+
 test('捕获本身有效：装载 bundle 后确实抓到 slot 注册（否则下面的断言都是空转）', () => {
   const { registered } = capture()
   assert.ok(registered.length > 0, '一个 slot 都没捕获到——装载桩或 bundle 已坏')

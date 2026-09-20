@@ -38,7 +38,8 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-theme"
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-settings"
       ]
     }
   },
@@ -48,6 +49,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
+    "@deepseek-ai/schemastery": "3.18.2",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-store": "*",
     "@deepseek-ai/dsh-client-ui-settings": "*",

@@ -25,8 +25,8 @@
  *     named colour like `black`, which is a different colour per theme engine);
  *     the values themselves are verified against the live engine by
  *     `pnpm run accept:theme-tokens`, which is the only instrument that can.
- *  C. **Type rides the official shorthands.** No bare `font-size`/`line-height`
- *     pairs: the pairing is the design decision and the shell already made it.
+ *  C. **Type rides semantic shorthands with official fallbacks.** No bare
+ *     `font-size`/`line-height` pairs: the theme owns the pairing and scaling.
  *     Where a shorthand is deliberately followed by a family/variant override,
  *     the order is asserted — `font:` resets both, so a reversed pair silently
  *     undoes the override.
@@ -50,23 +50,23 @@ function stripComments(text: string): string {
 const code = stripComments(css)
 const lines = code.split('\n')
 
-/** The one declaration block allowed to hold literals: `.root,\n.entry { … }`. */
-function brandBlockRange(text: string): { start: number; end: number } {
-  const lines = text.split('\n')
-  const start = lines.findIndex((line) => line.trim() === '.root,')
-  expect(start, 'the brand block selector list `.root,` must exist').toBeGreaterThanOrEqual(0)
-  const end = lines.findIndex((line, i) => i > start && line.trim() === '}')
-  return { start, end }
-}
-
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g
 
 describe('stylesheet tokens', () => {
-  it('keeps every colour literal inside the single brand block (Law A)', () => {
-    const { start, end } = brandBlockRange(code)
+  it('uses global accent, selected and hover colours instead of a private palette', () => {
+    const block = (selector: string) => code.slice(code.indexOf(`${selector} {`)).split('}')[0]
+    expect(block('.sysRole')).toContain('color: var(--sanbao-accent)')
+    expect(block('.sysRole')).toContain('background: var(--sanbao-selected)')
+    expect(block('.sysCard:hover:not(:disabled)')).toContain('background: var(--sanbao-hover)')
+    expect(block('.sysCard:hover:not(:disabled) .sysIcon')).toContain('color: var(--sanbao-accent)')
+    expect(block('.sysCard:hover:not(:disabled) .sysIcon')).toContain('background: var(--sanbao-selected)')
+    expect(code.match(/--lute-(?:brand[\w-]*|on-brand)/g)).toBeNull()
+    expect(code.match(/#58b848|#3e9b33|#8fd48a|#2a722e|88,\s*184,\s*72|drop-shadow/gi)).toBeNull()
+  })
+
+  it('keeps every colour literal inside a token fallback (Law A)', () => {
     const outside: string[] = []
     lines.forEach((line, i) => {
-      if (i > start && i < end) return
       const hits = line.match(COLOR_LITERAL)
       if (hits === null) return
       // A literal inside a `var()` fallback is Law B, checked separately.
@@ -74,15 +74,7 @@ describe('stylesheet tokens', () => {
       if (inFallback) return
       outside.push(`${String(i + 1)}: ${line.trim()}`)
     })
-    expect(outside, 'colour literals outside the brand block').toEqual([])
-  })
-
-  it('declares the brand block on both roots, since they are separate trees', () => {
-    // The drawer (`.root`) and the sidebar row (`.entry`) have no shared
-    // ancestor, so a single-selector block would leave half the UI untinted.
-    const { start } = brandBlockRange(code)
-    expect(lines[start + 1].trim()).toBe('.entry {')
-    expect(css).toMatch(/--lute-brand:\s*#58b848/)
+    expect(outside, 'colour literals outside token fallbacks').toEqual([])
   })
 
   it('uses no named colours as fallbacks (Law B)', () => {
@@ -103,13 +95,42 @@ describe('stylesheet tokens', () => {
     expect(bareSizes, 'bare font-size declarations — use `font: var(--dsw-font-…)`').toEqual([])
   })
 
-  it('always takes type from the official shorthand family (Law C)', () => {
+  it('always takes type from semantic shorthands with official fallbacks (Law C)', () => {
     for (const line of lines) {
       const shorthand = /^\s*font\s*:/.exec(line)
       if (shorthand === null) continue
-      expect(line, `font shorthand must use an official token: ${line.trim()}`).toMatch(
-        /font:\s*var\(--dsw-font-[a-z0-9-]+\)/,
+      expect(line, `font shorthand must use a supported token: ${line.trim()}`).toMatch(
+        /font:\s*(?:var\(--dsw-font-[a-z0-9-]+\)|var\(--sanbao-font-(?:page|section|panel|body|control|meta),\s*var\(--dsw-font-[a-z0-9-]+\)\));/,
       )
+    }
+  })
+
+  it.each([
+    ['page', '--dsw-font-xl-24', ['title']],
+    ['section', '--dsw-font-l-20', ['sectionTitle']],
+    ['panel', '--dsw-font-base-strong-16', ['noticeTitle', 'cardLabel', 'roleTitle', 'sysName']],
+    ['body', '--dsw-font-s-14', ['subtitle', 'state', 'stateError', 'noticeList', 'cardSummary', 'productFeatures', 'outcome', 'sysDesc']],
+    ['control', '--dsw-font-s-14', ['ghost', 'search', 'backButton', 'primary', 'sysCard', 'sysAction']],
+    ['meta', '--dsw-font-xs-13', ['total', 'cardDir', 'cardMeta', 'cardNote', 'blocked', 'footer', 'systemsMeta', 'rolePath', 'roleUnknown', 'roleCount', 'sysNameEn', 'sysKind', 'sysTag', 'sysRole', 'sysRoleMore', 'sysFlag', 'sysNote']],
+  ] as const)('assigns %s typography by content role without local size overrides', (role: string, fallback: string, selectors: readonly string[]) => {
+    for (const selector of selectors) {
+      // The selector also occurs in grouped hit-target rules; read its font block.
+      const blocks = [...code.matchAll(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`, 'g'))]
+      const block = blocks.map((match) => match[1]).find((value) => /\bfont\s*:/.test(value ?? ''))
+      expect(block, `missing .${selector} font block`).toBeDefined()
+      expect(block?.match(/\bfont:\s*([^;]+);/)?.[1], `.${selector} typography`).toBe(
+        `var(--sanbao-font-${role}, var(${fallback}))`,
+      )
+      expect(block, `.${selector} must follow central font preferences`).not.toMatch(/\b(?:font-size|font-weight|line-height)\s*:/)
+    }
+  })
+
+  it('keeps navigation and the icon-only close glyph outside the page ladder', () => {
+    for (const selector of ['.entry', 'button[class*="newSession"][data-lute-navrow]', '.close']) {
+      const start = code.indexOf(`${selector} {`)
+      expect(start, `missing ${selector}`).toBeGreaterThanOrEqual(0)
+      const block = code.slice(start, code.indexOf('}', start))
+      expect(block).not.toContain('--sanbao-font-')
     }
   })
 
@@ -140,12 +161,13 @@ describe('stylesheet tokens', () => {
       // `--dsw-alias-` are prefix fragments, not token names.
       expect(token, `ill-formed token name: ${token}`).toMatch(/^--(dsw|ds)-[a-z0-9]+(-[a-z0-9]+)+$/)
     }
-    // The package's own variables are namespaced `--lute-*`, so a vendor-looking
-    // name can never be one of ours by accident.
+    // Drawer typography also consumes the shared Sanbao semantic ladder.
     for (const token of tokens) {
       const isOurs = token.startsWith('--lute-')
       const isVendor = /^--(dsw|ds)-/.test(token)
-      expect(isOurs || isVendor, `un-namespaced custom property: ${token}`).toBe(true)
+      const isTypography = /^--sanbao-font-(page|section|panel|body|control|meta)$/.test(token)
+      const isColor = /^--sanbao-(accent|accent-fill|on-accent|selected|hover|border)$/.test(token)
+      expect(isOurs || isVendor || isTypography || isColor, `un-namespaced custom property: ${token}`).toBe(true)
     }
   })
 
@@ -156,6 +178,11 @@ describe('stylesheet tokens', () => {
     // Referencing it looks themed and is not.
     expect(code).not.toContain('--dsw-font-mono')
     expect(code).toContain('--ds-font-family-code')
+  })
+
+  it('pairs primary launch fills with the global on-accent foreground', () => {
+    expect(code).toMatch(/\.primary\s*\{[^}]*color:\s*var\(--sanbao-on-accent\);[^}]*background:\s*var\(--sanbao-accent-fill\)/)
+    expect(code).toMatch(/\.primary:hover:not\(:disabled\)\s*\{[^}]*border-color:\s*var\(--sanbao-accent-fill\);[^}]*background:\s*var\(--sanbao-accent-fill\)/)
   })
 
   it('keeps reduced-motion and focus-visible coverage', () => {
@@ -242,7 +269,7 @@ describe('Codex drawer visual contract (B4-UI-405A)', () => {
     expect(controls).toContain('min-height: 32px')
     expect(block('.close')).toMatch(/width:\s*32px[\s\S]*height:\s*32px/)
     expect(code).toMatch(
-      /\.ghost:focus-visible,\s*\.close:focus-visible,\s*\.primary:focus-visible\s*\{[\s\S]*outline:\s*2px solid var\(--lute-brand\)[\s\S]*outline-offset:\s*2px/,
+      /\.ghost:focus-visible,\s*\.close:focus-visible,\s*\.primary:focus-visible\s*\{[\s\S]*outline:\s*2px solid var\(--sanbao-accent\)[\s\S]*outline-offset:\s*2px/,
     )
   })
 

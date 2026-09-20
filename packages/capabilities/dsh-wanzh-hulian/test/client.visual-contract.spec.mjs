@@ -13,6 +13,14 @@ const settingsShellCssPath = resolve(
 const client = readFileSync(clientPath, 'utf8')
 const settingsShellCss = readFileSync(settingsShellCssPath, 'utf8')
 
+test('互联工具标签和按钮不持有独立绿色色板', () => {
+  const css = client.slice(client.indexOf('var CSS = ['), client.indexOf('exports.inject'))
+  assert.doesNotMatch(css, /#58B848|#2E7D3C|#DCF1D6/i)
+  assert.match(css, /whBtn \{[^}]*color:var\(--sanbao-on-accent\); background:var\(--sanbao-accent-fill\)/)
+  assert.match(css, /whSegOn \{[^}]*color:var\(--sanbao-on-accent\); background:var\(--sanbao-accent-fill\)/)
+  assert.match(css, /whToolChip \{[^}]*color:var\(--sanbao-accent\); background:var\(--sanbao-selected\)/)
+})
+
 function declaredNumber(css, variable) {
   const match = css.match(new RegExp(`${variable}\\s*:\\s*(\\d+)`))
   assert.ok(match, `missing numeric declaration for ${variable}`)

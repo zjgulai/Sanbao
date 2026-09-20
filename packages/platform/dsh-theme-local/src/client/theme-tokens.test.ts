@@ -1,100 +1,62 @@
 import { describe, expect, it } from "vitest";
-
+import { SANBAO_PALETTES, THEME_IDS } from "./sanbao-tokens.js";
 import { DEFAULT_THEME_STUDIO_SETTINGS } from "../theme-settings.js";
-import {
-  themePresetSettings,
-  type ThemePresetId,
-} from "./presets.js";
 import { buildThemeTokenOverrides } from "./theme-tokens.js";
 
-function settingsFor(id: ThemePresetId) {
-  return themePresetSettings(id);
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map(i => {
+    const channel = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
+}
+function contrast(a: string, b: string): number {
+  const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (values[0]! + 0.05) / (values[1]! + 0.05);
 }
 
-describe("theme token overrides", () => {
-  it("maps conversation tabs to the configured accent and text colors", () => {
-    const settings = settingsFor("proof");
-    const tokens = buildThemeTokenOverrides(settings);
-
-    expect(tokens["--dsw-alias-state-business-primary"]).toEqual({
-      light: settings.lightAccent,
-      dark: settings.darkAccent,
-    });
-    expect(tokens["--dsw-alias-label-tertiary"]).toEqual({
-      light: `color-mix(in oklch, ${settings.lightForeground} 50%, ${settings.lightBackground})`,
-      dark: `color-mix(in oklch, ${settings.darkForeground} 50%, ${settings.darkBackground})`,
-    });
-  });
-
-  it("derives interaction and sidebar states from the same palette", () => {
-    const settings = settingsFor("github");
-    const tokens = buildThemeTokenOverrides(settings);
-
-    expect(tokens["--dsw-alias-interactive-bg-hover"]).toEqual({
-      light: `color-mix(in oklch, #000000 5%, ${settings.lightBackground})`,
-      dark: `color-mix(in oklch, #FFFFFF 7%, ${settings.darkBackground})`,
-    });
-    expect(tokens["--dsw-specific-sidebar-nav-item-active-accent"]).toEqual({
-      light: `color-mix(in oklch, ${settings.lightAccent} 12%, ${settings.lightSidebar})`,
-      dark: `color-mix(in oklch, ${settings.darkAccent} 12%, ${settings.darkSidebar})`,
-    });
-  });
-
-  it("keeps raised surfaces neutral instead of tinting them with text color", () => {
-    const settings = settingsFor("editorial");
-    const tokens = buildThemeTokenOverrides(settings);
-
-    expect(tokens["--dsw-alias-bg-layer-2"]).toEqual({
-      light: `color-mix(in oklch, ${settings.lightBackground} 30%, #FFFFFF)`,
-      dark: `color-mix(in oklch, #FFFFFF 6%, ${settings.darkSurface})`,
-    });
-    expect(tokens["--dsw-alias-bg-overlay"]).toEqual({
-      light: `color-mix(in oklch, ${settings.lightBackground} 10%, #FFFFFF)`,
-      dark: `color-mix(in oklch, #FFFFFF 12%, ${settings.darkSurface})`,
-    });
-
-    for (const token of [
-      "--dsw-alias-bg-layer-2",
-      "--dsw-alias-bg-layer-3",
-      "--dsw-alias-bg-module-platform",
-      "--dsw-alias-bg-overlay",
-      "--dsw-alias-border-l1",
-      "--dsw-alias-border-l2",
-      "--dsw-alias-border-l3",
-      "--dsw-alias-border-l4",
-    ] as const) {
-      expect(JSON.stringify(tokens[token]), token).not.toContain(
-        settings.lightForeground,
-      );
+describe("fixed theme token overrides", () => {
+  it("keeps text readable on default and interactive surfaces in all three themes", () => {
+    const failures: string[] = [];
+    for (const id of THEME_IDS) {
+      const palette = SANBAO_PALETTES[id];
+      for (const background of ["canvas", "sidebar", "rightSidebar", "panel", "inset", "overlay", "hover", "pressed", "selected"] as const) {
+        for (const foreground of ["foreground", "secondary", "accent", "success", "warning", "error"] as const) {
+          const ratio = contrast(palette[foreground], palette[background]);
+          if (ratio < (foreground === "foreground" ? 7 : 4.5)) failures.push(`${id} ${foreground}/${background}: ${ratio.toFixed(2)}`);
+        }
+      }
+      expect(contrast(palette.onAccent, palette.accentFill), `${id} primary button`).toBeGreaterThanOrEqual(4.5);
     }
+    expect(failures).toEqual([]);
   });
 
-  it("themes the running status, composer action, and sent message bubble", () => {
-    const settings = settingsFor("proof");
-    const tokens = buildThemeTokenOverrides(settings);
-
-    expect(tokens["--dsw-static-deepseek-500"]).toEqual({
-      light: settings.lightAccent,
-      dark: settings.darkAccent,
-    });
-    expect(tokens["--dsw-alias-button-info-fill"]).toEqual({
-      light: settings.lightAccent,
-      dark: settings.darkAccent,
-    });
-    expect(tokens["--dsw-specific-bubble"]).toEqual({
-      light: `color-mix(in oklch, ${settings.lightAccent} 10%, ${settings.lightBackground})`,
-      dark: `color-mix(in oklch, ${settings.darkAccent} 10%, ${settings.darkBackground})`,
-    });
+  it("pairs the official primary button fill with its readable foreground", () => {
+    const tokens = buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS);
+    expect(tokens["--dsw-alias-button-primary-fill"]).toEqual({ light: "var(--sanbao-accent-fill)", dark: "var(--sanbao-accent-fill)" });
+    expect(tokens["--dsw-alias-label-primary-foreground"]).toEqual({ light: "var(--sanbao-on-accent)", dark: "var(--sanbao-on-accent)" });
   });
 
-  it("maps inline markdown code to its configured theme color", () => {
-    const settings = settingsFor("proof");
-    const tokens = buildThemeTokenOverrides(settings);
+  it("separates panel, nested and overlay layers without changing theme identity", () => {
+    const tokens = buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS);
+    expect(tokens["--dsw-alias-bg-layer-1"]?.light).toBe("var(--sanbao-panel)");
+    expect(tokens["--dsw-alias-bg-layer-2"]?.light).toBe("var(--sanbao-inset)");
+    expect(tokens["--dsw-alias-bg-layer-3"]?.light).toBe("var(--sanbao-overlay)");
+    expect(tokens["--dsw-alias-bg-overlay"]?.light).toBe("var(--sanbao-overlay)");
+  });
 
-    expect(tokens["--dsw-alias-markdown-inline-code"]).toEqual({
-      light: settings.lightInlineCode,
-      dark: settings.darkInlineCode,
-    });
+  it("uses a semantic error surface for destructive hover states", () => {
+    const tokens = buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS);
+    expect(tokens["--dsw-alias-interactive-bg-hover-danger"]?.light).toBe("var(--sanbao-error-surface)");
+  });
+
+  it("keeps control boundaries distinguishable on interactive backgrounds", () => {
+    for (const id of THEME_IDS) {
+      const palette = SANBAO_PALETTES[id];
+      for (const background of ["canvas", "panel", "inset", "hover", "pressed", "selected"] as const) {
+        expect(contrast(palette.controlBorder, palette[background]), `${id} control/${background}`).toBeGreaterThanOrEqual(3);
+      }
+    }
   });
 
   it("maps interface and code font families through Harness theme tokens", () => {
@@ -116,6 +78,30 @@ describe("theme token overrides", () => {
     expect(tokens["--dsw-font-mono"]).toEqual(tokens["--ds-font-family-code"]);
   });
 
+  it("keeps heading, reading and control roles distinct while scaling them together", () => {
+    const normal = buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS);
+    const larger = buildThemeTokenOverrides({ ...DEFAULT_THEME_STUDIO_SETTINGS, uiFontSize: 16 });
+    const expected = {
+      "--sanbao-font-hero": [36, 44, 600],
+      "--sanbao-font-page": [28, 36, 600],
+      "--sanbao-font-section": [20, 28, 600],
+      "--sanbao-font-panel": [16, 24, 600],
+      "--sanbao-font-body": [14, 22, 400],
+      "--sanbao-font-control": [14, 20, 400],
+      "--sanbao-font-meta": [13, 18, 400],
+    };
+    for (const [name, [size, lineHeight, weight]] of Object.entries(expected)) {
+      expect(normal[name]?.light, name).toBe(`${weight} ${size}px/${lineHeight}px var(--dsw-font-family)`);
+      expect(normal[name]?.dark, name).toBe(normal[name]?.light);
+      const scaled = larger[name]?.light.match(/([\d.]+)px\/([\d.]+)px/);
+      expect(scaled, name).not.toBeNull();
+      expect(Number(scaled?.[1]), name).toBeCloseTo(size! * 16 / 14, 2);
+      expect(Number(scaled?.[2]), name).toBeCloseTo(lineHeight! * 16 / 14, 2);
+    }
+    expect(normal["--dsw-font-markdown-base"]?.light).toBe("16px/28px var(--dsw-font-family)");
+    expect(normal["--dsw-font-m-18"]?.light).toBe("600 18px/28px var(--dsw-font-family)");
+  });
+
   it("scales semantic interface and code type tokens from stable defaults", () => {
     const tokens = buildThemeTokenOverrides({
       ...DEFAULT_THEME_STUDIO_SETTINGS,
@@ -124,183 +110,12 @@ describe("theme token overrides", () => {
     });
 
     expect(tokens["--dsw-font-s-14"]).toEqual({
-      light: "16px/24px var(--dsw-font-family)",
-      dark: "16px/24px var(--dsw-font-family)",
+      light: "16px/25.143px var(--dsw-font-family)",
+      dark: "16px/25.143px var(--dsw-font-family)",
     });
     expect(tokens["--dsw-font-markdown-code-block-small"]).toEqual({
       light: "14px/20px var(--ds-font-family-code)",
       dark: "14px/20px var(--ds-font-family-code)",
     });
-  });
-});
-
-describe("contrast scaling", () => {
-  // Golden freeze: at the baseline contrast every neutral blend must stay
-  // byte-identical to the implementation before contrast existed. These
-  // literals are copied from that implementation, not regenerated.
-  it("keeps the baseline palette byte-identical with explicit contrast 50", () => {
-    const tokens = buildThemeTokenOverrides({
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightContrast: 50,
-      darkContrast: 50,
-    });
-    expect(tokens).toEqual(
-      buildThemeTokenOverrides(DEFAULT_THEME_STUDIO_SETTINGS),
-    );
-
-    expect(tokens["--dsw-alias-bg-layer-2"]).toEqual({
-      light: "color-mix(in oklch, #F6F7F4 30%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 6%, #202420)",
-    });
-    expect(tokens["--dsw-alias-bg-layer-3"]).toEqual({
-      light: "color-mix(in oklch, #F6F7F4 15%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 10%, #202420)",
-    });
-    expect(tokens["--dsw-alias-bg-module-platform"]).toEqual({
-      light: "color-mix(in oklch, #000000 4%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 6%, #202420)",
-    });
-    expect(tokens["--dsw-alias-bg-overlay"]).toEqual({
-      light: "color-mix(in oklch, #F6F7F4 10%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 12%, #202420)",
-    });
-    // Borders are translucent overlays at the Harness baseline alpha
-    // (#0000000a… / #ffffff0f…), not opaque background blends.
-    expect(tokens["--dsw-alias-border-l1"]).toEqual({
-      light: "rgb(0 0 0 / 0.039)",
-      dark: "rgb(255 255 255 / 0.059)",
-    });
-    expect(tokens["--dsw-alias-border-l2"]).toEqual({
-      light: "rgb(0 0 0 / 0.102)",
-      dark: "rgb(255 255 255 / 0.122)",
-    });
-    expect(tokens["--dsw-alias-border-l3"]).toEqual({
-      light: "rgb(0 0 0 / 0.122)",
-      dark: "rgb(255 255 255 / 0.161)",
-    });
-    expect(tokens["--dsw-alias-border-l4"]).toEqual({
-      light: "rgb(0 0 0 / 0.161)",
-      dark: "rgb(255 255 255 / 0.2)",
-    });
-    expect(tokens["--dsw-alias-label-secondary"]).toEqual({
-      light: "color-mix(in oklch, #1E221F 62%, #F6F7F4)",
-      dark: "color-mix(in oklch, #F1F4F0 62%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-label-tertiary"]).toEqual({
-      light: "color-mix(in oklch, #1E221F 50%, #F6F7F4)",
-      dark: "color-mix(in oklch, #F1F4F0 50%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-label-caption"]).toEqual({
-      light: "color-mix(in oklch, #1E221F 40%, #F6F7F4)",
-      dark: "color-mix(in oklch, #F1F4F0 40%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-label-dimmed"]).toEqual({
-      light: "color-mix(in oklch, #1E221F 28%, #F6F7F4)",
-      dark: "color-mix(in oklch, #F1F4F0 28%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-interactive-bg-hover"]).toEqual({
-      light: "color-mix(in oklch, #000000 5%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 7%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-interactive-bg-hover-solid"]).toEqual({
-      light: "color-mix(in oklch, #000000 5%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 7%, #202420)",
-    });
-    expect(tokens["--dsw-alias-interactive-bg-active"]).toEqual({
-      light: "color-mix(in oklch, #000000 9%, #F6F7F4)",
-      dark: "color-mix(in oklch, #FFFFFF 11%, #171A17)",
-    });
-    expect(tokens["--dsw-specific-sidebar-nav-item-active"]).toEqual({
-      light: "color-mix(in oklch, #000000 9%, #F1F4EF)",
-      dark: "color-mix(in oklch, #FFFFFF 11%, #191C1A)",
-    });
-    expect(tokens["--dsw-specific-sidebar-nav-item-hover"]).toEqual({
-      light: "color-mix(in oklch, #000000 5%, #F1F4EF)",
-      dark: "color-mix(in oklch, #FFFFFF 7%, #191C1A)",
-    });
-  });
-
-  it("scales neutral blends per variant while leaving accent derivations and the other variant untouched", () => {
-    const tokens = buildThemeTokenOverrides({
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightContrast: 100,
-    });
-
-    // k(100) = 1.4: 62 * 1.4 = 86.8 -> 87. Borders ride their own narrower
-    // band, k(100) = 1.25: 0.039 * 1.25 = 0.049.
-    expect(tokens["--dsw-alias-border-l1"]).toEqual({
-      light: "rgb(0 0 0 / 0.049)",
-      dark: "rgb(255 255 255 / 0.059)",
-    });
-    expect(tokens["--dsw-alias-label-secondary"]).toEqual({
-      light: "color-mix(in oklch, #1E221F 87%, #F6F7F4)",
-      dark: "color-mix(in oklch, #F1F4F0 62%, #171A17)",
-    });
-    // Accent-derived blends keep their tuned ratios regardless of contrast.
-    expect(tokens["--dsw-specific-bubble"]).toEqual({
-      light: "color-mix(in oklch, #347A2F 10%, #F6F7F4)",
-      dark: "color-mix(in oklch, #58B848 10%, #171A17)",
-    });
-    expect(tokens["--dsw-alias-interactive-bg-hover-accent"]).toEqual({
-      light: "color-mix(in oklch, #347A2F 10%, #F6F7F4)",
-      dark: "color-mix(in oklch, #58B848 10%, #171A17)",
-    });
-  });
-
-  it("lowers neutral blend strength at the lower bound", () => {
-    const tokens = buildThemeTokenOverrides({
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      darkContrast: 0,
-    });
-
-    // k(0) = 0.6: 6 * 0.6 = 3.6 -> 4. Borders: k(0) = 0.75,
-    // 0.122 * 0.75 = 0.091.
-    expect(tokens["--dsw-alias-border-l2"]).toEqual({
-      light: "rgb(0 0 0 / 0.102)",
-      dark: "rgb(255 255 255 / 0.091)",
-    });
-    expect(tokens["--dsw-alias-bg-layer-2"]).toEqual({
-      light: "color-mix(in oklch, #F6F7F4 30%, #FFFFFF)",
-      dark: "color-mix(in oklch, #FFFFFF 4%, #202420)",
-    });
-  });
-
-  /**
-   * The property the goldens above cannot state: whatever the contrast slider
-   * does, a border stays a **translucent overlay** and never turns into a drawn
-   * box. Without this, a future edit can silently restore an opaque blend and
-   * every exact-value assertion still looks reasonable.
-   */
-  it("keeps every border level a translucent overlay across the whole contrast range", () => {
-    const levels = [1, 2, 3, 4] as const;
-    const alphaOf = (value: string, label: string) => {
-      const match = /^rgb\((?:0 0 0|255 255 255) \/ (0\.\d+)\)$/.exec(value);
-      expect(match, `${label} must be an alpha overlay, got ${value}`).not.toBeNull();
-      return Number(match![1]);
-    };
-
-    for (const contrast of [0, 25, 50, 75, 100]) {
-      const tokens = buildThemeTokenOverrides({
-        ...DEFAULT_THEME_STUDIO_SETTINGS,
-        lightContrast: contrast,
-        darkContrast: contrast,
-      });
-      for (const mode of ["light", "dark"] as const) {
-        const alphas = levels.map((level) => {
-          const border = tokens[`--dsw-alias-border-l${level}`];
-          if (border === undefined) throw new Error(`missing --dsw-alias-border-l${level}`);
-          return alphaOf(border[mode], `${mode} l${level} at contrast ${contrast}`);
-        });
-        // Levels ascend, and the strongest one still stops at 0.25 — the old
-        // opaque oklch blend reached an equivalent ~0.42 at contrast 100, which
-        // is where a separator starts reading as structure. See the appearance
-        // revamp note for the measured 1.18–1.59x drift this replaced.
-        expect(alphas).toEqual([...alphas].sort((a, b) => a - b));
-        for (const alpha of alphas) {
-          expect(alpha).toBeGreaterThan(0);
-          expect(alpha).toBeLessThanOrEqual(0.25);
-        }
-      }
-    }
   });
 });

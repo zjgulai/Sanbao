@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CONTRAST_DEFAULT,
   DEFAULT_THEME_STUDIO_SETTINGS,
+  type ThemeId,
   type ThemeStudioSettings,
+  type ThemeTypographyField,
 } from "../theme-settings.js";
-import { getThemePreset } from "./presets.js";
 import {
+  LEGACY_THEME_STUDIO_STORAGE_KEY,
   loadThemeStudioPrefs,
   loadThemeStudioSettings,
   saveThemeStudioPrefs,
@@ -29,16 +30,20 @@ function memoryStorage(initial?: string): ThemeStudioStorage & {
 }
 
 describe("theme persistence", () => {
-  it("round-trips a complete theme", () => {
+  it.each(["light", "dark", "warm-pink"] as const)("round-trips %s and typography in v2", (themeId: ThemeId) => {
     const storage = memoryStorage();
     const settings: ThemeStudioSettings = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightAccent: "#123456",
+      themeId,
+      uiFont: "avenir",
+      codeFont: "menlo",
       uiFontSize: 16,
+      codeFontSize: 13,
     };
 
     expect(saveThemeStudioSettings(storage, settings)).toBe(true);
     expect(loadThemeStudioSettings(storage)).toEqual(settings);
+    expect(JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!)).toEqual(settings);
+    expect(storage.values.has(LEGACY_THEME_STUDIO_STORAGE_KEY)).toBe(false);
   });
 
   it("uses defaults for missing, malformed, or unavailable storage", () => {
@@ -53,47 +58,46 @@ describe("theme persistence", () => {
     );
   });
 
-  it("adds inline-code colors to themes saved before the field existed", () => {
-    const proof = getThemePreset("proof").palette;
-    const {
-      lightInlineCode: _lightInlineCode,
-      darkInlineCode: _darkInlineCode,
-      ...legacySettings
-    } = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...proof,
+  it("prefers valid v2 over legacy colors, typography, and the initial scheme", () => {
+    const settings: ThemeStudioSettings = {
+      themeId: "warm-pink",
+      uiFont: "inter",
+      codeFont: "jetbrains",
+      uiFontSize: 15,
+      codeFontSize: 13,
     };
+    const storage = memoryStorage(JSON.stringify(settings));
+    storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+      uiFont: "serif", codeFont: "menlo", uiFontSize: 16, codeFontSize: 15,
+      lightAccent: "broken",
+    }));
+    const reads: string[] = [];
 
-    expect(
-      loadThemeStudioSettings(memoryStorage(JSON.stringify(legacySettings))),
-    ).toEqual({
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...proof,
-    });
+    expect(loadThemeStudioSettings({
+      getItem: (key) => {
+        reads.push(key);
+        return storage.getItem(key);
+      },
+      setItem: storage.setItem,
+    }, "dark")).toEqual(settings);
+    expect(reads).toEqual([THEME_STUDIO_STORAGE_KEY]);
   });
 
-  it("migrates the reddish legacy editorial foreground", () => {
-    const legacyEditorial = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      ...getThemePreset("editorial").palette,
-      lightForeground: "#1F0909",
-      lightSidebar: "#F3F2EE",
-      darkSidebar: "#211C1A",
-      uiFont: "system",
-      codeFont: "sf-mono",
-      uiFontSize: 14,
-      codeFontSize: 14,
-    };
-    const storage = memoryStorage(JSON.stringify(legacyEditorial));
+  it.each([undefined, "{", "{}", "null", "[]"])(
+    "preserves legacy typography despite invalid colors when v2 is %s",
+    (cached: string | undefined) => {
+      const storage = memoryStorage(cached);
+      storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+        lightAccent: "broken", darkAccent: null, lightBackground: {}, darkBackground: 42,
+        lightContrast: -1, darkContrast: "100",
+        uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13,
+      }));
 
-    expect(loadThemeStudioSettings(storage)).toEqual({
-      ...legacyEditorial,
-      lightForeground: "#2F2C29",
-    });
-    expect(
-      JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!),
-    ).toMatchObject({ lightForeground: "#2F2C29" });
-  });
+      expect(loadThemeStudioSettings(storage, "dark")).toEqual({
+        themeId: "dark", uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13,
+      });
+    },
+  );
 
   it("reports a rejected write without changing the preview source", () => {
     const storage: ThemeStudioStorage = {
@@ -108,53 +112,51 @@ describe("theme persistence", () => {
     ).toBe(false);
   });
 
-  it("round-trips contrast values", () => {
-    const storage = memoryStorage();
-    const settings: ThemeStudioSettings = {
-      ...DEFAULT_THEME_STUDIO_SETTINGS,
-      lightContrast: 100,
-      darkContrast: 0,
-    };
+  it("leaves legacy, prefs, and unrelated caches byte-for-byte unchanged", () => {
+    const storage = memoryStorage("{");
+    storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({ uiFont: "serif" }));
+    storage.setItem(THEME_PREFS_STORAGE_KEY, '{ "reduceMotion": "off", "fontSmoothing": true }');
+    storage.setItem("other-plugin/cache", "untouched");
+    const before = new Map(storage.values);
 
+    const settings = loadThemeStudioSettings(storage, "dark");
+    expect(settings).toEqual({ ...DEFAULT_THEME_STUDIO_SETTINGS, themeId: "dark", uiFont: "serif" });
+    expect(storage.values).toEqual(before);
     expect(saveThemeStudioSettings(storage, settings)).toBe(true);
-    expect(loadThemeStudioSettings(storage)).toEqual(settings);
+    expect(storage.values).toEqual(new Map([
+      ...before,
+      [THEME_STUDIO_STORAGE_KEY, JSON.stringify(settings)],
+    ]));
   });
 
-  it("defaults contrast for themes saved before the field existed and migrates storage", () => {
-    const {
-      lightContrast: _lightContrast,
-      darkContrast: _darkContrast,
-      ...legacySettings
-    } = DEFAULT_THEME_STUDIO_SETTINGS;
-    const storage = memoryStorage(JSON.stringify(legacySettings));
-
-    expect(loadThemeStudioSettings(storage)).toEqual(
-      DEFAULT_THEME_STUDIO_SETTINGS,
-    );
-    expect(
-      JSON.parse(storage.values.get(THEME_STUDIO_STORAGE_KEY)!),
-    ).toMatchObject({
-      lightContrast: CONTRAST_DEFAULT,
-      darkContrast: CONTRAST_DEFAULT,
+  it("uses the initial scheme when storage reads are blocked and rejects unavailable writes", () => {
+    const storage: ThemeStudioStorage = {
+      getItem: () => { throw new Error("blocked"); },
+      setItem: () => { throw new Error("blocked"); },
+    };
+    expect(loadThemeStudioSettings(storage, "dark")).toEqual({
+      ...DEFAULT_THEME_STUDIO_SETTINGS, themeId: "dark",
     });
+    expect(saveThemeStudioSettings(undefined, DEFAULT_THEME_STUDIO_SETTINGS)).toBe(false);
+    expect(saveThemeStudioSettings(storage, DEFAULT_THEME_STUDIO_SETTINGS)).toBe(false);
   });
 
-  it("falls back to the default contrast for out-of-range or malformed values", () => {
-    // Contrast is a preference, not identity: a bad value mirrors the
-    // typography fallback (single-field default) instead of the color
-    // hard-failure that rejects the whole record.
-    for (const bad of [-1, 101, 50.5, "60", null, {}]) {
-      const raw = JSON.stringify({
-        ...DEFAULT_THEME_STUDIO_SETTINGS,
-        lightContrast: bad,
-        darkContrast: bad,
-      });
+  it.each(["uiFont", "codeFont", "uiFontSize", "codeFontSize"] as const)(
+    "defaults only the malformed legacy typography field %s",
+    (field: ThemeTypographyField) => {
+      const typography = { uiFont: "avenir", codeFont: "menlo", uiFontSize: 15, codeFontSize: 13 } as const;
+      for (const bad of [-1, 101, 50.5, "60", null, {}]) {
+        const storage = memoryStorage();
+        storage.setItem(LEGACY_THEME_STUDIO_STORAGE_KEY, JSON.stringify({
+          ...typography, [field]: bad, lightAccent: "broken",
+        }));
 
-      expect(loadThemeStudioSettings(memoryStorage(raw))).toEqual(
-        DEFAULT_THEME_STUDIO_SETTINGS,
-      );
-    }
-  });
+        expect(loadThemeStudioSettings(storage), `${field}: ${JSON.stringify(bad)}`).toEqual({
+          themeId: "light", ...typography, [field]: DEFAULT_THEME_STUDIO_SETTINGS[field],
+        });
+      }
+    },
+  );
 });
 
 describe("theme prefs", () => {
@@ -185,9 +187,10 @@ describe("theme prefs", () => {
     const prefs = { reduceMotion: "on" as const, fontSmoothing: true };
     expect(saveThemeStudioPrefs(storage, prefs)).toBe(true);
     expect(loadThemeStudioPrefs(storage)).toEqual(prefs);
-    expect(
-      loadThemeStudioSettings(storage).lightContrast,
-    ).toBe(CONTRAST_DEFAULT);
+    expect(loadThemeStudioSettings(storage)).toEqual(DEFAULT_THEME_STUDIO_SETTINGS);
+    expect(storage.values.get(THEME_STUDIO_STORAGE_KEY)).toBe(
+      JSON.stringify(DEFAULT_THEME_STUDIO_SETTINGS),
+    );
   });
 
   it("falls back to defaults per field for malformed prefs", () => {

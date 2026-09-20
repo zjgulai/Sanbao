@@ -5,7 +5,7 @@
  *  - 颜色只写 `var(--dsw-alias-*, <亮色真实读数>)`，字体用官方 font shorthand（无 fallback——名字是官方声明的）；
  *  - 间距/圆角走 `--lute-*` 家族（本仓库自建命名空间，见 shared/client/lute-tokens.ts），
  *    fallback 即字面量本身——注入缺失时视觉不塌。
- *  - 品牌绿仅用于焦点光环；状态色用 shell 的 state 家族（品牌色不是主题色）。
+ *  - 焦点使用全局 `--sanbao-accent`；状态色用 shell 的 state 家族。
  */
 
 .palette {
@@ -106,10 +106,10 @@
 }
 
 .item:focus-visible,
-.item:focus-visible .search {
-  outline: none;
-  /* 焦点光环用品牌绿（品牌色的合法出场位：可交互的主焦点） */
-  box-shadow: 0 0 0 2px var(--lute-brand-line, rgba(88, 184, 72, 0.45));
+.search:focus-visible,
+.refresh:focus-visible {
+  outline: 2px solid var(--sanbao-accent);
+  outline-offset: -2px;
 }
 
 .kind {

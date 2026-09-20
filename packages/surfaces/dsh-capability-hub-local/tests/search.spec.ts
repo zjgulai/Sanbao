@@ -1,6 +1,8 @@
 /**
  * 搜索评分测试：中英混排下子串 > tag > 摘要 > 子序列的次序，以及空查询语义。
  */
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { searchItems } from '../src/client/search.ts'
 import type { CapabilityItem } from '../src/client/types.ts'
@@ -17,6 +19,15 @@ function item(overrides: Partial<CapabilityItem> & { id: string }): CapabilityIt
     ...overrides,
   }
 }
+
+describe('palette focus', () => {
+  it('keeps search, refresh and result focus visible in the global accent', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/client/palette.module.css'), 'utf8')
+    const focus = css.match(/\.item:focus-visible,\s*\.search:focus-visible,\s*\.refresh:focus-visible\s*\{([^}]*)\}/)?.[1]
+    expect(focus).toContain('outline: 2px solid var(--sanbao-accent)')
+    expect(css.match(/--lute-brand|88,\s*184,\s*72/g)).toBeNull()
+  })
+})
 
 describe('searchItems', () => {
   it('空查询按切片优先级分块，而不是沿用取数顺序（回归：首屏曾全是工具）', () => {
