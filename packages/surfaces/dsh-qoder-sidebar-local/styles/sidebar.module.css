@@ -1,0 +1,257 @@
+/**
+ * 右栏「活动」页样式。
+ *
+ * 规矩（本仓库红线）：
+ *   1. **零字面色**：颜色一律走 `--dsw-*` 主题 token（底色、边框、文字、状态）。
+ *   2. 改写官方外壳的锚点只用**稳定 data 属性**（ADR-0019：禁止钉 CSS-module 哈希）。
+ *   3. 折叠用 `grid-template-rows: 0fr ↔ 1fr`（不是 max-height），动效敏感用户归零。
+ */
+
+/* ── 宿主面板（原生右栏列）────────────────────────────────────────────────
+ *
+ * 面板底色换成右栏专属色（未定义时兜底到左栏面板色），左边界加粗到 1.5px
+ * （渲染值 ≥1.2px；1.2px 在 2x 屏上会被吸附成 1px）。 */
+
+:global([data-sidebar-right-panel]) {
+  background: var(--dsw-specific-sidebar-right-fill, var(--dsw-specific-sidebar-fill)) !important;
+  border-left: 1.5px solid var(--dsw-alias-border-l3) !important;
+}
+
+/* ── 一页：一列可折叠的栏 ─────────────────────────────────────────────── */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 16px;
+}
+
+.section {
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--dsw-alias-bg-layer-2) 55%, transparent);
+  overflow: hidden;
+  transition: border-color 160ms ease;
+}
+
+.section:hover {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sectionHeader:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.sectionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.section[data-expanded='true'] .sectionIcon {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.sectionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+}
+
+.sectionCount {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.sectionChevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.section[data-expanded='true'] .sectionChevron {
+  transform: rotate(90deg);
+}
+
+.sectionBody {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.section[data-expanded='true'] .sectionBody {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sectionBodyInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── 行 ─────────────────────────────────────────────────────────────────── */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0 10px 10px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rowDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+
+.row[data-state='running'] .rowDot {
+  background: var(--dsw-alias-state-business-primary);
+  animation: activityPulse 1.4s ease-in-out infinite;
+}
+
+.row[data-state='done'] .rowDot {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.row[data-state='error'] .rowDot {
+  background: var(--dsw-alias-state-error-primary);
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+}
+
+.rowMeta {
+  flex: none;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+@keyframes activityPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sectionBody,
+  .sectionChevron,
+  .rowDot {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ── 设置页的「右侧栏宽度」偏好行 ─────────────────────────────────────
+ *
+ * 颜色零字面量（本文件红线 1）：文字、边框、底色一律 `--dsw-alias-*`。
+ * 结构走 flex + 两端对齐，宽度值用等宽数字，避免 ± 点击时行宽抖动。 */
+
+.widthRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.widthCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.widthLabel {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+}
+
+.widthHint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.widthControl {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.widthValue {
+  min-width: 56px;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  text-align: center;
+}
+
+.widthButton {
+  min-width: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.widthButton:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.widthButton:disabled {
+  color: var(--dsw-alias-label-tertiary);
+  cursor: default;
+  opacity: 0.55;
+}

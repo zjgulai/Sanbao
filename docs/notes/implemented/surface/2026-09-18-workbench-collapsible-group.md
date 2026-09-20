@@ -1,7 +1,9 @@
 # 决策记录：能力带折叠组「工作台 ▸」收编落地
 
 - 日期：2026-09-18
-- 状态：implemented
+- 状态：**已退役（2026-09-20）**——折叠组形态由用户裁决撤销、条目全部铺开，见
+  [2026-09-20-workbench-group-retired](2026-09-20-workbench-group-retired.md)
+  （ADR-0125 修订节）；本 Note 保留为当时的落地记录，不再描述现状。
 - 对应 ADR：[ADR-0125](../../../adr/ADR-0125.md) D4、[ADR-0079](../../../adr/ADR-0079.md)、[ADR-0009](../../../adr/ADR-0009.md)
 - 涉及包：`shared/client/sidebar-entry-core.ts`、`packages/surfaces/dsh-skill-center-local`、`packages/surfaces/dsh-role-matrix-local`、`packages/surfaces/dsh-newapp-local`
 

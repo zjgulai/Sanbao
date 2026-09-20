@@ -22,7 +22,9 @@
     "accept:worktable-fence": "node scripts/acceptance/worktable-fence-live.mjs",
     "accept:newapp-products": "node scripts/acceptance/newapp-products-live.mjs",
     "accept:newapp-systems": "node scripts/acceptance/newapp-systems-live.mjs",
-    "accept:settings-shell": "node scripts/acceptance/settings-shell-live.mjs"
+    "accept:settings-shell": "node scripts/acceptance/settings-shell-live.mjs",
+    "accept:right-sidebar": "node scripts/acceptance/right-sidebar-activity-live.mjs",
+    "accept:right-sidebar-width": "node scripts/acceptance/right-sidebar-width-live.mjs"
   },
   "dependencies": {
     "@poyoapi/cli": "^0.1.11"
