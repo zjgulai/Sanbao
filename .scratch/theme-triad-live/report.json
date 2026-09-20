@@ -1,0 +1,83 @@
+{
+  "before": {
+    "identity": "light",
+    "officialDark": false,
+    "scheme": "light",
+    "canvas": "#FDFDFD",
+    "panel": "#FFFFFF",
+    "accent": "#386940",
+    "accentFill": "#386940",
+    "foreground": "#202120",
+    "aliasBase": "#FDFDFD",
+    "canvasPaint": "rgb(253, 253, 253) non",
+    "uiFont": "\"Avenir Next\",",
+    "bodyFont": "15px/23.571px \"Avenir Next\", Avenir, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+    "checked": "light"
+  },
+  "identities": {
+    "light": {
+      "picked": "clicked",
+      "identity": "light",
+      "officialDark": false,
+      "scheme": "light",
+      "canvas": "#FDFDFD",
+      "panel": "#FFFFFF",
+      "accent": "#386940",
+      "accentFill": "#386940",
+      "foreground": "#202120",
+      "aliasBase": "#FDFDFD",
+      "canvasPaint": "rgb(253, 253, 253) non",
+      "uiFont": "\"Avenir Next\",",
+      "bodyFont": "15px/23.571px \"Avenir Next\", Avenir, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+      "checked": "light"
+    },
+    "dark": {
+      "picked": "clicked",
+      "identity": "dark",
+      "officialDark": true,
+      "scheme": "dark",
+      "canvas": "#232523",
+      "panel": "#191B1A",
+      "accent": "#8FBC99",
+      "accentFill": "#5C9363",
+      "foreground": "#ECEDEB",
+      "aliasBase": "#232523",
+      "canvasPaint": "rgb(35, 37, 35) none r",
+      "uiFont": "\"Avenir Next\",",
+      "bodyFont": "15px/23.571px \"Avenir Next\", Avenir, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+      "checked": "dark"
+    },
+    "warm-pink": {
+      "picked": "clicked",
+      "identity": "warm-pink",
+      "officialDark": false,
+      "scheme": "light",
+      "canvas": "#FFF8F7",
+      "panel": "#FFFDFC",
+      "accent": "#874958",
+      "accentFill": "#8F5361",
+      "foreground": "#382E30",
+      "aliasBase": "#FFF8F7",
+      "canvasPaint": "rgb(255, 248, 247) non",
+      "uiFont": "\"Avenir Next\",",
+      "bodyFont": "15px/23.571px \"Avenir Next\", Avenir, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+      "checked": "warm-pink"
+    }
+  },
+  "after": {
+    "identity": "light",
+    "officialDark": false,
+    "scheme": "light",
+    "canvas": "#FDFDFD",
+    "panel": "#FFFFFF",
+    "accent": "#386940",
+    "accentFill": "#386940",
+    "foreground": "#202120",
+    "aliasBase": "#FDFDFD",
+    "canvasPaint": "rgb(253, 253, 253) non",
+    "uiFont": "\"Avenir Next\",",
+    "bodyFont": "15px/23.571px \"Avenir Next\", Avenir, -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+    "checked": "light"
+  },
+  "distinctCanvases": 3
+}
