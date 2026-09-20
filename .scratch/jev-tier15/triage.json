@@ -1,0 +1,2885 @@
+{
+  "totals": {
+    "findings": 189,
+    "borderline": 31,
+    "examined": 220,
+    "exempt": 58,
+    "shortlist": 162,
+    "conserved": true
+  },
+  "shortlist": [
+    {
+      "name": "gmail-assistant",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.93,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.92,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "alibaba-amazon-market-intel",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.91,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "git-guardrails-claude-code",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.91,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "lark-tools",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.91,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "people-research",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.91,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "social-media-publisher",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.91,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "agent-browser",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "ask-matt",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "docx",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "file-history-manager",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "jtbd-analyzer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "pptx",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "social-network-mapper",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.9,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "content-breakdown",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.89,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "implement",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.89,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "higgsfield-guide",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.88,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "scaffold-exercises",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.88,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "web-scraping-plan-designer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.88,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "code-review",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.87,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "pnpm-upgrade",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.87,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "skill-optimizer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.87,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "skill-creator",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.86,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "1688-sourcing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.85,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "accio-mcp-cli",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.84,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "skill-evaluator",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.84,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "skill-family-manager",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.84,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "xlsx",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.84,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-competitor-teardown",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.83,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "amz-hot-keywords",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.83,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.83,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "to-tickets",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.83,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "content-strategy",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.82,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "data-context-extractor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.82,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "sycm-analysis-skill",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.82,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-competitor-monitor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.81,
+      "borderline": false,
+      "cluster": "amazon"
+    },
+    {
+      "name": "jungle-scout-deep-dive-analyzer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.81,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "skill-finder",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.81,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "wizard",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.81,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-listing-builder",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "setup-pre-commit",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "git-commit",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.79,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "api-designer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.77,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "dependency-updater",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.77,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-margin-check",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "amazon-prelaunch-trend-scout",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "cross-border-selection",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "file-history-manager",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "writing-plans",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-ad-budget",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.75,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "code-documenter",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.75,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-competitor-teardown",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "amazon-prelaunch-demand-mirror",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "amazon-prelaunch-listing-builder",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "amazon-prelaunch-margin-check",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "handoff",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "incident-retrospective",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "supplier-evaluation",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "analytics",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.73,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "accessibility",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.72,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "multi-platform-listing-generator",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.72,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "performance-tracking",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.72,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "self-improvement",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.71,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "co-marketing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.7,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "instagram-marketing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.7,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "internal-comms",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.7,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-sorftime-research",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "amazon"
+    },
+    {
+      "name": "knowledge-extraction-expert",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "teach",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "brand-mention-tracking",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "brand"
+    },
+    {
+      "name": "code-review",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "multilingual-seo",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "prototype",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "resolving-merge-conflicts",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "skill-structure-doctor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.67,
+      "borderline": false,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "to-spec",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.67,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "public-relations",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.66,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-trend-scout",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "anysearch",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "cross-border-category-feasibility",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "web-perf",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-ad-budget",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "diagnosing-bugs",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "research",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "sales-negotiator",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "seo-page-audit",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "seo"
+    },
+    {
+      "name": "tariff-search",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "lark-tools",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.63,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-listing-expert",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.62,
+      "borderline": false,
+      "cluster": "amazon"
+    },
+    {
+      "name": "wait-what",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.62,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "ad-creative",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.61,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "grill-with-docs",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.61,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "web-scraping-plan-designer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.61,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "product-marketing-context",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "product-supplier-sourcing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "setup-matt-pocock-skills",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "triage",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "attribution",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "grill-me",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "influencer-marketing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "org-structure-research",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "wayfinder",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-demand-mirror",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.58,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "image-prompt-guide",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.58,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "to-questionnaire",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.58,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "geo-optimizer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.57,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "accio-mcp-cli",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "company-research",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "llm-tech-research",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "performance",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "triage",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "ecommerce-ml-modeling-advisor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "ecommerce"
+    },
+    {
+      "name": "editorial-ops",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "outreach-automation",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "seo-competitor-analysis",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "seo"
+    },
+    {
+      "name": "tech-pack-generator",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "turborepo",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "web-design-reviewer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.54,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "wait-what",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.54,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "git-guardrails-claude-code",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.53,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-demand-check",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.52,
+      "borderline": false,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "pnpm-upgrade",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.52,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "product-review-intelligence-collector",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.52,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "ecommerce-price-monitor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.51,
+      "borderline": false,
+      "cluster": "ecommerce"
+    },
+    {
+      "name": "experience-system-blueprint",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.51,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "win-loss-dataset",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.51,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "battlecard-library",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "github-gem-seeker",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "mece-knowledge-extractor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "platform-price-monitor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "terminology-standardizer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone"
+    },
+    {
+      "name": "brand-logo-designer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.49,
+      "borderline": true,
+      "cluster": "brand"
+    },
+    {
+      "name": "brand-narrative-playbook",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.49,
+      "borderline": true,
+      "cluster": "brand"
+    },
+    {
+      "name": "review-analyst-agent",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.49,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "semantic-density-analyzer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.49,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-ppc-campaign-manager",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.48,
+      "borderline": true,
+      "cluster": "amazon"
+    },
+    {
+      "name": "tdd",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.48,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "amazon-prelaunch-demand-check",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.47,
+      "borderline": true,
+      "cluster": "amazon-prelaunch-family"
+    },
+    {
+      "name": "clickhouse-architecture-advisor",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.47,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "cross-border-intel-radar",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.47,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "graphql-architect",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.46,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "review-analyst-agent",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.46,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "verification-before-completion",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.46,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "etsy-pod-automation",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.45,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "gmail-assistant",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.45,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "marketing-psychology",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.45,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "ecommerce-marketing",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.44,
+      "borderline": true,
+      "cluster": "ecommerce"
+    },
+    {
+      "name": "etsy-pod-automation",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.44,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "knowledge-extraction-expert",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.44,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "prometheus-configuration",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.43,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "semantic-doc-chunker",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.43,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "skill-vetter",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.43,
+      "borderline": true,
+      "cluster": "skill-meta"
+    },
+    {
+      "name": "supply-chain-controller",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.43,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "create-website",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.42,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "prompt-engineer",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.42,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "verification-before-completion",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.42,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "brand-measurement-dashboard",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.41,
+      "borderline": true,
+      "cluster": "brand"
+    },
+    {
+      "name": "marketing-ideas",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.41,
+      "borderline": true,
+      "cluster": "standalone"
+    },
+    {
+      "name": "participant-operations-hub",
+      "criterion": "q3-env-mechanism",
+      "noul": 0.4,
+      "borderline": true,
+      "cluster": "standalone"
+    }
+  ],
+  "shortlistByCluster": {
+    "standalone": [
+      {
+        "name": "gmail-assistant",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.93,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "improve-codebase-architecture",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.92,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "alibaba-amazon-market-intel",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.91,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "git-guardrails-claude-code",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.91,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "lark-tools",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.91,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "people-research",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.91,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "social-media-publisher",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.91,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "agent-browser",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "ask-matt",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "docx",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "file-history-manager",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "jtbd-analyzer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "pptx",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "social-network-mapper",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.9,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "content-breakdown",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.89,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "implement",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.89,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "higgsfield-guide",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.88,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "scaffold-exercises",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.88,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "web-scraping-plan-designer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.88,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "code-review",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.87,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "pnpm-upgrade",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.87,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "1688-sourcing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.85,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "accio-mcp-cli",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.84,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "xlsx",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.84,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "amz-hot-keywords",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.83,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "finishing-a-development-branch",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.83,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "to-tickets",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.83,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "content-strategy",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.82,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "data-context-extractor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.82,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "sycm-analysis-skill",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.82,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "jungle-scout-deep-dive-analyzer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.81,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "wizard",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.81,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "finishing-a-development-branch",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.8,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "setup-pre-commit",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.8,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "git-commit",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.79,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "api-designer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.77,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "dependency-updater",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.77,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "cross-border-selection",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.76,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "file-history-manager",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.76,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "writing-plans",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.76,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "code-documenter",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.75,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "handoff",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "incident-retrospective",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "supplier-evaluation",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "analytics",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.73,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "accessibility",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.72,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "multi-platform-listing-generator",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.72,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "performance-tracking",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.72,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "self-improvement",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.71,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "co-marketing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.7,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "instagram-marketing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.7,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "internal-comms",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.7,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "knowledge-extraction-expert",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.69,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "teach",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.69,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "code-review",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.68,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "multilingual-seo",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.68,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "prototype",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.68,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "resolving-merge-conflicts",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.68,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "to-spec",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.67,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "public-relations",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.66,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "anysearch",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.65,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "cross-border-category-feasibility",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.65,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "web-perf",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.65,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "diagnosing-bugs",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "research",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "sales-negotiator",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "tariff-search",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "lark-tools",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.63,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "wait-what",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.62,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "ad-creative",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.61,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "grill-with-docs",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.61,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "web-scraping-plan-designer",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.61,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "product-marketing-context",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.6,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "product-supplier-sourcing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.6,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "setup-matt-pocock-skills",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.6,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "triage",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.6,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "attribution",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.59,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "grill-me",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.59,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "influencer-marketing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.59,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "org-structure-research",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.59,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "wayfinder",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.59,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "image-prompt-guide",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.58,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "to-questionnaire",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.58,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "geo-optimizer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.57,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "accio-mcp-cli",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.56,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "company-research",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.56,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "llm-tech-research",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.56,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "performance",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.56,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "triage",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.56,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "editorial-ops",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "outreach-automation",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "tech-pack-generator",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "turborepo",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "web-design-reviewer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "dispatching-parallel-agents",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.54,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "wait-what",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.54,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "git-guardrails-claude-code",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.53,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "pnpm-upgrade",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.52,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "product-review-intelligence-collector",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.52,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "experience-system-blueprint",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.51,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "win-loss-dataset",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.51,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "battlecard-library",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "git-workflow-and-versioning",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "github-gem-seeker",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "mece-knowledge-extractor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "platform-price-monitor",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "terminology-standardizer",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.5,
+        "borderline": false,
+        "cluster": "standalone"
+      },
+      {
+        "name": "review-analyst-agent",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.49,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "semantic-density-analyzer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.49,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "tdd",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.48,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "clickhouse-architecture-advisor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.47,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "cross-border-intel-radar",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.47,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "graphql-architect",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.46,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "review-analyst-agent",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.46,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "verification-before-completion",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.46,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "etsy-pod-automation",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.45,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "gmail-assistant",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.45,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "marketing-psychology",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.45,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "etsy-pod-automation",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.44,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "knowledge-extraction-expert",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.44,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "prometheus-configuration",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.43,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "semantic-doc-chunker",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.43,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "supply-chain-controller",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.43,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "create-website",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.42,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "prompt-engineer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.42,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "verification-before-completion",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.42,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "marketing-ideas",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.41,
+        "borderline": true,
+        "cluster": "standalone"
+      },
+      {
+        "name": "participant-operations-hub",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.4,
+        "borderline": true,
+        "cluster": "standalone"
+      }
+    ],
+    "skill-meta": [
+      {
+        "name": "skill-optimizer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.87,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-creator",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.86,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-evaluator",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.84,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-family-manager",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.84,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-finder",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.81,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-structure-doctor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.67,
+        "borderline": false,
+        "cluster": "skill-meta"
+      },
+      {
+        "name": "skill-vetter",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.43,
+        "borderline": true,
+        "cluster": "skill-meta"
+      }
+    ],
+    "amazon-prelaunch-family": [
+      {
+        "name": "amazon-prelaunch-competitor-teardown",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.83,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-listing-builder",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.8,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-margin-check",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.76,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-trend-scout",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.76,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-ad-budget",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.75,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-competitor-teardown",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-demand-mirror",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-listing-builder",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-margin-check",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.74,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-trend-scout",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.65,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-ad-budget",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-demand-mirror",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.58,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-demand-check",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.52,
+        "borderline": false,
+        "cluster": "amazon-prelaunch-family"
+      },
+      {
+        "name": "amazon-prelaunch-demand-check",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.47,
+        "borderline": true,
+        "cluster": "amazon-prelaunch-family"
+      }
+    ],
+    "amazon": [
+      {
+        "name": "amazon-competitor-monitor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.81,
+        "borderline": false,
+        "cluster": "amazon"
+      },
+      {
+        "name": "amazon-sorftime-research",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.69,
+        "borderline": false,
+        "cluster": "amazon"
+      },
+      {
+        "name": "amazon-listing-expert",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.62,
+        "borderline": false,
+        "cluster": "amazon"
+      },
+      {
+        "name": "amazon-ppc-campaign-manager",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.48,
+        "borderline": true,
+        "cluster": "amazon"
+      }
+    ],
+    "brand": [
+      {
+        "name": "brand-mention-tracking",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.68,
+        "borderline": false,
+        "cluster": "brand"
+      },
+      {
+        "name": "brand-logo-designer",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.49,
+        "borderline": true,
+        "cluster": "brand"
+      },
+      {
+        "name": "brand-narrative-playbook",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.49,
+        "borderline": true,
+        "cluster": "brand"
+      },
+      {
+        "name": "brand-measurement-dashboard",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.41,
+        "borderline": true,
+        "cluster": "brand"
+      }
+    ],
+    "seo": [
+      {
+        "name": "seo-page-audit",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.64,
+        "borderline": false,
+        "cluster": "seo"
+      },
+      {
+        "name": "seo-competitor-analysis",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "seo"
+      }
+    ],
+    "ecommerce": [
+      {
+        "name": "ecommerce-ml-modeling-advisor",
+        "criterion": "q2-stop-obligation",
+        "noul": 0.55,
+        "borderline": false,
+        "cluster": "ecommerce"
+      },
+      {
+        "name": "ecommerce-price-monitor",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.51,
+        "borderline": false,
+        "cluster": "ecommerce"
+      },
+      {
+        "name": "ecommerce-marketing",
+        "criterion": "q3-env-mechanism",
+        "noul": 0.44,
+        "borderline": true,
+        "cluster": "ecommerce"
+      }
+    ]
+  },
+  "exempt": [
+    {
+      "name": "ad-creative",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.78,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ai-product-designer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.66,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "amazon-competitor-monitor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "amazon",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "amazon-listing-expert",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.67,
+      "borderline": false,
+      "cluster": "amazon",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "amazon-ppc-campaign-manager",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "amazon",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "amazon-sorftime-research",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "amazon",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "bestseller-pattern-decoder",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "brand-logo-designer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.53,
+      "borderline": false,
+      "cluster": "brand",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "brand-voice-glossary",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.76,
+      "borderline": false,
+      "cluster": "brand",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "company-research",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.58,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "competitor-alternative-analysis",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "competitor-profiling",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "copywriting",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.73,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "customer-voice-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.71,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-business-insights",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-csv-processing",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.73,
+      "borderline": false,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-daily-report",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.75,
+      "borderline": false,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-marketing",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.47,
+      "borderline": true,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-monthly-review",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.44,
+      "borderline": true,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-price-monitor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.57,
+      "borderline": false,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "ecommerce-seo-optimizer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "ecommerce",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "email-automation-flow-builder",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.42,
+      "borderline": true,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "geo-optimizer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.61,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "gtm-strategy-planning",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "icp-profiler",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.54,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "inventory-demand-forecaster",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.75,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "knowledge-similarity-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.87,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "launch-strategy",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.75,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "make-repo-contribution",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.72,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "market-insight-product-selection",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.54,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "market-viability-logic-auditor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.5,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "marketing-content-suite",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "mece-knowledge-extractor",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "multi-platform-listing-generator",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.62,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "multilingual-seo",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "optimize-ecommerce-page-conversion",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.83,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "outreach-automation",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "paid-advertising",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.68,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "performance-tracking",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.74,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "product-attribute-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.69,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "product-data-deep-analysis",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "product-research-matrix",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.64,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "scenario-driven-product-scout",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.63,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "semantic-bucketer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "seo-competitor-analysis",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "seo",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "seo-controller",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.67,
+      "borderline": false,
+      "cluster": "seo",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "seo-page-audit",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.59,
+      "borderline": false,
+      "cluster": "seo",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "shipment-tracking",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.65,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "single-post-intel-mining",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.84,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "skill-creator",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.56,
+      "borderline": false,
+      "cluster": "skill-meta",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "skill-evaluator",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.6,
+      "borderline": false,
+      "cluster": "skill-meta",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "skill-family-manager",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.53,
+      "borderline": false,
+      "cluster": "skill-meta",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "skill-optimizer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.7,
+      "borderline": false,
+      "cluster": "skill-meta",
+      "exemptions": [
+        "guarantee-schema-migration",
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "social-content",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.73,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "supplier-evaluation",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.8,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "trend-stage-timing-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.55,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "viral-video-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.77,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    },
+    {
+      "name": "voc-sentiment-analyzer",
+      "criterion": "q2-stop-obligation",
+      "noul": 0.51,
+      "borderline": false,
+      "cluster": "standalone",
+      "exemptions": [
+        "guarantee-security-boundary"
+      ]
+    }
+  ]
+}

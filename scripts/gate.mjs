@@ -41,6 +41,7 @@ import { checkPluginEntryContract } from './gates/plugin-entry-contract.mjs'
 import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/profile-coverage.mjs'
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
+import { checkJevTier15Freshness, toCanonicalJevTier15Result } from './gates/jev-tier15-freshness.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
 import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
@@ -553,6 +554,29 @@ const CHECKS = [
       '跑 node --test scripts/gates/live-presets.test.mjs 看红在哪条：本项必须能说「不」——__DSH_HOME__ 残留、解析不到的包名/绝对路径必须判红；宿主会跳过的 disabled 行不得判红；空射程必须「跳过并写明」；块标量内容里的 name: 不得当插件行；M1 恒真桩突变：只查占位符的退化实现必须放过解析不到的行（P-02 / P-03）',
     run() {
       return runNodeTestFile('scripts/gates/live-presets.test.mjs', '用户预设写后核验的反向自测失败')
+    },
+  },
+  {
+    name: 'jev-tier15-freshness',
+    // 离线、确定性、零 API 调用（ADR-0138 D5）：语义轨基线不进 gate 关键路径，但它的输入指纹进——
+    // corpus/判据/模型版本/样本集任一漂了，旧基线就指向不存在的输入，本项判红并点名是哪一项。
+    remediation:
+      '按报错看是哪项漂了：corpus（待审语料）/判据文本⊕阈值（scripts/jev/questions.mjs）/模型版本/基线样本集（scripts/jev/samples.json）。'
+      + '修法是重跑语义轨记分卡（node scripts/jev/scorecard.mjs --out …，真实 API）确认判据质量未退化后，'
+      + 'node scripts/gates/jev-tier15-freshness.mjs --print-expected 重采并人工审查 scripts/gates/jev-tier15.expected.json；'
+      + '不要手改 expected 里的哈希（四项全对而汇总不对会被单独判红）',
+    run() {
+      return toCanonicalJevTier15Result(checkJevTier15Freshness({}))
+    },
+  },
+  {
+    name: 'jev-tier15-freshness-selftest',
+    remediation:
+      '跑 node --test scripts/gates/jev-tier15-freshness.test.mjs 看红在哪条：本项必须能说「不」——判据/corpus/samples/model 任一漂移、'
+      + '汇总指纹被手改、corpus 或样本 0 条（P-15 空射程）、corpus 缺失或坏 JSON、expected 缺失或 schema 不符，'
+      + '每一条都必须判红并点名漂的是哪项；也必须不误报——同输入两次重算逐字节一致（ADR-0138 D5 / P-02 / P-15）',
+    run() {
+      return runNodeTestFile('scripts/gates/jev-tier15-freshness.test.mjs', 'Tier 1.5 指纹判据的反向自测失败')
     },
   },
   {
