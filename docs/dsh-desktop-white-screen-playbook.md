@@ -1,6 +1,6 @@
 # DSH Desktop 白屏排查手册（White-Screen Playbook）
 
-> 适用：DSH Desktop 2.0.5（LUTE Agentic System 品牌版）二次开发
+> 适用：DSH Desktop 2.0.10（Sanbao；曾用名 LUTE Agentic System）二次开发
 > 更新：2026-09-13（沉淀三类白屏实战：root 槽竞态 ×2、HMR 热更白屏 ×1；G1/G2 守卫已随 2.3.x 打包基线固化）
 > 配套：`~/.agents/skills/dsh-desktop-diagnostics/SKILL.md`（AI 诊断侧已同步本手册要点）
 

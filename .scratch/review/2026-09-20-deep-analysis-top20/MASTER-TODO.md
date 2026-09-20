@@ -16,7 +16,7 @@
 | [DA-02](tasks/DA-02-permission-bit-gate.md) | 权限位判据：000 文件不得进提交 | P-45「尚无——约定，无强制」 | S | 无 | `local-done` |
 | [DA-03](tasks/DA-03-intake-placeholders.md) | 入库面占位化收口（写入者直写占位符或加判据） | P-48「入库面占位化仍是流程」 | M | 无 | `local-done` |
 | [DA-04](tasks/DA-04-cleanup-commitment-first.md) | 清场清单「先查承诺」序机制化 | P-49「第一步只有纪律」 | M | 无 | `local-done` |
-| [DA-05](tasks/DA-05-architecture-base-facts.md) | architecture.md §1 基座事实节更新（已核实落后一次迁移） | 本次实测（pin v2.0.10 vs 文档 2.0.5/rc.1） | S | 与 DA-12 同批 | `open` |
+| [DA-05](tasks/DA-05-architecture-base-facts.md) | architecture.md §1 基座事实节更新（已核实落后一次迁移） | 本次实测（pin v2.0.10 vs 文档 2.0.5/rc.1） | S | 与 DA-12 同批 | `local-done` |
 | [DA-06](tasks/DA-06-observer-singleton-probe.md) | observer 乒乓最小探针：单例计数进可执行判据 | P-52「缺口不是成绩」 | M | 无 | `local-done` |
 
 ## 3. P1 · 结构热点与在飞工作（9 项）
@@ -28,10 +28,10 @@
 | [DA-09](tasks/DA-09-mgt-ship-prerequisites.md) | MGT 管理层出货前置推进（或复核边界并记录） | ADR-0129 / architecture.md §3 | M | `open` |
 | [DA-10](tasks/DA-10-auto-update-first-steps.md) | 自动更新路线第一步（不白做的两步） | docs/plans/2026-09-13-auto-update-route.md | M | `open` |
 | [DA-11](tasks/DA-11-x64-universal-gap.md) | x64 / universal 构建缺口补齐（或记录单架构决策） | 2.5.0 CHANGELOG「登记下轮」 | M | `open` |
-| [DA-12](tasks/DA-12-production-machine-baseline.md) | 生产机基座现状核对并落记录 | architecture.md §1（2026-09-10 观察，未核实） | S | `open` |
+| [DA-12](tasks/DA-12-production-machine-baseline.md) | 生产机基座现状核对并落记录 | architecture.md §1（2026-09-10 观察，未核实） | S | `local-done` |
 | [DA-13](tasks/DA-13-scratch-cleanup.md) | .scratch 42 个工作流清场（按 DA-04 顺序） | historical-artifacts 层 205 节点 | L | 依赖 DA-04 |
 | [DA-14](tasks/DA-14-agt-shared-source-guard.md) | AGT 共享源改动 → 50 全量重生成护栏 | research/16 §3.6（目前是阅读纪律） | M | `open` |
-| [DA-15](tasks/DA-15-jev-remaining-gaps.md) | Jev 语义层剩余口子复核 | CHANGELOG Unreleased vs 项目记忆对账 | S | `open` |
+| [DA-15](tasks/DA-15-jev-remaining-gaps.md) | Jev 语义层剩余口子复核 | CHANGELOG Unreleased vs 项目记忆对账 | S | `local-done` |
 
 ## 4. P2 · 保鲜与纪律（5 项）
 

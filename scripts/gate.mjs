@@ -50,6 +50,7 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { checkJevTier15Freshness, toCanonicalJevTier15Result } from './gates/jev-tier15-freshness.mjs'
 import { checkJevEgressBoundary, toCanonicalJevEgressResult } from './gates/jev-egress-boundary.mjs'
+import { REGISTRY_REL_PATH as JEV_RESIDUALS_REL_PATH, checkJevResiduals } from './gates/jev-residuals.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
 import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
@@ -609,6 +610,42 @@ const CHECKS = [
       + 'canonical 读数在通过/违约/空射程三种形态下都要过 validateGateResult（ADR-0138 D2）',
     run() {
       return runNodeTestFile('scripts/gates/jev-egress-boundary.test.mjs', 'Jev 出网边界判据的反向自测失败')
+    },
+  },
+  {
+    name: 'jev-residuals',
+    // ADR-0138 后果节的机器面（DA-15 对账收口）：残余此前散在 ADR/CHANGELOG/项目记忆三处快照，
+    // 对账时实测到记忆一侧已经腐烂（写出网门禁「仍是口子」，而它 2026-09-20 已从纪律变机制）。
+    // 本项守登记簿的形状：accepted 必须有 decisionDoc（裸接受=遗忘），open 必须有 nextAction。
+    remediation:
+      '按报错补齐 scripts/gates/jev.residuals.json：每条要 id/status/what/why/evidence；accepted 补 decisionDoc（哪篇记录拍的板）、'
+      + 'open 补 nextAction（下一步做什么）；空登记簿判红。残余的状态变化（从 open 到 accepted 或反之）必须同批改这里，'
+      + '它是 Jev 残余的**唯一机器可读的家**（ADR-0138 后果 2-5 / DA-15）',
+    run() {
+      const abs = join(repoRoot, JEV_RESIDUALS_REL_PATH)
+      const verdict = checkJevResiduals({ registryText: existsSync(abs) ? readFileSync(abs, 'utf8') : null })
+      return {
+        status: verdict.passed ? 'pass' : 'fail',
+        expected: 1,
+        discovered: 1,
+        checked: verdict.passed ? 1 : 0,
+        skipped: 0,
+        failed: verdict.passed ? 0 : 1,
+        typedSkips: [],
+        reason: verdict.passed ? 'Jev 残余登记处形状合法' : `Jev 残余登记处不合规：${verdict.violations.length} 处`,
+        violations: verdict.violations,
+        note: verdict.note,
+      }
+    },
+  },
+  {
+    name: 'jev-residuals-selftest',
+    remediation:
+      '跑 node --test scripts/gates/jev-residuals.test.mjs 看红在哪条：本项必须能说「不」——空登记簿、坏 JSON、缺 what/why/evidence、'
+      + 'accepted 缺 decisionDoc、open 缺 nextAction、status 出枚举、id 重复，每一条都必须判红并点名 id；'
+      + '恒真桩突变（不报违规）下负例必须失效（2026-09-21 实测 5/9 用例变红）；入库的真登记簿自身必须过（P-02）',
+    run() {
+      return runNodeTestFile('scripts/gates/jev-residuals.test.mjs', 'Jev 残余登记处判据的反向自测失败')
     },
   },
   {

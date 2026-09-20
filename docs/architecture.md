@@ -6,10 +6,10 @@
 
 | 层 | 位置 | 说明 |
 | --- | --- | --- |
-| 基座参照系 | `vendor/dsh-desktop/deepseek-harness/` | pin 到 `a66e470`（runtime 0.1.2-rc.1）的上游源码，**只读、不参与构建**（[ADR-0008](adr/ADR-0008.md)） |
+| 基座参照系 | `vendor/dsh-desktop/deepseek-harness/` | 上游源码参照系，pin 到 `fb2c4b9e`（`vendor/dsh-desktop.pin` 的 `harness-submodule`；运行时以 `harness-runtime-source` 为准 = 0.1.5-rc.2 物化），**只读、不参与构建**（[ADR-0008](adr/ADR-0008.md)） |
 | 壳层 fork | `vendor/dsh-desktop/` | 嵌套仓库，pin 见 `vendor/dsh-desktop.pin`；改 pin 与行为变更分开提交 |
-| 运行时来源 | `vendor/dsh-runtime/0.1.2-rc.1/*.tgz` | 打包与 profile 实际使用的运行时产物 |
-| 二开插件 | `packages/<能力组>/<包>/` | 19 个受管包按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
+| 运行时来源 | `vendor/dsh-desktop/dsh-plugin-desktop/node_modules`（0.1.5-rc.2 物化，270/270 tgz） | 打包与 profile 实际使用的运行时产物；`vendor/dsh-runtime/0.1.2-rc.1/*.tgz` **仅作 2.0.5 回滚对照**保留，不再被构建消费（见 pin 注释与 [research/13](research/13-upgrade-2.0.10-execution-plan.md) §7-§8） |
+| 二开插件 | `packages/<能力组>/<包>/` | 28 个受管包（`package-files-coverage` 门禁读数）按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
 | 自有薄壳 | `apps/lute-shell/` | LUTE 自有的 Electron 薄壳，用 npm 上的 harness 运行时启动 cordis host（脱离 `vendor/dsh-desktop` fork）；**不在 package collector 射程内**（`package-layout.mjs` 只下钻 `packages/<五组>/`），版本与治理事实由独立门禁守，详见 [ADR-0139](adr/ADR-0139.md) |
 | 出海技能创作源 | `~/project/81-Skills/`（**仓库外**） | 81 个中文名原文，经 `dsh-overseas-skills/scripts/import-81skills.mjs` 转换后安装进 `~/.dsh/skills/`。2026-09-11 迁出仓库，与同包其余 3 个 importer（accio / marketing / fullstack）的「源在仓库外」设计一致 |
 | 门禁 | `scripts/gate.mjs` | 单命令聚合校验，退出码即契约（[ADR-0014](adr/ADR-0014.md)） |
@@ -40,12 +40,21 @@
 跳过（skip）是**第三态**：日常模式下不改变退出码，但汇总行会独立成句地点名「未核对 N 项（不是通过）」；
 **发布前那一次运行**用 `pnpm run gate:strict`（= `--require-no-skip`），skip 计为非零退出（P-17 / ADR-0148）。
 
-## 1. DSH 基座事实（双基座：生产 2.0.4/alpha.1 · 发行 2.0.0=2.0.5/rc.1）
+## 1. DSH 基座事实（发行线 LUTE 2.5.0 = DSH 2.0.10 / runtime 0.1.5-rc.2；生产机现状**未核实**）
 
-> 2026-09-10 更新：发行线已迁移到 DSH Desktop 2.0.5 + runtime 0.1.2-rc.1（LUTE 2.0.0，
-> 35 补丁重锚、34→35 锚点 verify v2、smoke 37/37）；生产机仍是 2.0.4/alpha.1（灰度期双基座漂移，
-> 见 docs/research/09-audit-architecture.md C 类与 10-debt-solution.md 段 C）。下方契约两基座通用，
-> 差异处以「2.0.5」标注。
+> 2026-09-21 更新（深度分析 TOP20 · DA-05）：发行线已到 **LUTE 2.5.0**——
+> `packaging/release/2.5.0/VERSION` 读数 `DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2`
+> （2026-09-18 发布）；源码 pin 见 `vendor/dsh-desktop.pin`（`upstream-tag: v2.0.10` /
+> `lute-branch: lute-v2.0.10`，checked-at 2026-09-17）。该窗口 **38 个补丁锚点全量重锚**
+> （`verify-patches-v2.sh` 38 锚 ALL VERIFIED；登记簿
+> [`dsh-patches/patches-manifest-v3.md`](../dsh-patches/patches-manifest-v3.md)），打包形态从 ASAR 改目录、
+> 运行时 0.1.5-rc.2 物化 270/270（CHANGELOG 2.5.0）。
+> **生产机（2026-09-10 观察为 2.0.4/alpha.1 的那台）现状未核实**（DA-12）：本仓与本研究机都没有
+> 到那台机器的读数通道（无 SSH/远程面），按 P-01 写「未验证」而不是「应该升了」——拿到读数前
+> 本行不做出货级断言；升级计划与滞留差异见 [research/09](research/09-audit-architecture.md) C 类与
+> [research/10](research/10-debt-solution.md) 段 C。
+> 旧的 2026-09-10 快照保留为历史引用：发行线 2.0.0 = DSH 2.0.5 / runtime 0.1.2-rc.1、35 补丁重锚、
+> smoke 37/37。
 
 - Skill 契约：`name` 必须英文 kebab（加载与运行时双重校验）；目录一层扫描；`.system` 跳过；frontmatter 首行必须是且仅是一个 `---`（重复 `---` 会静默忽略技能，见诊断案例 12）。
 - 插件：`dsh.bundle` + profile `file:` 硬链接安装；bundles 列表注册。

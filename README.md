@@ -2,7 +2,7 @@
 
 基于 **DeepSeek Harness（DSH Desktop）** 的二次开发平台：出海技能体系 + 万物互联（连接 MCP / API / 企业应用 / 知识库）+ 全套工程插件与打包流水线。
 
-> 当前版本：**v2.2.0**（2026-09-12，DSH 基座 2.0.5 / runtime 0.1.2-rc.1）· 仓库：monorepo · 变更历史见 [CHANGELOG.md](CHANGELOG.md)（2.0.0 升级全链研究见 docs/research/）
+> 当前版本：**v2.5.0**（2026-09-18，DSH 基座 2.0.10 / runtime 0.1.5-rc.2）· 仓库：monorepo · 变更历史见 [CHANGELOG.md](CHANGELOG.md)（基座升级全链研究见 docs/research/）
 >
 > **客户安装**：下载 `DSH-Desktop-LUTE-<版本>-mac-arm64.dmg`，挂载后按 [安装手册](packaging/INSTALL-GUIDE.md) 安装（终端一条命令，或双击 `LUTE Setup.app`；一页速查见 [安装卡](packaging/INSTALL-CARD.md)）。
 > **本版起只发 DMG**：全仓无 `.pkg` 产物，「pkg 为主交付」的历史说法自 2.2.0 起作废。

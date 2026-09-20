@@ -1,0 +1,46 @@
+{
+  "$comment": "Jev 语义轨的**已登记残余**（ADR-0138 后果节的机器面；2026-09-21 DA-15 对账后建立）。契约：每条必须有 id/status/what/why/evidence；status=accepted 必须有 decisionDoc（哪篇记录拍板接受它），status=open 必须有 nextAction（下一步做什么）；id 不得重复；空登记簿判红（空 = 本项恒绿）。判据见 scripts/gates/jev-residuals.mjs（gate:jev-residuals）。加一条的门槛：必须来自实测定性或一份决策记录——不登记口味。",
+  "schemaVersion": 1,
+  "residuals": [
+    {
+      "id": "key-readability",
+      "status": "accepted",
+      "what": "`~/.dsh/.credentials.yaml` 的 `LUTE_JEV_API_KEY` 对同用户、能跑 bash 的 agent 会话一律可读，可被打印进输出",
+      "why": "Keychain 默认形态实测零收益（同一读取命令 rc=0 直接拿到明文）；收紧 ACL 的 Keychain 是唯一真收益形态，但会把语义轨变成人在环（每次取用人工授权），与当前「人喊一声跑一轮」的用法不匹配。接受的缓解：key 专用可吊销、按次计费、只用于内部研发回路；门禁路径零 API 调用不碰 key。",
+      "evidence": "docs/notes/implemented/process/2026-09-20-jev-credentials-keychain-rejudge.md 读数表（Keychain 默认 rc=0 / 收紧 rc=128 / 现状 -rw------- owner=lute）",
+      "decisionDoc": "docs/adr/ADR-0138.md（D7 + 后果 2：前置条件——无人值守自动化前必须先上收紧 ACL 的 Keychain 或等价的人在环取用）"
+    },
+    {
+      "id": "tracked-not-clean",
+      "status": "accepted",
+      "what": "出网闸门只保证「来源是仓内 git 跟踪文本」，不保证「内容清白」——内容层面的复核只能靠人",
+      "why": "机器分不出「正常语料」与「夹带敏感信息的语料」；给出题面会把闸门变成需要词汇表的判据，而那种判据会腐烂（ADR-0121 的同一条取向）。",
+      "evidence": "CHANGELOG Unreleased（2026-09-20 出网边界条：「残余如实保留：文件被跟踪 ≠ 内容清白，那一段只能靠人复核」）",
+      "decisionDoc": "docs/notes/implemented/process/2026-09-20-jev-egress-boundary.md"
+    },
+    {
+      "id": "thresholds-uncalibrated",
+      "status": "open",
+      "what": "三条判据的阈值全是待校准初值：② 的分离边距实测只有 0.33；① 改逐任务后越界率判定线未在任何数据上定过（`scripts/jev/questions.mjs` 里 `overreachRate` 当前为 null）",
+      "why": "阈值质量决定判据质量（ADR-0138 D6 把判据与阈值钉进指纹，就是为了改它必须重采基线）。",
+      "evidence": "docs/adr/ADR-0138.md 后果 4；scripts/jev/questions.mjs 的 thresholds（overreachRate: null）",
+      "nextAction": "下一轮语义轨校准时扩样本集并复核 ② 边距；① 的越界率线要么在数据上定下来、要么显式删掉该判据（不许留 null 恒绿）"
+    },
+    {
+      "id": "skillopt-root-vs-corpus",
+      "status": "accepted",
+      "what": "语料之家 = 只评**仓内** `skill-evidence-corpus.json`（292 条，git 跟踪），不评 SkillOpt 的 ROOT（`~/.dsh/skills` 已安装技能）；活体漂移交给 apply 时既有的机械校验兜底",
+      "why": "D5 指纹要跨机复现 + D2 出网上限（只认仓内跟踪文本）都要「语料住仓库里」；评 ROOT 会让「体检报告说 A 有问题、apply 改的是 B」的分叉重新出现。",
+      "evidence": "ADR-0138 后果 5 原为「未决」；T3 于 2026-09-19 拍板方案 A 关闭（对账注记：ADR 那一行是决策当时的快照，未随 T3 回写——本登记处 + 项目记忆为现态）",
+      "decisionDoc": "docs/notes/implemented/process/2026-09-19-jev-tier15-baseline-and-fingerprint-gate.md（T3 拍板语料之家）"
+    },
+    {
+      "id": "project-skill-duplicate",
+      "status": "open",
+      "what": "项目级 skill（`.qoder/skills/typesafe-ai`）被 `.gitignore` 通配 `*` 排除、不随克隆走，且与 `~/.agents/skills` 的全局副本逐字节重复",
+      "why": "官方建议二选一（Choose one installation method to avoid duplicate copies）；现状是「只在本机有效」+ 重复，换机后技能不在。",
+      "evidence": "docs/adr/ADR-0138.md 后果 3（两处 sha1 一致实测）",
+      "nextAction": "要么给 `.qoder/skills/` 与 `skills-lock.json` 加白名单入库，要么显式接受「只在本机有效」并删掉重复副本"
+    }
+  ]
+}

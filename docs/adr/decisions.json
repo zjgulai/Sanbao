@@ -2442,7 +2442,7 @@
         },
         {
           "id": "D5",
-          "text": "P-52 收口：新增 scripts/acceptance/singleton-count-live.mjs——覆盖 workbench 容器 / 组行 / 设置壳根三类单例（恰好 1 / 至多 1），数到 2 点名「重复挂载」；读不到（CDP 不通、选择器求值失败、必需单例数到 0）一律 exit 2 并点名；共享层 sidebar-entry-core.ts 不变量注释加「改 observer 前先数单例」的读数指引；被证伪仪器（探针打点/代码内观测当存活证明）登记进 dead-instruments.json。",
+          "text": "P-52 收口：新增 scripts/acceptance/singleton-count-live.mjs——覆盖 workbench 容器 / 组行 / 设置壳根三类单例（恰好 1 / 至多 1），数到 2 点名「重复挂载」；读不到（CDP 不通、选择器求值失败、必需单例数到 0）一律 exit 2 并点名；共享层 sidebar-entry-core.ts 不变量注释加「改 observer 前先数单例」的读数指引；被证伪仪器（把「探针打点」「代码内观测」的输出当存活证明的那种）登记进 dead-instruments.json。",
           "constraints": [
             "探针不进 pnpm run gate（需要 CDP 端口，实机读数由人在实况验收轮跑）；这层边界如实写在账本里",
             "--self-test 必须覆盖每类单例的红绿一对 + 三类 typed unavailable，恒真桩突变下必须失效",

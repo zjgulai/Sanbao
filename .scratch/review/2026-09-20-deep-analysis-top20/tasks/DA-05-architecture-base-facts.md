@@ -1,7 +1,7 @@
 # DA-05 · architecture.md §1 基座事实节更新（已核实落后一次迁移）
 
 - 优先级：P0
-- 状态：`open`
+- 状态：`local-done`（2026-09-21，批次 B 落地，待提交）
 - 依赖：与 DA-12 同批
 - 估算：S
 - 来源：本次实测；报告 TOP20 #5
@@ -27,3 +27,13 @@
 ## 注意
 
 同批核对 docs 中其他引用「2.0.5」的历史位置——按「指向运行时的家 vs 历史快照」分类处理，不要一刀切改（历史 Note/ADR 不动）。
+
+## 结算（2026-09-21）
+
+- §1 重写为「发行线 LUTE 2.5.0 = DSH 2.0.10 / runtime 0.1.5-rc.2；生产机现状未核实」；数字逐项对表：
+  `vendor/dsh-desktop.pin`（upstream-tag v2.0.10 / lute-branch lute-v2.0.10 / runtime 0.1.5-rc.2 物化 / checked-at 2026-09-17）、
+  `packaging/release/2.5.0/VERSION`（DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2）、CHANGELOG 2.5.0（38 锚 ALL VERIFIED）。
+- §0 表里三行**指向运行时**的事实一并修正：参照系 pin（a66e470 → fb2c4b9e）、运行时来源（0.1.2-rc.1 tgz → 2.0.10 物化，
+  旧目录降级为 2.0.5 回滚对照）、受管包 19 → 28（读数：`gate:package-files-coverage`「受管包 28 个」）。
+- 其余「2.0.5 / 0.1.2-rc.1」位置按「指向运行时 vs 历史快照」分类：README.md 当前版本行与白屏手册「适用」头（指向运行时 → 已改）；
+  upgrade-2.0.5-window-plan、SOP 的示例句、REFACTOR-MAINLINE 等历史快照**不动**。
