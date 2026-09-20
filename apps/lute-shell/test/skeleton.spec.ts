@@ -16,9 +16,9 @@ describe('shell package skeleton', () => {
     expect(manifest.main).toBe('lib/main/index.js')
   })
 
-  it('exposes the six lifecycle scripts in the repo order', () => {
+  it('exposes the local lifecycle scripts in the repo order', () => {
     expect(Object.keys(manifest.scripts)).toEqual([
-      'typecheck', 'build', 'test', 'materialize', 'smoke', 'dev',
+      'typecheck', 'build', 'test', 'materialize', 'preview', 'smoke', 'dev',
     ])
   })
 

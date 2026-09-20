@@ -144,7 +144,7 @@ T6 文档 + 回滚演练说明
 - [ ] `node_modules/@etony668/dsh-task-board/lib/{index,client}.js` 与 fork 源同 inode
 
 **启动/装配运行时**
-- [ ] `~/Library/Application Support/DSH Desktop/lifecycle-events/startup.jsonl` 末条 `finalStage=health-commit`、`rendererStatus=healthy`
+- [ ] `~/Library/Application Support/Sanbao/lifecycle-events/startup.jsonl` 末条 `finalStage=health-commit`、`rendererStatus=healthy`
 - [ ] 错误日志无 `declares no dsh.bundle` / `plugin tree failed`
 - [ ] boot 清单含 `@etony668/dsh-task-board` 条目（用户浏览器侧确认；GUI 有认证围栏，外部 headless 不可达）
 - [ ] tab 顺序：对话 · 轨迹 · 上下文观测 · **任务看板**

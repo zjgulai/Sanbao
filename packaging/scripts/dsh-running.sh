@@ -99,7 +99,10 @@ fi
 
 # comm 字段可能含空格（本例的 app 名就含），所以只摘掉第一列 pid，其余整行逐字节比。
 if [ "$ANY" = "1" ]; then
-  PIDS="$(printf '%s\n' "$PS_TABLE" | awk -v suf="$ANY_SUFFIX" '{ pid=$1; $1=""; sub(/^ /, ""); if (index($0, suf) == length($0) - length(suf) + 1) print pid }')"
+  # 后缀比较必须用 substr。`index($0,suf)` 在**未命中**时返回 0，当 comm 比 suf 短 1 字符时
+  # 「尾部窗口 = 0」与它撞号 → 短路径全被误判成命中（2026-09-20 实机：coreservicesd /
+  # icdd / iconservicesd 三条系统进程让 --any 谎报「在跑」，quit 后轮询不收敛；回归网 R6d）。
+  PIDS="$(printf '%s\n' "$PS_TABLE" | awk -v suf="$ANY_SUFFIX" '{ pid=$1; $1=""; sub(/^ /, ""); if (length($0) >= length(suf) && substr($0, length($0) - length(suf) + 1) == suf) print pid }')"
   WHAT="任何 DSH 实例"
 else
   PIDS="$(printf '%s\n' "$PS_TABLE" | awk -v want="$EXEC" '{ pid=$1; $1=""; sub(/^ /, ""); if ($0 == want) print pid }')"

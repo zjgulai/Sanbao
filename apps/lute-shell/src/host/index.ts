@@ -125,7 +125,7 @@ export async function runShellHost(input: {
   const api = connection.createSharedFetchHandler('/api')
   const handlers: Record<RouteTarget, FetchHandler> = {
     api: { requestBodyMode: () => 'buffered', fetch: (request) => api.fetch(request) },
-    assets: createAssetHandler(ctx, resolveFrontendDistRoot(profileDir)),
+    assets: createAssetHandler(ctx, resolveFrontendDistRoot(profileDir), join(profileDir, 'session-workspaces')),
     stream: createRemoteStreamHandler(ctx),
   }
   const requests = new Map<number, AbortController>()

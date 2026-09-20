@@ -96,6 +96,8 @@ ck "会话迁移器:skill-catalog 条目接受 LUTE title"              "$NM/dsh
 ck "会话迁移器:title 必须是字符串"                             "$NM/dsh-session-format-v0-to-v1/lib/index.js" '`${memberLabel} title`'
 ck "P0-9 RootOutlet 兜底"   "$NM/dsh-client-ui-renderer/lib/client.js" "data-slot-waiting"
 ck "RECOVERY_DOCUMENT"      "$LIB/main.js" 'app.asar.unpacked'
+ck "identity productName"   "$LIB/bin.js" 'productName: "Sanbao"'
+ck "identity profile-mgr"   "$LIB_PM"     'productName: "Sanbao"'
 ck "clipboard fall-through" "$NM/dsh-client-ui-primitives/lib/index.js" "fall through to the legacy"
 ck "LB log 改名"            "$NM/dsh-session-log-export/lib/client.js" 'dsh-log-btn-fix'
 ck "LB 迁移器"              "$NM/dsh-session-log-export/lib/client.js" "session-log-download: relocate beside sidebar settings"

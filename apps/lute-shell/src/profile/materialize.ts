@@ -2,9 +2,9 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { copyFile, mkdir } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import { hostEntryPath, overlayPath, planMaterialize, type CopyPlan } from './layout.js'
+import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { composeProfileManifest, hostEntryPath, overlayPath, planMaterialize, type CopyPlan, type ProfileManifest } from './layout.js'
 
 /** One materialized profile ready to be handed to the host child process. */
 export interface MaterializedProfile {
@@ -17,10 +17,22 @@ export interface MaterializedProfile {
 function assertPlan(plan: CopyPlan, seedDir: string): void {
   for (const entry of plan.entries) {
     if (existsSync(entry.from)) continue
-    throw new Error(entry.from.startsWith(seedDir)
-      ? `lute shell: missing seed file ${entry.from}`
-      : `lute shell: built host runtime is missing ${entry.from} — run pnpm run build in apps/lute-shell`)
+    if (entry.kind === 'seed') throw new Error(`lute shell: missing seed file ${entry.from}`)
+    if (entry.kind === 'composed-package') {
+      throw new Error(`lute shell: missing composed package file ${entry.from} — run pnpm run build in the owning package`)
+    }
+    throw new Error(`lute shell: built host runtime is missing ${entry.from} — run pnpm run build in apps/lute-shell`)
   }
+}
+
+/**
+ * Rewrite the copied profile manifest so it carries the composed packages.
+ * @param profileDir - materialized profile holding the copied seed manifest.
+ */
+async function composeManifest(profileDir: string): Promise<void> {
+  const path = join(profileDir, 'package.json')
+  const manifest = JSON.parse(await readFile(path, 'utf8')) as ProfileManifest
+  await writeFile(path, `${JSON.stringify(composeProfileManifest(manifest), null, 2)}\n`)
 }
 
 /**
@@ -56,14 +68,18 @@ export async function materializeProfile(input: {
   seedDir: string
   shellRoot: string
   profileDir: string
+  /** Repository root composed package paths are relative to; defaults to `repoRootOf(shellRoot)`. */
+  repoRoot?: string
   install?: (profileDir: string) => Promise<void>
 }): Promise<MaterializedProfile> {
   const plan = planMaterialize(input)
   assertPlan(plan, input.seedDir)
   for (const entry of plan.entries) {
     await mkdir(dirname(entry.to), { recursive: true })
-    await copyFile(entry.from, entry.to)
+    if (entry.recursive === true) await cp(entry.from, entry.to, { recursive: true })
+    else await copyFile(entry.from, entry.to)
   }
+  await composeManifest(input.profileDir)
   const install = input.install ?? defaultInstall
   await install(input.profileDir)
   return {

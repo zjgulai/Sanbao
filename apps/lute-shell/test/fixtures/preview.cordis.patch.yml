@@ -1,0 +1,12 @@
+# 隔离预览 profile 的用户层补丁：默认模型锁到本地验收替身，关掉会外呼的遥测与标题生成。
+- id: session-telemetry-otel
+  disabled: true
+- id: session-title-llm
+  disabled: true
+- id: agent-default-model
+  config:
+    provider: sanbao-acceptance
+    model: fixture
+- insert:
+    - id: sanbao-acceptance
+      name: ./acceptance-plugin.mjs

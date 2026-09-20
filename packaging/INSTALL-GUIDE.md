@@ -193,7 +193,7 @@ cd "/Volumes/DSH Desktop LUTE {{VERSION}}" && bash install.sh
 1. 退出应用，把 `/Applications/DSH Desktop.app` 拖进废纸篓。
 2. 需要**彻底清干净**时再删这几处（⚠️ 删掉等于清空全部会话、记忆与登录状态，删前务必备份）：
    - `~/.dsh`（会话、记忆、技能、预设、凭据）
-   - `~/Library/Application Support/DSH Desktop`（日志与缓存）
+   - `~/Library/Application Support/Sanbao`（日志与缓存；2026-09-20 起产品名为 Sanbao，旧版仍写 DSH Desktop）
    - `~/Library/Application Support/LUTE Agentic System`（若存在，安装向导状态）
 3. 系统设置 → 隐私与安全性 → 那两个面板里，选中「LUTE Agentic System」用 **−** 移除。
 
@@ -212,7 +212,7 @@ cd "/Volumes/DSH Desktop LUTE {{VERSION}}" && bash install.sh
 ## 11. 反馈问题时，请带上这四样
 
 1. **版本号**：第 7 节那条命令的输出。
-2. **日志**：`~/Library/Application Support/DSH Desktop/logs/` 里当天的文件（`.error.log` 优先）。
+2. **日志**：`~/Library/Application Support/Sanbao/logs/` 里当天的文件（`.error.log` 优先）。
 3. **截图**：报错弹框、授权面板各一张。向导里的读数（安装包路径、搜索过的目录）尤其有用。
 4. **dmg 的校验值**（怀疑文件下载不全/被改过时）：
 

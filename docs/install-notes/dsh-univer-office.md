@@ -17,7 +17,7 @@
 - 依赖版本与宿主全对齐（cordis 4.0.2 / schemastery 3.18.2 / dsh-* 0.1.2-rc.1），零版本漂移。
 
 ## 更新 / 回滚
-- 更新：改 package.json 版本号 → `"$HOME/Library/Application Support/DSH Desktop/runtime-commands/bin/pnpm" install` → 重启桌面。
+- 更新：改 package.json 版本号 → `"$HOME/Library/Application Support/Sanbao/runtime-commands/bin/pnpm" install` → 重启桌面。
 - 回滚：`cp package.json.bak-20260911-092015 package.json` + `cp pnpm-lock.yaml.bak-20260911-092015 pnpm-lock.yaml` → pnpm install → 重启。
 - 卸载：删除 package.json 两条目（dependencies + bundles）→ pnpm install → 重启；遥测残留 `~/.dsh/telemetry/dsh-univer-office/` 可删。
 

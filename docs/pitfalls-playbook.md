@@ -86,7 +86,17 @@
   `gate:plugin-entry-contract-selftest`、`gate:profile-metadata-sync` / `gate:profile-files-sync` /
   `gate:profile-bundle-sync` 三面共用的 `gate:profile-coverage-selftest`
   （**分母 = 被检查对象的完整集合**：三处判据统一成 `expected = checked + skipped + failed`，
-  射程收缩一律判红，见下条同族前科）
+  射程收缩一律判红，见下条同族前科）、
+  `gate:dsh-running-selftest`（**未命中哨兵与位置值撞号**：`--any` 的后缀匹配写作
+  `index($0,suf) == length($0)-length(suf)+1`——`index` 未命中返回 0，而 comm 比后缀短 1 字符时
+  右侧窗口恰也是 0，于是三个系统进程（coreservicesd / icdd / iconservicesd，comm 长恰 42）
+  让「在跑」的判据在真机 quit 之后**持续谎报 24 秒**（2026-09-20 实测）；修法是比较前先验长度，
+  回归网 R6d 拿真机撞上的那两条路径当诱饵）、
+  `gate:brand-replay-selftest`（**覆盖面从未被判据守过**：品牌重放的「9 文件清单」漏 8 个带品牌
+  的文件、上一位品牌名只报不改、helper 与 CFBundleName 的匹配从未被核对——三处同源缺陷只在
+  真机改名落地时才现形（外层已换新名、helper 还是旧名，启动 17ms 崩 `Unable to find helper app`）；
+  现改扫描式替换 + 写后校验，T/U 系列反向自测含「身份行/路径行/基座名/诱饵逐字节不变」与
+  helper 曾用名四处齐换）
 - **下一版默认动作**：写任何仪器先定「读不到时输出什么」——必须是**失败**或**显式的跳过**，
   不是通过；凡读状态一律「值 + 绑定身份」两项一起读；交付前做一次恒真桩突变，红不了就是没测。
   **清单里的命令也是仪器**：它会被人照着跑，所以一条返回空输出的命令比没有命令更坏——

@@ -1,4 +1,6 @@
 import { join } from 'node:path'
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { describe, expect, it, vi } from 'vitest'
 import { SHELL_TRANSPORT_SCRIPT, createAssetHandler, resolveFrontendDistRoot } from '../src/host/assets.js'
 
@@ -76,6 +78,40 @@ describe('asset handler', () => {
       .fetch(request('/plugins/dsh-client-ui-chat.js'))
     expect(fetchBundle).toHaveBeenCalledOnce()
     expect(await response.text()).toBe('bundle-bytes')
+  })
+
+  it('adapts the served conversation module and removes its stale content validators', async () => {
+    const { ctx, fetchBundle } = fakeContext()
+    const source = await readFile(new URL('./fixtures/conversation-client.js', import.meta.url), 'utf8')
+    fetchBundle.mockImplementation(() => new Response(source, { headers: {
+      'content-type': 'text/javascript', 'content-length': String(source.length), etag: 'old',
+    } }))
+    const response = await createAssetHandler(asContext(ctx), distRoot).fetch(request('/plugins/conversation'))
+    expect((await response.text()).includes('data-sanbao-composer')).toBe(true)
+    expect(response.headers.get('etag')).toBeNull()
+    expect(response.headers.get('content-length')).toBeNull()
+  })
+
+  it('allocates distinct private directories only through the shell-owned POST endpoint', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sanbao-cwd-'))
+    try {
+      const { ctx } = fakeContext()
+      const handler = createAssetHandler(asContext(ctx), distRoot, root)
+      const first = await handler.fetch(request('/.sanbao/session-directory', 'POST'))
+      const second = await handler.fetch(request('/.sanbao/session-directory', 'POST'))
+      expect(first.status).toBe(201)
+      const one = await first.json() as { cwd: string }
+      const two = await second.json() as { cwd: string }
+      expect(one.cwd.startsWith(root + '/')).toBe(true)
+      expect(one.cwd).not.toBe(two.cwd)
+      expect((await stat(one.cwd)).mode & 0o777).toBe(0o700)
+      expect((await handler.fetch(request('/.sanbao/session-directory'))).status).toBe(405)
+      expect((await handler.fetch(new Request('dsh-app://app/.sanbao/session-directory', {
+        method: 'POST', headers: { origin: 'https://untrusted.example' },
+      }))).status).toBe(403)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it('declares a buffered request body mode', () => {

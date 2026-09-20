@@ -25,10 +25,15 @@ const repoRoot = join(scriptDir, '..', '..')
 /** 派生物文件在 tmp 根下的完整拷贝，供突变用例使用。 */
 function makeFixture() {
   const root = mkdtempSync(join(tmpdir(), 'brand-derivatives-'))
-  mkdirSync(join(root, 'dsh-patches'), { recursive: true })
   const file = join(root, 'dsh-patches', 'brand-replay.sh')
-  writeFileSync(file, readFileSync(join(repoRoot, 'dsh-patches', 'brand-replay.sh'), 'utf8'))
-  writeFileSync(join(root, 'dsh-patches', 'brand-payload-wordmark.txt'), readFileSync(join(repoRoot, 'dsh-patches', 'brand-payload-wordmark.txt')))
+  // 造**全部**派生物的副本——硬编码两份会在清单增长时静默漏造（2026-09-20 实测：
+  // 新增 identity-display-name 后，夹具缺 brand-payload-name.txt，write 回路用例恒红；
+  // 而「突变→红」用例因缺文件也红，看不出是哪种红）。分母 = DERIVATIVES 的完整集合。
+  for (const d of DERIVATIVES) {
+    const target = join(root, d.file)
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, readFileSync(join(repoRoot, d.file)))
+  }
   return { root, file }
 }
 

@@ -69,7 +69,7 @@
 ## 4. 标准排查路径（按序执行）
 
 1. **看生命周期**：`tail -1 ~/Library/Application\ Support/DSH\ Desktop/lifecycle-events/startup.jsonl` 的 `rendererStatus` 与 `finalStage`。
-2. **看日志**：`~/Library/Application Support/DSH Desktop/logs/dsh-<日期>.log` 尾部，找 `[Renderer] Error: renderSlot('root')`。
+2. **看日志**：`~/Library/Application Support/Sanbao/logs/dsh-<日期>.log`（2026-09-20 前装的版本为 `Application Support/DSH Desktop`） 尾部，找 `[Renderer] Error: renderSlot('root')`。
 3. **确认白屏范围**：macos-harness 截图。左侧主区空白 + 右侧面板正常 = root 槽问题（症状 A）；整窗全白 = 按速查卡 B1/B2 二分（运行中替换过 app bundle → Cmd+R；关机态改过 client bundle 字节 → 还原字节）。
 4. **查组合三路证据**（插件是否真的在组合、是否刚被改动）：
    ```bash

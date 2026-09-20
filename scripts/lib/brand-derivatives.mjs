@@ -46,6 +46,15 @@ export const DERIVATIVES = [
     render: (brand) => `<title>${brand.nameLatin}</title>`,
   },
   {
+    id: 'identity-display-name',
+    description: 'app 身份与显示名的唯一载荷（brand-replay.sh / app-identity-sanbao 都读它，不再各自抄一份）',
+    sourceField: 'bundleDisplayName',
+    file: 'dsh-patches/brand-payload-name.txt',
+    pattern: /^[\s\S]+$/g,
+    wholeFile: true,
+    render: (brand) => `${brand.bundleDisplayName}\n`,
+  },
+  {
     id: 'boot-stacked-wordmark',
     description: '启动屏单一 SVG 路径字标',
     sourceField: 'nameLatin',

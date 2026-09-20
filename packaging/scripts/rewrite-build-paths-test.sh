@@ -37,7 +37,7 @@ cat > "$SANDBOX/tree/presets/agt-001/agent.cordis.yml" <<'EOF'
 EOF
 cat > "$SANDBOX/tree/skills/x/SKILL.md" <<'EOF'
 | 安装位置 | `/Users/fixtureuser/.dsh/skills/x/` |
-- 本机 pnpm：`/Users/fixtureuser/Library/Application Support/DSH Desktop/runtime-commands/bin/pnpm`
+- 本机 pnpm：`/Users/fixtureuser/Library/Application Support/Sanbao/runtime-commands/bin/pnpm`
 - 样例：/Users/fixtureuser/Desktop/skill-翻译/a.json
 - 交付：/Users/fixtureuser/project/Magpie-Horch/dsh-chatui-fix/
 EOF
