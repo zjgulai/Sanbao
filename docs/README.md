@@ -45,6 +45,7 @@
 
 | 文档 | 说明 |
 | --- | --- |
+| [deep-analysis-2026-09-20.html](deep-analysis-2026-09-20.html) | **全仓深度分析指引**（2026-09-20，快照 `ef17b22`）：知识图谱（3930 节点）交叉核验治理文档，含开发指引（加功能/改架构/优化/重构）与 TOP20 必做事项；配套工单轮在 [.scratch/review/2026-09-20-deep-analysis-top20/](../.scratch/review/2026-09-20-deep-analysis-top20/README.md) |
 | [skillopt-optimization-plan.md](skillopt-optimization-plan.md) | SkillOpt 优化计划 |
 | [skillopt-optimization-report.md](skillopt-optimization-report.md) | SkillOpt 优化报告 |
 | [skillopt-skill-optimizer-merge-plan.md](skillopt-skill-optimizer-merge-plan.md) | SkillOpt 合并计划 |

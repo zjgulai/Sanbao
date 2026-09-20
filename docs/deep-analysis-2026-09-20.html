@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magpie-Horch 深度分析 · 开发指引与 TOP20 — 2026-09-20</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#bc8cff;
+    --green:#3fb950; --yellow:#d29922; --red:#f85149; --cyan:#39c5cf;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 -apple-system,"PingFang SC","Noto Sans SC",sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.88em;background:#21262d;padding:1px 6px;border-radius:4px;color:#79c0ff}
+  pre{background:#0b0f14;border:1px solid var(--border);border-radius:8px;padding:14px 16px;overflow-x:auto}
+  pre code{background:none;padding:0;color:#c9d1d9;font-size:13px;line-height:1.6}
+  h1,h2,h3,h4{line-height:1.35;font-weight:650}
+  h2{font-size:26px;margin:0 0 6px;scroll-margin-top:72px}
+  h3{font-size:19px;margin:28px 0 10px;color:#d2dae3}
+  h4{font-size:16px;margin:18px 0 8px;color:#c9d1d9}
+  p{margin:8px 0}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+
+  /* ── header ── */
+  .hero{padding:56px 0 28px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#101722 0%,var(--bg) 100%)}
+  .hero h1{font-size:34px;margin:0 0 8px}
+  .hero .sub{color:var(--muted);font-size:16px;margin:0 0 22px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+  .chip b{color:var(--text);font-weight:600}
+  .chip.ok{border-color:#1f5b2e}.chip.ok b{color:var(--green)}
+  .chip.warn{border-color:#6b4d12}.chip.warn b{color:var(--yellow)}
+  .chip.info{border-color:#1f3a5b}.chip.info b{color:var(--accent)}
+
+  /* ── nav ── */
+  nav.toc{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+  nav.toc .inner{max-width:1180px;margin:0 auto;padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap;font-size:13.5px}
+  nav.toc a{padding:4px 10px;border-radius:6px;color:var(--muted)}
+  nav.toc a:hover{background:var(--panel);color:var(--text);text-decoration:none}
+
+  /* ── layout blocks ── */
+  section{padding-top:40px}
+  .lede{font-size:16px;color:#c3ccd6;border-left:3px solid var(--accent);padding-left:14px;margin:14px 0 10px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .card h4{margin-top:0}
+  .card .tagline{color:var(--muted);font-size:13px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .kpi .v{font-size:26px;font-weight:700;font-family:var(--mono)}
+  .kpi .k{font-size:12.5px;color:var(--muted)}
+  .kpi.g .v{color:var(--green)}.kpi.b .v{color:var(--accent)}.kpi.y .v{color:var(--yellow)}.kpi.p .v{color:var(--accent2)}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#c9d1d9;font-weight:600;white-space:nowrap}
+  td code{font-size:12px}
+  tr:nth-child(even) td{background:#12171f}
+
+  .badge{display:inline-block;font-size:11.5px;font-family:var(--mono);border-radius:5px;padding:1px 7px;border:1px solid;vertical-align:1px}
+  .b-green{color:var(--green);border-color:#1f5b2e;background:#0f2417}
+  .b-yellow{color:var(--yellow);border-color:#6b4d12;background:#241c07}
+  .b-red{color:var(--red);border-color:#6e2a26;background:#2a100e}
+  .b-blue{color:var(--accent);border-color:#1f3a5b;background:#0d1a2b}
+  .b-purple{color:var(--accent2);border-color:#4a3a68;background:#1a1226}
+
+  .callout{border:1px solid var(--border);border-left:4px solid var(--accent);background:var(--panel);border-radius:8px;padding:12px 16px;margin:14px 0}
+  .callout.warn{border-left-color:var(--yellow)}
+  .callout.danger{border-left-color:var(--red)}
+  .callout.ok{border-left-color:var(--green)}
+  .callout .t{font-weight:650;margin-bottom:4px}
+
+  .lanes{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:900px){.lanes{grid-template-columns:1fr}}
+  .lane{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+  .lane h3{margin:0 0 4px;font-size:17px}
+  .lane .who{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+  .lane ul{margin:8px 0 0;padding-left:20px}
+  .lane li{margin:5px 0}
+  .lane.blue{border-top:3px solid var(--accent)}
+  .lane.green{border-top:3px solid var(--green)}
+  .lane.yellow{border-top:3px solid var(--yellow)}
+  .lane.purple{border-top:3px solid var(--accent2)}
+
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+  .flow .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px}
+  .flow .arrow{color:var(--muted)}
+
+  .top-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:10px 0}
+  .top-item .head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .top-item .num{font-family:var(--mono);font-weight:700;font-size:16px;color:var(--accent)}
+  .top-item .title{font-weight:650;font-size:15.5px}
+  .top-item .meta{margin-top:8px;display:grid;grid-template-columns:74px 1fr;gap:2px 10px;font-size:13.5px}
+  .top-item .meta .lab{color:var(--muted)}
+  .prio{font-size:11.5px;font-family:var(--mono);border-radius:5px;padding:1px 7px;border:1px solid}
+  .prio.p0{color:var(--red);border-color:#6e2a26;background:#2a100e}
+  .prio.p1{color:var(--yellow);border-color:#6b4d12;background:#241c07}
+  .prio.p2{color:var(--accent);border-color:#1f3a5b;background:#0d1a2b}
+
+  .muted{color:var(--muted)}
+  .small{font-size:12.5px}
+  .mono{font-family:var(--mono)}
+  hr.sep{border:0;border-top:1px solid var(--border);margin:34px 0 0}
+  footer{color:var(--muted);font-size:12.5px;padding:28px 0 0;border-top:1px solid var(--border);margin-top:50px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Magpie-Horch · 深度分析指引</h1>
+    <p class="sub">LUTE Agentic System（DSH Desktop 二开平台）· 基于 Understand-Anything 知识图谱（增量刷新至 HEAD）+ 治理文档交叉核验 · 生成于 2026-09-20</p>
+    <div class="chips">
+      <span class="chip info">代码快照 <b>ef17b22</b></span>
+      <span class="chip info">图谱 <b>3930 节点 / 4495 边 / 10 层 / 14 步导览</b></span>
+      <span class="chip ok">门禁实况 <b>110/113 通过 · 0 失败</b>（quick）</span>
+      <span class="chip">扫描清单 <b>2897 文件</b></span>
+      <span class="chip">受管包 <b>28</b>（24 self + 4 internalized）</span>
+      <span class="chip warn">发现漂移 <b>2 处</b>（见 TOP20 #5/#12）</span>
+    </div>
+  </div>
+</div>
+
+<nav class="toc"><div class="inner">
+  <a href="#summary">执行摘要</a>
+  <a href="#landscape">工程全景</a>
+  <a href="#graph">图谱统计</a>
+  <a href="#modules">模块地图与热点</a>
+  <a href="#guide">开发指引</a>
+  <a href="#risks">风险与债务地图</a>
+  <a href="#top20">TOP20 必做</a>
+  <a href="#appendix">附录 · 方法与命令</a>
+</div></nav>
+
+<div class="wrap">
+
+<!-- ══════════════════════ 1. 执行摘要 ══════════════════════ -->
+<section id="summary">
+  <h2>执行摘要</h2>
+  <p class="lede">本仓库的核心资产不是某个插件，而是「一条命令给证据」的验证平面：113 项聚合门禁 + 54 条复发故障总账 + 只减不增的豁免纪律。本次深度分析确认这套体系当前全绿（0 失败），同时找到 2 处文档与真身漂移、5 项文档自认「尚未落地」的机制债、以及若干由图谱首次量化的结构热点。</p>
+
+  <div class="grid g4" style="margin-top:16px">
+    <div class="kpi g"><div class="v">110/113</div><div class="k">门禁通过（quick，3 跳过=射程为空显式跳过，0 失败）</div></div>
+    <div class="kpi b"><div class="v">54</div><div class="k">复发故障根因条目（P-01…P-54，全部点名机制）</div></div>
+    <div class="kpi p"><div class="v">93+91</div><div class="k">ADR 决策 + 决策 Note（文档脊柱）</div></div>
+    <div class="kpi y"><div class="v">1633</div><div class="k">源码行级结构节点（1197 函数 + 46 类 + 390 文件）*</div></div>
+  </div>
+  <p class="small muted">* code 类节点（不含 config/docs）；函数节点 1864 含 POC 排除后的全量。完整分布见「图谱统计」。</p>
+
+  <h3>五条最重要的结论</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4>① 系统形态已定型：双基座 + 五组包 + 薄壳 + 一条门禁</h4>
+      <p>pin 已到 <code>upstream v2.0.10 / runtime 0.1.5-rc.2</code>（<code>vendor/dsh-desktop.pin</code>，checked-at 2026-09-17），LUTE 2.5.0 已发布（<code>packaging/release/2.5.0/VERSION</code>，SOURCE_DIRTY=0）。28 个包按 capabilities / contract / infra / platform / surfaces 五组归位；<code>apps/lute-shell</code> 是脱离 fork 的自有 Electron 薄壳。</p>
+    </div>
+    <div class="card">
+      <h4>② 治理平面是本仓库最强的部分——且当前干净</h4>
+      <p><code>scripts/gates/exemptions.json = []</code>（零豁免=存量全部达标）；28 个包全部有 <code>typecheck</code> + <code>test</code> 脚本；门禁 0 失败；dead-instruments 登记簿在执行（3 类已证伪仪器被拦）。这套「判据化 + 反向自测」的纪律是本仓区别于一般二开仓库的根本。</p>
+    </div>
+    <div class="card">
+      <h4>③ 结构热点首次被量化：三包独大 + 巨型入口</h4>
+      <p><code>dsh-deepresearch-local</code>（81 文件 / 281 函数）、<code>dsh-overseas-skills</code>（79 / 159）、<code>dsh-agent-team-gui-local</code>（60 / 124）构成前三大包。源码热点：<code>src/investigation.ts</code>（32 函数）、<code>src/client/ResearchView.tsx</code>（39 函数）与纯 JS 包 <code>dsh-wanzh-hulian/lib/index.js</code>（31 函数，源即产物）。</p>
+    </div>
+    <div class="card">
+      <h4>④ 测试「存在性」满分，「纵深」靠自觉</h4>
+      <p>图谱只连出 85 条 <code>tested_by</code> 边：<code>dsh-browser-local</code>（52 文件）、<code>dsh-paper2skills</code>（49）、<code>dsh-algo-skills-local</code>（41）生产节点零覆盖边；<code>changed-packages</code> 门禁只管「包有没有 test 脚本」，管不到「你这次改的函数有没有被测」。纵深缺口需要显式计划。</p>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h4>⑤ 两处已核实的「文档-真身漂移」（P-14 形态的现场实例）</h4>
+      <p>a) <code>docs/architecture.md</code> §1 标题仍写「<b>发行 2.0.0=2.0.5/rc.1</b>」（更新于 2026-09-10），而 pin 与 2.5.0 VERSION 均为 <b>2.0.10 / 0.1.5-rc.2</b> —— 落后一次完整基座迁移。<br>
+      b) 同节「生产机仍是 2.0.4/alpha.1」是五天前的观察，此后无更新记录 —— <b>未核实</b>，需实测后落笔。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 2. 工程全景 ══════════════════════ -->
+<section id="landscape">
+  <h2>工程全景</h2>
+  <p class="lede">从上游字节到客户屏幕，这个仓库管理着一条五级链路。理解每一级的「生效边界」，是避免 80% 调试时间的前提。</p>
+
+  <div class="card" style="margin:16px 0">
+    <h4>五级链路（自上而下）</h4>
+    <div class="flow">
+      <div class="step">① 基座参照<br><span class="small muted">vendor/dsh-desktop<br>pin 只读 · 不参与构建</span></div>
+      <div class="arrow">→</div>
+      <div class="step">② 运行时产物<br><span class="small muted">0.1.5-rc.2 物化 270/270<br>vendor checkout 内 node_modules</span></div>
+      <div class="arrow">→</div>
+      <div class="step">③ 二开包（28）<br><span class="small muted">packages/五组<br>src → build → lib</span></div>
+      <div class="arrow">→</div>
+      <div class="step">④ profile 装配<br><span class="small muted">两装载点：vendor 安装源 + node_modules 装载点</span></div>
+      <div class="arrow">→</div>
+      <div class="step">⑤ 交付面<br><span class="small muted">DMG → 客户机<br>38 补丁锚点全量重锚</span></div>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card">
+      <h4>基座与发行事实（已核实）</h4>
+      <ul class="small">
+        <li>上游：<code>v2.0.10</code> @ <code>697e7d78</code>，LUTE 分支 <code>lute-v2.0.10</code></li>
+        <li>运行时分发：<code>0.1.5-rc.2</code>（物化在 vendor checkout 的 node_modules）</li>
+        <li>上一代运行时 <code>0.1.2-rc.1</code> 仅作回滚对照保留</li>
+        <li>2.5.0 已发布：38 补丁锚全量重锚、ASAR→no-ASAR 形态切换、arm64</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>验证平面（本仓核心资产）</h4>
+      <ul class="small">
+        <li><code>pnpm run gate</code>：单命令 113 项，退出码即契约</li>
+        <li>契约级阻塞 + <code>expected/discovered/checked/skipped/failed</code> 守恒读数</li>
+        <li>每条判据配「恒真桩突变必须变红」的反向自测</li>
+        <li>豁免文件只减不增、到期即拒（当前为空）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>文档脊柱（事实单一之家）</h4>
+      <ul class="small">
+        <li>AGENTS.md（常驻规则）→ architecture.md（有序地图）→ ADR（决定什么）→ Notes（为什么）</li>
+        <li>坑账本 P-01…P-54 按根因组织，由门禁守着不腐烂</li>
+        <li>docs 内 230 个 document 节点、93 ADR、91 Note</li>
+        <li>链接可达性 / 索引一致性 / 双向互链均有门禁</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="t">⚠ 修改前必读的三条「生效边界」（来自坑账本高频复发族）</div>
+    <p class="small">① <b>磁盘 ≠ 生效</b>（P-15）：客户端 bundle 在应用内有不可变字节缓存，改完必须走 <code>同步 → 重启</code>，刷新页面不是生效路径；② <b>三级字节</b>（P-47）：工作树 / profile 安装源 / node_modules 装载点各存一份，「我改了源码」在三级里指的不是同一份字节；③ <b>硬链接</b>（红线 4）：编辑工具会打破 <code>file:</code> 硬链接，落盘一律 tmp+mv。</p>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 3. 图谱统计 ══════════════════════ -->
+<section id="graph">
+  <h2>知识图谱统计（本次增量刷新）</h2>
+  <p class="lede">分析管线：Understand-Anything <code>/understand</code> 增量模式（重扫 2897 文件 → 71 批子代理并行分析 284 个变更文件 → 合并 + 剪枝基线 → 10 层分层 → 14 步导览 → 确定性校验 <b>0 issue</b>）。图谱已落盘 <code>.ua/knowledge-graph.json</code>（可查询、可再增量）。</p>
+
+  <div class="grid g2">
+    <div>
+      <h4>节点分布（3930）</h4>
+      <table>
+        <tr><th>类型</th><th>数量</th><th>说明</th></tr>
+        <tr><td><code>function</code></td><td>1864</td><td>函数/方法（含跨包导出面）</td></tr>
+        <tr><td><code>file</code></td><td>1143</td><td>代码与脚本文件</td></tr>
+        <tr><td><code>document</code></td><td>552</td><td>Markdown 文档（docs 230 + 包内文档为主）</td></tr>
+        <tr><td><code>config</code></td><td>323</td><td>package.json / tsconfig / yml 等</td></tr>
+        <tr><td><code>class</code></td><td>46</td><td>类与服务定义</td></tr>
+        <tr><td><code>table</code></td><td>2</td><td>数据表定义</td></tr>
+      </table>
+    </div>
+    <div>
+      <h4>边分布（4495）</h4>
+      <table>
+        <tr><th>类型</th><th>数量</th><th>读法</th></tr>
+        <tr><td><code>contains</code></td><td>1909</td><td>结构包含（文件→函数/类）</td></tr>
+        <tr><td><code>exports</code></td><td>1134</td><td>导出面（跨包可见入口）</td></tr>
+        <tr><td><code>imports</code></td><td>706</td><td>静态导入（1:1 无聚合）</td></tr>
+        <tr><td><code>calls</code></td><td>519</td><td>调用关系（跨文件）</td></tr>
+        <tr><td><code>tested_by</code></td><td>85</td><td>生产→测试覆盖边（<b>纵深薄弱点</b>）</td></tr>
+        <tr><td><code>related</code>/<code>documents</code>/<code>configures</code>/<code>depends_on</code></td><td>142</td><td>语义/文档/配置关联</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>十个架构分层（= 本仓文档化的五组能力结构 + 工程/文档面）</h3>
+  <div class="grid g2">
+    <table>
+      <tr><th>层</th><th>节点数</th><th>内容</th></tr>
+      <tr><td><code>capabilities</code></td><td>631</td><td>能力插件：deepresearch / overseas-skills / browser / paper2skills / loopx / wanzh 等</td></tr>
+      <tr><td><code>surfaces</code></td><td>300</td><td>交互面：agent-team-gui / newapp / role-matrix / skill-center / 薄壳 apps</td></tr>
+      <tr><td><code>dsh-patches</code></td><td>295</td><td>上游补丁基线（38 锚 + 重放脚本）</td></tr>
+      <tr><td><code>documentation</code></td><td>230</td><td>ADR / Note / 坑账本 / SOP</td></tr>
+      <tr><td><code>historical-artifacts</code></td><td>205</td><td>.scratch 实验存证（42 个工作流）</td></tr>
+      <tr><td><code>engineering-delivery</code></td><td>183</td><td>门禁脚本 / 验收 / 打包链 / CI</td></tr>
+    </table>
+    <table>
+      <tr><th>层</th><th>节点数</th><th>内容</th></tr>
+      <tr><td><code>platform</code></td><td>104</td><td>宿主平台扩展：theme / settings-shell / root-brand / cost-guard</td></tr>
+      <tr><td><code>infrastructure</code></td><td>54</td><td>team-hub 协作基础设施</td></tr>
+      <tr><td><code>contract</code></td><td>12</td><td>契约执行：preset-lint / skill-subset</td></tr>
+      <tr><td><code>shared-runtime</code></td><td>6</td><td>共享 Host/Client 基础（含 sidebar-entry-core 不变量载体）</td></tr>
+      <tr><td colspan="3" class="small muted">分层按目录归属确定性构建，与 ADR-0011 的五组治理结构一一对应；验证器已确认全部 file 级节点恰好归属一层。</td></tr>
+    </table>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 4. 模块地图与热点 ══════════════════════ -->
+<section id="modules">
+  <h2>模块地图与热点</h2>
+  <p class="lede">25 个包目录（+4 个 internalized 共 28 个带治理三字段的包）按内聚度排序。函数数与测试边来自图谱实测——<b>测试边为 0 不代表没有测试</b>（各包有 vitest/node:test 套件），而是图谱未连出生产→测试引用关系，可当「测试触达生产代码的显性程度」读。</p>
+
+  <table>
+    <tr><th>包</th><th>组</th><th>文件</th><th>函数</th><th>tested_by 边</th><th>定位</th></tr>
+    <tr><td><code>dsh-deepresearch-local</code></td><td>capabilities</td><td>81</td><td>281</td><td>3</td><td>深度研究能力（TS 源 + client 视图）</td></tr>
+    <tr><td><code>dsh-overseas-skills</code></td><td>capabilities</td><td>79</td><td>159</td><td>4</td><td>出海技能体系（8 场景/28 细分/222 条，三线验证器）</td></tr>
+    <tr><td><code>dsh-agent-team-gui-local</code></td><td>surfaces</td><td>60</td><td>124</td><td>3</td><td>Agent Team 图形界面</td></tr>
+    <tr><td><code>dsh-browser-local</code></td><td>capabilities</td><td>52</td><td>88</td><td><span class="badge b-yellow">0</span></td><td>浏览器自动化能力</td></tr>
+    <tr><td><code>dsh-paper2skills</code></td><td>capabilities</td><td>49</td><td>107</td><td><span class="badge b-yellow">0</span></td><td>论文→技能转化线（p2s）</td></tr>
+    <tr><td><code>dsh-newapp-local</code></td><td>surfaces</td><td>49</td><td>102</td><td>7</td><td>新应用矩阵/中列设计</td></tr>
+    <tr><td><code>dsh-algo-skills-local</code></td><td>surfaces</td><td>41</td><td>53</td><td><span class="badge b-yellow">0</span></td><td>算法技能卡（frontmatter 不变量在守）</td></tr>
+    <tr><td><code>dsh-team-hub</code></td><td>infra</td><td>37</td><td>93</td><td>7</td><td>团队协作 hub（admin/RPC/代理三通路）</td></tr>
+    <tr><td><code>dsh-role-matrix-local</code></td><td>surfaces</td><td>34</td><td>72</td><td>7</td><td>岗位矩阵</td></tr>
+    <tr><td><code>dsh-skill-center-local</code></td><td>surfaces</td><td>30</td><td>56</td><td>3</td><td>技能中心</td></tr>
+    <tr><td><code>dsh-loopx-plugin</code></td><td>capabilities</td><td>23</td><td>50</td><td><span class="badge b-yellow">0</span></td><td>LoopX 集成</td></tr>
+    <tr><td><code>dsh-root-brand-local</code></td><td>platform</td><td>19</td><td>28</td><td>6</td><td>品牌面（Sanbao 收口 + UI 锚漂移判据）</td></tr>
+    <tr><td><code>dsh-theme-local</code></td><td>platform</td><td>16</td><td>23</td><td>8</td><td>三主题三通道外观架构</td></tr>
+    <tr><td><code>dsh-settings-shell-local</code></td><td>platform</td><td>12</td><td>23</td><td>7</td><td>设置壳（AX 校准纪律）</td></tr>
+    <tr><td><code>dsh-wanzh-hulian</code></td><td>capabilities</td><td>8</td><td>39</td><td>1</td><td>万物互联（纯 JS 包，lib 即源）</td></tr>
+    <tr><td colspan="6" class="small muted">其余 13 包（task-board / cost-guard / ui-polish / preset-lint / skill-subset / file-upload / my-quotes / rename-conversations / auto-compact / overseas-tools / capability-hub / onboarding-carousel / qoder-sidebar / bridge-browser）规模 2–8 文件，不逐一列出。</td></tr>
+  </table>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>源码热点（单一文件职能密度过高）</h4>
+      <ul class="small">
+        <li><code>capabilities/dsh-deepresearch-local/src/investigation.ts</code> — 32 函数</li>
+        <li><code>capabilities/dsh-deepresearch-local/src/client/ResearchView.tsx</code> — 39 函数 / 552 条调用边（图谱最大单文件调用面）</li>
+        <li><code>capabilities/dsh-wanzh-hulian/lib/index.js</code> — 31 函数（纯 JS 包，<b>lib 即源码</b>）</li>
+        <li><code>scripts/gate.mjs</code>（24）+ <code>scripts/gates/checks.mjs</code>（23）— 门禁核心两位一体</li>
+        <li><code>scripts/role-presets/generate.mjs</code> — 19 函数（50 AGT + 3 MGT 双命名空间生成器）</li>
+      </ul>
+      <p class="small muted">注：TS 包的 <code>lib/</code> 是构建产物（图谱同时收录了 src 与 lib，节点数约为源码视角的两倍）。</p>
+    </div>
+    <div class="card">
+      <h4>文档资产分布</h4>
+      <ul class="small">
+        <li><code>docs/adr/</code> — 93 篇决策记录（编号连续，索引受门禁守）</li>
+        <li><code>docs/notes/</code> — 91 篇决策 Note（implemented / proposed 双轨）</li>
+        <li>包内文档 238 处（各能力组 README / SOP / 分类总表）</li>
+        <li><code>docs/pitfalls-playbook.md</code> — 54 条根因账（本报告的主要交叉核验源）</li>
+        <li>最新 proposed：<code>docs/notes/proposed/architecture/2026-09-20-business-delivery-capability-map.md</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 5. 开发指引 ══════════════════════ -->
+<section id="guide">
+  <h2>开发指引</h2>
+  <p class="lede">面向四类动作：<b>加功能 / 改架构 / 做优化 / 做重构</b>。每类动作都有一条「本仓库专属」的正确路径——背离它会在某个门禁或某个现场读数上付出代价。</p>
+
+  <h3>通用工作循环（任何改动都适用）</h3>
+  <div class="flow">
+    <div class="step">1. 开工前读<br><span class="small muted">AGENTS.md → pitfalls-playbook<br>→ 相关 ADR/Note</span></div>
+    <div class="arrow">→</div>
+    <div class="step">2. 量基线<br><span class="small muted">先跑 gate，记录当前绿基线</span></div>
+    <div class="arrow">→</div>
+    <div class="step">3. 改<br><span class="small muted">tmp+mv 落盘<br>同一提交补机制</span></div>
+    <div class="arrow">→</div>
+    <div class="step">4. 验证<br><span class="small muted">pnpm run gate<br>（推送前 gate:full）</span></div>
+    <div class="arrow">→</div>
+    <div class="step">5. 同步<br><span class="small muted">sync-profile --apply --loadpoint<br>→ 重启 → 实况读数</span></div>
+    <div class="arrow">→</div>
+    <div class="step">6. 留痕<br><span class="small muted">ADR + Note 同批提交</span></div>
+  </div>
+
+  <div class="lanes" style="margin-top:18px">
+    <div class="lane blue">
+      <h3>A · 加功能（新插件 / 新能力）</h3>
+      <div class="who">产出物：一个新包 + 门禁全绿 + profile 可装载</div>
+      <ol class="small">
+        <li><b>选组落位</b>：capabilities（能力）/ surfaces（界面）/ platform（宿主扩展）/ contract（契约）/ infra。目录必须是 <code>packages/&lt;组&gt;/&lt;包名&gt;/</code>（package-layout 只认这一种布局）。</li>
+        <li><b>身份三字段</b>：<code>luteOrigin</code>（self/internalized/npm-pinned）/ <code>luteOwner</code> / <code>lutePublish</code> —— 缺任一项 <code>package-identity</code> 判红。</li>
+        <li><b>发布契约</b>：<code>files</code> 清单必须覆盖「入口可达闭包」的所有运行时文件（<code>package-files-coverage</code> 与真实 npm pack 逐文件校准）；宿主插件走 <code>dsh.bundle.patch → cordis.patch.yml</code>；界面插件声明 <code>dsh.client.platform/inject</code>（inject 里解析不到的包名会静默跳过——本仓用 <code>validate-build</code> 双向断言拦住）。</li>
+        <li><b>脚本三件套</b>：<code>typecheck</code> + <code>test</code> + <code>build</code>（changed-packages 门禁要求改动的包必须有前两者，缺失即阻塞）。</li>
+        <li><b>挂载路径二选一</b>：本机装配走 profile <code>cordis.patch.yml</code> 的 <code>file:</code> 显式挂载（ADR-0061）；出货则必须同时过 <code>shipped-presets</code> 白名单（外部产品永不进出货 preset，ADR-0056）。</li>
+        <li><b>生效链走完</b>：build → <code>node scripts/sync-profile.mjs --apply --loadpoint</code> → 重启应用 → 读实况（AX 几何/截图），不要用「刷新页面」当验收。</li>
+      </ol>
+    </div>
+    <div class="lane green">
+      <h3>B · 改架构（跨包结构 / 基座交互）</h3>
+      <div class="who">产出物：ADR 决策 + Note 理由 + 兼容迁移</div>
+      <ol class="small">
+        <li><b>先定位事实之家</b>：同一结论只写一处。改前 <code>grep -rn</code> 它的全部出现位置；复制一条事实时同步问「它的清单在哪」（P-07）。</li>
+        <li><b>pin 纪律</b>：<code>vendor/dsh-desktop.pin</code> 的 bump 与行为变更<b>分开提交</b>；<code>pin-consistency</code> 校验子模块 HEAD。</li>
+        <li><b>官方 UI 改写锚禁止钉哈希</b>（红线 7）：有公开 ARIA/DOM 语义则用 marker 路径（Settings 见 ADR-0098）；必须命中私有节点时用「官方样式标签包路径 + 模块局部名负向断言」运行时推导（ADR-0019）。解析失败必须自报降级，不能静默失效。</li>
+        <li><b>可选 host 服务双通道探测</b>：<code>ctx.get('x')</code> 与 <code>connection.api.x</code> 都要试，以「存在可调用 select」为准（ADR-0061）；<code>ctx.&lt;name&gt;</code> 属性读对未 inject 服务会抛，可选判据一律包保护且失败按最保守结论走（ADR-0038）。</li>
+        <li><b>共享层不变量</b>：改 <code>shared/client/sidebar-entry-core.ts</code> 的 observer 必须维持「对被观察子树的写操作，移动一次后不得再满足移动条件」——这是 P-52 黑屏事故的血价不变量。</li>
+        <li><b>变更包级门禁</b>：本次改动涉及的包必须已有 typecheck+test；根级治理文件变更会把射程扩到全部包。</li>
+      </ol>
+    </div>
+    <div class="lane yellow">
+      <h3>C · 做优化（性能 / 体积 / 质量）</h3>
+      <div class="who">产出物：基线读数 + 可复现的对比证据</div>
+      <ol class="small">
+        <li><b>先量基线再动手</b>：任何优化前记录当前读数（时间/体积/调用数），禁止拿记忆当基线（P-01）。</li>
+        <li><b>仪器三原则</b>（写任何新判据时）：① 读不到 = 失败或<b>显式跳过</b>，不是通过；② 读状态一律「值 + 绑定身份」一起读；③ 交付前做恒真桩突变，红不了就是没测。</li>
+        <li><b>几何/时间类结论</b>必须像素或契约读数（P-51：OCR 估算把 279pt 估成 350pt，方向还偏向了既有叙事）；时间相关断言用带截止的轮询（P-54）。</li>
+        <li><b>性能候选面</b>：巨型源文件拆分（见 TOP20 #7）；tsc -b 增量缓存利用率；DMG 打包链（3 分半构建记录在 SOP）。</li>
+        <li><b>存量违规清账</b>：theme-tokens 基线等「只减不增」清单按 <code>gate:full</code> 读数逐次清，条目失效即被门禁拒绝。</li>
+      </ol>
+    </div>
+    <div class="lane purple">
+      <h3>D · 做重构（含批量修复）</h3>
+      <div class="who">产出物：行为不变的证据 + 清账读数</div>
+      <ol class="small">
+        <li><b>豁免纪律</b>：<code>scripts/gates/exemptions.json</code> 只减不增、到期即拒——当前为空是好状态，任何新增豁免都是治理事件，需 owner + deadline。</li>
+        <li><b>收成一家</b>，不要「都改对」：同一判据出现在两处以上时，先合并实现（P-07 五例前科：13 个家、4 个家、2 个家…）。</li>
+        <li><b>成对动作写清单</b>（注册/回收、开端口/关端口）：判据断言两个集合<b>全等</b>，并为卸载/异常路径各写一条真实用例（P-32）。</li>
+        <li><b>批处理先建 plan</b>：把「最终会交给 open/copy/rename 的名字」列成 immutable plan，全批校验完才拿锁（P-28）。</li>
+        <li><b>临时资源回收写信号路径</b>：只写 <code>finally</code>/<code>test.after</code> 等于没写——进程被 kill 时一个都不收（P-34，实测 2,066 个残留根）。</li>
+        <li><b>try 里返回 promise 一律 <code>return await</code></b>（P-33：三处主通路曾全部静默悬挂）。</li>
+        <li><b>验证重构不改行为</b>：跑受影响包的 test + 相关 acceptance 脚本 + gate；重构与行为变更分开提交。</li>
+      </ol>
+    </div>
+  </div>
+
+  <h3>红线清单（改动前必读 · 摘自 architecture.md §2）</h3>
+  <div class="grid g2">
+    <div class="card small">
+      <ol style="margin:0;padding-left:20px">
+        <li>只用内置 alpha SDK（<code>@deepseek-ai/*</code>），不引入 npm 发布线（防双实例）。</li>
+        <li>不碰壳内 UI 的 shadows-shipped-ui slot。</li>
+        <li>凭证永不落仓库/日志/模型上下文；子进程环境经凭证擦洗。</li>
+        <li>编辑工具会打破 <code>file:</code> 硬链接 inode——改后必须 tmp+mv 同步 profile。</li>
+      </ol>
+    </div>
+    <div class="card small">
+      <ol start="5" style="margin:0;padding-left:20px">
+        <li>补丁锚点为精确原文，restore 会回滚全部补丁。</li>
+        <li>MCP 工具模型侧描述不可覆写——业务中文层走技能速查表桥接。</li>
+        <li>官方 UI 改写锚禁止钉哈希（见上 B-3）。</li>
+      </ol>
+    </div>
+  </div>
+
+  <h3>排障入口（90 秒定位）</h3>
+  <table>
+    <tr><th>症状</th><th>第一落点</th><th>关键读数</th></tr>
+    <tr><td>白屏 / 插件加载中卡死</td><td><code>docs/dsh-desktop-white-screen-playbook.md</code> + 挂死四签名（CPU 100%+ / inspector 超时 / console 零输出 / rAF 不跑）</td><td>旁路取证（铸 cookie + 独立 Chrome + 预启用 Debugger）；先数单例元素 <code>querySelectorAll('[data-dsh-workbench-container]').length</code></td></tr>
+    <tr><td>改了没生效</td><td>P-15 / P-47 三级字节</td><td><code>sha256</code> 三份（工作树/安装源/装载点）→ <code>--check</code> → 重启 → 实况读数</td></tr>
+    <tr><td>门禁红</td><td>先归因：本会话改动 or 并行会话在写同一棵树（P-43）</td><td>单独跑该用例；需要独占时用 <code>DSH_ATTEST_REPO=&lt;独占副本&gt;</code> 复跑</td></tr>
+    <tr><td>权限拒绝（EACCES）</td><td>P-45：先 <code>stat -f '%Sp %N' &lt;file&gt;</code> 再怀疑并发写者</td><td>权限位是第一个该看的读数，不是最后一个</td></tr>
+    <tr><td>上游升级后插件失效</td><td>P-38/39/40/50：环境常量过期族</td><td><code>ui-anchors.json</code> 声明 × 产物核对；<code>resource-path-reachability</code>；<code>preset-config-schema</code></td></tr>
+  </table>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 6. 风险与债务地图 ══════════════════════ -->
+<section id="risks">
+  <h2>风险与债务地图</h2>
+  <p class="lede">按根因族聚合 54 条坑账 + 本次实测发现。每族给出：触发条件、已有机制、残余缺口。</p>
+
+  <table>
+    <tr><th>风险族</th><th>典型条目</th><th>已有机制强度</th><th>残余缺口</th></tr>
+    <tr>
+      <td><b>仪器假绿 / 假红族</b><br><span class="small muted">测量面失真</span></td>
+      <td>P-02（30+ 变体）、P-11、P-19、P-25、P-36、P-41、P-42、P-46</td>
+      <td><span class="badge b-green">强</span> expected/checked/skipped/failed 守恒 + 恒真桩突变 + dead-instruments 登记簿</td>
+      <td>新代码写仪器时是否遵守三原则仍靠纪律；射程残缺（P-41「跑了一半」）无通用守卫</td>
+    </tr>
+    <tr>
+      <td><b>文档-真身漂移族</b><br><span class="small muted">同一事实多个家</span></td>
+      <td>P-07、P-09、P-14、P-48（入库面）、P-44</td>
+      <td><span class="badge b-green">强</span> docs-link-integrity + adr-note-links + dmg-layout-doc + pitfalls 门禁</td>
+      <td><b>本次实测 2 处</b>：architecture.md §1 基座节落后（TOP20 #5）；入库面占位化无判据（P-48，TOP20 #3）</td>
+    </tr>
+    <tr>
+      <td><b>三级字节 / 生效边界族</b><br><span class="small muted">最高频日常坑</span></td>
+      <td>P-15、P-47、P-24</td>
+      <td><span class="badge b-green">强</span> profile-bundle-sync + sync-profile --apply --loadpoint + package-files-coverage</td>
+      <td>「运行中的进程读的是不是它」无静态判据（设计性缺口，靠实况读数）</td>
+    </tr>
+    <tr>
+      <td><b>上游迁移族</b><br><span class="small muted">每次基座升级的固定成本</span></td>
+      <td>P-06、P-38、P-39、P-40、P-50、P-51</td>
+      <td><span class="badge b-yellow">中强</span> resource-path-reachability + plugin-ui-anchor-drift + preset-config-schema</td>
+      <td>x64/universal 构建缺口；写死路径/键名的补丁清单需每次迁移逐个过（纪律）</td>
+    </tr>
+    <tr>
+      <td><b>并发会话族</b><br><span class="small muted">多会话同写一棵树</span></td>
+      <td>P-43、P-31、P-34</td>
+      <td><span class="badge b-yellow">中</span> repo-attest 见证 + 独占副本约定 + gate-concurrency-selftest</td>
+      <td>读数无 owner 时仍需人工归因；共享文件提交要只取自己 hunks</td>
+    </tr>
+    <tr>
+      <td><b>机制债（已承诺未落地）</b><br><span class="small muted">文档自己声明的缺口</span></td>
+      <td>P-17 聚合层、P-45 权限位、P-48 入库面、P-49 清场序、P-52 observer 探针</td>
+      <td><span class="badge b-red">待补</span> 全部在坑账本「诚实划界」中明写</td>
+      <td>见 TOP20 #1–#6 —— 这是本轮最高优先级的可关闭项</td>
+    </tr>
+  </table>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 7. TOP20 ══════════════════════ -->
+<section id="top20">
+  <h2>TOP20 · 接下来必须要做的事</h2>
+  <p class="lede">排序原则：<b>P0 = 已承诺未落地的机制债（文档自认，关闭成本低、复发成本高）</b>；P1 = 结构与在飞工作（有明确证据与边界）；P2 = 保鲜与纪律（防回涨）。每条给出证据来源与可判验收标准——本仓库的规矩：没有验收命令的承诺不算数。</p>
+
+  <h3><span class="prio p0">P0</span> 机制债收口（6 项）</h3>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#1</span><span class="title">gate.mjs 聚合层三态收口：skip 显式渲染 + --strict 开关</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-17：「拦住聚合层的那一步尚未落地——只有 skip 时退出码仍为 0……两处尚未落地，下次同族复发前做掉」</span>
+      <span class="lab">动作</span><span>① 汇总行在 <code>skipped&gt;0</code> 时显式写「N 项未核对」；② 给 <code>gate.mjs</code> 一个让 skip 判非 0 的开关（发布前用，日常保留宽容）</span>
+      <span class="lab">验收</span><span>造一个 skip&gt;0 的场景：默认模式汇总行含「未核对」字样；<code>--strict</code> 下退出码非 0；selftest 覆盖两态</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#2</span><span class="title">权限位判据：000 文件不得进入提交或工作树残留</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-45：「尚无——按 P-03 明写：这一行是约定，无强制」；实测三轮包括 <code>scripts/gate.mjs</code>（门禁入口）曾为 000</span>
+      <span class="lab">动作</span><span>新增一条判据（或并入 gate-result 自检）：改动文件写入后权限位为 000/不可读即判红，点名文件</span>
+      <span class="lab">验收</span><span>RED 重放：<code>chmod 000</code> 一个受测文件必须判红；修复后静默</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#3</span><span class="title">入库面占位化收口：写入者直写占位符，或加一条读入库面的判据</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-48：「入库面的占位化仍是流程，无强制」——重跑受认可的入库命令会把构建机路径写回已提交的事实源（实测 2026-09-18）</span>
+      <span class="lab">动作</span><span>让 <code>intake-install.mjs</code>/<code>scan-runtime-deps.mjs</code> 直接写 <code>__SKILL_INTAKE_SOURCE__</code> 等占位符；或加一条门禁读 <code>manifest/intake-provenance.json</code> 与 <code>runtime-deps.json</code></span>
+      <span class="lab">验收</span><span><code>grep -c "$HOME" packages/capabilities/dsh-overseas-skills/manifest/{intake-provenance,runtime-deps}.json</code> 两次为 0 且由门禁自动执行</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#4</span><span class="title">清场清单「先查承诺」序机制化</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-49：「『先查承诺』这一步本身仍然只有纪律，没有判据」——体积最大的那堆恰是被 ADR 与 uchg 保护的历史发布产物（5.7 GB）</span>
+      <span class="lab">动作</span><span>清场/垃圾清单的生成式里固化三步顺序：① 被谁承诺过（release/*.sha256、uchg、门禁射程、ADR）→ ② 有没有人引用 → ③ 体积；①②任一为「是」即出局</span>
+      <span class="lab">验收</span><span>对已归档的 <code>packaging/release/</code> 跑一次清单工具：9 个版本全部被第①步拦下（不得出现在删除建议里）</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#5</span><span class="title">architecture.md §1 基座事实节更新（已核实落后一次迁移）</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>本次实测：该节写「发行 2.0.0=2.0.5/rc.1」（2026-09-10 更新），而 <code>vendor/dsh-desktop.pin</code> 为 <code>v2.0.10</code>、2.5.0 VERSION 为 <code>DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2</code></span>
+      <span class="lab">动作</span><span>更新该节两行事实（发行线版本 + 生产机现状核实结果）；若生产机未升级，写明「未核实/灰度滞留」按 P-01 写法</span>
+      <span class="lab">验收</span><span>该节数字与 pin/VERSION 对表一致；<code>pnpm run gate</code> 全绿</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#6</span><span class="title">observer 乒乓最小探针：单例计数进可执行判据</span><span class="prio p0">P0</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-52 诚实划界：「observer 乒乓没有专属门禁拦（运行时竞态无法静态判出）……这是缺口不是成绩」；`===2` 一个读数就能暴露挂载竞态</span>
+      <span class="lab">动作</span><span>把「DOM 中 <code>[data-dsh-workbench-container]</code> 等关键单例元素计数」固化为 dsh-desktop-diagnostics 技能内的可执行探针（旁路通道预启用），并在实况验收脚本中复用</span>
+      <span class="lab">验收</span><span>重复挂载场景下探针能报出 <code>count===2</code>；探针本身进登记簿防退化</span>
+    </div>
+  </div>
+
+  <h3><span class="prio p1">P1</span> 结构热点与在飞工作（9 项）</h3>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#7</span><span class="title">源码热点拆分（按行为不变的重构切片）</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>图谱实测：<code>src/investigation.ts</code> 32 函数、<code>src/client/ResearchView.tsx</code> 39 函数/552 调用边、<code>dsh-wanzh-hulian/lib/index.js</code> 31 函数（纯 JS 源）、<code>scripts/gate.mjs</code>+<code>checks.mjs</code> 47 函数</span>
+      <span class="lab">动作</span><span>先拆 <code>ResearchView.tsx</code>（视图/状态/请求分离）与 wanzh <code>lib/index.js</code>（按域拆模块，注意 files 清单同步——P-24 复发形态）</span>
+      <span class="lab">验收</span><span>相关包 typecheck+test+validate-build 全绿；<code>package-files-coverage</code> 不红；行为证据（acceptance 脚本或截图）留存</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#8</span><span class="title">测试纵深计划：核心包最低测试面</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>图谱：tested_by 边仅 85 条；<code>dsh-browser-local</code>(52 文件)、<code>dsh-paper2skills</code>(49)、<code>dsh-algo-skills-local</code>(41)、<code>dsh-loopx-plugin</code>(23) 生产节点零覆盖边。changed-packages 门禁只管「脚本存在」</span>
+      <span class="lab">动作</span><span>为上述包各定「最低测试面清单」（纯函数优先：协议解析、路径归一、状态机），随下次改动落地；优先 p2s 双树（p2s-two-trees 工作流仍在飞）</span>
+      <span class="lab">验收</span><span>每包新增 ≥1 条不依赖本机语料的最小用例（P-16 教训：按语料验证的判据在他人机器上不存在）</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#9</span><span class="title">MGT 管理层出货前置条件推进</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>architecture.md §3：出货前置 = MGT-EVAL-A/B 通过 + R0 对照臂结论 + 另立 ADR（ADR-0129）；当前姿态为「评估载体 + 本机装配」</span>
+      <span class="lab">动作</span><span>若本季度要出货 MGT：按 ADR-0129 清单逐项闭环；否则维持 exclude 档并在文档中复核「未授权 Shadow/生产」边界</span>
+      <span class="lab">验收</span><span>MGT-EVAL-A/B 报告 + R0 结论落 Note；出货副本 exclude 档被 <code>select-presets</code> 判据覆盖</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#10</span><span class="title">自动更新路线第一步（不白做的两步）</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span><code>docs/plans/2026-09-13-auto-update-route.md</code>：「待 Developer ID；换身份的代价（TCC 再重授一次）……以及现在就能做且不白做的两步」</span>
+      <span class="lab">动作</span><span>把「现在就能做」的两步排进下一窗口（feed 结构与版本清单可先行）；Developer ID 采购决策独立跟踪</span>
+      <span class="lab">验收</span><span>两步各自的判据进 <code>gate --list</code>；身份切换前 TCC 重授清单成文</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#11</span><span class="title">x64 / universal 构建缺口补齐</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>2.5.0 CHANGELOG：「x64 缺口单列：fs-ext 的 darwin-x64 prebuild 不在场……登记下轮」（2.5.0 出口为 arm64）</span>
+      <span class="lab">动作</span><span>补 <code>MACOS_UNIVERSAL_NATIVE_ENTRIES</code> 与 <code>--dir --universal</code> 适配；或在文档中明确「只发 arm64」为正式决策（用户裁决后二选一）</span>
+      <span class="lab">验收</span><span>universal 构建产物在 Intel 机（或 Rosetta 对照）可启动；或 ADR 记录单架构决策</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#12</span><span class="title">生产机基座现状核对并落记录</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>architecture.md §1「生产机仍是 2.0.4/alpha.1（灰度期双基座漂移）」为 2026-09-10 观察，此后 2.5.0 发布无生产机更新记录 —— <b>现状未核实</b></span>
+      <span class="lab">动作</span><span>在生产机实测应用版本并落一行事实（未升级则写明滞留原因与计划）</span>
+      <span class="lab">验收</span><span>接 #5 同批更新；双基座差异在两个方向的差异清单成文</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#13</span><span class="title">.scratch 42 个工作流清场（按 #4 的顺序）</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>图谱 historical-artifacts 层 205 节点（42 个工作流目录）；P-49 的现场</span>
+      <span class="lab">动作</span><span>逐工作流判「已完成归档 / 在飞保留 / 证据面不动」三档；在飞的收敛进 docs/notes；完成品移出工作树（按 ADR-0013 归档档）</span>
+      <span class="lab">验收</span><span>清单化处置（每项一句话去向）；<code>.scratch</code> 只剩在飞工作流；引用的验收证据路径仍可达</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#14</span><span class="title">AGT 共享源改动的 50 全量重生成护栏</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>architecture.md §3 引用 research/16 §3.6：「AGT 共享源（含 ROSTER.md）任何改动 = 存量 50 全量重生成；动它们之前先读」——目前是阅读纪律</span>
+      <span class="lab">动作</span><span>把「共享源 hash 变化 → 必须重生成」做成判据（生成器 <code>--check</code> 或 gate），防手改单包产物</span>
+      <span class="lab">验收</span><span>改共享源不重跑生成器时门禁判红；重生成后 56 preset 身份账本一致（live-presets 已具备）</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#15</span><span class="title">Jev 语义层剩余口子复核</span><span class="prio p1">P1</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>CHANGELOG Unreleased：egress-boundary 已落地（2026-09-20）；项目记忆中仍标注「剩出网门禁与 key 可读性两条口子」——需对账现状</span>
+      <span class="lab">动作</span><span>核对 <code>jev-egress-boundary</code> 与凭据链（<code>LUTE_JEV_API_KEY</code> 只读不写）两条现状；残余项写进 <code>scripts/gates/jev-tier15.expected.json</code> 相邻的登记处</span>
+      <span class="lab">验收</span><span><code>pnpm run gate</code> 中 jev 相关三项全绿且读数非空射程</span>
+    </div>
+  </div>
+
+  <h3><span class="prio p2">P2</span> 保鲜与纪律（5 项）</h3>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#16</span><span class="title">图谱保鲜：排除 TS 包构建产物 + 定期增量重跑</span><span class="prio p2">P2</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>本次实测：图谱同时收录 <code>src/</code>（源）与 <code>lib/</code>（tsc/tsdown 构建产物），节点数约为源码视角两倍，函数热点会误报</span>
+      <span class="lab">动作</span><span>在 <code>.ua/.understandignore</code> 增加「有 src/ 的 TS 包的 lib/」排除；约定每次发布窗口后跑一次增量 <code>/understand</code></span>
+      <span class="lab">验收</span><span>重跑后节点总数明显下降且热点指向源文件；本报告引用的一致性由图谱 re-run 复核</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#17</span><span class="title">基线类清单例行体检（防回涨）</span><span class="prio p2">P2</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>当前 <code>exemptions.json=[]</code>、dead-instruments 有 3 类已证伪仪器、theme-tokens 基线只减不增——都是「好状态」，但只减不增清单需要有人推着清</span>
+      <span class="lab">动作</span><span>每个发布窗口跑一次 <code>gate:full</code> 并读三项读数（theme-tokens / patch-anchors / staging-freshness）；清理一项记一项</span>
+      <span class="lab">验收</span><span>theme-tokens 基线条目数单调下降；豁免保持 0</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#18</span><span class="title">双基座回滚基线的显式维护</span><span class="prio p2">P2</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>pin 注释：<code>vendor/dsh-runtime/0.1.2-rc.1/</code> 仅作 2.0.5 回滚对照保留，不再被构建消费</span>
+      <span class="lab">动作</span><span>确认回滚链在 2.5.0 后的实际可用性（回滚到 2.0.5 的剧本是否仍成立），或在 ADR 中记录放弃回滚面</span>
+      <span class="lab">验收</span><span>回滚剧本可执行或明确废弃；相关说明与 pin 注释一致</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#19</span><span class="title">本报告与 docs 索引互链，避免死指针</span><span class="prio p2">P2</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>P-09：指路也算事实；本报告位于 <code>docs/deep-analysis-2026-09-20.html</code>，尚无入口指向它</span>
+      <span class="lab">动作</span><span>在 <code>docs/README.md</code> 增一行入口（或由用户决定入库位置后同批）；若移动位置，同批更新引用</span>
+      <span class="lab">验收</span><span><code>docs-link-integrity</code> 全绿；任意文档搜索「深度分析」能到达本文件</span>
+    </div>
+  </div>
+
+  <div class="top-item">
+    <div class="head"><span class="num">#20</span><span class="title">TOP20 工单化并纳入固定跟踪</span><span class="prio p2">P2</span></div>
+    <div class="meta">
+      <span class="lab">证据</span><span>本仓库经验：写在文档里的承诺若无跟踪机制 = P-03「知道没有变成拦住」；<code>.scratch/review/</code> 已有 MASTER-TODO 模式可复用</span>
+      <span class="lab">动作</span><span>把本清单 20 条转为带「证据/动作/验收」的工单（.scratch/review 下开一轮），关一条记一条</span>
+      <span class="lab">验收</span><span>清单有 owner 与状态；下轮深度分析可对照结算率</span>
+    </div>
+  </div>
+
+  <div class="callout ok">
+    <div class="t">怎么用这份 TOP20</div>
+    <p class="small">P0 六项建议<b>下一个工作窗口整体做掉</b>（每项都是文档自认缺口，合计预计 2–4 天）；P1 按在飞工作流的节奏择 3–4 项并行（#7/#8 与 p2s、右栏等在飞工作自然重叠）；P2 是每个发布窗口的例行公事。任何一条落地后，按仓库纪律：ADR/Note 留痕 + 判据进门禁 + 更新坑账本。</p>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- ══════════════════════ 8. 附录 ══════════════════════ -->
+<section id="appendix">
+  <h2>附录 · 方法与可复现命令</h2>
+
+  <h3>本次分析怎么做的（三步）</h3>
+  <div class="grid g3">
+    <div class="card small">
+      <h4>① 知识图谱（Understand-Anything）</h4>
+      <p>技能位于 <code>~/.agents/skills/understand</code> ↔ 插件 <code>~/.understand-anything-plugin</code>。增量模式：重扫 → 71 批并行子代理（每批「一读一写」压缩成本）→ 合并剪枝 → 分层导览 → 校验 0 issue。</p>
+    </div>
+    <div class="card small">
+      <h4>② 文档交叉核验</h4>
+      <p>精读 architecture.md / pitfalls-playbook（54 条）/ CONTEXT.md / CHANGELOG / AGENTS.md / refactor spec，并把文档声明与实体逐一对照（pin、VERSION、exemptions、包脚本）。</p>
+    </div>
+    <div class="card small">
+      <h4>③ 实况读数</h4>
+      <p>现场跑 <code>node scripts/gate.mjs --mode quick</code> 取门禁读数；用图谱统计（Node 脚本直查 JSON）量化包结构与测试边。</p>
+    </div>
+  </div>
+
+  <h3>复跑命令（随时可验证本报告的读数）</h3>
+  <pre><code># 门禁（提交前 / 推送前）
+pnpm run gate            # quick：110/113，0 失败（本次实测）
+pnpm run gate:full       # 含 theme-tokens / release-published 等 8 项仅 full 覆盖
+node scripts/gate.mjs --list   # 列出全部判据名
+
+# 知识图谱（增量刷新 / 查询）
+#   技能：/understand  （插件全流程，见 ~/.agents/skills/understand/SKILL.md）
+ls .ua/                          # knowledge-graph.json 是活图谱（本报告数据源）
+node -e "const g=require('./.ua/knowledge-graph.json');console.log(g.nodes.length,g.edges.length,g.layers.length,g.tour.length)"
+
+# 生效链（改客户端 bundle 后唯一正确路径）
+node scripts/sync-profile.mjs --apply --loadpoint   # 同步装载点（tmp+mv）
+node scripts/sync-profile.mjs --check               # 只读复检
+
+# 实况验收（挑与本改动相关的一条）
+pnpm run accept:settings-shell
+pnpm run accept:right-sidebar-width
+pnpm run accept:theme-tokens
+# …完整清单见根 package.json scripts</code></pre>
+
+  <h3>关键文件索引（本报告引用的家）</h3>
+  <table>
+    <tr><th>主题</th><th>唯一事实之家</th></tr>
+    <tr><td>常驻规则 / 红线 / 目录归属</td><td><code>AGENTS.md</code>（根）</td></tr>
+    <tr><td>架构有序地图 + 门禁契约表</td><td><code>docs/architecture.md</code></td></tr>
+    <tr><td>复发故障总账（54 条）</td><td><code>docs/pitfalls-playbook.md</code></td></tr>
+    <tr><td>术语表（Sanbao / AGT / Jev 等）</td><td><code>CONTEXT.md</code></td></tr>
+    <tr><td>决策时间线 / 决策理由</td><td><code>docs/adr/</code> · <code>docs/notes/</code></td></tr>
+    <tr><td>白屏排查手册</td><td><code>docs/dsh-desktop-white-screen-playbook.md</code></td></tr>
+    <tr><td>DMG 发布 SOP（含发布到 Releases 的编号步骤）</td><td><code>docs/sop/dmg-release.md</code></td></tr>
+    <tr><td>自动更新路线</td><td><code>docs/plans/2026-09-13-auto-update-route.md</code></td></tr>
+    <tr><td>版本变更账（含 2.5.0 迁移全记录）</td><td><code>CHANGELOG.md</code></td></tr>
+    <tr><td>pin 契约（bump 与行为变更分开提交）</td><td><code>vendor/dsh-desktop.pin</code></td></tr>
+    <tr><td>门禁实现与豁免</td><td><code>scripts/gate.mjs</code> · <code>scripts/gates/</code></td></tr>
+    <tr><td>知识图谱（本报告数据源）</td><td><code>.ua/knowledge-graph.json</code></td></tr>
+  </table>
+
+  <div class="callout">
+    <div class="t">数据诚实性声明</div>
+    <p class="small">本报告数字均为本次实测（2026-09-20，代码快照 ef17b22）；标注「未核实」的条目不做事实断言。图谱统计以增量分析为准（71 批中的 2 批曾因连接中断重派，最终 71/71 产物齐备、校验 0 issue）。门禁读数取自 quick 模式单次运行，推送前请以 <code>gate:full</code> 为准。分析管线本身的成本与压缩方法（每批「一读一写」，成本随调用次数而非体积增长）记录在 Understand-Anything 安装与增量管线的项目记忆中。</p>
+  </div>
+</section>
+
+<footer>
+  <p>Magpie-Horch 深度分析指引 · 2026-09-20 · 数据快照 ef17b22 · 由 Understand-Anything 知识图谱（3930 节点 / 4495 边）+ 治理文档交叉核验生成 · 单文件离线可分发</p>
+</footer>
+
+</div>
+</body>
+</html>
