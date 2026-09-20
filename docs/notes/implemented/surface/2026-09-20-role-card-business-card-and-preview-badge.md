@@ -111,6 +111,16 @@
     另一会话正在改共享层；本轮未触碰该文件族）已随对端落盘消失。
     本轮顺带修掉两条自身漂移：`ui-anchors.json` 改了 purpose 却未同步装载点、
     `docs/catalog/packages.md` 未随新包再生成（两项均为派生/声明面的机械同步）。
+  - 门禁（推送前复跑）：quick 109/113、full 114/121，红**全部**可归因到树外，无一落在本批文件上
+    （`role-brief-shape` 与其自测在两种模式下都绿）——①`theme-tokens`（full-only）：
+    `--dsw-text-primary/secondary/tertiary` 只被 `dsh-right-sidebar-local` 的 6 个模块引用、
+    从未定义（另一会话在制品）；②`scripts-runnable`（full-only）：该包尚无测试文件，
+    加 `dsh-role-matrix-local` 那条既有的 `linear-gradient` 契约红（同上）；
+    ③`repo-attest-selftest`：`.qoder/worktrees/agent-general-purpose-6ca63328/` 是**另一会话
+    12:40 建的活 worktree**（`git worktree list` 可见），快照拒绝把未跟踪目录折叠成单条而抛
+    `SNAPSHOT_SCOPE_COLLAPSED`——该目录不属本批，不擅自删。另有一次复跑期间本会话自己的
+    `git add`/`commit` 被见证仪器当场抓住（`entry-changed` + `.git/index` 变更）：它判得对，
+    那一轮不作有效读数。
   - 门禁在 `0ba6345` 又抓出两处**本轮自身的缺陷**，均已修复并各登记一条总账
     （[P-53](../../../pitfalls-playbook.md)：`brand.tsx` 三处描边引用了**从未定义**的
     `--dsw-alias-border-focus`，`var()` 兜底让它在任何可见读数里都成立 → 改指 `--sanbao-accent`；
