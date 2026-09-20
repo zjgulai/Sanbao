@@ -2,12 +2,14 @@
 
 import { createRequire } from 'node:module'
 import { realpathSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises'
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 // Type-only: loads the module augmentation that declares ctx.clientModules on cordis Context.
 import type {} from '@deepseek-ai/dsh-client-modules'
 import { renderIndexInjections, type IndexInjection } from '@deepseek-ai/dsh-host-webserver'
+import { adaptClientBundle } from './composer-adapter.js'
+import { COMPOSER_CSS } from './composer-view.js'
 import type { FetchHandler } from './handler.js'
 
 /** Endpoint the page transport POSTs to for gateway streaming. */
@@ -71,9 +73,12 @@ export function resolveFrontendDistRoot(profileDir: string): string {
  * @param distRoot - realpath of the frontend dist directory.
  * @returns handler for every request that is not an API or stream call.
  */
-export function createAssetHandler(ctx: Context, distRoot: string): FetchHandler {
+export function createAssetHandler(ctx: Context, distRoot: string, sessionRoot?: string): FetchHandler {
   const renderIndex = async (): Promise<Response> => {
-    const rows: IndexInjection[] = [{ kind: 'script', placement: 'head', text: SHELL_TRANSPORT_SCRIPT }]
+    const rows: IndexInjection[] = [
+      { kind: 'script', placement: 'head', text: SHELL_TRANSPORT_SCRIPT },
+      { kind: 'style', text: COMPOSER_CSS },
+    ]
     ctx.emit('webserver/index-inject', rows)
     const body = renderIndexInjections(await readFile(join(distRoot, 'index.html'), 'utf8'), rows)
     return new Response(body, { headers: { 'content-type': MIME['.html'] ?? 'text/html; charset=utf-8' } })
@@ -81,9 +86,32 @@ export function createAssetHandler(ctx: Context, distRoot: string): FetchHandler
   return {
     requestBodyMode: () => 'buffered',
     async fetch(request): Promise<Response> {
-      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405 })
       const url = new URL(request.url)
-      if (url.pathname.startsWith('/plugins/')) return ctx.clientModules.fetchBundle(request)
+      if (url.pathname === '/.sanbao/session-directory') {
+        if (request.method !== 'POST') return new Response(null, { status: 405 })
+        const origin = request.headers.get('origin')
+        if (url.protocol !== 'dsh-app:' || url.hostname !== 'app'
+          || (origin !== null && origin !== 'dsh-app://app')) return new Response(null, { status: 403 })
+        if (sessionRoot === undefined) return new Response(null, { status: 503 })
+        await mkdir(sessionRoot, { recursive: true, mode: 0o700 })
+        const cwd = await mkdtemp(join(sessionRoot, 'chat-'))
+        return Response.json({ cwd }, { status: 201 })
+      }
+      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405 })
+      if (url.pathname.startsWith('/plugins/')) {
+        const response = await ctx.clientModules.fetchBundle(request)
+        if (!response.ok || request.method === 'HEAD') return response
+        const source = await response.text()
+        const adapted = adaptClientBundle(source)
+        const headers = new Headers(response.headers)
+        if (adapted !== source) {
+          headers.delete('content-length')
+          headers.delete('etag')
+          headers.delete('last-modified')
+          headers.set('cache-control', 'no-store')
+        }
+        return new Response(adapted, { status: response.status, headers })
+      }
       let pathname: string
       try {
         pathname = decodeURIComponent(url.pathname)

@@ -1,6 +1,6 @@
 # Third-party notices · lute-shell
 
-本壳（`apps/lute-shell`）的代码 100% 由 LUTE 撰写，但有两处与第三方的关系需要署名：一处是**改写自**第三方源码，一处是**只在包边界调用**第三方发布的包。下面分别说明。
+本壳（`apps/lute-shell`）包含自有代码、基于 DeepSeek Harness 的改写，以及通过包边界消费的运行时。以下分别说明来源与许可。
 
 ## 1. 帧协议：改写自 MIT 许可的 DeepSeek Harness
 
@@ -67,3 +67,9 @@ npm view @deepseek-ai/dsh-web-frontend@0.1.5-rc.2 license
 ```
 
 升级这两个包时重跑上面两条，许可变了就改本节。
+
+## 4. 对话框兼容适配与测试夹具
+
+`src/host/composer-adapter.ts` 在薄壳资产出口适配 `@deepseek-ai/dsh-client-ui-conversation@0.1.5-rc.2` 与 `@deepseek-ai/dsh-client-ui-agent-preset@0.1.5-rc.2` 的已构建客户端，`src/host/composer-view.ts` 基于其 InputBar 组件契约重新组织呈现。上游安装包和 vendor 参照均不改写。
+
+`test/fixtures/conversation-client.js` 与 `test/fixtures/agent-preset-client.js` 是这两个包的原始客户端构建产物，用于兼容性和漂移反例测试，保留其模块内第三方声明。二者均声明 MIT 许可，Copyright (c) 2026 DeepSeek；许可全文见本文件第 2 节。测试夹具不属于运行时物化文件。

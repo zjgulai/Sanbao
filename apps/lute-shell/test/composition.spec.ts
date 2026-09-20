@@ -41,6 +41,15 @@ describe('composeShellPatches', () => {
     expect(webStartup?.disabled).toBe(true)
   })
 
+  it('composes both directory browsing faces without a webserver or native IPC dependency', () => {
+    const { patches } = composeShellPatches({ profileDir: fixtureProfile, overlayPatchPath: overlay })
+    const entries = inspectEntries(patches)
+    expect(entries.find(row => row.id === 'shell-directory-picker')?.name)
+      .toBe('@deepseek-ai/dsh-host-directory-picker-browse')
+    expect(entries.find(row => row.id === 'shell-ui-directory-picker')?.name)
+      .toBe('@deepseek-ai/dsh-client-ui-directory-picker-browse')
+  })
+
   it('does not inject an agent-presets system root', () => {
     const { patches } = composeShellPatches({ profileDir: fixtureProfile, overlayPatchPath: overlay })
     expect(ids(patches)).not.toContain('agent-presets')

@@ -16,6 +16,7 @@
     "build": "tsc",
     "test": "vitest run",
     "materialize": "node scripts/materialize.mjs",
+    "preview": "node scripts/preview.mjs",
     "smoke": "node scripts/smoke.mjs",
     "dev": "tsc && electron ."
   },

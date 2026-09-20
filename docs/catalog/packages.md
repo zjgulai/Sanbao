@@ -2,7 +2,7 @@
 
 本文件由 `scripts/gen-catalog.mjs` 从各包 `package.json` 生成，**请勿手改**——手改会被门禁 `catalog-fresh` 拒绝（ADR-0011）。
 
-受管包总数：**28**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
+受管包总数：**29**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
 
 | 组 | 目录 | 包名 | 来源 | owner | 发布 npm |
 | --- | --- | --- | --- | --- | --- |
@@ -18,7 +18,8 @@
 | surfaces | `packages/surfaces/dsh-capability-hub-local` | `dsh-capability-hub-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-my-quotes` | `dsh-my-quotes` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-newapp-local` | `dsh-newapp-local` | `self` | `lute` | `false` |
-| surfaces | `packages/surfaces/dsh-right-sidebar-local` | `dsh-right-sidebar-local` | `self` | `lute` | `false` |
+| surfaces | `packages/surfaces/dsh-onboarding-carousel-local` | `dsh-onboarding-carousel` | `self` | `lute` | `false` |
+| surfaces | `packages/surfaces/dsh-right-sidebar-local` | `dsh-right-sidebar-local` | `Magpie-Horch` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-role-matrix-local` | `dsh-role-matrix-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-skill-center-local` | `dsh-skill-center-local` | `self` | `lute` | `false` |
 | surfaces | `packages/surfaces/dsh-task-board-local` | `@etony668/dsh-task-board` | `internalized` | `@etony668` | `false` |
@@ -40,7 +41,7 @@
 | 组 | 包数 |
 | --- | --- |
 | capabilities | 7 |
-| surfaces | 9 |
+| surfaces | 10 |
 | platform | 8 |
 | contract | 2 |
 | infra | 2 |
