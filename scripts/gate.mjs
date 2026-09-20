@@ -43,6 +43,7 @@ import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
+import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
 import { assertRemediationDeclared, computeNotCovered, isCheckActive, runGateChecks } from './gates/gate-result.mjs'
 import { appResourcesRoot } from './lib/app-resources.mjs'
 import { checkResourcePathReachability } from './gates/resource-path-reachability.mjs'
@@ -1991,6 +1992,30 @@ const CHECKS = [
       '跑 node --test scripts/gates/boot-animation.test.mjs；真实浏览器测量实际 BootPage/CSS 重放后 spin 的 2s 周期及双色道弧色；删除动画、改时长、改弧色必须各自判红。',
     run() {
       return runNodeTestFile('scripts/gates/boot-animation.test.mjs', '启动旋转周期与主题弧色自测失败')
+    },
+  },
+  {
+    name: 'role-brief-shape',
+    // ADR-0142：名片右栏的「一句话职责」是 cardBrief(description) 删出来的（前导【…】/(补充)/〔…〕）。
+    // 上游一旦改 description 写法，规则不报错、只走兜底原样返回整句——名片悄悄变成一句长描述。
+    // 射程是**真机的 53 张卡**（不是夹具）：根不在时报跳过，根在而一张带描述的卡都没读到时报红。
+    remediation:
+      '跑 node scripts/gates/role-brief-shape.mjs 或看漏在哪个 id：该卡 description 的【平面·域】/（标准产物：…）/〔…〕三条结构删除一条都没命中，'
+      + '名片会原样显示整句。要么按新写法扩 packages/surfaces/dsh-role-matrix-local/src/client/card-brief.ts 的规则（并加样本进 role-brief-shape.test.mjs），'
+      + '要么确认该卡 description 确实就是短句后把它排除出射程——不要为了让门禁变绿去改 description 正文',
+    run() {
+      return checkRoleBriefShape({})
+    },
+  },
+  {
+    name: 'role-brief-shape-selftest',
+    remediation:
+      '跑 node --test scripts/gates/role-brief-shape.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '上游换成无【】的写法必须判红并点名是哪张卡、只清掉尾随标点不算剥动（P-46：兜底把规则失效伪装成合法值）、'
+      + '【】里为空回落原文必须判红、一张带描述的卡都没读到（空射程）必须判红（P-02）、'
+      + '而结构仍在只是换了前缀（{} + （标准产物：…））不得误报（P-02/P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/role-brief-shape.test.mjs', '名片职责简介形状判据的反向自测失败')
     },
   },
 ]
