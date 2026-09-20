@@ -169,9 +169,30 @@ function main() {
     // 装载点缺文件必须**能补齐**（2026-09-15 实测：`lib/host-util.js` 缺失时
     // `--apply --loadpoint` 只打印 note、不加文件，remediation 空转，应用进恢复模式）。
     // vendor 分支维持「不追加」：那是物化副本，不是装载点。
-    const selected = onlyMetadata
+    let selected = onlyMetadata
       ? diverged.filter((file) => file === 'package.json')
       : loadpoint ? [...absentInTarget, ...diverged] : diverged
+
+    if (loadpoint) {
+      // 检查 package.json 的 LOADPOINT_MANIFEST_FIELDS 是否发生漂移
+      const readField = (dir) => {
+        try {
+          return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
+        } catch {
+          return null
+        }
+      }
+      const from = readField(sourceDir)
+      const to = readField(targetDir)
+      if (from !== null && to !== null) {
+        const drift = ['main', 'exports', 'dsh'].filter(
+          (field) => JSON.stringify(from[field] ?? null) !== JSON.stringify(to[field] ?? null),
+        )
+        if (drift.length > 0 && !selected.includes('package.json')) {
+          selected = [...selected, 'package.json']
+        }
+      }
+    }
     if (selected.length === 0) {
       if (absentInTarget.length > 0 && !loadpoint) {
         process.stdout.write(`note ${name}: ${scope}未包含 ${absentInTarget.length} 个仓库文件（不追加，副本可能含运行所需产物）\n`)

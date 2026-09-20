@@ -462,7 +462,12 @@ function apply(ctx) {
 		if (namespace !== "sanbao-appearance") return;
 		const themeId = next?.themeId;
 		if (themeId && THEME_IDS.includes(themeId)) {
-			const runtime = ctx.get("desktopRuntime") ?? ctx.desktopRuntime;
+			let runtime;
+			try {
+				runtime = ctx.get("desktopRuntime") ?? ctx.desktopRuntime;
+			} catch {
+				runtime = void 0;
+			}
 			try {
 				runtime?.setSanbaoTheme?.(themeId);
 			} catch (cause) {

@@ -29,7 +29,12 @@ export function apply(ctx: HostContext): void {
     if (namespace !== THEME_SETTINGS_NAMESPACE) return;
     const themeId = (next as { themeId?: ThemeId })?.themeId;
     if (themeId && (THEME_IDS as readonly string[]).includes(themeId)) {
-      const runtime = (ctx.get("desktopRuntime") ?? ctx.desktopRuntime) as DesktopRuntime | undefined;
+      let runtime: DesktopRuntime | undefined;
+      try {
+        runtime = (ctx.get("desktopRuntime") ?? ctx.desktopRuntime) as DesktopRuntime | undefined;
+      } catch {
+        runtime = undefined;
+      }
       try {
         runtime?.setSanbaoTheme?.(themeId);
       } catch (cause) {

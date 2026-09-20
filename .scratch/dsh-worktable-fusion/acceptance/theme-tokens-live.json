@@ -1,12 +1,12 @@
 {
-  "checkedAt": "2026-09-20T11:16:44.016Z",
+  "checkedAt": "2026-09-20T12:53:03.892Z",
   "themeBundle": "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepseek-ai/dsh-client-ui-theme/lib/client.js",
   "browser": "chromium 153.0.8010.50",
   "cssBlobs": 8,
   "cssDefinedTokens": 357,
   "officialDefinedTokens": 396,
   "repoSuppliedTokens": 129,
-  "referenced": 96,
+  "referenced": 90,
   "sourceFiles": [
     "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts",
     "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/packages/platform/dsh-theme-local/src/theme-settings.ts",
@@ -15,14 +15,14 @@
     "/Users/lute/project/Magpie-Horch/.worktrees/theme-triad-a60b3a9f/shared/client/sanbao-tokens.ts"
   ],
   "triad": {
-    "expected": 627,
+    "expected": 609,
     "identities": [
       {
         "id": "light",
         "scheme": "light",
-        "expected": 209,
-        "checked": 209,
-        "failed": 32,
+        "expected": 203,
+        "checked": 203,
+        "failed": 26,
         "missing": [
           {
             "token": "--dsh-agent-team-popover-layer",
@@ -424,129 +424,6 @@
               "packages/surfaces/dsh-agent-team-gui-local/src/client/styles.ts"
             ],
             "baselined": true
-          },
-          {
-            "token": "--dsw-bg-layer-1",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-bg-layer-2",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-border-light",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-primary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-secondary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-tertiary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
           }
         ],
         "declaredNotSupplied": [],
@@ -1699,39 +1576,6 @@
               "usable": true
             },
             {
-              "token": "--dsw-bg-layer-1",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-bg-layer-2",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-border-light",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
               "token": "--dsw-font-base-16",
               "value": "16px/24px -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", Arial, sans-serif",
               "color": "rgba(0, 0, 0, 0)",
@@ -2291,39 +2135,6 @@
               "matchesSupply": true,
               "property": "background-color",
               "usable": true
-            },
-            {
-              "token": "--dsw-text-primary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-secondary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-tertiary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
             },
             {
               "token": "--sanbao-accent",
@@ -2897,9 +2708,9 @@
       {
         "id": "dark",
         "scheme": "dark",
-        "expected": 209,
-        "checked": 209,
-        "failed": 32,
+        "expected": 203,
+        "checked": 203,
+        "failed": 26,
         "missing": [
           {
             "token": "--dsh-agent-team-popover-layer",
@@ -3301,129 +3112,6 @@
               "packages/surfaces/dsh-agent-team-gui-local/src/client/styles.ts"
             ],
             "baselined": true
-          },
-          {
-            "token": "--dsw-bg-layer-1",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-bg-layer-2",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-border-light",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-primary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-secondary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-tertiary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
           }
         ],
         "declaredNotSupplied": [],
@@ -4576,39 +4264,6 @@
               "usable": true
             },
             {
-              "token": "--dsw-bg-layer-1",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-bg-layer-2",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-border-light",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
               "token": "--dsw-font-base-16",
               "value": "16px/24px -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", Arial, sans-serif",
               "color": "rgba(0, 0, 0, 0)",
@@ -5168,39 +4823,6 @@
               "matchesSupply": true,
               "property": "background-color",
               "usable": true
-            },
-            {
-              "token": "--dsw-text-primary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-secondary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-tertiary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
             },
             {
               "token": "--sanbao-accent",
@@ -5774,9 +5396,9 @@
       {
         "id": "warm-pink",
         "scheme": "light",
-        "expected": 209,
-        "checked": 209,
-        "failed": 32,
+        "expected": 203,
+        "checked": 203,
+        "failed": 26,
         "missing": [
           {
             "token": "--dsh-agent-team-popover-layer",
@@ -6178,129 +5800,6 @@
               "packages/surfaces/dsh-agent-team-gui-local/src/client/styles.ts"
             ],
             "baselined": true
-          },
-          {
-            "token": "--dsw-bg-layer-1",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-bg-layer-2",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-border-light",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-primary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-secondary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
-          },
-          {
-            "token": "--dsw-text-tertiary",
-            "value": "",
-            "color": "rgba(0, 0, 0, 0)",
-            "supplied": false,
-            "declared": false,
-            "expectedValue": null,
-            "matchesSupply": true,
-            "property": null,
-            "usable": false,
-            "files": [
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/outputs-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/skills-mcp-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/sources-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/todo-panel.tsx",
-              "packages/surfaces/dsh-right-sidebar-local/src/client/modules/web-search-panel.tsx"
-            ],
-            "baselined": false
           }
         ],
         "declaredNotSupplied": [],
@@ -7453,39 +6952,6 @@
               "usable": true
             },
             {
-              "token": "--dsw-bg-layer-1",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-bg-layer-2",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-border-light",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
               "token": "--dsw-font-base-16",
               "value": "16px/24px -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", Arial, sans-serif",
               "color": "rgba(0, 0, 0, 0)",
@@ -8045,39 +7511,6 @@
               "matchesSupply": true,
               "property": "background-color",
               "usable": true
-            },
-            {
-              "token": "--dsw-text-primary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-secondary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
-            },
-            {
-              "token": "--dsw-text-tertiary",
-              "value": "",
-              "color": "rgba(0, 0, 0, 0)",
-              "supplied": false,
-              "declared": false,
-              "expectedValue": null,
-              "matchesSupply": true,
-              "property": null,
-              "usable": false
             },
             {
               "token": "--sanbao-accent",
@@ -8681,7 +8114,7 @@
   "summary": {
     "agreeOfficial": 63,
     "agreeRepo": 1,
-    "agreeAbsent": 28,
+    "agreeAbsent": 22,
     "gateFalsePositiveOfficial": 4,
     "gateFalsePositiveRepo": 0,
     "gateFalseNegative": 0,

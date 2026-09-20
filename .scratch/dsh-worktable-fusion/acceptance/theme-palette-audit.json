@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T11:22:00.882Z",
+  "generatedAt": "2026-09-20T12:53:23.809Z",
   "appDir": "/Applications/DSH Desktop.app",
   "scope": {
     "hexScope": "packages + shared + dsh-patches，扩展名 css/ts/tsx/js/mjs，排除 node_modules/dist/lib/build/coverage/staging/*.patched/*.min.*。与一次性脚本 colors.mjs 的唯一差别：本探针接受 4 位 #rgba（7 个不同值），colors.mjs 只认 3/6/8 位",
@@ -92,12 +92,12 @@
     {
       "name": "扫描#1：口径 A 扫到源码文件",
       "ok": true,
-      "detail": "598 个文件"
+      "detail": "602 个文件"
     },
     {
       "name": "扫描#2：口径 A 抓到 hex 字面量",
       "ok": true,
-      "detail": "1451 处"
+      "detail": "1402 处"
     },
     {
       "name": "引擎：四层 × 三身份完整解析",
@@ -175,7 +175,7 @@
         5
       ]
     ],
-    "nearWhiteDistinct": 38,
+    "nearWhiteDistinct": 31,
     "pureWhite": 2,
     "nearWhite": [
       [
@@ -193,20 +193,6 @@
         }
       ],
       [
-        "#fef3c7",
-        {
-          "hsl": [
-            47.999999999999986,
-            0.9649122807017545,
-            0.888235294117647
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:116",
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:137"
-          ]
-        }
-      ],
-      [
         "#eddbde",
         {
           "hsl": [
@@ -218,20 +204,6 @@
             "packages/infra/dsh-team-hub/admin-ui/appearance.generated.css:127",
             "packages/platform/dsh-theme-local/src/client/sanbao-tokens.ts:27",
             "shared/client/sanbao-tokens.ts:26"
-          ]
-        }
-      ],
-      [
-        "#d1fae5",
-        {
-          "hsl": [
-            149.26829268292687,
-            0.8039215686274511,
-            0.8999999999999999
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:104",
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:167"
           ]
         }
       ],
@@ -356,20 +328,6 @@
         }
       ],
       [
-        "#dbeafe",
-        {
-          "hsl": [
-            214.2857142857143,
-            0.9459459459459462,
-            0.9274509803921569
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:265",
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:152"
-          ]
-        }
-      ],
-      [
         "#e6faed",
         {
           "hsl": [
@@ -379,20 +337,6 @@
           ],
           "sites": [
             "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:329"
-          ]
-        }
-      ],
-      [
-        "#fee2e2",
-        {
-          "hsl": [
-            0,
-            0.9333333333333336,
-            0.9411764705882353
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:128",
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/background-procs-panel.tsx:247"
           ]
         }
       ],
@@ -496,19 +440,6 @@
         }
       ],
       [
-        "#f3e8ff",
-        {
-          "hsl": [
-            268.695652173913,
-            1,
-            0.9549019607843137
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:213"
-          ]
-        }
-      ],
-      [
         "#f2f3f5",
         {
           "hsl": [
@@ -579,32 +510,6 @@
             "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:57",
             "packages/surfaces/dsh-capability-hub-local/src/client/palette.module.css:121",
             "packages/surfaces/dsh-newapp-local/src/client/newapp.module.css:235"
-          ]
-        }
-      ],
-      [
-        "#fff7ed",
-        {
-          "hsl": [
-            33.33333333333332,
-            1,
-            0.9647058823529412
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:202"
-          ]
-        }
-      ],
-      [
-        "#eff6ff",
-        {
-          "hsl": [
-            213.75,
-            1,
-            0.9686274509803922
-          ],
-          "sites": [
-            "packages/surfaces/dsh-right-sidebar-local/src/client/modules/env-info-panel.tsx:191"
           ]
         }
       ],
@@ -728,16 +633,16 @@
     ]
   },
   "hue": {
-    "occurrences": 1451,
-    "distinct": 350,
+    "occurrences": 1402,
+    "distinct": 334,
     "buckets": [
       [
         0,
-        46
+        41
       ],
       [
         30,
-        23
+        21
       ],
       [
         60,
@@ -749,11 +654,11 @@
       ],
       [
         120,
-        31
+        30
       ],
       [
         150,
-        8
+        6
       ],
       [
         180,
@@ -761,11 +666,11 @@
       ],
       [
         210,
-        79
+        77
       ],
       [
         240,
-        10
+        7
       ],
       [
         270,
@@ -777,24 +682,24 @@
       ],
       [
         330,
-        14
+        13
       ]
     ],
     "byFamily": {
-      "BLUE": 84,
+      "BLUE": 79,
       "neutral": 73,
-      "green/teal": 78,
-      "warm": 88,
+      "green/teal": 75,
+      "warm": 80,
       "other": 27,
       "unparsable": 0
     }
   },
   "hardcoded": {
-    "hexOccurrences": 571,
+    "hexOccurrences": 522,
     "tokenDefs": 124,
-    "varRefs": 1757,
-    "hardcoded": 447,
-    "tokenizationRate": 79.7
+    "varRefs": 1650,
+    "hardcoded": 398,
+    "tokenizationRate": 80.6
   },
   "fallbacks": {
     "tokensWithLiteralFallback": 30,
@@ -2083,38 +1988,38 @@
     {
       "metric": "nearWhiteDistinct",
       "recorded": 29,
-      "measured": 38,
-      "delta": 9
+      "measured": 31,
+      "delta": 2
     },
     {
       "metric": "hardcodedHexScopeB",
       "recorded": 335,
-      "measured": 447,
-      "delta": 112
+      "measured": 398,
+      "delta": 63
     },
     {
       "metric": "hexOccurrencesScopeA",
       "recorded": 948,
-      "measured": 1451,
-      "delta": 503
+      "measured": 1402,
+      "delta": 454
     },
     {
       "metric": "hexDistinctScopeA",
       "recorded": 364,
-      "measured": 350,
-      "delta": -14
+      "measured": 334,
+      "delta": -30
     },
     {
       "metric": "blueFamilyDistinct",
       "recorded": 90,
-      "measured": 79,
-      "delta": -11
+      "measured": 77,
+      "delta": -13
     },
     {
       "metric": "greenFamilyDistinct",
       "recorded": 34,
-      "measured": 49,
-      "delta": 15
+      "measured": 48,
+      "delta": 14
     },
     {
       "metric": "conflictingFallbackTokens",
