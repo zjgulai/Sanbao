@@ -18,7 +18,13 @@ const SYSTEM_LABELS = new Set(["跟随系统", "System"]);
 const OWN_FINGERPRINT = ["暖粉白", "Warm pink"];
 
 function isOfficialLabel(node: Element): boolean {
-  return node.children.length === 0 && SYSTEM_LABELS.has((node.textContent ?? "").trim());
+  const directText = Array.from(node.childNodes)
+    .filter(n => n.nodeType === 3)
+    .map(n => n.textContent ?? "")
+    .join("")
+    .trim();
+  return (node.children.length === 0 && SYSTEM_LABELS.has((node.textContent ?? "").trim()))
+    || SYSTEM_LABELS.has(directText);
 }
 
 function containsOwnStudio(element: Element): boolean {
@@ -38,12 +44,11 @@ export interface OfficialAppearanceSuppressor {
 export function createOfficialAppearanceSuppressor(root: HTMLElement): OfficialAppearanceSuppressor {
   const hidden = new Map<HTMLElement, string>();
 
-  /** 从系统项文案上爬到「仍含官方指纹、且不含我们 studio」的最高祖先。 */
+  /** 从系统项文案上爬到「仍含官方指纹、且不含我们 studio」且在 root 内的最高祖先。 */
   function officialRowOf(label: Element): HTMLElement | undefined {
     let row: HTMLElement | undefined;
-    for (let node = label.parentElement; node && node !== root.parentElement; node = node.parentElement) {
+    for (let node: HTMLElement | null = label.parentElement; node && node !== root; node = node.parentElement) {
       if (containsOwnStudio(node)) break;
-      if (!Array.from(node.querySelectorAll("*")).some(isOfficialLabel)) break;
       row = node;
     }
     return row;

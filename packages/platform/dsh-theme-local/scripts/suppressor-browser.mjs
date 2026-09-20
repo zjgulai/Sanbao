@@ -8,7 +8,7 @@
  * 跑的是产物级别的同一份 TS 源。
  *
  * 用法：THEME_BROWSER_PACKAGE=<带 playwright-core 的 package.json> node dsh-patches/.../ 或
- *      node packages/platform/dsh-theme-local/scripts/suppressor-browser.test.mjs
+ *      node packages/platform/dsh-theme-local/scripts/suppressor-browser.mjs
  * 退出码：0 全过；1 判据不过；2 前置缺失或仪器坏（绝不当作通过）。
  */
 import assert from 'node:assert/strict'
@@ -26,7 +26,7 @@ if (!browserPkg) {
   process.exit(2)
 }
 const toolRequire = createRequire(join(pkgRoot, 'package.json'))
-const { chromium } = createRequire(browserPkg)('playwright-core')
+const { chromium } = createRequire(resolve(browserPkg))('playwright-core')
 
 // 官方行的真实结构：从已装产物读得 —— div.group > (div.title + div.cubeRow > 三个 cube)，
 // 系统项文案在 zh/en 字典里分别是「跟随系统」/「System」。
@@ -45,9 +45,9 @@ let bundle
 const servers = []
 async function serve(body) {
   const server = createServer((_, res) => {
-    res.setHeader('content-type', 'text/html')
+    res.setHeader('content-type', 'text/html; charset=utf-8')
     res.setHeader('cache-control', 'no-store')
-    res.end(`<!doctype html><html><head><style>[data-role="official"]{display:flex;flex-direction:column}</style></head><body>${body}<script>${bundle}</script></body></html>`)
+    res.end(`<!doctype html><html><head><meta charset="utf-8"><style>[data-role="official"]{display:flex;flex-direction:column}</style></head><body>${body}<script>${bundle}</script></body></html>`)
   })
   servers.push(server)
   await new Promise(r => server.listen(0, '127.0.0.1', r))
