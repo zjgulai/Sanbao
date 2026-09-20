@@ -30,7 +30,7 @@
 | [DA-11](tasks/DA-11-x64-universal-gap.md) | x64 / universal 构建缺口补齐（或记录单架构决策） | 2.5.0 CHANGELOG「登记下轮」 | M | `open` |
 | [DA-12](tasks/DA-12-production-machine-baseline.md) | 生产机基座现状核对并落记录 | architecture.md §1（2026-09-10 观察，未核实） | S | `local-done` |
 | [DA-13](tasks/DA-13-scratch-cleanup.md) | .scratch 42 个工作流清场（按 DA-04 顺序） | historical-artifacts 层 205 节点 | L | 依赖 DA-04 |
-| [DA-14](tasks/DA-14-agt-shared-source-guard.md) | AGT 共享源改动 → 50 全量重生成护栏 | research/16 §3.6（目前是阅读纪律） | M | `open` |
+| [DA-14](tasks/DA-14-agt-shared-source-guard.md) | AGT 共享源改动 → 50 全量重生成护栏 | research/16 §3.6（目前是阅读纪律） | M | `local-done` |
 | [DA-15](tasks/DA-15-jev-remaining-gaps.md) | Jev 语义层剩余口子复核 | CHANGELOG Unreleased vs 项目记忆对账 | S | `local-done` |
 
 ## 4. P2 · 保鲜与纪律（5 项）

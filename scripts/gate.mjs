@@ -568,6 +568,50 @@ const CHECKS = [
     },
   },
   {
+    name: 'role-preset-source-freshness',
+    // DA-14：architecture.md §3 的「AGT 共享源任何改动 = 存量 50 全量重生成」此前是**阅读纪律**——
+    // 只改共享源不重跑 generate.mjs，产物与源不一致没有任何东西报错（P-03）。本项把
+    // 「产物记录的 source_snapshot」与「现场重算」比对；重算走生成器自己的 load 函数（P-07：
+    // 不给「共享源是哪几个文件」造第二个家）。读不到产物 / 材料根不在本机 → 类型化 skip。
+    remediation:
+      '按报错重跑 node scripts/role-presets/generate.mjs 全量重生成（AGT 50 条 / MGT 3 条各自独立判），'
+      + '再把产物落位；只改共享源（含 ROSTER.md）而不重生成即判红是本项的设计目的（DA-14 / ADR-0129）',
+    run() {
+      const { command, env } = nodeCommand()
+      const script = join(repoRoot, 'scripts', 'role-presets', 'generate.mjs')
+      const result = runScript(repoRoot, `"${command}" "${script}" --check`, 300000, env)
+      if (result.code === 0) {
+        return { passed: true, violations: [], note: `${(result.stdout ?? '').trim().split('\n').join('；')}` }
+      }
+      const lines = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+      if (result.code === 2) {
+        return {
+          passed: true,
+          skipped: true,
+          violations: [],
+          note: `新鲜度读数不可用（材料根/产物不在本机）：${lines.slice(0, 2).join('；')}`,
+        }
+      }
+      return {
+        passed: false,
+        violations: lines.filter((line) => line.startsWith('✗') || line.startsWith('  需重跑')),
+      }
+    },
+  },
+  {
+    name: 'role-preset-source-freshness-selftest',
+    remediation:
+      '跑 node --test scripts/role-presets/source-freshness.test.mjs 看红在哪条：本项必须能说「不」——'
+      + '共享文件变了必须点名那个 key、共享 hash 全同但 revision 变了同样判不新鲜（角色卡/soul/blueprint 也进 revision）、'
+      + '新增共享文件算变、任一侧读数缺失必须判不新鲜（读不到≠干净）；恒真桩突变必须让负例失效（DA-14 / P-07）',
+    run() {
+      return runNodeTestFile('scripts/role-presets/source-freshness.test.mjs', '共享源新鲜度判据的反向自测失败')
+    },
+  },
+  {
     name: 'jev-tier15-freshness',
     // 离线、确定性、零 API 调用（ADR-0138 D5）：语义轨基线不进 gate 关键路径，但它的输入指纹进——
     // corpus/判据/模型版本/样本集任一漂了，旧基线就指向不存在的输入，本项判红并点名是哪一项。

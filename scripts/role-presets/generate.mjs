@@ -47,6 +47,8 @@
  * 用法：
  *   node scripts/role-presets/generate.mjs                # 生成到 ~/.dsh/.agent-presets
  *   node scripts/role-presets/generate.mjs --dry-run      # 只打印，不写盘
+ *   node scripts/role-presets/generate.mjs --check        # 新鲜度判定：产物记录的源快照 vs 现场重算
+ *                                                         # （0=一致 / 1=有漂移并点名共享文件 / 2=读数不可用；不写盘）
  *   ROLE_MATERIAL_ROOT=... ROLE_PRESET_OUT=... node ...   # 覆盖源/目标
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs'
@@ -54,6 +56,7 @@ import { join, dirname } from 'node:path'
 import { createHash } from 'node:crypto'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { judgeSourceFreshness, readRecordedSnapshot } from './source-freshness.mjs'
 
 import { unmanagedRowBlocks, reinstateRows } from './unmanaged-rows.mjs'
 import { appNodeModules } from '../lib/app-resources.mjs'
@@ -112,6 +115,7 @@ const STANDARD_COMPOSITION =
 const SNAPSHOT_DATE = '2026-09-11'
 const SOURCE_DSH_VERSION = '2.0.5'
 const DRY_RUN = process.argv.includes('--dry-run')
+const CHECK = process.argv.includes('--check')
 
 /** 平面 → order 千位基座。平面内再按「首次出现的责任域」分百位段，故扁平列表里平面与责任域都成块。 */
 const PLANE_BASE = { 'PLN-MGT': 1000, 'PLN-OPS': 2000, 'PLN-CTL': 3000, 'PLN-PLT': 4000, 'PLN-EXC': 0 }
@@ -1034,7 +1038,67 @@ function renderMgtPersona(mrole, ctx) {
 
 // ── 主流程 ──────────────────────────────────────────────────────────────────
 
+/**
+ * `--check`：把「产物记录的源快照」与「现场重算」逐条比对（DA-14）。
+ *
+ * 重算用的就是本文件里那两个 load 函数（与生成走同一条路），比对逻辑在
+ * `source-freshness.mjs`（纯函数、自带测试）——判据与生成器**共用同一份实现**，
+ * 不给"共享源是哪几个文件"造第二个家（P-07）。
+ *
+ * 退出码：0 全部一致；1 有漂移（点名共享文件与需重生成的条数）；2 读数不可用
+ * （材料根读不到 / 目标目录还没有产物）——2 是"仪器不可用"，不是"新鲜"。
+ */
+function runSourceFreshnessCheck() {
+  const namespaces = [
+    { name: 'AGT', prefix: 'agt-', designCount: 50, load: loadSources },
+    { name: 'MGT', prefix: 'mgt-', designCount: 3, load: loadMgtSources },
+  ]
+  let drifted = 0
+  for (const ns of namespaces) {
+    const dirs = existsSync(OUT_ROOT)
+      ? readdirSync(OUT_ROOT).filter((name) => name.startsWith(ns.prefix))
+      : []
+    if (dirs.length === 0) {
+      console.error(`[${ns.name}] ${OUT_ROOT} 下没有 ${ns.prefix}* 产物——先跑一次生成，本项才有对照面（读不到 ≠ 新鲜）`)
+      process.exit(2)
+    }
+    let computed
+    try {
+      computed = ns.load()
+    } catch (error) {
+      console.error(`[${ns.name}] 源读不到（材料根 ${MATERIAL_ROOT}）：${error instanceof Error ? error.message : String(error)}`)
+      process.exit(2)
+    }
+    const stale = []
+    for (const dir of dirs.sort()) {
+      let manifest = null
+      try {
+        manifest = JSON.parse(readFileSync(join(OUT_ROOT, dir, 'manifest.json'), 'utf8'))
+      } catch {
+        manifest = null
+      }
+      const verdict = judgeSourceFreshness({
+        recorded: readRecordedSnapshot(manifest),
+        computed: { revision: computed.sourceRevision, hashes: computed.hashes },
+      })
+      if (!verdict.fresh) stale.push({ dir, verdict })
+    }
+    if (stale.length > 0) {
+      drifted += 1
+      console.error(`✗ [${ns.name}] ${stale.length}/${dirs.length} 条产物与共享源不一致——${stale[0].verdict.reason}`)
+      console.error(`   需重跑 node scripts/role-presets/generate.mjs 全量重生成（${ns.name} 本机 ${dirs.length} 条 / 设计存量 ${ns.designCount} 条）；举例：${stale.slice(0, 5).map((entry) => entry.dir).join('、')}${stale.length > 5 ? ' …' : ''}`)
+    } else {
+      console.log(`✓ [${ns.name}] ${dirs.length} 条产物与共享源一致（${computed.sourceRevision}）`)
+    }
+  }
+  process.exit(drifted > 0 ? 1 : 0)
+}
+
 function main() {
+  if (CHECK) {
+    runSourceFreshnessCheck()
+    return
+  }
   const src = loadSources()
   const orgRoles = new Map(src.organizationGraph.roles.map((r) => [r.id, r]))
   const planes = new Map(src.organizationGraph.planes.map((p) => [p.id, p]))

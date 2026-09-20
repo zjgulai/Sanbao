@@ -90,7 +90,9 @@ T0（16 项）判据是「①任何岗位都用得上；②不产出岗位责任
 - **共享源传染面**：agt-001 与 agt-050 的 shared_source_hashes 逐字节一致，8 个共享源
   （roleCatalog/organizationGraph/managementGraph/lifecycle/collaborationGraph/flowCatalog/
   playbooks/roster）任一改动 = 50 preset 全量重生成。这是 D4「MGT 协作事实不进共享图」
-  的定量依据。
+  的定量依据。**2026-09-21 起这条从阅读纪律变成机制**（DA-14）：`node scripts/role-presets/generate.mjs --check`
+  （判据 `gate:role-preset-source-freshness`）把产物记录的 source_snapshot 与现场重算比对，
+  漂移即判红并**点名共享文件**与需重生成的条数；AGT 与 MGT 两个命名空间分别判。
 
 ## 4. 复现方式
 

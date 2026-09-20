@@ -106,6 +106,6 @@
 
 ### 岗位 Preset 体系当前形态（2026-09-19）
 
-- **双命名空间**：`agt-001~050`（执行面，4 组织平面 × 8 责任域，材料根 role-catalog）+ `mgt-001~003`（管理层决策权平面，投影平面 PLN-EXC / DOM-EXC，order 基座 0 置顶渲染，材料根 management-catalog）。生成器 `scripts/role-presets/generate.mjs` 双装载分支；MGT 共享源与 AGT 共享源相互独立——**AGT 共享源（含 ROSTER.md）任何改动 = 存量 50 全量重生成**，动它们之前先读 [research/16](research/16-organization-audit-53-roles.md) §3.6
+- **双命名空间**：`agt-001~050`（执行面，4 组织平面 × 8 责任域，材料根 role-catalog）+ `mgt-001~003`（管理层决策权平面，投影平面 PLN-EXC / DOM-EXC，order 基座 0 置顶渲染，材料根 management-catalog）。生成器 `scripts/role-presets/generate.mjs` 双装载分支；MGT 共享源与 AGT 共享源相互独立——**AGT 共享源（含 ROSTER.md）任何改动 = 存量 50 全量重生成**，动它们之前先读 [research/16](research/16-organization-audit-53-roles.md) §3.6；该纪律自 2026-09-21 起有机制兜底：`gate:role-preset-source-freshness`（`node scripts/role-presets/generate.mjs --check`，AGT/MGT 分别判、漂移点名共享文件）
 - 校验三件：`verify-lossless.mjs`（AGT 12 层 + MGT M1~M12/M-D/M-T0/M-O 层）、`scripts/gates/live-presets.mjs`（身份账本 56 preset）、`audit-organization.mjs`（组织一致性审计，只报告不阻塞）
 - 管理层姿态：**评估载体 + 本机装配**——profile 可加载、限 MGT-EVAL 与人在环演练、未授权 Shadow/生产、出货面 exclude 档；出货前置 = MGT-EVAL-A/B 通过 + R0 对照臂结论 + 另立 ADR。决策与理由见 [ADR-0129](adr/ADR-0129.md)（材料侧对应 D-065/D-066）
