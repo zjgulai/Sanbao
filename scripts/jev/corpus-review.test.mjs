@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,14 +7,26 @@ import assert from 'node:assert/strict'
 import { loadCorpus, runCorpusReview, stateFor, defaultCriteriaIds, render } from './corpus-review.mjs'
 import { MODEL_VERSION } from './questions.mjs'
 
-function fixtureCorpus(entries) {
+/**
+ * 夹具必须落在临时 git 仓库里：`loadCorpus` 先过 D2 出网闸门，未跟踪/仓外的来源会被拒载
+ * （见 egress-boundary.mjs）——夹具不入库，测到的就只是闸门，而不是形状校验本身。
+ */
+function fixtureDir(files) {
   const dir = mkdtempSync(join(tmpdir(), 'jev-corpus-review-'))
-  const path = join(dir, 'corpus.json')
-  writeFileSync(path, JSON.stringify({
-    _meta: { what: 'fixture' },
-    skills: Object.fromEntries(entries.map(([name, e]) => [name, e])),
-  }))
-  return { path, dir }
+  execFileSync('git', ['init', '-q', dir])
+  for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text)
+  execFileSync('git', ['-C', dir, 'add', '--', ...Object.keys(files)])
+  return dir
+}
+
+function fixtureCorpus(entries) {
+  const dir = fixtureDir({
+    'corpus.json': JSON.stringify({
+      _meta: { what: 'fixture' },
+      skills: Object.fromEntries(entries.map(([name, e]) => [name, e])),
+    }),
+  })
+  return { path: join(dir, 'corpus.json'), dir }
 }
 
 const CLEAN = { description: '分析品类结构。', body_excerpt: '# 分析\n先出表再出图。' }
@@ -85,16 +98,14 @@ test('200 但回答形状坏按失败计（P-02），不进 findings 也不静�
 })
 
 test('corpus 形状与空射程（P-15）：坏形状/0 条/缺 description 全部拒绝', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'jev-corpus-review-'))
-  const shapeless = join(dir, 'shapeless.json')
-  writeFileSync(shapeless, JSON.stringify({ nope: true }))
-  assert.throws(() => loadCorpus(shapeless), /形状非法/)
-  const empty = join(dir, 'empty.json')
-  writeFileSync(empty, JSON.stringify({ skills: {} }))
-  assert.throws(() => loadCorpus(empty), /P-15/)
-  const descless = join(dir, 'descless.json')
-  writeFileSync(descless, JSON.stringify({ skills: { a: { title: 'x' } } }))
-  assert.throws(() => loadCorpus(descless), /缺 description/)
+  const dir = fixtureDir({
+    'shapeless.json': JSON.stringify({ nope: true }),
+    'empty.json': JSON.stringify({ skills: {} }),
+    'descless.json': JSON.stringify({ skills: { a: { title: 'x' } } }),
+  })
+  assert.throws(() => loadCorpus(join(dir, 'shapeless.json')), /形状非法/)
+  assert.throws(() => loadCorpus(join(dir, 'empty.json')), /P-15/)
+  assert.throws(() => loadCorpus(join(dir, 'descless.json')), /缺 description/)
 })
 
 test('state 拼法与基线样本同构：description + body_excerpt', () => {

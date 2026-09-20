@@ -14,6 +14,14 @@
   与 `scripts/gates/jev-tier15.expected.json` 逐项比对，漂移判红并点名哪项——第三方 API
   可用性不进门禁关键路径，旧基线在输入未变时零 API 调用永久有效。
 
+- **Jev 出网边界从纪律变机制**（ADR-0138 D2 的收口，记录见
+  [Note](docs/notes/implemented/process/2026-09-20-jev-egress-boundary.md)）：装载器
+  `loadCorpus` / `loadSamples` 在读盘前先过闸门 `scripts/jev/egress-boundary.mjs`——
+  来源必须是仓库内被 git 跟踪的文件，仓外/未跟踪（`~/.dsh/scratch/attrib/**` 那类转录）
+  在装载那一刻被拒且判词点名 D2。新增门禁 `jev-egress-boundary` + 反例自测：六项探针
+  （含「跟踪来源不许误杀」与「发网模块无文件读取面」），恒真/过严/不点名 D2/空射程四种突变
+  各自判红。残余如实保留：文件被跟踪 ≠ 内容清白，那一段只能靠人复核。
+
 ## [2.5.0] - 2026-09-18（DSH 基座 2.0.5→2.0.10 / runtime 0.1.5-rc.2 迁移）
 
 ### 基座迁移

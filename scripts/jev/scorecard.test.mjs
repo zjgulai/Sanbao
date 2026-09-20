@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -5,6 +6,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { runScorecard, loadSamples } from './scorecard.mjs'
 import { MODEL_VERSION } from './questions.mjs'
+
+/** 夹具落在临时 git 仓库里：`loadSamples` 先过 D2 出网闸门（见 egress-boundary.mjs）。 */
+function fixtureDir(files) {
+  const dir = mkdtempSync(join(tmpdir(), 'scorecard-samples-'))
+  execFileSync('git', ['init', '-q', dir])
+  for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text)
+  execFileSync('git', ['-C', dir, 'add', '--', ...Object.keys(files)])
+  return dir
+}
 
 const SAMPLES = [
   { id: 'R-1', kind: 'recall', criterion: 'q2-stop-obligation', expectFire: true, source: 'x', state: 'a' },
@@ -61,13 +71,13 @@ test('部分失败：错误计入 errors、分母按实际成功数计，不静�
 })
 
 test('样本校验：缺 source 拒绝（P-01），空集拒绝（P-15），未知判据拒绝', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'scorecard-samples-'))
-  const write = (name, obj) => writeFileSync(join(dir, name), JSON.stringify(obj))
-  write('bad.json', { samples: [{ id: 'x', kind: 'recall', criterion: 'q2-stop-obligation', state: 's' }] })
+  const dir = fixtureDir({
+    'bad.json': JSON.stringify({ samples: [{ id: 'x', kind: 'recall', criterion: 'q2-stop-obligation', state: 's' }] }),
+    'empty.json': JSON.stringify({ samples: [] }),
+    'unknown.json': JSON.stringify({ samples: [{ id: 'x', kind: 'recall', criterion: 'nope', state: 's', source: 'y' }] }),
+  })
   assert.throws(() => loadSamples(join(dir, 'bad.json')), /source/)
-  write('empty.json', { samples: [] })
   assert.throws(() => loadSamples(join(dir, 'empty.json')), /P-15/)
-  write('unknown.json', { samples: [{ id: 'x', kind: 'recall', criterion: 'nope', state: 's', source: 'y' }] })
   assert.throws(() => loadSamples(join(dir, 'unknown.json')), /未知判据/)
   assert.equal(loadSamples(new URL('./samples.json', import.meta.url).pathname).length, 9)
 })

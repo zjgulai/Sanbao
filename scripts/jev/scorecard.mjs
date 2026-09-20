@@ -13,10 +13,13 @@ import { pathToFileURL } from 'node:url'
 import { fingerprintPayload, CRITERIA, MODEL_VERSION } from './questions.mjs'
 import { resolveJevKey, redact } from '../lib/jev-credentials.mjs'
 import { createJevClient } from './client.mjs'
+import { assertEgressSourceTracked } from './egress-boundary.mjs'
 
 const CRITERION_BY_ID = Object.fromEntries(CRITERIA.map((c) => [c.id, c]))
 
+/** 样本集是 outbound state 的第二个来源，与 corpus 同过 D2 闸门（仓外/未跟踪一律拒载）。 */
 export function loadSamples(path) {
+  assertEgressSourceTracked(path)
   const raw = JSON.parse(readFileSync(path, 'utf8'))
   const samples = raw.samples ?? []
   if (samples.length === 0) throw new Error(`样本集为空：${path}（P-15：空扫描面不可判）`)

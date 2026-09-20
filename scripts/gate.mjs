@@ -42,6 +42,7 @@ import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
 import { checkJevTier15Freshness, toCanonicalJevTier15Result } from './gates/jev-tier15-freshness.mjs'
+import { checkJevEgressBoundary, toCanonicalJevEgressResult } from './gates/jev-egress-boundary.mjs'
 import { checkBrandDerivatives } from './gates/brand-derivatives-sync.mjs'
 import { checkBrandAvatarsPin } from './gates/brand-avatars-pin.mjs'
 import { checkRoleBriefShape } from './gates/role-brief-shape.mjs'
@@ -577,6 +578,28 @@ const CHECKS = [
       + '每一条都必须判红并点名漂的是哪项；也必须不误报——同输入两次重算逐字节一致（ADR-0138 D5 / P-02 / P-15）',
     run() {
       return runNodeTestFile('scripts/gates/jev-tier15-freshness.test.mjs', 'Tier 1.5 指纹判据的反向自测失败')
+    },
+  },
+  {
+    name: 'jev-egress-boundary',
+    // D2 的机制面（ADR-0138 后果 1 于 2026-09-20 由机制收口）：闸门接在装载器里了，但「守住闸门本身」
+    // 需要有仪器——摘掉守卫、或让发网模块自己读文件绕过它，此前不会有任何读数变红（P-04 同族）。
+    remediation:
+      '读判据输出点名的那条：未跟踪/仓外来源必须被 loadCorpus 与 loadSamples 拒载且判词点名 ADR-0138 D2（attrib 转录是直系判例），'
+      + '被跟踪的来源必须照常装载（误杀同判红），默认语料路径必须落在跟踪集内，发网模块 client.mjs 不得出现 node:fs / node:child_process / readFileSync。'
+      + '先跑 node scripts/gates/jev-egress-boundary.mjs 看红在哪条，再修 scripts/jev/egress-boundary.mjs 的闸门或把它接回两个装载器——不要放宽探针',
+    run() {
+      return toCanonicalJevEgressResult(checkJevEgressBoundary())
+    },
+  },
+  {
+    name: 'jev-egress-boundary-selftest',
+    remediation:
+      '跑 node --test scripts/gates/jev-egress-boundary.test.mjs 看红在哪条：本项必须能说「不」——恒真闸门（守卫被摘）、过严闸门（拒绝一切、误杀跟踪来源）、'
+      + '拒了但不点名 D2、空探针（P-02）四条都必须判红；也必须不误报——真实夹具下六项探针全过；'
+      + 'canonical 读数在通过/违约/空射程三种形态下都要过 validateGateResult（ADR-0138 D2）',
+    run() {
+      return runNodeTestFile('scripts/gates/jev-egress-boundary.test.mjs', 'Jev 出网边界判据的反向自测失败')
     },
   },
   {

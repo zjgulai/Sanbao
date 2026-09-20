@@ -21,10 +21,12 @@
  *
  * CLI：node scripts/jev/corpus-review.mjs [--corpus <file>] [--out <file>] [--criteria q2,q3]
  * key 解析走 jev-credentials（D7）；解析不到大声退出（exit 2）。
+ * `--corpus` 只接受仓库内被 git 跟踪的文件（D2 闸门，见 egress-boundary.mjs）。
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { createJevClient } from './client.mjs'
+import { assertEgressSourceTracked } from './egress-boundary.mjs'
 import { resolveJevKey, redact } from '../lib/jev-credentials.mjs'
 import { CRITERIA, MODEL_VERSION, fingerprintPayload } from './questions.mjs'
 
@@ -39,8 +41,12 @@ export function stateFor(entry) {
   return `description: ${entry.description ?? ''}\n\nbody: ${entry.body_excerpt ?? ''}`
 }
 
-/** 读 corpus 并校验形状；0 条直接 throw（P-15 空射程不可用）。 */
+/**
+ * 读 corpus 并校验形状；0 条直接 throw（P-15 空射程不可用）。
+ * 来源先过 D2 闸门：仓外/未跟踪的文件（如 attrib 转录）在读盘之前就被拒绝。
+ */
 export function loadCorpus(path = DEFAULT_CORPUS_PATH) {
+  assertEgressSourceTracked(path)
   const raw = readFileSync(path, 'utf8')
   const corpus = JSON.parse(raw)
   if (!corpus || typeof corpus !== 'object' || Array.isArray(corpus) || typeof corpus.skills !== 'object' || Array.isArray(corpus.skills)) {
