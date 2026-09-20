@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   CONTRAST_DEFAULT,
@@ -7,6 +7,11 @@ import {
 } from "../theme-settings.js";
 import { getThemePreset } from "./presets.js";
 import {
+  loadSavedAppearance,
+  saveAppearance,
+  initAppearancePreboot,
+  DEFAULT_SAVED_APPEARANCE,
+  APPEARANCE_STORAGE_KEY,
   loadThemeStudioPrefs,
   loadThemeStudioSettings,
   saveThemeStudioPrefs,
@@ -16,11 +21,15 @@ import {
   type ThemeStudioStorage,
 } from "./persistence.js";
 
-function memoryStorage(initial?: string): ThemeStudioStorage & {
+function memoryStorage(initial?: Record<string, string>): ThemeStudioStorage & {
   values: Map<string, string>;
 } {
   const values = new Map<string, string>();
-  if (initial !== undefined) values.set(THEME_STUDIO_STORAGE_KEY, initial);
+  if (initial) {
+    for (const [k, v] of Object.entries(initial)) {
+      values.set(k, v);
+    }
+  }
   return {
     values,
     getItem: (key) => values.get(key) ?? null,
@@ -28,7 +37,146 @@ function memoryStorage(initial?: string): ThemeStudioStorage & {
   };
 }
 
-describe("theme persistence", () => {
+function createMockDocument() {
+  const htmlAttrs = new Map<string, string>();
+  const htmlStyles = new Map<string, string>();
+  const bodyAttrs = new Map<string, string>();
+  const headElements: any[] = [];
+
+  const documentElement = {
+    getAttribute: (name: string) => htmlAttrs.get(name) ?? null,
+    setAttribute: (name: string, val: string) => { htmlAttrs.set(name, String(val)); },
+    removeAttribute: (name: string) => { htmlAttrs.delete(name); },
+    style: {
+      getPropertyValue: (name: string) => htmlStyles.get(name) ?? "",
+      setProperty: (name: string, val: string) => { htmlStyles.set(name, String(val)); },
+      removeProperty: (name: string) => { htmlStyles.delete(name); },
+    },
+  };
+
+  const body = {
+    getAttribute: (name: string) => bodyAttrs.get(name) ?? null,
+    setAttribute: (name: string, val: string) => { bodyAttrs.set(name, String(val)); },
+    removeAttribute: (name: string) => { bodyAttrs.delete(name); },
+  };
+
+  const head = {
+    append: (el: any) => headElements.push(el),
+    prepend: (el: any) => headElements.unshift(el),
+    appendChild: (el: any) => headElements.push(el),
+    querySelector: (selector: string) => {
+      const parts = selector.split(",").map((s) => s.trim());
+      for (const part of parts) {
+        for (const el of headElements) {
+          if (part.startsWith("style#") && el.id === part.slice("style#".length)) return el;
+          if (part.includes("data-sanbao-preboot") && el.dataset?.sanbaoPreboot) return el;
+          if (part.includes("data-sanbao-tokens") && el.dataset?.sanbaoTokens) return el;
+        }
+      }
+      return null;
+    },
+  };
+
+  const doc = {
+    documentElement,
+    body,
+    head,
+    createElement: (tag: string) => {
+      const el: any = {
+        tagName: tag.toUpperCase(),
+        dataset: {},
+        textContent: "",
+        id: "",
+      };
+      return el;
+    },
+    querySelector: (selector: string) => {
+      return head.querySelector(selector);
+    },
+  };
+
+  (doc as any).head.ownerDocument = doc;
+
+  return doc as unknown as Document;
+}
+
+describe("appearance persistence & preboot", () => {
+  it("loads default appearance when storage is empty or undefined", () => {
+    expect(loadSavedAppearance(undefined)).toEqual(DEFAULT_SAVED_APPEARANCE);
+    const storage = memoryStorage();
+    expect(loadSavedAppearance(storage)).toEqual(DEFAULT_SAVED_APPEARANCE);
+  });
+
+  it("round-trips appearance state correctly", () => {
+    const storage = memoryStorage();
+    const app = {
+      mode: "dark" as const,
+      theme: "parchment" as const,
+      fontScale: 1.1,
+      reducedMotion: true,
+    };
+    expect(saveAppearance(app, storage)).toBe(true);
+    expect(loadSavedAppearance(storage)).toEqual(app);
+  });
+
+  it("handles malformed JSON or partial values gracefully", () => {
+    const storage = memoryStorage({ [APPEARANCE_STORAGE_KEY]: "invalid-json" });
+    expect(loadSavedAppearance(storage)).toEqual(DEFAULT_SAVED_APPEARANCE);
+
+    const storagePartial = memoryStorage({
+      [APPEARANCE_STORAGE_KEY]: JSON.stringify({ mode: "light", theme: "unknown" }),
+    });
+    expect(loadSavedAppearance(storagePartial)).toEqual({
+      mode: "light",
+      theme: "forest-green",
+      fontScale: 1.0,
+      reducedMotion: false,
+    });
+  });
+
+  it("reports false on storage set failure", () => {
+    const brokenStorage: ThemeStudioStorage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("fail");
+      },
+    };
+    expect(saveAppearance(DEFAULT_SAVED_APPEARANCE, brokenStorage)).toBe(false);
+  });
+
+  it("initAppearancePreboot mounts data attributes and styles before DOM render", () => {
+    const storage = memoryStorage();
+    saveAppearance(
+      {
+        mode: "dark",
+        theme: "parchment",
+        fontScale: 1.1,
+        reducedMotion: true,
+      },
+      storage,
+    );
+
+    const mockDoc = createMockDocument();
+    initAppearancePreboot(mockDoc, storage);
+
+    expect(mockDoc.documentElement.getAttribute("data-sanbao-mode")).toBe("dark");
+    expect(mockDoc.documentElement.getAttribute("data-sanbao-theme")).toBe("parchment");
+    expect(mockDoc.documentElement.style.getPropertyValue("--sanbao-font-scale")).toBe("1.1");
+
+    expect(mockDoc.body.getAttribute("data-sanbao-mode")).toBe("dark");
+    expect(mockDoc.body.getAttribute("data-sanbao-theme")).toBe("parchment");
+    expect(mockDoc.body.getAttribute("data-lute-reduce-motion")).toBe("reduce");
+
+    const prebootTag = mockDoc.head.querySelector("style[data-sanbao-preboot]");
+    expect(prebootTag).not.toBeNull();
+    expect(prebootTag?.textContent).toContain("--sanbao-font-scale: 1.1");
+
+    const tokensTag = mockDoc.head.querySelector("style[data-sanbao-tokens]");
+    expect(tokensTag).not.toBeNull();
+  });
+});
+
+describe("theme persistence (legacy compatibility)", () => {
   it("round-trips a complete theme", () => {
     const storage = memoryStorage();
     const settings: ThemeStudioSettings = {
@@ -45,10 +193,10 @@ describe("theme persistence", () => {
     expect(loadThemeStudioSettings(undefined)).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
-    expect(loadThemeStudioSettings(memoryStorage("not-json"))).toEqual(
+    expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: "not-json" }))).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
-    expect(loadThemeStudioSettings(memoryStorage("{}"))).toEqual(
+    expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: "{}" }))).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
     );
   });
@@ -65,7 +213,7 @@ describe("theme persistence", () => {
     };
 
     expect(
-      loadThemeStudioSettings(memoryStorage(JSON.stringify(legacySettings))),
+      loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacySettings) })),
     ).toEqual({
       ...DEFAULT_THEME_STUDIO_SETTINGS,
       ...proof,
@@ -84,7 +232,7 @@ describe("theme persistence", () => {
       uiFontSize: 14,
       codeFontSize: 14,
     };
-    const storage = memoryStorage(JSON.stringify(legacyEditorial));
+    const storage = memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacyEditorial) });
 
     expect(loadThemeStudioSettings(storage)).toEqual({
       ...legacyEditorial,
@@ -126,7 +274,7 @@ describe("theme persistence", () => {
       darkContrast: _darkContrast,
       ...legacySettings
     } = DEFAULT_THEME_STUDIO_SETTINGS;
-    const storage = memoryStorage(JSON.stringify(legacySettings));
+    const storage = memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: JSON.stringify(legacySettings) });
 
     expect(loadThemeStudioSettings(storage)).toEqual(
       DEFAULT_THEME_STUDIO_SETTINGS,
@@ -140,9 +288,6 @@ describe("theme persistence", () => {
   });
 
   it("falls back to the default contrast for out-of-range or malformed values", () => {
-    // Contrast is a preference, not identity: a bad value mirrors the
-    // typography fallback (single-field default) instead of the color
-    // hard-failure that rejects the whole record.
     for (const bad of [-1, 101, 50.5, "60", null, {}]) {
       const raw = JSON.stringify({
         ...DEFAULT_THEME_STUDIO_SETTINGS,
@@ -150,14 +295,14 @@ describe("theme persistence", () => {
         darkContrast: bad,
       });
 
-      expect(loadThemeStudioSettings(memoryStorage(raw))).toEqual(
+      expect(loadThemeStudioSettings(memoryStorage({ [THEME_STUDIO_STORAGE_KEY]: raw }))).toEqual(
         DEFAULT_THEME_STUDIO_SETTINGS,
       );
     }
   });
 });
 
-describe("theme prefs", () => {
+describe("theme prefs (legacy compatibility)", () => {
   it("defaults to system motion and zero-intervention smoothing", () => {
     expect(loadThemeStudioPrefs(undefined)).toEqual({
       reduceMotion: "system",
@@ -167,7 +312,7 @@ describe("theme prefs", () => {
       reduceMotion: "system",
       fontSmoothing: false,
     });
-    expect(loadThemeStudioPrefs(memoryStorage("not-json"))).toEqual({
+    expect(loadThemeStudioPrefs(memoryStorage({ [THEME_PREFS_STORAGE_KEY]: "not-json" }))).toEqual({
       reduceMotion: "system",
       fontSmoothing: false,
     });
@@ -177,8 +322,6 @@ describe("theme prefs", () => {
     const storage = memoryStorage();
     saveThemeStudioSettings(storage, DEFAULT_THEME_STUDIO_SETTINGS);
 
-    // Reading prefs never materializes the key; theme settings never read
-    // or write prefs.
     loadThemeStudioPrefs(storage);
     expect(storage.values.has(THEME_PREFS_STORAGE_KEY)).toBe(false);
 
