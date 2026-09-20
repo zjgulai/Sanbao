@@ -78,20 +78,15 @@ var AppearanceHostService = class {
 		} catch {}
 	}
 	broadcastCordis() {
-		if (this.ctx && typeof this.ctx.emit === "function") try {
-			this.ctx.emit("appearance/change", this.getAppearance());
+		try {
+			const emitter = this.ctx;
+			if (typeof emitter?.emit === "function") emitter.emit("appearance/change", this.getAppearance());
 		} catch {}
 	}
 };
 //#endregion
 //#region src/index.ts
 const name = "dsh-theme";
-function apply(ctx) {
-	if (ctx) {
-		const appearanceService = new AppearanceHostService({ ctx });
-		if (typeof ctx.provide === "function") ctx.provide("appearance");
-		ctx.appearance = appearanceService;
-	}
-}
+function apply() {}
 //#endregion
 export { AppearanceHostService, apply, name };

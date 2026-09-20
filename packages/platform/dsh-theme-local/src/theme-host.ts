@@ -126,12 +126,13 @@ export class AppearanceHostService {
   }
 
   private broadcastCordis(): void {
-    if (this.ctx && typeof this.ctx.emit === "function") {
-      try {
-        this.ctx.emit("appearance/change", this.getAppearance());
-      } catch {
-        // Prevent emit errors from failing update
+    try {
+      const emitter = this.ctx as { emit?: (event: string, payload: unknown) => void } | undefined;
+      if (typeof emitter?.emit === "function") {
+        emitter.emit("appearance/change", this.getAppearance());
       }
+    } catch {
+      // Prevent emit errors from failing update
     }
   }
 }
