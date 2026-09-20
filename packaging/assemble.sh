@@ -205,6 +205,16 @@ if [ -f "$DSH_VENDOR/dsh-patches/brand-replay.sh" ]; then
 else
   echo "[assemble] 警告：缺少 brand-replay.sh（Info.plist/web 标题品牌跳过）"
 fi
+# 应用身份补丁（2026-09-20）：productName（数据目录身份）→ Sanbao。
+# 与 brand-replay 的分工：本支管「身份表」（bin.js + profile-manager 两处，客户机数据目录由它决定），
+# brand-replay 管「显示名/CFBundle/Helper」。两支都幂等，锚点 count==1 才落笔。
+# 装机侧迁移见 docs/sop（数据目录 DSH Desktop → Sanbao，只复制不删除）。
+if [ -f "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" ]; then
+  DSH_APP="$APP_STAGE/DSH Desktop.app" bash "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" apply 2>&1 | tail -6 \
+    || { echo "[assemble] ✗ app-identity-sanbao 补丁重放失败（见上）"; exit 1; }
+else
+  echo "[assemble] ✗ 缺少 dsh-patches/app-identity-sanbao/apply-fixes.sh（身份与数据目录名必须随包一致）"; exit 1
+fi
 # 运行时守卫补丁（2026-09-13 白屏事故）：G1 HMR 生产模式不推 rebuilt 帧（白屏机制修复）
 # + G2 renderer console 转发（可观测性）。幂等脚本，锚点 count==1 才落笔。
 if [ -f "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" ]; then
@@ -512,7 +522,11 @@ cp "$PKG_ROOT/scripts/tcc-grant-status.sh" "$PAYLOAD/tools/"
 cp "$PKG_ROOT/verify-patches-v2.sh" "$PAYLOAD/tools/" 2>/dev/null || true
 cp "$DSH_VENDOR/dsh-patches/brand-replay.sh" "$PAYLOAD/tools/" 2>/dev/null || true
 cp "$DSH_VENDOR/dsh-patches/boot-brand-replay.py" "$PAYLOAD/tools/"
+cp "$DSH_VENDOR/dsh-patches/brand-replay-strings.py" "$PAYLOAD/tools/"
 cp "$DSH_VENDOR/dsh-patches/brand-payload-wordmark.txt" "$PAYLOAD/tools/"
+cp "$DSH_VENDOR/dsh-patches/brand-payload-name.txt" "$PAYLOAD/tools/"
+mkdir -p "$PAYLOAD/tools/app-identity-sanbao"
+cp "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" "$PAYLOAD/tools/app-identity-sanbao/" 2>/dev/null || true
 mkdir -p "$PAYLOAD/tools/licenses"
 cp "$DSH_VENDOR/brand/logo/Inter-OFL-1.1.txt" "$PAYLOAD/tools/licenses/"
 # runtime-guards 随包分发：客户机安装后可用 --check 体检、--apply 自愈（升级重打包后重放）。

@@ -116,5 +116,5 @@
 ## D. 投稿建议
 
 1. 优先级：A-1（安全）> A-2（数据）> B-1/B-2/B-3（活跃故障）> 其余。
-2. 每条附「复现日志」：`~/Library/Application Support/DSH Desktop/logs/dsh-*.log` 中对应片段。
+2. 每条附「复现日志」：`~/Library/Application Support/Sanbao/logs/dsh-*.log` 中对应片段。
 3. 本地修复均已在 `Magpie-Horch/dsh-patches/` 留档（锚点 + 回滚），PR 可直接引用本地 diff 意图。

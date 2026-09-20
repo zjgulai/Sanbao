@@ -120,6 +120,16 @@ else no "R6b 期望 1（尾锚定），实得 rc=$rc_any"; fi
 if [ "$rc_app" = "0" ]; then ok "R6c 同一张表下 --app <路径> 仍判 0 → 两种问法确实不同，不是别名"
 else no "R6c 期望 0，实得 rc=$rc_app"; fi
 
+# ── R6d 长度窗口碰撞：comm 比后缀短 1 字符时，「未命中返回 0」与「尾部窗口 = 0」撞号 ──
+# 实机 2026-09-20 被三个系统进程撞出（coreservicesd / icdd / iconservicesd，comm 长恰 42 =
+# 后缀 43 − 1）：`--any` 误判「在跑」，quit 之后轮询 24 秒不收敛。诱饵取真机撞上的那两条路径。
+mkpsstub "$TMP/bin4" "  444 /System/Library/CoreServices/coreservicesd
+  555 /System/Library/Image Capture/Support/icdd
+  666 /x/y/z"
+rc="$(PATH="$TMP/bin4:$PATH" bash "$SUT" --any --quiet >/dev/null 2>&1; echo $?)"
+if [ "$rc" = "1" ]; then ok "R6d comm 比后缀短（含长度恰 42 的碰撞诱饵）→ --any 判 1"
+else no "R6d 期望 1，实得 rc=$rc —— 短 comm 被误判成 DSH 实例（未命中 0 撞上尾部窗口 0）"; fi
+
 # ── R7 真实靶子：已装的 app 在跑时，本判据必须说 0 ─────────────────────────
 # 期望值由**独立读数**给出（本脚本自己 grep ps），不用被测脚本自证。
 REAL="${DSH_APP:-/Applications/DSH Desktop.app}"

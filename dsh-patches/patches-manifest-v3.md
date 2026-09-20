@@ -22,6 +22,8 @@
 | RECOVERY | recovery.html 路径 | main.js | `app.asar.unpacked`（no-ASAR 下 replace 是 no-op，import.meta URL 已直指 Resources/app/lib/native-ui/recovery.html——2.0.10 上语义意外成立，锚串保留；见 E-3） | 7791496f0 |
 | 品牌×9 | ROOT/LUTE 品牌 | updates/update-checker/recovery/setup-wizard/desktop-dialog/client/electron-runtime/main（8 文件 hash glob + main.js userData 路径豁免）+ wordmark JS + index.html | brand-replay.sh（**glob 参数化**：electron-runtime-\*/update-checker-\* 随基座 hash 变化自动捕捉；**D0+L0 → N/A**：上游可能整文件移除品牌串（desktop-terminal.js 实证），旧矩阵把无判定面误报 DRIFT；`${rel}` 花括号修复 macOS bash3.2 多字节变量名吞噬） | 66de2dc6b |
 
+| app-identity-sanbao | **应用身份改名**（productName → Sanbao，决定数据目录） | bin.js + profile-manager-\*.js（同一张表的两个家） | `productName: "Sanbao"`（每文件恰 1 行；`--verify-anchors` 判两种状态） | 装配期重放 `dsh-patches/app-identity-sanbao/apply-fixes.sh`（幂等；运行中拒绝执行） | 数据目录迁移 `packaging/scripts/migrate-app-data-dir.sh`（只复制不删除） |
+
 | boot-health-retry | **启动健康上报确认式重试** | **lib/client.js**（dsh-plugin-desktop 客户端 bundle；非 NM 层——NM 目标空间是 app `node_modules`） | `LUTE(2026-09-18): 把一次性上报改成确认式重试`（补丁标记）+ `postRendererBootReport` 锚点唯一 | 装配期重放 `dsh-patches/boot-health-retry/apply-fixes.sh`（**非** vendor 提交；见残差） | [ADR-0127](../docs/adr/ADR-0127.md) |
 
 ## B. 运行时层（NM patch，packaging/patches/nm/，对 0.1.5-rc.2 pristine 重锚）

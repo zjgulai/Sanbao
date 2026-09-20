@@ -103,7 +103,7 @@ mkdir -p "$HOME/project/Magpie-Horch"
 say "2/5 profile 就位"
 
 # 3/5 pnpm 安装
-PNPM="${PNPM:-$(ls "$HOME/Library/Application Support/DSH Desktop/runtime-commands/bin/pnpm" 2>/dev/null || command -v pnpm)}"
+PNPM="${PNPM:-$(ls "$HOME/Library/Application Support/Sanbao/runtime-commands/bin/pnpm" 2>/dev/null || command -v pnpm)}"
 ( cd "$DSH_HOME_DIR/profiles/desktop" && "$PNPM" install --no-frozen-lockfile )
 say "3/5 依赖安装完成"
 

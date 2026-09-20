@@ -15,7 +15,7 @@
  *
  * - 只处理 `grep -rlFI` 认得的**文本**文件（二进制跳过，与守卫同一把尺）；
  * - 用**字面前缀替换**（不是正则匹配「一条路径」）：路径里可能含空格
- *   （`/Library/Application Support/DSH Desktop`），按分隔符切字的正则会在空格处断开，
+ *   （`/Library/Application Support/Sanbao`，2026-09-20 前为 DSH Desktop），按分隔符切字的正则会在空格处断开，
  *   把可改的路径误判成「没覆盖的形态」；
  * - 表里没覆盖到的构建机路径 → **响亮失败**：新形态该由人来决定它是什么意思
  *   （补一条占位符，还是登记进基线），不由脚本猜；
@@ -45,7 +45,7 @@ import { fileURLToPath } from 'node:url'
  *   出处语义，剥离「在哪台机器的哪个目录」。
  */
 const MAP = [
-  ['/Library/Application Support/DSH Desktop', '__DSH_APP_SUPPORT__'],
+  ['/Library/Application Support/Sanbao', '__DSH_APP_SUPPORT__'],
   ['/project/Magpie-Horch', '__LUTE_REPO__'],
   ['/project/AI组织变革', '__LUTE_MATERIAL_ROOT__'],
   ['/Downloads/skills', '__SKILL_INTAKE_SOURCE__'],

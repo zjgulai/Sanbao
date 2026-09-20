@@ -1856,7 +1856,7 @@
         },
         {
           "id": "D6",
-          "text": "启动加载屏动画必须保留；2026-09-20 用户将周期改为2s，仅经bundle重放修改CSS时长，不改vendor源码。验收animation-name对应spin（允许CSS Modules派生名）、animation-duration=2s、conic弧色解析值等于品牌源accent。",
+          "text": "启动加载屏动画列为必须保留项：不改 dsh-client-web 的 boot 页，弧色经 --dsw-alias-brand-primary 自动跟皮；新增断言校验 animation-name=spin、animation-duration=0.8s、conic 弧色解析值等于品牌源 accent。",
           "constraints": [
             "不得以「简化启动屏」为由删除或冻结动画",
             "断言必须读解析后的真实值，不得复述字面量（ADR-0135 D1）",
@@ -2075,34 +2075,6 @@
       ]
     },
     {
-      "id": "ADR-0141",
-      "title": "ADR-0141 · 右边侧边栏 UI 优化：Qoder CN 风格折叠分组设计",
-      "status": "proposed",
-      "date": "2026-09-20",
-      "decisions": [
-        {
-          "id": "D1",
-          "text": "采用折叠分组设计，将 7 个模块分为工作区/工具/信息三组",
-          "constraints": []
-        },
-        {
-          "id": "D2",
-          "text": "图标尺寸 24x24px，组内间距 8px，组间间距 16px",
-          "constraints": []
-        },
-        {
-          "id": "D3",
-          "text": "采用 Qoder CN 风格：双层边框 + 微渐变 + 柔和阴影",
-          "constraints": []
-        },
-        {
-          "id": "D4",
-          "text": "激活状态：高亮背景色 + 发光边框 + 图标变色",
-          "constraints": []
-        }
-      ]
-    },
-    {
       "id": "ADR-0142",
       "title": "ADR-0142 · 岗位名片版式与官方预览角标移除：版面层也是换皮的一层",
       "status": "accepted（2026-09-20）",
@@ -2188,6 +2160,54 @@
             "官方 UI 改写锚一律运行时解析，不得把 CSS-module 哈希写进产品代码（ADR-0019）",
             "TARGET_SIDEBAR_WIDTH=264 与行轴契约不动；真要改宽度须另开一条并同步改门禁 TARGET 与 ADR-0125 D7/D8 的登记",
             "生效路径必须走两条同步（loadpoint 与 vendor）+ 完整重启，不接受『改了源码就算生效』"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0147",
+      "title": "ADR-0147 · Sanbao 改名落地四步成套（身份表 / 数据目录 / 显示名 / 重签）；品牌重放改扫描式 + 曾用名",
+      "status": "accepted（2026-09-20）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sanbao 改名落地必须四步成套执行：身份表 productName（app-identity-sanbao 补丁，两个家各一行）→ 数据目录迁移（migrate-app-data-dir.sh --apply，只复制不删除）→ 显示名/Helper/Info.plist 重放（brand-replay.sh --apply）→ 同身份重签（refresh-app-brand.sh）。四步均要求应用已退出；任一步运行时守卫判不了（dsh-running 退出码 4）必须中止，不得当成「没在跑」。",
+          "constraints": [
+            "旧数据目录（~/Library/Application Support/DSH Desktop）只复制不删除，作为回滚后路；确认新实例跑通前不得清理",
+            "数据主体在 ~/.dsh（profile/会话/设置），与 productName 无关；迁移的只是 userData（缓存/日志/少量 state）",
+            "appId（ai.deepseek.dsh.desktop）与签名身份（LUTE Code Signing）不得改动——TCC 授权按 bundle id + 证书 leaf 记账；重签后必须复核 TCC 仍为身份型匹配（tcc-grant-status.sh）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "品牌重放（brand-replay.sh 块 1）从「9 文件清单」改为扫描式：扫描 app 本体（Resources/app 下、排除 node_modules 与 *.orig* 备份）的文本文件；实现落 dsh-patches/brand-replay-strings.py。「曾用名」清单（PREV_NAMES，新→旧）是替换与 DRIFT 判定的唯一家；豁免按行判定并显式报 SKIP——productName 行归 app-identity 补丁，app.setPath(\"userData\") 行是路径不替换。基座平台名 DeepSeek Harness 不替换（它在很多地方正确指代上游事实），窗口标题位由 2b 块单独处理。",
+          "constraints": [
+            "扫描面为空（0 个文本文件）必须报 MISSING 判红（P-15 空扫描面响亮失败），不得静默通过",
+            "index.html 的 title 替换不得写死任一历史名锚点：替换器认任意 <title>…</title>，替换前后各量一次（次数==1 才动手、落笔后 grep 校验）",
+            "曾用名清单只增不删；改名时在其中追加旧名，否则改名后首次 --check 会因「旧名也不见了」落进 N/A 假绿"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Electron Helper 目录必须与 CFBundleName 同批换名，且旧名要认曾用名：<名> Helper*.app（含 (GPU)/(Plugin)/(Renderer) 后缀），plist 两字段（CFBundleName/CFBundleExecutable）与 Contents/MacOS/ 下可执行文件名四处一起换；曾用名目录不存在且目标也不存在时静默跳过，找到旧名却在 apply 后校验不过必须判红。",
+          "constraints": [
+            "不匹配的下场是启动期 FATAL: Unable to find helper app（Electron 按 Frameworks/<CFBundleName> Helper.app 查找），崩溃发生在 17ms 内、日志无插件信息——诊断时先看崩溃报告 procLaunch→exit 间隔",
+            "helper 改名后 app bundle 封条破损，必须重签后才能启动（refresh-app-brand.sh）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "品牌与身份写路径默认带落笔后校验：index.html 标题以 grep 期望值复核、helper 以 CFBundleName 回读 + 可执行文件 -x 复核、扫描器逐文件写后按非豁免行统计残留（>0 报 ERROR）。替换「没命中却报成功」与工具静默失败（PlistBuddy）是本轮实测过的两种假绿形态。",
+          "constraints": [
+            "不得只凭工具返回值判定成功：execCommand 假阳性同族教训——写路径的判据必须是「重读目标字节/字段」"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "本轮不改 bundle 目录名（/Applications/DSH Desktop.app 保留）与官方包内容：app 内 node_modules 的第三方/官方包（dshmarket、dsh-community-market、@deepseek-ai/dsh-client-ui-directory-picker-browse）里仍含 DSH Desktop 字样，属已知边界——改它们需要 vendor 化，且会被 pnpm 重装/上游同步覆盖。",
+          "constraints": [
+            "上游包品牌串如需清理，必须走 vendor 化（file: 依赖 + 补丁脚本），不得就地改 app 内 node_modules"
           ]
         }
       ]

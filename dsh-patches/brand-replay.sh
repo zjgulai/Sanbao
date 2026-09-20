@@ -1,11 +1,12 @@
 #!/bin/bash
-# DSH Desktop 2.0.4 品牌重放脚本（升级后恢复 ROOT/路特创新/LUTE Agentic System 品牌）
+# 品牌重放脚本（升级后恢复 Sanbao 品牌）。目标串读 brand-payload-name.txt（由名源
+# shared/client/sanbao-brand-source.ts 的 bundleDisplayName 生成）——本文件不再自带品牌字面量。
 #
 # 背景：官方升级重打包 .app 会还原「DSH Desktop / DeepSeek」品牌字符串。
 # 本脚本把品牌注入幂等重放。三块：
-#   1) 显示名品牌（DSH Desktop → LUTE Agentic System）——9 个文件；
+#   1) 显示名品牌（DSH Desktop → $BRAND_NAME）——9 个文件；
 #   2) 启动词标（wordmark "ROOT" + 内联 SVG）——dsh-web-frontend 哈希资产；
-#   3) Info.plist 显示名（CFBundleName/CFBundleDisplayName → LUTE Agentic System）。
+#   3) Info.plist 显示名（CFBundleName/CFBundleDisplayName → $BRAND_NAME）。
 #
 # 纪律：
 #   - 路径 join 字符串【不可替换】：bin.js 的 "DSH Desktop" 全是路径，main.js 5136 行
@@ -33,6 +34,16 @@ ASSETS="$CHK/node_modules/@deepseek-ai/dsh-web-frontend/dist/assets"
 PAYLOAD="$(dirname "$0")/brand-payload-wordmark.txt"
 MODE="${1:---check}"
 fail=0
+# 显示名目标串来自名源生成物（ADR-0136 D2：改名 = 改一个源 + 重跑生成）；
+# 缺失即回退载荷默认值，并由 --check 报出。本文件不再自带品牌字面量。
+BRAND_NAME="$(cat "$(dirname "$0")/brand-payload-name.txt" 2>/dev/null | tr -d '\n' || true)"
+BRAND_NAME="${BRAND_NAME:-Sanbao}"
+# 曾用名（要重放掉的），新→旧。这是「曾用名」的唯一家：改名时在这里追加。
+# 为什么必须有它：改名后第一次 --check 若只看「旧名还在不在」，会因「旧名也不见了」
+# 落进 N/A 变成假绿——曾用名在 == 还没换成新名，必须报 DRIFT。
+#   · LUTE Agentic System —— 上一位（2026-09-20 起换成 Sanbao）
+#   · DSH Desktop —— 首代 / 上游 app 名（官方升级重打包会还原，必须认）
+PREV_NAMES=("LUTE Agentic System" "DSH Desktop")
 
 say() { echo "[$MODE] $*"; }
 
@@ -41,70 +52,23 @@ BOOT_REPLAY="$(dirname "$0")/boot-brand-replay.py"
 [ -f "$BOOT_REPLAY" ] || { say "MISSING boot-brand-replay.py"; exit 1; }
 python3 "$BOOT_REPLAY" "$ASSETS" "$PAYLOAD" "$MODE" || exit 1
 
-# ── 1. 显示名品牌 ────────────────────────────────────────────────────────────
-# 动态文件名：hash 文件名随基座版本变化（2.0.4: Mw2EmLOX/DS52LbUW；2.0.5: DaaZGYGQ/DLNj0vyk）
-UPDATE_CHECKER="$(basename "$(ls "$CHK"/lib/update-checker-*.js 2>/dev/null | head -1)" 2>/dev/null)"
-ELECTRON_RUNTIME="$(basename "$(ls "$CHK"/lib/electron-runtime-*.js 2>/dev/null | head -1)" 2>/dev/null)"
-FILES=(
-  "lib/updates.js"
-  "lib/${UPDATE_CHECKER:-update-checker-Mw2EmLOX.js}"
-  "lib/desktop-terminal.js"
-  "lib/native-ui/recovery.html"
-  "lib/native-ui/setup-wizard.html"
-  "lib/native-ui/desktop-dialog.html"
-  "lib/client.js"
-  "lib/${ELECTRON_RUNTIME:-electron-runtime-DS52LbUW.js}"
-  "lib/main.js"
-)
-for rel in "${FILES[@]}"; do
-  f="$CHK/$rel"
-  [ -f "$f" ] || { say "MISSING $rel"; fail=1; continue; }
-  if [ "$rel" = "lib/main.js" ]; then
-    # 豁免 userData 路径行后再计数
-    d=$(grep "DSH Desktop" "$f" 2>/dev/null | grep -vc 'app.setPath("userData"' || true)
-  else
-    d=$(grep -c "DSH Desktop" "$f" 2>/dev/null || true)
-  fi
-  l=$(grep -c "LUTE Agentic System" "$f" 2>/dev/null || true)
-  if [ "$d" = "0" ] && [ "$l" -gt 0 ]; then
-    say "OK   $rel (LUTE×$l)"
-  elif [ "$d" = "0" ] && [ "$l" = "0" ]; then
-    # 2026-09-17（2.0.10 重锚）：上游基座个别文件已彻底移除品牌串
-    #（如 desktop-terminal.js D0+L0）。旧的判定矩阵没这个分支 → D0+L0 落进
-    # DRIFT（假阳性：apply 也无事可做）。D0+L0 = 该文件在本基座上已无判定面，
-    # 报 N/A，不算 DRIFT、不置 fail。
-    # 注意 `${rel}` 花括号形式：旧 bash（macOS /usr/bin/bash 3.2）会把
-    # `$rel（D0` 的多字节 `（` 吞进变量名 → 报 `rel…: unbound variable`。
-    say "N/A  ${rel}（D0+L0：本基座该文件无品牌串，无判定面）"
-  elif [ "$MODE" = "--apply" ]; then
-    if [ "$rel" = "lib/main.js" ]; then
-      # 豁免 userData 路径行，只替换其余显示串
-      python3 - "$f" <<'PY'
-import sys
-p = sys.argv[1]
-s = open(p).read()
-protected = 'app.setPath("userData", app.getPath("appData") + "/DSH Desktop")'
-marker = "@@KEEP_PATH@@"
-s2 = s.replace(protected, marker)
-c = s2.count("DSH Desktop")
-if c == 0:
-    open(p).close()  # 无需改
-else:
-    s2 = s2.replace("DSH Desktop", "LUTE Agentic System").replace(marker, protected)
-    open(p, "w").write(s2)
-print(f"replaced {c} display strings (userData path exempt)")
-PY
-      say "APPLY $rel"
-    else
-      c=$(grep -c "DSH Desktop" "$f")
-      perl -pi -e 's/DSH Desktop/LUTE Agentic System/g' "$f"
-      say "APPLY $rel (DSH×$c)"
-    fi
-  else
-    say "DRIFT $rel (DSH×$d LUTE×$l) — 升级已还原品牌，跑 --apply"
-    fail=1
-  fi
-done
+# ── 1. 显示名品牌（扫描式）───────────────────────────────────────────────────
+# 为什么是扫描而不是文件清单：2026-09-20 实测「9 文件清单」漏了 8 个带品牌的文件
+# （notifications-*、tray-locale-*、src-*.js、native-ui/assets/* 等分块），而基座每次
+# 升级都可能带来新分块——那是一份会腐烂的纪律。扫描是机制：凡 app 本体（排除
+# node_modules 与 *.orig* 备份）里还带着曾用名的文本文件，都在面上；这也让 --check
+# 第一次看得见「清单外」的漂移（旧清单式只报清单内的，P-02 假绿）。
+#
+# 唯一不在这里处理的名字是基座平台名 DeepSeek Harness——很多地方在**正确地指代
+# 上游事实**（如 package.json 的 "composed as a DeepSeek Harness Cordis plugin"），
+# 只有窗口标题位是产品名，由 2b 块单独处理。
+STRINGS_PY="$(dirname "$0")/brand-replay-strings.py"
+if [ -f "$STRINGS_PY" ]; then
+  python3 "$STRINGS_PY" "$MODE" "$CHK" "$BRAND_NAME" "${PREV_NAMES[@]}" || fail=1
+else
+  say "MISSING brand-replay-strings.py（显示名扫描面缺判据——读不到 ≠ 无漂移）"
+  fail=1
+fi
 
 # ── 2b. 网页标题（hero 空态标题的补丁已于 2026-09-11 退役）───────────────
 # 退役说明：原先此处把官方 locale 的 "hero.headline" 改写成品牌句做兜底，与
@@ -112,20 +76,28 @@ done
 # 的隐藏规则 miss（CSS-module 哈希漂移），官方标题就会以同文案第二次出现。
 # 现在品牌句的唯一真相源是插件，官方标题由插件在运行时解析类名后隐藏。
 # 规格：.scratch/dsh-root-brand-drift/spec.md ｜ 决定：ADR-0019
+TITLE_HTML='<title>Sanbao</title>'   # 派生物（门禁 brand-derivatives 守）：窗口标题
 IDX_HTML="$CHK/node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html"
 if [ -f "$IDX_HTML" ]; then
-  if grep -q '<title>Sanbao</title>' "$IDX_HTML" 2>/dev/null; then
+  if grep -qF "$TITLE_HTML" "$IDX_HTML" 2>/dev/null; then
     say "OK   index.html 标题"
   elif [ "$MODE" = "--apply" ]; then
-    python3 - "$IDX_HTML" <<'PY'
-import sys
-p = sys.argv[1]
-s = open(p, encoding="utf-8").read()
-s = s.replace("<title>DeepSeek Harness</title>", "<title>Sanbao</title>")
-open(p, "w", encoding="utf-8").write(s)
-print("index.html title patched")
-PY
-    say "APPLY index.html 标题"
+    # 锚点不写死某一个历史名：替换器认任意 <title>…</title>（上游态 / 曾用名态都换得
+    # 动）；落笔前先量 <title> 出现次数（== 1 才动手）、落笔后 grep 校验（旧实现
+    # replace 不命中也打印 patched——2026-09-20 实测的假绿）。
+    n_title=$(grep -oF '<title>' "$IDX_HTML" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$n_title" != "1" ]; then
+      say "APPLY index.html 中止：<title> 出现 $n_title 次（期望 1）——基座换了布局？"
+      fail=1
+    else
+      TITLE_HTML="$TITLE_HTML" perl -0777 -pi -e 's{<title>.*?</title>}{$ENV{TITLE_HTML}}s' "$IDX_HTML"
+      if grep -qF "$TITLE_HTML" "$IDX_HTML"; then
+        say "APPLY index.html 标题"
+      else
+        say "APPLY index.html 失败：落笔后校验不过"
+        fail=1
+      fi
+    fi
   else
     say "DRIFT index.html 标题 — 跑 --apply"
     fail=1
@@ -133,19 +105,40 @@ PY
 fi
 
 # ── 3b. Electron Helper 重命名（Electron 按外层 CFBundleName 查找 helper，缺省会 "Unable to find helper app"）──
+# 曾用名要认：旧实现把旧目录名写死成首代名（DSH Desktop Helper），改名到 Sanbao 后再接手
+# 两个分支都不进、静默跳过——check 不报、apply 不改（2026-09-20 实测：外层 CFBundleName
+# 已是 Sanbao 而 helper 还叫上一位的名字，启动 17ms 崩在 FATAL "Unable to find helper app"）。
 HELPERS_DIR="$DSH_APP/Contents/Frameworks"
 for helper_suffix in "" " (GPU)" " (Plugin)" " (Renderer)"; do
-  OLD_H="$HELPERS_DIR/DSH Desktop Helper${helper_suffix}.app"
-  NEW_H="$HELPERS_DIR/LUTE Agentic System Helper${helper_suffix}.app"
-  if [ -d "$OLD_H" ]; then
+  NEW_H="$HELPERS_DIR/$BRAND_NAME Helper${helper_suffix}.app"
+  OLD_H=""
+  for prev in "${PREV_NAMES[@]}"; do
+    if [ -d "$HELPERS_DIR/$prev Helper${helper_suffix}.app" ]; then
+      OLD_H="$HELPERS_DIR/$prev Helper${helper_suffix}.app"
+      break
+    fi
+  done
+  if [ -n "$OLD_H" ]; then
     if [ "$MODE" = "--apply" ]; then
       mv "$OLD_H" "$NEW_H"
-      /usr/libexec/PlistBuddy -c "Set :CFBundleName LUTE Agentic System Helper${helper_suffix}" "$NEW_H/Contents/Info.plist" 2>/dev/null
-      /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable LUTE Agentic System Helper${helper_suffix}" "$NEW_H/Contents/Info.plist" 2>/dev/null
-      mv "$NEW_H/Contents/MacOS/DSH Desktop Helper${helper_suffix}" "$NEW_H/Contents/MacOS/LUTE Agentic System Helper${helper_suffix}" 2>/dev/null || true
-      say "APPLY Helper${helper_suffix} 重命名"
+      /usr/libexec/PlistBuddy -c "Set :CFBundleName $BRAND_NAME Helper${helper_suffix}" "$NEW_H/Contents/Info.plist" 2>/dev/null || true
+      /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $BRAND_NAME Helper${helper_suffix}" "$NEW_H/Contents/Info.plist" 2>/dev/null || true
+      for prev in "${PREV_NAMES[@]}"; do
+        if [ -f "$NEW_H/Contents/MacOS/$prev Helper${helper_suffix}" ]; then
+          mv "$NEW_H/Contents/MacOS/$prev Helper${helper_suffix}" "$NEW_H/Contents/MacOS/$BRAND_NAME Helper${helper_suffix}"
+          break
+        fi
+      done
+      # 落笔后校验：PlistBuddy 静默失败的下场就是「启动了才崩在 Unable to find helper app」
+      cur_name="$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$NEW_H/Contents/Info.plist" 2>/dev/null || true)"
+      if [ "$cur_name" = "$BRAND_NAME Helper${helper_suffix}" ] && [ -x "$NEW_H/Contents/MacOS/$BRAND_NAME Helper${helper_suffix}" ]; then
+        say "APPLY Helper${helper_suffix} 重命名（$(basename "$OLD_H") → $(basename "$NEW_H")）"
+      else
+        say "APPLY Helper${helper_suffix} 失败：CFBundleName='$cur_name'、可执行文件缺失——启动会崩在 Unable to find helper app"
+        fail=1
+      fi
     else
-      say "DRIFT Helper${helper_suffix} 未重命名 — 跑 --apply"
+      say "DRIFT Helper${helper_suffix} 未重命名（仍为 $(basename "$OLD_H")）— 跑 --apply"
       fail=1
     fi
   elif [ -d "$NEW_H" ]; then
@@ -157,11 +150,11 @@ done
 PLIST="$DSH_APP/Contents/Info.plist"
 if [ -f "$PLIST" ]; then
   cur=$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$PLIST" 2>/dev/null)
-  if [ "$cur" = "LUTE Agentic System" ]; then
+  if [ "$cur" = "$BRAND_NAME" ]; then
     say "OK   Info.plist CFBundleName"
   elif [ "$MODE" = "--apply" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName LUTE Agentic System" "$PLIST"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName LUTE Agentic System" "$PLIST"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName $BRAND_NAME" "$PLIST"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $BRAND_NAME" "$PLIST"
     say "APPLY Info.plist"
   else
     say "DRIFT Info.plist (现为 $cur) — 跑 --apply"
