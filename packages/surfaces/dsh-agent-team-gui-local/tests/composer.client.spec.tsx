@@ -163,7 +163,7 @@ describe('TeamComposerControl', () => {
     render(<TeamComposerControl {...composerProps(controller)} />)
     await user.click(await screen.findByRole('button', { name: /小队模式设置/ }))
     await user.click(screen.getByRole('radio', { name: /始终使用小队/ }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('DeepSeek Harness')
+    expect(await screen.findByRole('alert')).toHaveTextContent('前后端版本不一致')
     expect(screen.getByRole('radio', { name: /始终使用小队/ })).not.toBeDisabled()
   })
 

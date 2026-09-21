@@ -29,7 +29,7 @@ describe('AgentTeamController RPC compatibility', () => {
   it('rejects a stale host before enabling unsupported controls', async () => {
     const controller = new AgentTeamController(async <T,>() => emptySnapshot(0) as T)
 
-    await expect(controller.load()).rejects.toThrow(/DeepSeek Harness/)
+    await expect(controller.load()).rejects.toThrow(/前后端版本不一致/)
     expect(controller.getSnapshot()).toMatchObject({
       status: 'error',
       data: EMPTY_DATA,

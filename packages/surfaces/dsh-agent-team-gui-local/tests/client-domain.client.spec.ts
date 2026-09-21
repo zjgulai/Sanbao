@@ -181,7 +181,7 @@ describe('client domain validation and view models', () => {
     expect(isTeamSnapshot({ apiVersion: 4, agents: [{ id: 'a' }], squads: [], models: [], tools: [] })).toBe(false)
     expect(isTeamSnapshot({ apiVersion: 4, agents: [], squads: [{ id: 't', name: 'T', collabNote: '', members: [42] }], models: [], tools: [] })).toBe(false)
     const controller = new AgentTeamController(async <T,>() => ({ apiVersion: 4, agents: [{ id: 'a' }], squads: [], models: [], tools: [] }) as T)
-    await expect(controller.load()).rejects.toThrow('DeepSeek Harness')
+    await expect(controller.load()).rejects.toThrow('前后端版本不一致')
     expect(controller.getSnapshot().status).toBe('error')
   })
 
