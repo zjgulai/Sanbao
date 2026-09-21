@@ -119,7 +119,7 @@ import {
 } from './gates/changelog-release-sections.mjs'
 import { GUARD_BUNDLE_GLOB, checkUpdateGuard } from './gates/update-guard.mjs'
 import { checkUpdateFeeds } from './gates/update-feed.mjs'
-import { runScript } from './lib/run-script.mjs'
+import { describeTestRunFailure, runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectManagedManifests, collectPackages } from './gates/package-collect.mjs'
 import { CHANGE_SOURCES, LOCAL_BASE_REF, createGitRunner, resolveChangedScope } from './gates/changed-packages.mjs'
@@ -279,7 +279,20 @@ const CHECKS = [
     remediation:
       '跑 node --test scripts/lib/repo-attest.test.mjs；正常、断言失败、非零退出、fixture setup 失败、cleanup 失败与 SIGTERM 六条结束路径都必须 before_digest == after_digest（ADR-0103）',
     run() {
-      return runNodeTestFile('scripts/lib/repo-attest.test.mjs', '侧效应见证六条结束路径的反向自测失败')
+      // 见证类用例必须显式抬高预算（P-21：环境读数不得当成代码缺陷）。实测本机 139.5s
+      // 走完 9 条用例并 9/9 通过，按住默认 120s 会得到「退出码 124」而不是「哪条路径变了」。
+      // 上界由用例自身的探针超时决定：8 个探针 × attestCommand 内部 120s + 每用例两次全仓快照
+      // ≈ 18 分钟，取 20 分钟保证**用例自己的判词**先于门禁的墙钟出现。
+      return runNodeTestFile('scripts/lib/repo-attest.test.mjs', '侧效应见证六条结束路径的反向自测失败', 20 * 60 * 1000)
+    },
+  },
+  {
+    name: 'run-script-selftest',
+    remediation:
+      '跑 node --test scripts/lib/run-script.test.mjs；分流截尾、退出码 124/null、超时机器读数、'
+      + '以及「超时判词不得写成用例判红」每一条都必须有反例能判红（ADR-0043 / 总账 P-21）',
+    run() {
+      return runNodeTestFile('scripts/lib/run-script.test.mjs', '证据分流与超时判词的反向自测失败')
     },
   },
   {
@@ -2370,7 +2383,9 @@ function collectPrescriptionSurfaces() {
  * @param {string} failureLabel 没有任何可解析失败行时的兜底说明
  * @param {number} [timeoutMs] 超时上限；默认 120s。**并发/见证类用例必须显式抬高**：
  *   QG-006B 的聚合并发一轮就是两次完整 gate，按住默认值会得到「超时判红」而不是
- *   「并发不安全」——那正是 P-18 的形态（环境读数被当成代码缺陷）。
+ *   「并发不安全」——那正是 P-21 的形态（环境读数与代码缺陷报成同一句话）。
+ *   抬高预算不等于放弃信号：真超时由 `describeTestRunFailure` 单独判词，
+ *   与「用例判红」在输出上长得不一样。
  * @returns {{passed: boolean, violations: string[]}}
  */
 function runNodeTestFile(relPath, failureLabel, timeoutMs = 120000) {
@@ -2378,13 +2393,7 @@ function runNodeTestFile(relPath, failureLabel, timeoutMs = 120000) {
   const script = join(repoRoot, relPath)
   const result = runScript(repoRoot, `"${command}" --test "${script}"`, timeoutMs, env)
   if (result.code === 0) return { passed: true, violations: [] }
-  const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
-  const lines = text
-    .split('\n')
-    .filter((line) => /^\s*✖/.test(line) || /AssertionError/.test(line))
-    .map((line) => line.trim())
-  const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
-  return { passed: false, violations: lines.length > 0 ? lines : [`${failureLabel}（${verdict}）`] }
+  return { passed: false, violations: describeTestRunFailure({ result, scriptPath: relPath, failureLabel }) }
 }
 
 /**
@@ -2628,13 +2637,14 @@ function runNodeTestFiles(relPaths, failureLabel, timeoutMs = 120000) {
   const scripts = relPaths.map((relPath) => `"${join(repoRoot, relPath)}"`).join(' ')
   const result = runScript(repoRoot, `"${command}" --test ${scripts}`, timeoutMs, env)
   if (result.code === 0) return { passed: true, violations: [] }
-  const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
-  const lines = text
-    .split('\n')
-    .filter((line) => /^\s*✖/.test(line) || /AssertionError/.test(line))
-    .map((line) => line.trim())
-  const verdict = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
-  return { passed: false, violations: lines.length > 0 ? lines : [`${failureLabel}（${verdict}）`] }
+  return {
+    passed: false,
+    violations: describeTestRunFailure({
+      result,
+      scriptPath: relPaths.join(' '),
+      failureLabel,
+    }),
+  }
 }
 
 /**

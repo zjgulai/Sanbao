@@ -8,11 +8,10 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync, spawn } from 'node:child_process'
-import { chmodSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { cpus, loadavg, tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { readMachineLoad, runScript, SCRIPT_OUTPUT_TAIL } from './run-script.mjs'
+import { describeTestRunFailure, readMachineLoad, runScript, SCRIPT_OUTPUT_TAIL } from './run-script.mjs'
 
 const CWD = process.cwd()
 const TIMEOUT_MS = 30000
@@ -109,31 +108,46 @@ test('超时读数：load 是当场读的（与独立读数一致），不是常
   assert.equal(Number(m[4]), cpus().length, '核数必须来自这台机器')
 })
 
-test('超时读数：正在烧 CPU 的进程必须出现在读数里（真起一个烧 CPU 的进程）', () => {
-  // 用 /bin/cat 的副本当烧 CPU 的进程：**名字是独特的**，所以「它出现在前 5 名里」
-  // 只能是当场读出来的——写死的读数、缓存的读数、或只打印 load 的实现都混不过这一条。
-  const tmp = mkdtempSync(join(tmpdir(), 'run-script-load-'))
-  const burner = join(tmp, 'dshgateload-burner')
-  copyFileSync('/bin/cat', burner)
-  chmodSync(burner, 0o755)
-  const child = spawn(burner, ['/dev/zero'], { stdio: ['ignore', 'ignore', 'ignore'], detached: true })
+test('超时读数：进程表按 pcpu 降序取前 5，且那份表是当场从 ps 读的', () => {
+  // 为什么换成受控的 `ps` 替身（2026-09-21）：这一例原先是「真起一个烧 CPU 的进程，
+  // 断言它出现在前 5 名里」。那等于让判据去抢一个**全局排名**——本机挂着五个 96% CPU 的
+  // 孤儿 vitest worker 时，烧 CPU 的替身再怎么忙也挤不进前 5，判据就在**负载**上翻脸。
+  // 排名本身不是本项要证的东西；要证的是「调用了 ps、按 pcpu 排、截到 5、名字取对了」，
+  // 这些用一份受控表证得更严（乱序输入 + 7 行 + 落榜的两行点名不许出现）。
+  const tmp = mkdtempSync(join(tmpdir(), 'run-script-ps-'))
+  const marker = join(tmp, 'ps-invoked')
+  const fakePs = join(tmp, 'ps')
+  writeFileSync(
+    fakePs,
+    [
+      '#!/bin/sh',
+      `printf 'called\\n' > ${JSON.stringify(marker)}`,
+      `printf '%s\\n' ' 12.0  1001 alpha' ' 88.4  1002 dshpshello-hi' '  3.1  1003 beta' \\
+        ' 71.2  1004 dshpshello-mid' ' 45.0  1005 dshpshello-low' '  9.9  1006 gamma' \\
+        '  1.0  1007 delta'`,
+    ].join('\n'),
+  )
+  chmodSync(fakePs, 0o755)
+  const saved = process.env.PATH
+  process.env.PATH = `${tmp}:${saved}`
+  let note
   try {
-    execFileSync('sleep', ['0.4']) // 让它真的跑起来并积累 CPU 时间，再触发超时
-    const note = runScript(CWD, 'sleep 5', 300).note ?? ''
-    assert.match(note, /占 CPU 前 \d+：/, `note 必须列出占 CPU 的进程：${note}`)
-    assert.match(
-      note,
-      /dshgateload-burner \d+%/,
-      `正在烧 CPU 的进程必须出现在读数里（否则这个读数不是当场读的）：${note}`,
-    )
+    note = runScript(CWD, 'sleep 5', 300).note ?? ''
   } finally {
-    try {
-      process.kill(-child.pid, 'SIGKILL')
-    } catch {
-      child.kill('SIGKILL')
-    }
-    rmSync(tmp, { recursive: true, force: true })
+    process.env.PATH = saved
   }
+
+  assert.equal(existsSync(marker), true, '读数必须真的来自一次 ps 调用，不是写死的表')
+  const m = /占 CPU 前 (\d+)：([^\n]*)/.exec(note)
+  assert.ok(m !== null, `note 必须列出占 CPU 的进程：${note}`)
+  assert.equal(m[1], '5', `七行输入必须截到前 5，实际 ${m[1]}`)
+  assert.equal(
+    m[2],
+    'dshpshello-hi 88%、dshpshello-mid 71%、dshpshello-low 45%、alpha 12%、gamma 10%',
+    `必须按 pcpu 降序取前 5（乱序输入是这条用例的牙）：${m[2]}`,
+  )
+  assert.equal(/beta|delta/.test(m[2]), false, `第 6、7 名不得混进读数：${m[2]}`)
+  rmSync(tmp, { recursive: true, force: true })
 })
 
 test('超时读数：进程读不到时必须说出来，且不许把 load 一起吞掉', () => {
@@ -150,4 +164,93 @@ test('超时读数：进程读不到时必须说出来，且不许把 load 一�
     process.env.PATH = saved
     rmSync(empty, { recursive: true, force: true })
   }
+})
+
+// ── 判词分类（2026-09-21 加）：超时不得被写成「用例判红」 ─────────────────────────
+// 实测形状：`repo-attest-selftest` 的墙钟预算是 120s，而用例集本机要跑 139s（9/9 全绿）。
+// 门禁报出的却是「侧效应见证六条结束路径的反向自测失败（退出码 124）」——
+// 判词说「自测失败」，而自测根本没失败：是**预算**读不到结论。读的人据此去改代码，方向就错了。
+
+test('判词分类：超时报的是预算，不谎称「反向自测失败」', () => {
+  const result = runScript(CWD, 'sleep 5', 300)
+  assert.equal(result.code, 124)
+
+  const violations = describeTestRunFailure({
+    result,
+    scriptPath: 'scripts/lib/example.test.mjs',
+    failureLabel: '示例判据的反向自测失败',
+  })
+
+  assert.equal(violations.length, 1, `超时必须给一条判词，实际 ${JSON.stringify(violations)}`)
+  assert.match(violations[0], /墙钟预算 300ms 用尽/, `必须点名耗尽的预算：${violations[0]}`)
+  assert.match(violations[0], /退出码 124/, `必须带上原始退出码：${violations[0]}`)
+  assert.match(violations[0], /未跑完不等于用例判红/, '必须说明这条红不能当代码缺陷读')
+  assert.doesNotMatch(
+    violations[0],
+    /示例判据的反向自测失败/,
+    `超时判词不得复用「自测失败」这句——那正是把人推向错方向的话：${violations[0]}`,
+  )
+})
+
+test('判词分类：超时时把当场机器读数一起带进判词', () => {
+  const result = runScript(CWD, 'sleep 5', 300)
+  const violations = describeTestRunFailure({
+    result,
+    scriptPath: 'scripts/lib/example.test.mjs',
+    failureLabel: '示例判据的反向自测失败',
+  })
+
+  assert.match(
+    violations[0],
+    /load \d+\.\d{2}\/\d+\.\d{2}\/\d+\.\d{2}（\d+ 核）/,
+    `必须带上当场读的 load，否则读的人无法判断是不是环境慢：${violations[0]}`,
+  )
+  assert.match(
+    violations[0],
+    /node --test scripts\/lib\/example\.test\.mjs/,
+    `必须给出单独复跑的命令：${violations[0]}`,
+  )
+})
+
+test('判词分类：用例真的判红时才用 failureLabel，且逐条带出失败的用例行', () => {
+  const result = runScript(
+    CWD,
+    "printf '✖ 会挂的那条用例\\n✖ AssertionError: 期望 1 实际 2\\n'; exit 1",
+    TIMEOUT_MS,
+  )
+  assert.equal(result.code, 1)
+
+  const violations = describeTestRunFailure({
+    result,
+    scriptPath: 'scripts/lib/example.test.mjs',
+    failureLabel: '示例判据的反向自测失败',
+  })
+
+  assert.deepEqual(
+    violations,
+    ['✖ 会挂的那条用例', '✖ AssertionError: 期望 1 实际 2'],
+    '真判红必须逐条点名失败的用例，而不是只说「失败了」',
+  )
+})
+
+test('判词分类：非零但没有可解析的失败行时，报退出码而不编造用例名', () => {
+  const result = runScript(CWD, "printf 'boom\\n' >&2; exit 3", TIMEOUT_MS)
+
+  const violations = describeTestRunFailure({
+    result,
+    scriptPath: 'scripts/lib/example.test.mjs',
+    failureLabel: '示例判据的反向自测失败',
+  })
+
+  assert.deepEqual(violations, ['示例判据的反向自测失败（退出码 3）'])
+})
+
+test('判词分类：读不到退出码时报「未给出退出码」，不折算成 1', () => {
+  const violations = describeTestRunFailure({
+    result: { code: null, stdout: 'partial', stderr: '' },
+    scriptPath: 'scripts/lib/example.test.mjs',
+    failureLabel: '示例判据的反向自测失败',
+  })
+
+  assert.deepEqual(violations, ['示例判据的反向自测失败（未给出退出码）'])
 })

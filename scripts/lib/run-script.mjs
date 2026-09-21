@@ -125,3 +125,42 @@ export function runScript(cwd, script, timeoutMs, extraEnv = {}) {
     }
   }
 }
+
+/** 从超时的 `note` 里取出当场机器读数；取不到就说取不到，不编一个「机器很闲」。 */
+function machineReadingOr(result) {
+  const m = /当时读数：([\s\S]*)$/.exec(result.note ?? '')
+  return m !== null ? m[1] : '（机器读数未给出——「未给出」不等于机器空闲）'
+}
+
+/**
+ * 把一次 `node --test` 运行的结果翻译成门禁的判词。
+ *
+ * 为什么要分这一刀（2026-09-21 实测）：`repo-attest-selftest` 的墙钟预算 120s，
+ * 用例集本机跑完要 139s 且 9/9 全绿，而旧实现把这件事报成
+ * 「侧效应见证六条结束路径的反向自测失败（退出码 124）」——
+ * 判词说「自测失败」，自测却没失败，是**预算**没读到结论。`runScript` 已经算出了
+ * 超时的当场机器读数，旧实现在聚合处把它丢了，于是 P-21 的两种前提（环境事实 /
+ * 数据缺陷）又报成了同一句话。
+ *
+ * @param {{result: {code: number|null, stdout?: string, stderr?: string, note?: string}, scriptPath: string, failureLabel: string}} args
+ *   `result` 是 `runScript` 的返回；`scriptPath` 用于给出单独复跑的命令；
+ *   `failureLabel` 只在**用例真的判红却没有可解析的失败行**时才用
+ * @returns {string[]} 违规明细（空数组不代表通过，由调用方按退出码判）
+ */
+export function describeTestRunFailure({ result, scriptPath, failureLabel }) {
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  if (result.code === 124) {
+    const budget = /超时 (\d+)ms/.exec(result.note ?? '')?.[1] ?? '未知'
+    return [
+      `「${scriptPath}」的墙钟预算 ${budget}ms 用尽（退出码 124）——未跑完不等于用例判红，`
+      + `这条红不能按代码缺陷读。当时读数：${machineReadingOr(result)}。`
+      + `先单独复跑 node --test ${scriptPath} 看真实读数，再判断该修的是用例还是预算`,
+    ]
+  }
+  const lines = output
+    .split('\n')
+    .filter((line) => /^\s*✖/.test(line) || /AssertionError/.test(line))
+    .map((line) => line.trim())
+  if (lines.length > 0) return lines
+  return [`${failureLabel}（${result.code === null ? '未给出退出码' : `退出码 ${result.code}`}）`]
+}
