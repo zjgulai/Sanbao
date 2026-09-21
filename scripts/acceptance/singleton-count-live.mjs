@@ -17,12 +17,17 @@
  * ## 判据
  *
  * 每个单例一条读数，全部读**渲染后的 DOM**，不读任何声明：
- *   - `workbench-container`  `[data-dsh-workbench-container]`：**恰好 1**。数到 2 即
- *     「两个实例同时存活」——共享层按插入时单例强制（`shared/client/sidebar-entry-core.ts`），
- *     这个读数就是那条强制在实机上的对照面。
- *   - `workbench-group`      `[data-dsh-workbench-group]`：**恰好 1**。同上。
- *   - `settings-shell-root`  `[data-dsh-settings-shell-root]`：**至多 1**（条件单例）。
+ *   - `entry-newapp`        `[data-dsh-newapp-entry]`：**恰好 1**。
+ *   - `entry-role-matrix`   `[data-dsh-role-matrix-entry]`：**恰好 1**。
+ *   - `entry-taskboard` / `entry-ssh` / `entry-skill-center`：**至多 1**（入口行族成员，
+ *     装不装随 profile 装配而定，未挂载时 0 是正常值；数到 2 仍是重复挂载）。
+ *   - `settings-shell-root` `[data-dsh-settings-shell-root]`：**至多 1**（条件单例）。
  *     设置壳只在设置页打开时挂载，未挂载时 0 是正常值；数到 2 仍是重复挂载。
+ *
+ * 入口行由共享层按插入时单例强制（`shared/client/sidebar-entry-core.ts` 的读数指引注释），
+ * 这些读数就是那条强制在实机上的对照面。曾经的 `[data-dsh-workbench-container]` /
+ * `[data-dsh-workbench-group]` 随折叠组退役（2026-09-20）从产品退出——运行中的 plugin
+ * bundle 里两串各 0 次命中（DA-06 结算留档），继续数它们只会得到恒定假红。
  *
  * ## 读数与「读不到」的分界（P-15）
  *
@@ -30,14 +35,20 @@
  * **不是**「通过」；选择器求值失败、CDP 连不上、页面没就绪同理。只有拿到读数之后
  * 才有判决（0/1 之外都是红，且 2 会被单独点名为「重复挂载」）。
  *
+ * **窗口不可见**是另一类「读不到」：屏幕休眠/锁定或窗口被完全遮挡时 Chromium 冻结
+ * rAF，放置驱动的入口注入被**挂起而非失败**——此时任何计数（尤其是 0）都不能当结论，
+ * 归因也不是「本包未装载」。探针先读 `document.hidden`，命中即报 exit 2 的
+ * `[window-hidden]` 并要求把窗口切到可见后重跑（2026-09-21 实机故障现场：休眠屏幕下
+ * 旧版探针把「放置被挂起」误报为「not-mounted」，见 DA-06 结算）。
+ *
  * ## 退出码（与仓内其它 live 探针同口径）
- *   exit 2  仪器不可用：CDP 连不上 / 没有 SPA target / 必需单例读数为 0 / 读数缺失或非法
+ *   exit 2  仪器不可用：CDP 连不上 / 没有 SPA target / 窗口不可见 / 必需单例读数为 0 / 读数缺失或非法
  *   exit 1  量到了、有单例计数 != 期望（含 count === 2 的重复挂载）
  *   exit 0  全部单例按期望（note 里带全部读数）
  *
  * 用法：node scripts/acceptance/singleton-count-live.mjs [--port 9333] [--self-test]
- *   `--self-test` 跑纯函数 `judgeSingletonCounts()` 的射程自检（不需要应用在跑）：
- *   每个判据都要有**一对**读数（该绿的 + 该红的），恒真桩突变必须让用例失效。
+ *   `--self-test` 跑纯函数 `judgeSingletonCounts()` / `judgeWindowVisibility()` 的射程自检
+ *   （不需要应用在跑）：每个判据都要有**一对**读数（该绿的 + 该红的），恒真桩突变必须让用例失效。
  */
 import { setTimeout as sleep } from 'node:timers/promises'
 
@@ -52,16 +63,34 @@ const PORT = Number(
  */
 export const SINGLETONS = Object.freeze([
   {
-    id: 'workbench-container',
-    selector: '[data-dsh-workbench-container]',
+    id: 'entry-newapp',
+    selector: '[data-dsh-newapp-entry]',
     expected: 1,
-    why: '黑屏事故的关键读数：挂载竞态会留下两个同名容器（P-52）；共享层按插入时单例强制，这里是它在实机上的对照面',
+    why: '新应用入口行：共享层按插入时单例强制（shared/client/sidebar-entry-core.ts），数到 2 即两个实例同时存活（P-52 的挂载竞态签名）',
   },
   {
-    id: 'workbench-group',
-    selector: '[data-dsh-workbench-group]',
+    id: 'entry-role-matrix',
+    selector: '[data-dsh-role-matrix-entry]',
     expected: 1,
-    why: '组行同样按插入时单例强制；数到 2 即两个实例同时存活（observer 会互相搬运成员，见 sidebar-entry-core.ts 的 ping-pong 不变量）',
+    why: '岗位矩阵入口行：同一条插入时单例强制；条目行是折叠组退役（2026-09-20）后的现役单例面',
+  },
+  {
+    id: 'entry-taskboard',
+    selector: '[data-dsh-taskboard-entry]',
+    atMost: 1,
+    why: '入口行族成员（装配相关）：未挂载时 0 正常；数到 2 仍是两个实例同时存活',
+  },
+  {
+    id: 'entry-ssh',
+    selector: '[data-dsh-ssh-entry]',
+    atMost: 1,
+    why: '入口行族成员（装配相关）：未挂载时 0 正常；数到 2 仍是两个实例同时存活',
+  },
+  {
+    id: 'entry-skill-center',
+    selector: '[data-dsh-skill-center-entry]',
+    atMost: 1,
+    why: '入口行族成员（装配相关）：未挂载时 0 正常；数到 2 仍是两个实例同时存活',
   },
   {
     id: 'settings-shell-root',
@@ -78,6 +107,39 @@ export class ProbeUnavailableError extends Error {
     this.name = 'ProbeUnavailableError'
     this.code = code
   }
+}
+
+/**
+ * 窗口可见性闸门：不可见时 rAF 冻结，放置驱动的注入被挂起，读数无效。
+ *
+ * 两类「读不到」都不得静默（P-15）：可见性读数缺失或形状不对，抛 typed unavailable
+ * 而不是假定「窗口可见」——假定可见会让隐藏窗口下的 0 被读成「未装载」。
+ * @param {{hidden?: unknown, visibilityState?: unknown}} page
+ * @returns {string} 可见时返回 visibilityState 供报告引用。
+ */
+export function judgeWindowVisibility(page) {
+  const hidden = page?.hidden
+  if (hidden === undefined || hidden === null) {
+    throw new ProbeUnavailableError(
+      'reading-missing',
+      '窗口可见性没有读数——不得把「读不到可见性」当「窗口可见」（P-15），页面没就绪或 target 选错了',
+    )
+  }
+  if (typeof hidden !== 'boolean') {
+    throw new ProbeUnavailableError(
+      'reading-invalid',
+      `窗口可见性读数 ${JSON.stringify(hidden)} 不是布尔——仪器坏了，不是「没问题」`,
+    )
+  }
+  if (hidden === true) {
+    throw new ProbeUnavailableError(
+      'window-hidden',
+      `窗口不可见（visibilityState=${String(page?.visibilityState)}）——屏幕休眠/锁定或窗口被完全遮挡时`
+        + ' Chromium 冻结 rAF，放置驱动的入口注入被挂起而非失败；此时的 0 不是「未装载」，读数一律无效。'
+        + '把窗口切到可见（唤醒屏幕）后重跑。',
+    )
+  }
+  return String(page?.visibilityState ?? 'visible')
 }
 
 /**
@@ -139,56 +201,106 @@ export function verdictExitCode(results) {
 function selfTest() {
   const cases = [
     {
-      name: '正常态：容器 1 / 组 1 / 设置壳未挂载',
-      readings: { 'workbench-container': 1, 'workbench-group': 1, 'settings-shell-root': 0 },
-      wantPass: { 'workbench-container': true, 'workbench-group': true, 'settings-shell-root': true },
+      name: '正常态：入口行族各一 / 设置壳未挂载',
+      readings: {
+        'entry-newapp': 1,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 1,
+        'entry-ssh': 0,
+        'entry-skill-center': 1,
+        'settings-shell-root': 0,
+      },
+      wantPass: { 'entry-newapp': true, 'entry-role-matrix': true, 'entry-ssh': true, 'settings-shell-root': true },
       wantExit: 0,
     },
     {
-      name: '重复挂载：容器数到 2（黑屏事故的签名）',
-      readings: { 'workbench-container': 2, 'workbench-group': 1, 'settings-shell-root': 0 },
-      wantPass: { 'workbench-container': false, 'workbench-group': true },
-      wantDetail: { 'workbench-container': /重复挂载/ },
+      name: '重复挂载：入口行数到 2（黑屏事故的签名）',
+      readings: {
+        'entry-newapp': 2,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 0,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 0,
+      },
+      wantPass: { 'entry-newapp': false, 'entry-role-matrix': true },
+      wantDetail: { 'entry-newapp': /重复挂载/ },
       wantExit: 1,
     },
     {
-      name: '组行重复：数到 3',
-      readings: { 'workbench-container': 1, 'workbench-group': 3, 'settings-shell-root': 0 },
-      wantPass: { 'workbench-group': false },
-      wantExit: 1,
-    },
-    {
-      name: '设置壳重复：条件单例数到 2 也红',
-      readings: { 'workbench-container': 1, 'workbench-group': 1, 'settings-shell-root': 2 },
+      name: '条件单例数到 2 也红（设置壳）',
+      readings: {
+        'entry-newapp': 1,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 0,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 2,
+      },
       wantPass: { 'settings-shell-root': false },
       wantExit: 1,
     },
     {
-      name: '设置壳已挂载且唯一',
-      readings: { 'workbench-container': 1, 'workbench-group': 1, 'settings-shell-root': 1 },
-      wantPass: { 'settings-shell-root': true },
-      wantExit: 0,
+      name: '条件单例数到 3 也红（入口行族成员）',
+      readings: {
+        'entry-newapp': 1,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 3,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 0,
+      },
+      wantPass: { 'entry-taskboard': false },
+      wantExit: 1,
     },
     {
       name: '必需单例数到 0（本包未装载）→ typed unavailable，不是通过',
-      readings: { 'workbench-container': 0, 'workbench-group': 1, 'settings-shell-root': 0 },
+      readings: {
+        'entry-newapp': 0,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 0,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 0,
+      },
       wantUnavailable: 'not-mounted',
     },
     {
       name: '读数缺失（页面没就绪）→ typed unavailable',
-      readings: { 'workbench-container': 1, 'workbench-group': 1 },
+      readings: { 'entry-newapp': 1, 'entry-role-matrix': 1 },
       wantUnavailable: 'reading-missing',
     },
     {
       name: '读数非法（NaN）→ typed unavailable',
-      readings: { 'workbench-container': Number.NaN, 'workbench-group': 1, 'settings-shell-root': 0 },
+      readings: {
+        'entry-newapp': Number.NaN,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 0,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 0,
+      },
       wantUnavailable: 'reading-invalid',
     },
     {
       name: '读数非法（负数）→ typed unavailable',
-      readings: { 'workbench-container': -1, 'workbench-group': 1, 'settings-shell-root': 0 },
+      readings: {
+        'entry-newapp': -1,
+        'entry-role-matrix': 1,
+        'entry-taskboard': 0,
+        'entry-ssh': 0,
+        'entry-skill-center': 0,
+        'settings-shell-root': 0,
+      },
       wantUnavailable: 'reading-invalid',
     },
+  ]
+
+  const visibilityCases = [
+    { name: '窗口可见（hidden=false）→ 放行，返回 visibilityState', page: { hidden: false, visibilityState: 'visible' }, wantOk: 'visible' },
+    { name: '窗口不可见（hidden=true）→ typed unavailable(window-hidden)', page: { hidden: true, visibilityState: 'hidden' }, wantUnavailable: 'window-hidden' },
+    { name: '可见性读数缺失 → typed unavailable(reading-missing)', page: {}, wantUnavailable: 'reading-missing' },
+    { name: '可见性读数非法（字符串）→ typed unavailable(reading-invalid)', page: { hidden: 'no', visibilityState: 'visible' }, wantUnavailable: 'reading-invalid' },
   ]
 
   const problems = []
@@ -232,14 +344,32 @@ function selfTest() {
       }
     }
   }
+  for (const testCase of visibilityCases) {
+    try {
+      const state = judgeWindowVisibility(testCase.page)
+      assertions += 1
+      if (testCase.wantUnavailable !== undefined) {
+        problems.push(`「${testCase.name}」应 typed unavailable(${testCase.wantUnavailable})，却放行（visibilityState=${state}）`)
+      } else if (state !== testCase.wantOk) {
+        problems.push(`「${testCase.name}」期望放行并返回 ${testCase.wantOk}，实得 ${state}`)
+      }
+    } catch (error) {
+      assertions += 1
+      if (!(error instanceof ProbeUnavailableError)) {
+        problems.push(`「${testCase.name}」judgeWindowVisibility() 异常：${error.message}`)
+      } else if (error.code !== testCase.wantUnavailable) {
+        problems.push(`「${testCase.name}」期望 typed unavailable=${testCase.wantUnavailable}，实得 ${error.code}`)
+      }
+    }
+  }
 
   if (problems.length > 0) {
     console.error('✗ 单例计数探针射程自检未通过：')
     for (const problem of problems) console.error(`  ✗ ${problem}`)
     return 1
   }
-  console.log(`✓ 单例计数探针射程自检：${cases.length} 个状态、${assertions} 条断言，全部按预期红/绿/typed unavailable。`)
-  console.log('  （覆盖：正常态 / 容器重复 / 组重复 / 条件单例重复与挂载 / 未装载 / 读数缺失 / 读数非法 ×2）')
+  console.log(`✓ 单例计数探针射程自检：${cases.length + visibilityCases.length} 个状态、${assertions} 条断言，全部按预期红/绿/typed unavailable。`)
+  console.log('  （覆盖：正常态 / 入口行重复 / 条件单例重复 ×2 / 未装载 / 读数缺失 / 读数非法 ×2 / 窗口可见性 ×4）')
   return 0
 }
 
@@ -299,29 +429,40 @@ async function main() {
   })
   await send('Runtime.enable')
 
-  // 一条表达式数完所有单例：逐条独立求值会让「页面中途被换掉」产生混批读数。
+  // 一条表达式数完所有单例 + 读窗口可见性：逐条独立求值会让「页面中途被换掉」产生混批读数。
   const expression = `(() => {
-    const out = {};
-    ${SINGLETONS.map((spec) => `out[${JSON.stringify(spec.id)}] = document.querySelectorAll(${JSON.stringify(spec.selector)}).length;`).join('\n    ')}
+    const out = { counts: {}, page: { hidden: document.hidden, visibilityState: document.visibilityState } };
+    ${SINGLETONS.map((spec) => `out.counts[${JSON.stringify(spec.id)}] = document.querySelectorAll(${JSON.stringify(spec.selector)}).length;`).join('\n    ')}
     return out;
   })()`
-  let readings
+  let payload
   try {
     const response = await send('Runtime.evaluate', { expression, returnByValue: true }, 30000)
     if (response.exceptionDetails !== undefined) {
       die2(`页面内求值抛错：${JSON.stringify(response.exceptionDetails).slice(0, 300)}`)
     }
-    readings = response.result?.value
-    if (readings === undefined || readings === null) {
+    payload = response.result?.value
+    if (payload === undefined || payload === null) {
       die2('页面内求值没有返回值——页面没就绪或 target 选错了（「读不到」不得静默）')
     }
   } catch (error) {
     die2(`单例计数求值失败：${error.message}`)
   }
 
+  // 窗口可见性先于计数判决：不可见时 rAF 冻结、放置被挂起，任何计数都不是结论。
+  let visibilityState
+  try {
+    visibilityState = judgeWindowVisibility(payload.page)
+  } catch (error) {
+    if (error instanceof ProbeUnavailableError) {
+      die2(`[${error.code}] ${error.message}`)
+    }
+    throw error
+  }
+
   let results
   try {
-    results = judgeSingletonCounts({ readings })
+    results = judgeSingletonCounts({ readings: payload.counts })
   } catch (error) {
     if (error instanceof ProbeUnavailableError) {
       die2(`[${error.code}] ${error.message}`)
@@ -330,6 +471,7 @@ async function main() {
   }
 
   console.log(`CDP port=${PORT} target=${String(page.url).slice(0, 80)}`)
+  console.log(`窗口可见性 ${visibilityState}（document.hidden=false）`)
   for (const entry of results) {
     const spec = SINGLETONS.find((candidate) => candidate.id === entry.id)
     console.log(`${entry.pass ? 'PASS' : 'FAIL'}  ${entry.id}  ${entry.detail}`)

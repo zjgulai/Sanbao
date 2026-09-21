@@ -607,11 +607,16 @@ export function mountSidebarGroup(options: SidebarGroupOptions): () => void {
       // a live root wins; later instances retire instead of fighting it.
       //
       // Reading guide (P-52, 2026-09-21): before touching either observer,
-      // count the singletons on a live app first —
-      //   document.querySelectorAll('[data-dsh-workbench-container]').length
-      // must be 1 (same for [data-dsh-workbench-group]). A reading of 2 is the
-      // mount race showing itself; the 2026-09-19 blackout ran 40 hours of
-      // triage without anyone taking that one count. Executable probe:
+      // count the singleton entry rows on a live app first —
+      //   document.querySelectorAll('[data-dsh-newapp-entry]').length
+      // must be 1 (same for [data-dsh-role-matrix-entry]; the rest of the row
+      // family — skill-center / taskboard / ssh — is at most 1). A reading of 2
+      // is the mount race showing itself; the 2026-09-19 blackout ran 40 hours
+      // of triage without anyone taking that one count. The old
+      // [data-dsh-workbench-*] markers retired with the group feature
+      // (2026-09-20) — do not count them. A hidden window freezes rAF and
+      // suspends placement, so a count of 0 there means "not placed yet", not
+      // "not mounted". Executable probe:
       //   node scripts/acceptance/singleton-count-live.mjs
       const foreign = root.querySelector(options.groupSelector)
       if (foreign !== null) {

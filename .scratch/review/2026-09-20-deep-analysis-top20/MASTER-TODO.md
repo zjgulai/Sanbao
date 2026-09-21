@@ -17,9 +17,9 @@
 | [DA-03](tasks/DA-03-intake-placeholders.md) | 入库面占位化收口（写入者直写占位符或加判据） | P-48「入库面占位化仍是流程」 | M | 无 | `done`（09-21） |
 | [DA-04](tasks/DA-04-cleanup-commitment-first.md) | 清场清单「先查承诺」序机制化 | P-49「第一步只有纪律」 | M | 无 | `done`（09-21） |
 | [DA-05](tasks/DA-05-architecture-base-facts.md) | architecture.md §1 基座事实节更新（已核实落后一次迁移） | 本次实测（pin v2.0.10 vs 文档 2.0.5/rc.1） | S | 与 DA-12 同批 | `done`（09-21） |
-| [DA-06](tasks/DA-06-observer-singleton-probe.md) | observer 乒乓最小探针：单例计数进可执行判据 | P-52「缺口不是成绩」 | M | 无 | `done`（09-21） |
+| [DA-06](tasks/DA-06-observer-singleton-probe.md) | observer 乒乓最小探针：单例计数进可执行判据 | P-52「缺口不是成绩」 | M | 无 | `local-done`（09-21 补读：探针换面 + window-hidden 闸门已落；绿读数待窗口可见） |
 
-## 3. P1 · 结构热点与在飞工作（9 项）
+## 3. P1 · 结构热点与在飞工作（10 项）
 
 | ID | 事项 | 证据 | 估算 | 状态 |
 | --- | --- | --- | --- | --- |
@@ -32,6 +32,7 @@
 | [DA-13](tasks/DA-13-scratch-cleanup.md) | .scratch 42 个工作流清场（按 DA-04 顺序） | historical-artifacts 层 205 节点 | L | 依赖 DA-04 |
 | [DA-14](tasks/DA-14-agt-shared-source-guard.md) | AGT 共享源改动 → 50 全量重生成护栏 | research/16 §3.6（目前是阅读纪律） | M | `done`（09-21） |
 | [DA-15](tasks/DA-15-jev-remaining-gaps.md) | Jev 语义层剩余口子复核 | CHANGELOG Unreleased vs 项目记忆对账 | S | `done`（09-21） |
+| [DA-21](tasks/DA-21-newapp-degrade-false-positive.md) | newapp 降级文案误归因 + 陈旧标志（窗口不可见被读成「侧边栏改版」） | DA-06 补读轮活体现场（2026-09-21） | S | `open` |
 
 ## 4. P2 · 保鲜与纪律（5 项）
 

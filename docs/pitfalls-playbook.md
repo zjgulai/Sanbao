@@ -1547,19 +1547,27 @@
   本条已按常驻规则口径写入根 [AGENTS.md](../../AGENTS.md)（挂死四签名定性 + 禁止跳玄学 + observer 不变量，
   每个会话上下文可见）。用户级 `~/.qoder-cn/AGENTS.md` 同步了跨项目版本（旁路第一问、止痛贴纪律）。
   **2026-09-21 收口「缺口不是成绩」那句**：单例计数落成可执行探针
-  `script:scripts/acceptance/singleton-count-live.mjs`——覆盖 workbench 容器 / 组行 / 设置壳根三类单例
-  （恰好 1 / 至多 1），数到 2 直接点名「重复挂载」；「读不到」（CDP 不通、选择器求值失败、必需单例数到 0）
-  一律 exit 2 并点名，绝不当成通过（P-15）；`--self-test` 9 状态 / 18 断言，恒真桩突变下必红
-  （2026-09-21 实测 6 条断言失效）。共享层不变量注释同步加了「改 observer 前先数单例」的读数指引
-  （同一份源，`gate:shared-sync` 保 20 份副本一致）。被本轮证伪的仪器（把「探针打点 / 代码内观测」
-  的**有没有输出**当作「代码有没有执行」）已登记进 `script:scripts/gates/dead-instruments.json`（第 5 条）。
+  `script:scripts/acceptance/singleton-count-live.mjs`——覆盖入口行族单例（newapp / 岗位矩阵各恰好 1；
+  taskboard / ssh / 技能中心 / 设置壳根各至多 1），数到 2 直接点名「重复挂载」；「读不到」（CDP 不通、
+  选择器求值失败、必需单例数到 0、**窗口不可见**）一律 exit 2 并点名，绝不当成通过（P-15）。
+  窗口不可见是补读轮（2026-09-21）在真故障现场上换来的第三类 typed 状态：屏幕休眠/锁定或窗口被完全遮挡时
+  Chromium 冻结 rAF，放置被**挂起而非失败**——旧版探针把这种状态的 0 误报成「not-mounted 本包未装载」，
+  正是本条要防的错误归因（app 侧同现场还有 newapp 降级标志把 rAF 冻结误报成「侧边栏改版」，另立工单）。
+  `--self-test` 12 状态 / 21 断言，恒真桩突变下必红（visibility 闸门与 not-mounted 闸门各做一条突变实测失效）。
+  共享层不变量注释同步带「改 observer 前先数单例」的读数指引（同一份源，`gate:shared-sync` 保副本一致）；
+  原 workbench 容器 / 组行标记随折叠组退役（2026-09-20）已不在产品运行面（运行中 plugin bundle 两串各 0 命中），
+  探针与指引均已换面到入口行族。被本轮证伪的仪器（把「探针打点 / 代码内观测」的**有没有输出**
+  当作「代码有没有执行」）已登记进 `script:scripts/gates/dead-instruments.json`（第 5 条）。
   **边界如实写明**：运行时竞态仍无法**静态**判出——本探针是实机读数，需要应用带 CDP 端口启动、由人跑
   （不进 `pnpm run gate`）；缺口从「没有任何机器能数」变成「有一个可执行读数、等实况验收轮去跑」。
+  本轮实机读数为 `[window-hidden]`（屏幕休眠 11.1h、`document.hidden=true`）——那是故障现场取证，
+  不是通过；绿读数留待窗口可见时一条命令补。
 - **下一版默认动作**：卡死类故障第一问「我还有什么**不经过故障现场**的观测手段」——旁路通道必须在挂死前建立
   （铸 cookie + 独立 Chrome + 预启用 Debugger 的 pause 中断是已验证的完整路径）；症状消失后必查三件套
   （attempt N=1 / watchdog 零告警 / CPU 归零）才算完成；涉 observer 改 DOM 的挂死，先跑
-  `node scripts/acceptance/singleton-count-live.mjs` 数单例（容器 / 组行 / 设置壳根必须各自唯一，
-  数到 2 即挂载竞态现形），再看节流逻辑；诊断止痛贴（放宽阈值）必须登记或还原，不得静默留在盘上。
+  `node scripts/acceptance/singleton-count-live.mjs` 数单例（入口行族必须各自唯一：newapp / 岗位矩阵
+  各 1、其余至多 1，数到 2 即挂载竞态现形；读数前先看 `document.hidden`——窗口不可见时 rAF 冻结、
+  放置被挂起，0 不是结论），再看节流逻辑；诊断止痛贴（放宽阈值）必须登记或还原，不得静默留在盘上。
 - **详见**：[Note（技术）](notes/implemented/surface/2026-09-19-workbench-group-livelock-boot-blackout.md)、
   [Note（复盘）](notes/implemented/process/2026-09-19-boot-blackout-triage-retrospective.md)
 
