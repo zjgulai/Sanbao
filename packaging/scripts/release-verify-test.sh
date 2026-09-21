@@ -87,6 +87,13 @@ restore(){ LUTE_RELEASES_ARCHIVE="$SANDBOX/archive" bash "$SANDBOX/pkg/scripts/r
 
 replaced_count(){ ls -d "$SANDBOX"/pkg/release/*.replaced-* 2>/dev/null | wc -l | tr -d ' '; }
 
+write_feed(){ # write_feed [sha256] —— 缺省从沙箱 dmg 现算（保证与清单一致）
+  local sha="${1:-$(shasum -a 256 "$(dmg_path "$V")" | awk '{print $1}')}"
+  cat > "$SANDBOX/pkg/release/$V/latest.json" <<EOF
+{"schema_version":1,"version":"$V","dmg":"$DMG","sha256":"$sha","build":"b1","source_commit":"$(printf 'b%.0s' {1..40})","profile_snapshot":"5f6ca254d10a00d0","min_os":"12.0","channel":"stable","notes":""}
+EOF
+}
+
 # ── V1 完整集合 → 绿 ─────────────────────────────────────────────────────────
 fresh; seed
 out="$(verify)"; rc=$?
@@ -139,6 +146,33 @@ if [ "$rc" = "0" ] && printf '%s' "$out" | grep -q 'SKIP'; then
   ok "V6 版本目录整体不存在 → rc=0 且 SKIP（不假红）"
 else
   no "V6 缺席版本应 SKIP 而非判红（rc=${rc}）"; printf '%s\n' "$out" | sed 's/^/       /'
+fi
+
+# ── F1–F3 更新 feed（DA-10）：更新器的入口文件不许与清单分家 ─────────────────
+# feed（latest.json）是更新器读的第一份文件；它与清单/dmg 分家时若无判据，「更新检查」
+# 指向的就是另一串字节。F1 绿；F2 分家必红；F3 机制引入前的版本没有 feed 不假红。
+fresh; seed; write_feed
+out="$(verify)"; rc=$?
+if [ "$rc" = "0" ] && printf '%s' "$out" | grep -q 'feed 一致'; then
+  ok "F1 feed 与清单/dmg 一致 → rc=0 且报「feed 一致」"
+else
+  no "F1 一致 feed 应判绿（rc=${rc}）"; printf '%s\n' "$out" | sed 's/^/       /'
+fi
+
+fresh; seed; write_feed "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+out="$(verify)"; rc=$?
+if [ "$rc" = "1" ] && printf '%s' "$out" | grep -q 'feed 的 sha256 与清单不符'; then
+  ok "F2 feed 的 sha256 与清单分家 → rc=1 且点名"
+else
+  no "F2 分家 feed 必须判红（rc=${rc}）"; printf '%s\n' "$out" | sed 's/^/       /'
+fi
+
+fresh; seed
+out="$(verify)"; rc=$?
+if [ "$rc" = "0" ] && printf '%s' "$out" | grep -q '无 feed（机制引入前）'; then
+  ok "F3 没有 feed（机制引入前的版本）→ rc=0 且注记"
+else
+  no "F3 缺席 feed 应注记而非判红（rc=${rc}）"; printf '%s\n' "$out" | sed 's/^/       /'
 fi
 
 # ── V7 已宣告丢失、但字节已在位（豁免过期）→ 红 ─────────────────────────────

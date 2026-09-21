@@ -94,8 +94,9 @@ for dest in "$REL" "$ARCHIVE_VER"; do
   # **没有任何一处会因此报错**。2026-09-13 15:19 的 2.3.2 就是这个形态，诱因是那次「把 dmg
   # 搬走来证明机制」的丢失演练（不是新的丢失事件：字节由归档原样救回，哈希逐位相同），
   # 但留下的半截目录直到人工翻目录才被发现，清单靠手工归位。下面这个循环就是那次教训的固化。
+  # `latest.json`（DA-10 的更新 feed）同列：没有它，恢复出来的目录缺一截更新面。
   if [ -n "$KEEP" ]; then
-    for f in SHA256SUMS VERSION manifest.json; do
+    for f in SHA256SUMS VERSION manifest.json latest.json; do
       if [ -f "$KEEP/$f" ] && [ ! -f "$dest/$f" ]; then
         cp -p "$KEEP/$f" "$dest/$f"
         echo "[restore] 清单随行: ${f}（取自 $(basename "$KEEP")）"
@@ -104,9 +105,9 @@ for dest in "$REL" "$ARCHIVE_VER"; do
   fi
 done
 
-# 同一目录下若有同版本的 SHA256SUMS/VERSION/manifest.json（归档或旧产物里带），一并带回仓库产物位，
-# 让 release/<版本>/ 重新成为「完整且已通过终验的产物集合」（ADR-0057 的两种状态之一）。
-for f in SHA256SUMS VERSION manifest.json; do
+# 同一目录下若有同版本的 SHA256SUMS/VERSION/manifest.json/latest.json（归档或旧产物里带），一并带回
+# 仓库产物位，让 release/<版本>/ 重新成为「完整且已通过终验的产物集合」（ADR-0057 的两种状态之一）。
+for f in SHA256SUMS VERSION manifest.json latest.json; do
   if [ -f "$ARCHIVE_VER/$f" ] && [ ! -f "$REL/$f" ]; then cp "$ARCHIVE_VER/$f" "$REL/$f"; fi
 done
 

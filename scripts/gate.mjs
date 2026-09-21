@@ -118,6 +118,7 @@ import {
   ROOT_CHANGELOG_REL_PATH,
 } from './gates/changelog-release-sections.mjs'
 import { GUARD_BUNDLE_GLOB, checkUpdateGuard } from './gates/update-guard.mjs'
+import { checkUpdateFeeds } from './gates/update-feed.mjs'
 import { runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectManagedManifests, collectPackages } from './gates/package-collect.mjs'
@@ -1081,6 +1082,34 @@ const CHECKS = [
         passed: false,
         violations: lines.length > 0 ? lines : [`发布产物核对失败（${verdict}）`],
       }
+    },
+  },
+  {
+    name: 'update-feed',
+    remediation:
+      '更新 feed（release/<版本>.latest.json）与入库清单（release/<版本>.sha256）分家、形状不合法，或最新版本缺快照。feed 的六个派生字段唯一来源是清单（ADR-0058 / ADR-0009）——不要手改 feed，重新派生：node scripts/lib/update-feed.mjs --manifest release/<版本>.sha256 --min-os 12.0 --out release/<版本>.latest.json（发布时由 packaging/sign-and-dmg.sh §7.5 自动生成）；最新版本缺快照 = 发布时漏生成或漏提交，补生成后随提交入库',
+    run() {
+      const releaseDir = join(repoRoot, 'release')
+      const names = existsSync(releaseDir) ? readdirSync(releaseDir) : []
+      const entries = names
+        .filter((name) => name.endsWith('.sha256'))
+        .map((name) => name.slice(0, -'.sha256'.length))
+        .map((version) => ({
+          version,
+          // readRepoText：读不到返回 null（区别于空文件）——「没有 feed 快照」与
+          // 「feed 快照是空的」是两件事，判据要能分开（readIfExists 的 '' 会被 JSON.parse 误判）。
+          manifestText: readRepoText(`release/${version}.sha256`),
+          feedText: readRepoText(`release/${version}.latest.json`),
+        }))
+      return checkUpdateFeeds({ entries })
+    },
+  },
+  {
+    name: 'update-feed-selftest',
+    remediation:
+      '跑 node --test scripts/gates/update-feed.test.mjs 看红在哪条：feed 判据必须能说「不」——字段变异 / 与清单分家 / 最新版本缺快照 / 射程为空都必须判红且点名，恒真桩突变必须被证明能通过同一批「该红」输入（用例没有牙就是没测，P-02）',
+    run() {
+      return runNodeTestFile('scripts/gates/update-feed.test.mjs', '更新 feed 判据的反向自测失败')
     },
   },
   {

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "version": "2.5.0",
+  "dmg": "DSH-Desktop-LUTE-2.5.0-mac-arm64.dmg",
+  "sha256": "9c9e44f7bb035d671dfa3affb3545e059c8c8d3f9032d55597bba2b2411365c2",
+  "build": "20260917-203118",
+  "source_commit": "605a15916e7b6dd03ca2f21ddb53c7e5c20f44f2",
+  "profile_snapshot": "5f6ca254d10a00d0",
+  "min_os": "12.0",
+  "channel": "stable",
+  "notes": "回填快照：机制引入（2026-09-21）时按 release/2.5.0.sha256 派生，内容与清单逐字段一致"
+}

@@ -173,7 +173,10 @@ bash "$PKG_ROOT/scripts/verify-app-signature.sh" "$VERIFY_TMP/DSH Desktop.app" "
   echo "[$(basename "$0")] 载荷内 app 签名无效——dmg 不可发布（${STAGE_DMG}）" >&2
   exit 1
 }
-say "载荷内 app 签名 OK"
+# 更新 feed 的 min_os 必须是**载荷里那份 app** 的实测值（不是本机装的那份）：趁 app 已解在
+# VERIFY_TMP 里读出来，§7.5 直接用它。读不出就在那里中止——feed 里的 min_os 不允许猜。
+MIN_OS="$(plutil -extract LSMinimumSystemVersion raw "$VERIFY_TMP/DSH Desktop.app/Contents/Info.plist" 2>/dev/null || true)"
+say "载荷内 app 签名 OK（LSMinimumSystemVersion=$MIN_OS）"
 rm -rf "$VERIFY_TMP"; VERIFY_TMP=""
 ls "$MOUNT"
 
@@ -249,6 +252,27 @@ if [ "$M_DIRTY" = "1" ]; then
   echo "[dmg] ⚠ source_dirty=1：本次载荷含未提交源码，source_commit 不足以重建它" >&2
 fi
 
+# ── 7.5 更新 feed（latest.json，DA-10 第一步 / 自动更新路线 §3）───────────────
+# feed 是更新器读的入口文件：六个派生字段**全部**来自上面那份入库清单（不许手抄第二份），
+# 外加 min_os（载荷 app 实测）/ channel（stable|canary）/ notes。生成与判据共享
+# scripts/lib/update-feed.mjs（同一份实现）；判据侧由 gate:update-feed 离线守着。
+# 落两处：仓库根 release/<版本>.latest.json（进 git，判据的射程）+ 发布集合 $REL/latest.json
+# （随 dmg 进仓库外归档、作为 GitHub Releases 附件上传——发布动作里已有的那一步）。
+if [ -z "${MIN_OS:-}" ]; then
+  echo "[dmg] ✗ 读不到载荷 app 的 LSMinimumSystemVersion——feed 的 min_os 必须是实测值，本次发布中止" >&2
+  exit 1
+fi
+FEED_CHANNEL="${LUTE_CHANNEL:-stable}"
+FEED_NOTES="${LUTE_NOTES:-}"
+node "$REPO_ROOT/scripts/lib/update-feed.mjs" \
+  --manifest "$MANIFEST" \
+  --channel "$FEED_CHANNEL" \
+  --min-os "$MIN_OS" \
+  --notes "$FEED_NOTES" \
+  --out "$REPO_ROOT/release/$VERSION.latest.json"
+cp "$REPO_ROOT/release/$VERSION.latest.json" "$REL/latest.json"
+say "更新 feed 已就位: $REL/latest.json（channel=$FEED_CHANNEL min_os=$MIN_OS）"
+
 # ── 8. 不可变归档 + 锁定（「发布的版本不允许被删除」）───────────────────────────
 # 背景：发布过的 dmg 已经**两次**从 release/<版本>/ 里消失（2026-09-12、2026-09-13 的 2.3.1），
 # 每次都只剩 manifest/SHA256SUMS/VERSION——即「清单还在、清单描述的字节没了」。两次都没查出
@@ -273,12 +297,18 @@ if [ -e "$ARCHIVE_VER" ]; then
   say "归档中旧的同版本副本已改名保留（未删除）: $OLD_ARCHIVE"
 fi
 mkdir -p "$ARCHIVE_VER"
-cp "$REL/$DMG_NAME" "$REL/SHA256SUMS" "$REL/VERSION" "$REL/manifest.json" "$ARCHIVE_VER/"
+cp "$REL/$DMG_NAME" "$REL/SHA256SUMS" "$REL/VERSION" "$REL/manifest.json" "$REL/latest.json" "$ARCHIVE_VER/"
 ARCH_SHA="$(shasum -a 256 "$ARCHIVE_VER/$DMG_NAME" | awk '{print $1}')"
 if [ "$ARCH_SHA" != "$DMG_SHA" ]; then
   echo "[dmg] ✗ 归档副本与已发布产物哈希不一致——归档不可信，本次发布视为失败" >&2
   echo "      发布：$DMG_SHA" >&2
   echo "      归档：$ARCH_SHA  ($ARCHIVE_VER/$DMG_NAME)" >&2
+  exit 1
+fi
+# feed 也回读核对：归档那份必须与发布集合里的逐字节相同——归档与发布集合若在 feed 上分家，
+# 找回时（release-restore）带回来的就是另一份「最新版本声明」。
+if ! cmp -s "$REL/latest.json" "$ARCHIVE_VER/latest.json"; then
+  echo "[dmg] ✗ 归档副本的 latest.json 与发布集合不一致——归档不可信，本次发布视为失败" >&2
   exit 1
 fi
 say "归档完成并回读校验一致: $ARCHIVE_VER"
@@ -295,7 +325,8 @@ say "已锁定（uchg）：${REL} 与 ${ARCHIVE_VER}（删除/改名会失败；
 cat <<EOF
 
         下一步（顺序不能换，ADR-0058）：
-          1) git add release/$VERSION.sha256 && git commit
+          1) git add release/$VERSION.sha256 release/$VERSION.latest.json && git commit
           2) git tag v$VERSION && git push origin v$VERSION    # tag 必须指向含清单的提交
-          3) DMG 上传 GitHub Releases 附件；清单内容一并贴进 release 说明
+          3) DMG 与 latest.json 一起上传 GitHub Releases 附件（latest.json 就是更新器的 feed 入口）；
+             清单内容一并贴进 release 说明
 EOF

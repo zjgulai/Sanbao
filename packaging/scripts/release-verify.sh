@@ -124,6 +124,26 @@ for manifest in "$REPO_ROOT"/release/*.sha256; do
     meta_state="清单齐全"
   fi
 
+  # 更新 feed（DA-10）：latest.json 若在场，必须与清单/dmg 对得上——它是更新器的入口，
+  # 「feed 说 A、清单说 B」时若无判据，用户的更新检查会指向两串不同的字节。机制引入
+  # （2026-09-21）前的版本没有它 → 注记不判红（与归档副本同一口径）；git 里那份快照
+  # 另由 `gate:update-feed` 离线对账（不需要产物字节）。
+  feed_state="无 feed（机制引入前）"
+  if [ -f "$rel/latest.json" ]; then
+    feed_sha="$(sed -n 's/.*"sha256"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{64\}\)".*/\1/p' "$rel/latest.json" | head -1)"
+    feed_dmg="$(sed -n 's/.*"dmg"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$rel/latest.json" | head -1)"
+    feed_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$rel/latest.json" | head -1)"
+    if [ "$feed_sha" != "$expect" ]; then
+      feed_state="✗ feed 的 sha256 与清单不符"
+      FAIL=$((FAIL+1))
+    elif [ "$feed_dmg" != "$dmg_name" ] || [ "$feed_version" != "$version" ]; then
+      feed_state="✗ feed 的 dmg/version 与清单不符"
+      FAIL=$((FAIL+1))
+    else
+      feed_state="feed 一致"
+    fi
+  fi
+
   hash_state="跳过"
   if [ "$DO_HASH" = "1" ]; then
     got="$(shasum -a 256 "$repo_dmg" | awk '{print $1}')"
@@ -149,7 +169,7 @@ for manifest in "$REPO_ROOT"/release/*.sha256; do
     fi
   fi
 
-  report "$version" "产物在；哈希=${hash_state}；${meta_state}；${arch_state}；${lock_state}"
+  report "$version" "产物在；哈希=${hash_state}；${meta_state}；${feed_state}；${arch_state}；${lock_state}"
   CHECKED=$((CHECKED+1))
 done
 

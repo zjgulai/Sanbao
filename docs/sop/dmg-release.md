@@ -95,7 +95,10 @@ VERSION="$VERSION" ./assemble.sh
 - `packaging/release/$VERSION/SHA256SUMS`
 - `packaging/release/$VERSION/VERSION`
 - `packaging/release/$VERSION/manifest.json`
+- `packaging/release/$VERSION/latest.json`（更新 feed——更新器读的入口文件；六个派生字段来自入库
+  清单 + min_os/channel/notes，由 §7.5 经 `scripts/lib/update-feed.mjs` 生成，随归档并上传）
 - 仓库根 `release/$VERSION.sha256`（入库清单，已进 git）
+- 仓库根 `release/$VERSION.latest.json`（feed 快照，已进 git；由 `gate:update-feed` 与清单离线对账）
 
 **若版本目录已存在**：脚本会拒绝。必须重制时加 `--force`：
 
@@ -290,11 +293,12 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
 
 ## 6. 发布
 
-1. **提交入库清单**：仓库根 `release/$VERSION.sha256` 必须随源码一起提交。
+1. **提交入库清单与 feed 快照**：仓库根 `release/$VERSION.sha256` 与 `release/$VERSION.latest.json`
+   必须随源码一起提交（后者是 feed 的 git 侧对照面，漏了它 `gate:update-feed` 会红）。
 2. **打 tag**：清单提交后再打 tag，tag 才担保得住字节。
 
    ```bash
-   git add release/$VERSION.sha256
+   git add release/$VERSION.sha256 release/$VERSION.latest.json
    git commit -m "release: $VERSION dmg manifest"
    git tag -a "v$VERSION" -m "DSH Desktop LUTE $VERSION"
    ```
@@ -318,7 +322,8 @@ cat "release/$VERSION.sha256" | head   # 仓库根清单
      --verify-tag \
      --latest \
      "packaging/release/$VERSION/DSH-Desktop-LUTE-$VERSION-mac-arm64.dmg" \
-     "packaging/release/$VERSION/SHA256SUMS"
+     "packaging/release/$VERSION/SHA256SUMS" \
+     "packaging/release/$VERSION/latest.json"
    ```
 
    - **`--latest` 只给最新的入库版本**；补发历史版本时用 `--latest=false`，否则历史版本会因
