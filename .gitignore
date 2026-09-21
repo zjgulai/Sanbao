@@ -43,6 +43,7 @@ vendor/dsh-worktable/
 
 # —— 纳入目录内的常见排除 ——
 node_modules/
+/.qoder/worktrees/
 __pycache__/
 .doctor-backup/
 staging/

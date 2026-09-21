@@ -12,6 +12,7 @@ function cssRule(selector) {
 }
 
 test('看板面板随主题解析 CSS，不在 apply 时读取或固化背景', () => {
+  /** @type {{ apply: (ctx: unknown) => void } | undefined} */
   let plugin
   let reads = 0
   const writes = []
@@ -30,6 +31,7 @@ test('看板面板随主题解析 CSS，不在 apply 时读取或固化背景', 
     },
     getComputedStyle: () => { reads++; return { backgroundColor: 'rgb(35, 35, 36)' } },
   })
+  assert.ok(plugin, 'client factory must register the plugin')
   plugin.apply({ get: (key) => key === 'slots' ? { inject() {} } : undefined, effect() {} })
   assert.equal(reads, 0, 'apply must not sample the current theme')
   assert.deepEqual(writes, [], 'apply must not pin a root background property')
