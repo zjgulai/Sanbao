@@ -1,0 +1,11 @@
+- insert:
+    - id: dsh-update-local
+      name: dsh-update-local
+      config:
+        # feed 地址。缺省 = 仓库 Releases 的 latest 指针；本地核对时用 upd_check 的 feedUrl 覆盖。
+        # 2.5.0 的 release 里还没有这个附件（机制后第一版才有），所以现在读到的是 http-error——
+        # 那是**具名状态**，不是「已是最新」。
+        channel: stable
+        # 启动时自动查一次（延后 20 秒、离线只记日志）；不想要就改 false。
+        checkOnStart: true
+        timeoutMs: 8000

@@ -2585,6 +2585,54 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0152",
+      "title": "ADR-0152 · 更新器骨架只做「检查 + 提示」（版本口径 / 八态判定 / 不下载不安装）",
+      "status": "accepted（2026-09-21）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "更新器骨架只做「检查 + 提示有新版」：包内不得有任何下载 dmg、写盘或调用 install.sh 的代码路径；自动安装与签名校验分别等 Developer ID 与私钥管理决策。",
+          "constraints": [
+            "身份未换、公证未做之前不得开启自动安装（Gatekeeper 会让用户看到「更新完打不开」）",
+            "不提前实现 Ed25519 校验（feed 的 schema 变更留给 ⑦）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "本机版本口径 = app Info.plist 的 CFBundleVersion 的 -lute.<版本> 后缀；没有该后缀是具名状态 current-not-lute；plist 用 XML 文本解析（不用 plutil 子进程），二进制 plist 明确报出。",
+          "constraints": [
+            "不得用 profile 的 package.json 或仓库 tag 当本机版本读数",
+            "读不出必须是具名状态，不许猜成默认版本"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "判定是八态状态机（update-available / up-to-date / feed-behind / channel-mismatch / feed-unreadable / feed-invalid / current-unreadable / current-not-lute），读不到绝不允许折叠成「已是最新」；工具 upd_check 只读；启动检查延后 20 秒、离线只写日志。",
+          "constraints": [
+            "任何失败路径都不得返回「无更新」语义",
+            "feed-behind（feed 比本机旧）单列，不并入 up-to-date"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "feed 判据的消费侧实现随包走（lib/feed.js），与生产侧 scripts/lib/update-feed.mjs 靠用例对钉：对钉生产侧派生出的 feed 的键序，并用同一张突变表验证两份判据结论一致。",
+          "constraints": [
+            "任何一侧改契约而另一侧未跟上时，用例必须判红",
+            "不得让 profile 内的副本 import 仓库路径"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "装配走 profile 本地（ADR-0061）：包以 file:./vendor/packages/platform/dsh-update-local 声明并列入 dsh.profile.bundles；不进仓库出货物（lutePublish=false）。",
+          "constraints": [
+            "重启应用后才生效；卸载 = 删声明 + 删 vendor 与装载点两处副本",
+            "装载点字节以 node scripts/sync-profile.mjs --apply --loadpoint 为准"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 本文件由 `scripts/gen-catalog.mjs` 从各包 `package.json` 生成，**请勿手改**——手改会被门禁 `catalog-fresh` 拒绝（ADR-0011）。
 
-受管包总数：**29**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
+受管包总数：**30**。分组规则见 [docs/architecture.md](../architecture.md#0-仓库构成与门禁2026-09-11-起) 与 [ADR-0011](../adr/ADR-0011.md)。
 
 | 组 | 目录 | 包名 | 来源 | owner | 发布 npm |
 | --- | --- | --- | --- | --- | --- |
@@ -31,6 +31,7 @@
 | platform | `packages/platform/dsh-settings-shell-local` | `dsh-settings-shell` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-theme-local` | `dsh-theme` | `self` | `lute` | `false` |
 | platform | `packages/platform/dsh-ui-polish-local` | `dsh-ui-polish` | `self` | `lute` | `false` |
+| platform | `packages/platform/dsh-update-local` | `dsh-update-local` | `self` | `lute` | `false` |
 | contract | `packages/contract/dsh-preset-lint-local` | `dsh-preset-lint-local` | `self` | `lute` | `false` |
 | contract | `packages/contract/dsh-skill-subset` | `dsh-skill-subset` | `self` | `lute` | `false` |
 | infra | `.` | `lute-agentic-system` | `self` | `lute` | `false` |
@@ -42,6 +43,6 @@
 | --- | --- |
 | capabilities | 7 |
 | surfaces | 10 |
-| platform | 8 |
+| platform | 9 |
 | contract | 2 |
 | infra | 2 |

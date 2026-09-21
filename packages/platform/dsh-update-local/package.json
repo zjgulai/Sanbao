@@ -1,0 +1,36 @@
+{
+  "name": "dsh-update-local",
+  "version": "0.1.0",
+  "luteOrigin": "self",
+  "luteOwner": "lute",
+  "lutePublish": false,
+  "description": "更新检查骨架（host-only）：读 release/<版本>.latest.json（ADR-0151 派生契约），与本机 app 的 CFBundleVersion（2.0.10-lute.2.5.0）比较，报告「有新版 / 已是最新 / 读不到」等具名状态。只检查、只报告——不下载、不安装。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./feed": "./lib/feed.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/feed.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.spec.mjs",
+    "live-check": "node scripts/live-check.mjs",
+    "typecheck": "tsc -p tsconfig.json --pretty false"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "5.6.3"
+  }
+}
