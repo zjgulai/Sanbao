@@ -23,8 +23,8 @@
 
 | ID | 事项 | 证据 | 估算 | 状态 |
 | --- | --- | --- | --- | --- |
-| [DA-07](tasks/DA-07-source-hotspot-split.md) | 源码热点拆分（ResearchView.tsx / wanzh lib/index.js 等） | 图谱：39 函数/552 调用边；31 函数纯 JS 源 | L | `open` |
-| [DA-08](tasks/DA-08-test-depth-plan.md) | 测试纵深计划：四个零覆盖边核心包定最低测试面 | 图谱 tested_by 仅 85 边 | L | `open` |
+| [DA-07](tasks/DA-07-source-hotspot-split.md) | 源码热点拆分（ResearchView.tsx / wanzh lib/index.js 等） | 图谱：39 函数/552 调用边；31 函数纯 JS 源 | L | `in-progress`（09-21：先拆 ResearchView，隔离工作区，行为验收后再碰下一文件） |
+| [DA-08](tasks/DA-08-test-depth-plan.md) | 测试纵深计划：四包最低测试面与默认套件可达性 | 图谱零边不代表零测试，见工单无语料反证 | L | `local-done`（09-21：无语料反证、LoopX 漏收修复及评审通过；未合入主树） |
 | [DA-09](tasks/DA-09-mgt-ship-prerequisites.md) | MGT 管理层出货前置推进（或复核边界并记录） | ADR-0129 / architecture.md §3 | M | `done`（09-21） |
 | [DA-10](tasks/DA-10-auto-update-first-steps.md) | 自动更新路线第一步（不白做的两步） | docs/plans/2026-09-13-auto-update-route.md | M | `local-done`（09-21：①feed 管道 `ff4d721` + ②骨架 `bf7438a`；Developer ID 决策＝暂不采购，③–⑦ 挂起） |
 | [DA-11](tasks/DA-11-x64-universal-gap.md) | x64 / universal 构建缺口补齐（或记录单架构决策） | 2.5.0 CHANGELOG「登记下轮」 | M | `done`（09-21） |
@@ -39,7 +39,7 @@
 | ID | 事项 | 证据 | 估算 | 状态 |
 | --- | --- | --- | --- | --- |
 | [DA-16](tasks/DA-16-graph-freshness.md) | 图谱保鲜：排除 TS 包 lib/ + 发布窗口后例行增量重跑 | 本次实测：lib 构建产物双计入图 | S | `open` |
-| [DA-17](tasks/DA-17-baseline-checkups.md) | 基线类清单例行体检（theme-tokens / dead-instruments / exemptions） | 只减不增需有人推着清 | S | `open` |
+| [DA-17](tasks/DA-17-baseline-checkups.md) | 基线类清单例行体检（theme-tokens / dead-instruments / exemptions） | 只减不增需有人推着清 | S | `done`（09-21：主题基线 6、豁免 0、死仪器 5；五项检查通过，后续窗口仍例行） |
 | [DA-18](tasks/DA-18-rollback-baseline.md) | 双基座回滚基线显式维护 | pin 注释：0.1.2-rc.1 仅回滚对照 | S | `open` |
 | [DA-19](tasks/DA-19-docs-link.md) | 本报告入 docs 索引，避免死指针 | P-09 | S | `done`（本收尾已执行） |
 | [DA-20](tasks/DA-20-ticket-conversion.md) | TOP20 工单化并纳入固定跟踪 | P-03 | S | `done`（本目录即产出） |

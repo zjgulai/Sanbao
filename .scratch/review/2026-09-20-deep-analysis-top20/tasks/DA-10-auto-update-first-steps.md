@@ -87,3 +87,26 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
   重启后 `upd_check` 应能报出 `feed-unreadable（HTTP 404）`（真 Releases 尚无该附件）。
 - 与 DA-06 的实机绿读数、DA-21 的实机读数同批欠着：都需要 app 带 `--remote-debugging-port=9333`
   重启且屏幕可见。
+
+### 6. CI 验收更正与续跑（2026-09-21）
+
+`274e793` 的 CI 与此前 `b19be38` 虽同为 20 个失败检查，内部违例却增加：
+`scripts-runnable` 64→65，`release-verify-selftest` 11→14。**失败检查名集合相同不能证明零新增红**；
+上轮汇报的无条件「零新增红」撤回，以下两项继续留作验收缺口。
+
+- 更新包：在不带 `node_modules` 的临时仓库布局中，以 TypeScript 5.6.3 执行该包 `tsconfig.json`，
+  重现 `TS2688: Cannot find type definition file for 'node'`（exit 2）；在同一副本运行
+  `pnpm install --offline --frozen-lockfile --ignore-scripts` 后，同一 typecheck exit 0，
+  `node --test test/update.spec.mjs` 为 28/28。工作流只装根包依赖，本仓不是 workspace。
+  用户已批准 **full job 仅补该包的锁文件安装**；尚不能用本地实验代替远端 CI 通过。
+- 发布自测：`mktemp -d -t lute-release-verify` 缺少 GNU 模板所需的尾部 `X`，且创建失败未中止。
+  用拒绝所有 `rm/mkdir/cp/chflags` 的临时边界桩，模拟 `mktemp` 失败，真实脚本继续执行并试图使用
+  `/pkg/scripts/release-verify.sh`，14 项都报 rc 127。该模拟无根路径写入；根因是沙箱创建失败后仍执行，
+  不是 feed 被实际检验后失败。修复必须先阻断该路径，再恢复 F1–F3 的有效执行。
+- 本机 Docker daemon 未运行，Linux 实测未运行；不得用 `chflags` 恒成功桩冒充恢复产物的锁定保证。
+
+本地修复及验收已落，见 [验收入口 Note](../../../../docs/notes/implemented/contract/2026-09-21-acceptance-entrypoints.md)
+与 [ADR-0154](../../../../docs/adr/ADR-0154.md)：full job 在门禁前单独锁文件安装更新包；沙箱失败停止
+及可移植模板已修复，安全自测纳入原发布门禁。本地 CI/沙箱 35/35、发布自测 14/14；在实际隔离工作区
+安装更新包依赖后 typecheck exit 0、28/28。独立评审规格/质量通过。
+远端新 CI 与前述 DSH 实机读数仍未运行，本地通过不覆盖这两项缺口。
