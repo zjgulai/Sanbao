@@ -225,6 +225,15 @@ if [ -f "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-fixes.sh" ]; then
 else
   echo "[assemble] ✗ 缺少 dsh-patches/upstream-brand-surface/apply-fixes.sh（上游品牌面必须随包清干净）"; exit 1
 fi
+# 上游品牌面·批二（2026-09-21 用户拍板）：PWA 清单 / favicon / 原生窗口标题 / 局域网 CA 名 /
+# 第三方 bridge 可见串 / 系统提示三处 / CLI 描述 / dsh-badge 徽章技能停用 + profile 影子副本。
+# 同样以 `--staged` 对装配暂存树执行；缺脚本硬失败（这批是「平台面不留上游名」的判据面）。
+if [ -f "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-extras.sh" ]; then
+  DSH_APP="$APP_STAGE/DSH Desktop.app" bash "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-extras.sh" apply --staged 2>&1 | tail -6 \
+    || { echo "[assemble] ✗ upstream-brand-surface 批二重放失败（见上）"; exit 1; }
+else
+  echo "[assemble] ✗ 缺少 dsh-patches/upstream-brand-surface/apply-extras.sh（平台面必须随包清干净）"; exit 1
+fi
 # 运行时守卫补丁（2026-09-13 白屏事故）：G1 HMR 生产模式不推 rebuilt 帧（白屏机制修复）
 # + G2 renderer console 转发（可观测性）。幂等脚本，锚点 count==1 才落笔。
 if [ -f "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" ]; then
@@ -539,6 +548,7 @@ mkdir -p "$PAYLOAD/tools/app-identity-sanbao"
 cp "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" "$PAYLOAD/tools/app-identity-sanbao/" 2>/dev/null || true
 mkdir -p "$PAYLOAD/tools/upstream-brand-surface"
 cp "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-fixes.sh" "$PAYLOAD/tools/upstream-brand-surface/" 2>/dev/null || true
+cp "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-extras.sh" "$PAYLOAD/tools/upstream-brand-surface/" 2>/dev/null || true
 mkdir -p "$PAYLOAD/tools/licenses"
 cp "$DSH_VENDOR/brand/logo/Inter-OFL-1.1.txt" "$PAYLOAD/tools/licenses/"
 # runtime-guards 随包分发：客户机安装后可用 --check 体检、--apply 自愈（升级重打包后重放）。

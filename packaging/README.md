@@ -35,7 +35,7 @@ packaging/
 ## dev 机当前状态（2026-09-13）
 
 - **已装 app**：`/Applications/DSH Desktop.app` = 2.0.5-lute.2.3.0 + G1/G2 运行时守卫（`LUTE Code Signing` 深签名，`codesign --verify --strict` 通过）。
-- **补丁面**：`verify-patches-v2.sh` **46 锚点**（2026-09-20 增补 identity×2 与 upstream-brand-surface×6（含 3 条否定式））ALL VERIFIED（含 G1 HMR 生产守卫 / G2 console 转发，见 [ADR-0065](../docs/adr/ADR-0065.md)）；`runtime-guards/apply-fixes.sh` 管理 G1/G2 的重放与体检。
+- **补丁面**：`verify-patches-v2.sh` **54 锚点**（2026-09-20 增补 identity×2 与 upstream-brand-surface×6（含 3 条否定式）；2026-09-21 增补 upstream-brand-surface 批二×8（含 3 条否定式））ALL VERIFIED（含 G1 HMR 生产守卫 / G2 console 转发，见 [ADR-0065](../docs/adr/ADR-0065.md)）；`runtime-guards/apply-fixes.sh` 管理 G1/G2 的重放与体检。
 - **profile bundles**：40 个（见 `~/.dsh/profiles/desktop/package.json` 的 `dsh.profile.bundles`；出货投影由 assemble 现算）。
 - **出货版本**：2.3.0（固定证书签名，ADR-0063）/ 2.3.1（build 20260913-125353）。
 

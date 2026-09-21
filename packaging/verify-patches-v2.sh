@@ -104,6 +104,19 @@ ck "brand-surface 远程控制" "$LIB_ER" '从其他设备使用这台电脑上�
 ckn "brand-surface 页眉无上游名"  "$NM/dsh-client-ui-layout/lib/client.js" 'DeepSeek Harness'
 ckn "brand-surface 文案无上游名"  "$NM/dsh-client-ui-settings-models/lib/client.js" 'DeepSeek Harness'
 ckn "brand-surface 对话框无上游名" "$LIB_ER" 'DeepSeek Harness'
+
+# ── brand-surface 批二：平台面清扫（PWA 清单 / favicon / 窗口标题 / CA 名，2026-09-21）──
+LIB_SRC="$(glob1 "$LIB" 'src-*.js')"
+LIB_CA="$(glob1 "$LIB" 'lan-https-certificate-*.js')"
+WEB_FE="$NM/dsh-web-frontend/dist"
+ck  "brand-extras PWA 名"        "$WEB_FE/manifest.webmanifest" '"name": "Sanbao"'
+ck  "brand-extras PWA 短名"      "$WEB_FE/manifest.webmanifest" '"short_name": "SB"'
+ck  "brand-extras favicon"       "$WEB_FE/favicon.svg" 'aria-label="SanBao"'
+ck  "brand-extras 窗口标题"      "$LIB_SRC" 'windowTitle: "Sanbao"'
+ck  "brand-extras CA 名"         "$LIB_CA" 'CA_COMMON_NAME = "Sanbao Local CA"'
+ckn "brand-extras PWA 无上游名"  "$WEB_FE/manifest.webmanifest" 'DeepSeek Harness'
+ckn "brand-extras 标题无上游名"  "$LIB_SRC" 'DeepSeek Harness Desktop'
+ckn "brand-extras CA 无上游名"   "$LIB_CA" 'DeepSeek Harness'
 ck "clipboard fall-through" "$NM/dsh-client-ui-primitives/lib/index.js" "fall through to the legacy"
 ck "LB log 改名"            "$NM/dsh-session-log-export/lib/client.js" 'dsh-log-btn-fix'
 ck "LB 迁移器"              "$NM/dsh-session-log-export/lib/client.js" "session-log-download: relocate beside sidebar settings"

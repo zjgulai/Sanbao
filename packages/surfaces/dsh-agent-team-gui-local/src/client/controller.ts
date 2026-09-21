@@ -227,7 +227,7 @@ export class ModeGateway {
   private async request(endpoint: string, payload: unknown): Promise<ModeResponse> {
     const value = await this.call<unknown>(endpoint, payload)
     if (!isModeResponse(value)) throw new Error(this.t === undefined
-      ? 'Agent Team GUI client/host versions do not match. Restart DeepSeek Harness, then refresh the page.'
+      ? 'Agent Team GUI client/host versions do not match. Restart Sanbao, then refresh the page.'
       : incompatibleHostMessage(this.t))
     return value
   }
@@ -511,7 +511,7 @@ export function refreshAgentTeamsOnReconnect(controller: AgentTeamController, so
 export function errorText(reason: unknown, t?: Translate): string {
   const message = reason instanceof Error ? reason.message : String(reason)
   if (message.includes('unknown agent team endpoint')) return t === undefined
-    ? 'Agent Team GUI client/host versions do not match. Restart DeepSeek Harness, then refresh the page.'
+    ? 'Agent Team GUI client/host versions do not match. Restart Sanbao, then refresh the page.'
     : incompatibleHostMessage(t)
   return message
 }
