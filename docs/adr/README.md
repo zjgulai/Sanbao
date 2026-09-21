@@ -162,6 +162,8 @@
 
 | ADR-0152 | **更新器骨架只做「检查 + 提示」**（DA-10②，包 `packages/platform/dsh-update-local`）：本机版本口径 = app `Info.plist` 的 `CFBundleVersion` 后缀（`2.0.10-lute.2.5.0`→`2.5.0`，无后缀是具名状态 `current-not-lute`；XML 文本解析不用 plutil 子进程）；**八态判定**（update-available / up-to-date / feed-behind / channel-mismatch / feed-unreadable / feed-invalid / current-unreadable / current-not-lute）——**读不到绝不折叠成「已是最新」**；工具 `upd_check` 只读、启动检查延后 20s 且离线只记日志；消费侧 `lib/feed.js` 与生产侧 `scripts/lib/update-feed.mjs` 靠用例**交叉钉**（对钉生产侧产物的键序 + 同一张突变表）；**边界：无下载、无写盘、无安装路径**（自动安装等 Developer ID）；装配走 profile 本地（ADR-0061）。 | accepted（2026-09-21） | [Note](../notes/implemented/contract/2026-09-21-updater-skeleton.md) |
 
+| ADR-0153 | **降级自报标志定为「挂起 ≠ 失败」**（DA-21，包 `dsh-newapp-local`）：放置走 rAF 而窗口不可见时 Chromium 冻结 rAF——宽限到点若 `document.hidden` 即**暂停**（不报、不对休眠显示器轮询），`visibilitychange`（监听在 `document`，该事件不冒泡到 window）恢复后给 1200ms 短宽限再判；**标志不得比它的条件活得久**——迟到归位时清除 `entry-unavailable` 并拆除定时器/观察者/监听；「可见 + 宽限过后仍无入口行」照旧响亮降级（**不许拉长宽限期掩盖**）。 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-newapp-degrade-window-hidden.md) |
+
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 
 > ADR-0007 ~ ADR-0018 是「LUTE 二开平台架构重构」的十二项决策，共享同一篇决策记录 Note。

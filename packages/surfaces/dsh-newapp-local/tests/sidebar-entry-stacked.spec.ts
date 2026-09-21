@@ -63,18 +63,45 @@ function fakeClientContext(): { ctx: unknown; disposers: Array<() => void>; regi
       },
     },
   }
+  appliedDisposers.push(() => {
+    for (const disposeEffect of disposers) disposeEffect()
+  })
   return { ctx, disposers, registered }
 }
+
+/** Effects registered by the last `apply()` call, disposed after each test.
+ *  The plugin installs document-level listeners and observers; leaving them
+ *  attached leaks state into the next test (and keeps the runner busy). */
+let appliedDisposers: Array<() => void> = []
 
 beforeEach(() => {
   reportDegraded(undefined)
 })
 
 afterEach(() => {
+  for (const disposeEffect of appliedDisposers) disposeEffect()
+  appliedDisposers = []
   vi.useRealTimers()
   document.body.innerHTML = ''
   reportDegraded(undefined)
+  delete (document as { hidden?: boolean }).hidden
 })
+
+/**
+ * jsdom's `document.hidden` is a read-only accessor; override it per test.
+ * The placement path is rAF-driven and Chromium freezes rAF while the window is
+ * not visible (display asleep, window fully covered), so "hidden" must be
+ * expressible in the suite.
+ */
+function setHidden(hidden: boolean): void {
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
+}
+
+/** Bring the document back to the foreground the way the browser does. */
+function showDocument(): void {
+  setHidden(false)
+  document.dispatchEvent(new Event('visibilitychange'))
+}
 
 describe('stacked entry wiring', () => {
   it('mounts the row in stacked mode with this package’s identity attributes', () => {
@@ -165,6 +192,61 @@ describe('degradation self-report', () => {
   it('is observable through the same data-* surface the rest of the family uses', () => {
     reportDegraded('entry-mount-failed')
     expect(document.documentElement.getAttribute('data-dsh-newapp-degraded')).toBe('entry-mount-failed')
+  })
+
+  // The three cases below are the 「挂起 ≠ 失败」 contract: placement is rAF-driven and
+  // Chromium freezes rAF while the document is hidden, so a missing row at the
+  // deadline means "suspended" whenever the document is hidden — and the flag must
+  // never outlive the condition that raised it.
+
+  it('stays silent while the document is hidden (suspended, not degraded)', async () => {
+    vi.useFakeTimers()
+    setHidden(true)
+    const { ctx } = fakeClientContext()
+    document.body.innerHTML = ''
+
+    apply(ctx as never)
+    await vi.advanceTimersByTimeAsync(4000)
+
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
+  })
+
+  it('gives the restored visibility a grace period before judging, then reports a real restructure', async () => {
+    vi.useFakeTimers()
+    setHidden(true)
+    const { ctx } = fakeClientContext()
+    document.body.innerHTML = ''
+
+    apply(ctx as never)
+    await vi.advanceTimersByTimeAsync(4000)
+    showDocument()
+
+    // Still inside the grace period: the restored rAF has not necessarily run yet.
+    await vi.advanceTimersByTimeAsync(200)
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
+
+    // Grace elapsed and the shell really did not render the expected row: shout.
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('entry-unavailable')
+  })
+
+  it('clears a flag it already raised once a late placement lands', async () => {
+    vi.useFakeTimers()
+    const { ctx } = fakeClientContext()
+    document.body.innerHTML = ''
+
+    apply(ctx as never)
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBe('entry-unavailable')
+
+    // The sidebar shows up late (slow boot, or the window was restored) and the
+    // row is placed — the stale report must not survive it.
+    const { official } = buildShell()
+    stubRect(official, 240, 38)
+    await vi.advanceTimersByTimeAsync(4000)
+
+    expect(document.querySelector(ENTRY_SELECTOR)).not.toBeNull()
+    expect(document.documentElement.dataset[DEGRADED_ATTR]).toBeUndefined()
   })
 })
 
