@@ -110,3 +110,24 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
 及可移植模板已修复，安全自测纳入原发布门禁。本地 CI/沙箱 35/35、发布自测 14/14；在实际隔离工作区
 安装更新包依赖后 typecheck exit 0、28/28。独立评审规格/质量通过。
 远端新 CI 与前述 DSH 实机读数仍未运行，本地通过不覆盖这两项缺口。
+
+### 7. 集成后完整门禁的逐项归因（2026-09-21 夜 → 09-22）
+
+基线（`274e793` 主树，未含本批）：`{"total":131,"passed":124,"skipped":3,"failed":4}`。
+集成后（`1734914..82f1361` 四个提交）：`{"total":131,"passed":127,"skipped":3,"failed":1}`。
+
+| 项 | 基线读数 | 集成后 | 归因 |
+| --- | --- | --- | --- |
+| `gate-concurrency-selftest` | 抛 `RepoSnapshotError`：untracked 射程被折叠成目录 `.qoder/worktrees/…` | 通过（10 轮 ×2 lane 零差异） | **本批修掉的存量缺陷**（`e7306c2` 把工具工作区排除出射程） |
+| `profile-bundle-sync` | 4 个包装载点字节漂移 | 27/27 达标 | 本批「核验后同步」，非判据放宽 |
+| `scripts-runnable` | theme 陈旧断言 + carousel 缺依赖 + task-board TS18048 | 达标 | 本批最小修复 |
+| `repo-attest-selftest` | 527ms 快速失败（同一 `.qoder/worktrees` 原因） | **退出码 124** | **墙钟预算，非代码缺陷**：单独复跑 9/9 全绿、139.5s。见 `689f7bf` |
+
+最后一项红值得单记：`runScript` 已为「超时 ≠ 判红」准备了当场机器读数 `note`，
+聚合层 `runNodeTestFile` 把它丢了，于是超时被写成「反向自测失败」。
+判据本身没失败，是**仪器没读到结论**（总账 P-21 的修法自己复发了一次）。
+
+**环境事实（未处理，需用户拍板）**：本机挂着四组父进程已是 init 的 `dsh-newapp-local`
+vitest worker（起跑 09-21 11:53–12:28，11 小时以上，每组 10 worker），load 9.7／10 核。
+它同时是 `repo-attest.test.mjs` 逼近 120s、以及 `run-script.test.mjs` 那条
+「烧 CPU 的进程要出现在前 5 名」翻红的直接原因。清进程属机器级动作，不在本批擅自执行。
