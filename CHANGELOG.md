@@ -22,6 +22,12 @@
   （含「跟踪来源不许误杀」与「发网模块无文件读取面」），恒真/过严/不点名 D2/空射程四种突变
   各自判红。残余如实保留：文件被跟踪 ≠ 内容清白，那一段只能靠人复核。
 
+- **出货架构正式定为 arm64-only**（[ADR-0149](docs/adr/ADR-0149.md)，记录见
+  [Note](docs/notes/implemented/contract/2026-09-21-single-arch-arm64-decision.md)）：2.5.0 登记在案的 x64 缺口
+  转为**决策**——适用范围（Apple Silicon 新装、Intel 不在范围、不经 Rosetta）与重新评估的**逃生路径**
+  （universal 适配两步 + Intel 对照验证，含运行时物化与接入 SDK 的 intel 兼容性）写进 ADR；
+  2.5.0 的历史条目保留为历史，其「登记下轮」由本 ADR 接住。
+
 ## [2.5.0] - 2026-09-18（DSH 基座 2.0.5→2.0.10 / runtime 0.1.5-rc.2 迁移）
 
 ### 基座迁移
