@@ -176,7 +176,7 @@ bash "$PKG_ROOT/scripts/verify-app-signature.sh" "$VERIFY_TMP/DSH Desktop.app" "
 # 更新 feed 的 min_os 必须是**载荷里那份 app** 的实测值（不是本机装的那份）：趁 app 已解在
 # VERIFY_TMP 里读出来，§7.5 直接用它。读不出就在那里中止——feed 里的 min_os 不允许猜。
 MIN_OS="$(plutil -extract LSMinimumSystemVersion raw "$VERIFY_TMP/DSH Desktop.app/Contents/Info.plist" 2>/dev/null || true)"
-say "载荷内 app 签名 OK（LSMinimumSystemVersion=$MIN_OS）"
+say "载荷内 app 签名 OK（LSMinimumSystemVersion=${MIN_OS}）"
 rm -rf "$VERIFY_TMP"; VERIFY_TMP=""
 ls "$MOUNT"
 
@@ -271,7 +271,7 @@ node "$REPO_ROOT/scripts/lib/update-feed.mjs" \
   --notes "$FEED_NOTES" \
   --out "$REPO_ROOT/release/$VERSION.latest.json"
 cp "$REPO_ROOT/release/$VERSION.latest.json" "$REL/latest.json"
-say "更新 feed 已就位: $REL/latest.json（channel=$FEED_CHANNEL min_os=$MIN_OS）"
+say "更新 feed 已就位: $REL/latest.json（channel=$FEED_CHANNEL min_os=${MIN_OS}）"
 
 # ── 8. 不可变归档 + 锁定（「发布的版本不允许被删除」）───────────────────────────
 # 背景：发布过的 dmg 已经**两次**从 release/<版本>/ 里消失（2026-09-12、2026-09-13 的 2.3.1），
