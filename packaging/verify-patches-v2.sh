@@ -98,6 +98,12 @@ ck "P0-9 RootOutlet 兜底"   "$NM/dsh-client-ui-renderer/lib/client.js" "data-s
 ck "RECOVERY_DOCUMENT"      "$LIB/main.js" 'app.asar.unpacked'
 ck "identity productName"   "$LIB/bin.js" 'productName: "Sanbao"'
 ck "identity profile-mgr"   "$LIB_PM"     'productName: "Sanbao"'
+ck "brand-surface 页眉常量" "$NM/dsh-client-ui-layout/lib/client.js" 'const productTitle = "Sanbao"'
+ck "brand-surface 内测声明" "$NM/dsh-client-ui-settings-models/lib/client.js" 'Sanbao 目前的 0.1 版本'
+ck "brand-surface 远程控制" "$LIB_ER" '从其他设备使用这台电脑上的 Sanbao'
+ckn "brand-surface 页眉无上游名"  "$NM/dsh-client-ui-layout/lib/client.js" 'DeepSeek Harness'
+ckn "brand-surface 文案无上游名"  "$NM/dsh-client-ui-settings-models/lib/client.js" 'DeepSeek Harness'
+ckn "brand-surface 对话框无上游名" "$LIB_ER" 'DeepSeek Harness'
 ck "clipboard fall-through" "$NM/dsh-client-ui-primitives/lib/index.js" "fall through to the legacy"
 ck "LB log 改名"            "$NM/dsh-session-log-export/lib/client.js" 'dsh-log-btn-fix'
 ck "LB 迁移器"              "$NM/dsh-session-log-export/lib/client.js" "session-log-download: relocate beside sidebar settings"

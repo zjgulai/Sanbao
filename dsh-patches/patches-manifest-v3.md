@@ -24,6 +24,8 @@
 
 | app-identity-sanbao | **应用身份改名**（productName → Sanbao，决定数据目录） | bin.js + profile-manager-\*.js（同一张表的两个家） | `productName: "Sanbao"`（每文件恰 1 行；`--verify-anchors` 判两种状态） | 装配期重放 `dsh-patches/app-identity-sanbao/apply-fixes.sh`（幂等；运行中拒绝执行） | 数据目录迁移 `packaging/scripts/migrate-app-data-dir.sh`（只复制不删除） |
 
+| upstream-brand-surface | **上游平台名 `DeepSeek Harness` 清出可见 UI 面** | layout `client.js`（页眉常量→`document.title` + sidebar 属性）、settings-models `client.js`（内测声明中英文案：轮播接管后的兜底）、`lib/electron-runtime-*.js`（远程控制对话框） | 上游名 **0 处**（`ckn` 否定式）+ `productTitle = "Sanbao"`（`--verify-anchors` 按文件断言计数 1/4/4） | 装配期重放 `dsh-patches/upstream-brand-surface/apply-fixes.sh apply --staged`（幂等）；**装机 app 必须运行中打**（client bundle 关机态改字节 → combo rev 白屏，ADR-0080），主进程分块下次启动生效 | 模型/提供方真名 `DeepSeek`、`@deepseek-ai/*` 包 id、本地 CA CommonName 明确不改（真身份，改了是说谎） |
+
 | boot-health-retry | **启动健康上报确认式重试** | **lib/client.js**（dsh-plugin-desktop 客户端 bundle；非 NM 层——NM 目标空间是 app `node_modules`） | `LUTE(2026-09-18): 把一次性上报改成确认式重试`（补丁标记）+ `postRendererBootReport` 锚点唯一 | 装配期重放 `dsh-patches/boot-health-retry/apply-fixes.sh`（**非** vendor 提交；见残差） | [ADR-0127](../docs/adr/ADR-0127.md) |
 
 ## B. 运行时层（NM patch，packaging/patches/nm/，对 0.1.5-rc.2 pristine 重锚）

@@ -215,6 +215,16 @@ if [ -f "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" ]; then
 else
   echo "[assemble] ✗ 缺少 dsh-patches/app-identity-sanbao/apply-fixes.sh（身份与数据目录名必须随包一致）"; exit 1
 fi
+# 上游品牌面（2026-09-20 用户拍板清干净）：UI 可见的上游平台名 `DeepSeek Harness`
+# （左栏页眉常量 → document.title / 内测声明文案 / 远程控制对话框）换成本品牌名。
+# `--staged`：装配期的 app 是**全新拷贝**，从未启动过、无 combo rev 缓存，关机态改
+# client bundle 字节安全；装机 app 上则必须**运行中**打（见补丁头注释与 ADR-0080）。
+if [ -f "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-fixes.sh" ]; then
+  DSH_APP="$APP_STAGE/DSH Desktop.app" bash "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-fixes.sh" apply --staged 2>&1 | tail -6 \
+    || { echo "[assemble] ✗ upstream-brand-surface 补丁重放失败（见上）"; exit 1; }
+else
+  echo "[assemble] ✗ 缺少 dsh-patches/upstream-brand-surface/apply-fixes.sh（上游品牌面必须随包清干净）"; exit 1
+fi
 # 运行时守卫补丁（2026-09-13 白屏事故）：G1 HMR 生产模式不推 rebuilt 帧（白屏机制修复）
 # + G2 renderer console 转发（可观测性）。幂等脚本，锚点 count==1 才落笔。
 if [ -f "$DSH_VENDOR/dsh-patches/runtime-guards/apply-fixes.sh" ]; then
@@ -527,6 +537,8 @@ cp "$DSH_VENDOR/dsh-patches/brand-payload-wordmark.txt" "$PAYLOAD/tools/"
 cp "$DSH_VENDOR/dsh-patches/brand-payload-name.txt" "$PAYLOAD/tools/"
 mkdir -p "$PAYLOAD/tools/app-identity-sanbao"
 cp "$DSH_VENDOR/dsh-patches/app-identity-sanbao/apply-fixes.sh" "$PAYLOAD/tools/app-identity-sanbao/" 2>/dev/null || true
+mkdir -p "$PAYLOAD/tools/upstream-brand-surface"
+cp "$DSH_VENDOR/dsh-patches/upstream-brand-surface/apply-fixes.sh" "$PAYLOAD/tools/upstream-brand-surface/" 2>/dev/null || true
 mkdir -p "$PAYLOAD/tools/licenses"
 cp "$DSH_VENDOR/brand/logo/Inter-OFL-1.1.txt" "$PAYLOAD/tools/licenses/"
 # runtime-guards 随包分发：客户机安装后可用 --check 体检、--apply 自愈（升级重打包后重放）。

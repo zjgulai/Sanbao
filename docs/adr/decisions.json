@@ -2489,6 +2489,54 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0150",
+      "title": "ADR-0150 · 上游平台名 `DeepSeek Harness` 从可见 UI 面清出（brand-surface 补丁）",
+      "status": "accepted（2026-09-21）",
+      "date": "",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "射程=可见 UI 面三处：layout 页眉常量 productTitle、settings-models 内测声明段、主进程 electron-runtime 远程控制对话框；判定标准是装机产物里逐字读到的用户可见文案。",
+          "constraints": [
+            "不扩大到手写清单之外的位置",
+            "不替换「正确指代上游事实」的文本（ADR-0147 D2 的保留面）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "实现走独立补丁 dsh-patches/upstream-brand-surface/：逐文件声明期望命中数（layout×1、settings-models×4、electron-runtime×4 且恰一份分块），锚点不唯一即拒绝落笔，写后断言残留为 0；替换名从 brand-payload-name.txt 名源读。",
+          "constraints": [
+            "apply/--rollback 要求应用不在运行；出货暂存树走 --staged",
+            "不新增品牌名字面量的第二份家"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "注册三处：verify-patches-v2 增 6 条判据（3 正 + 3 否，否证=上游名必须缺席）、assemble.sh 以 --staged 调用（缺脚本硬失败）、manifest 行与 packaging/README 锚点数（40→46）。",
+          "constraints": [
+            "升级重打包后必须重放并复查锚点",
+            "否定式判据与肯定式判据同批登记，不允许只登记其一"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "生效判据=重启后服务端实际发出的字节：按 __DSH_BOOT__ 的 entries[].url 取回，上游名归零且 productTitle 命中 Sanbao；运行中改盘不算生效。",
+          "constraints": [
+            "验收必须发生在整重启之后",
+            "不得以盘上文件或 --check 绿代替服务端字节读数"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "不碰：CLI 描述、三方包 package.json 描述、connection fixture 数据等正确指代上游事实的位置；身份、路径与签名（appId/productName/数据目录）不因本补丁变动。",
+          "constraints": [
+            "改完需重签（同身份）以保 TCC 授权",
+            "node_modules 内其余三方包品牌串属已知边界，需 vendor 化，不在本 ADR 射程"
+          ]
+        }
+      ]
     }
   ]
 }
