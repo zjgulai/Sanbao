@@ -1223,6 +1223,8 @@ const CHECKS = [
     remediation:
       '跑 bash packaging/scripts/release-verify-test.sh 看红在哪条：「已发布产物不许被删、也不许只剩半截」这条判据必须能说「不」。V2/V3 钉住新增的「字节在、清单不全」红灯（2026-09-13 release-restore 把整目录改名留档却只拷回 dmg，清单滞留在 *.replaced-* 里而无人报错）；V4/V5 钉住「清单在、字节没了」与哈希不符；V6 钉住「本机没发布过」不假红；V7/V8 钉住「豁免会过期」——字节已在位却还留着 .lost 判红（2026-09-13 的 2.3.1 由飞书副本找回后正是这形态），而如实宣告的缺席仍判绿；R1/R2/R3 钉住找回时清单随行、不重复留档、哈希不符拒收（ADR-0057 / ADR-0058）',
     run() {
+      const safety = runNodeTestFile('scripts/gates/release-sandbox.test.mjs', '发布验收沙箱边界自测失败')
+      if (!safety.passed) return safety
       const script = join(repoRoot, 'packaging', 'scripts', 'release-verify-test.sh')
       const result = runScript(repoRoot, `bash "${script}"`, 120000)
       if (result.code === 0) return { passed: true, violations: [] }

@@ -29,7 +29,9 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { spawnSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -312,6 +314,31 @@ test('变异 22：门禁命令进管道但没有 pipefail → 判红（2026-09-1
     (text) => text.replace(/^ {10}set -o pipefail\n/m, '').replace(/^ {10}set -o pipefail\n/m, ''),
     /管道吞掉退出码/,
   )
+})
+
+test('full 在门禁前于更新包目录执行锁文件安装，且安装失败不会被吞掉', () => {
+  const steps = parseWorkflowYaml(baseline).jobs.full.steps
+  const index = steps.findIndex(step => step['working-directory'] === 'packages/platform/dsh-update-local')
+  assert.ok(index >= 0, 'full 未准备更新包依赖')
+  assert.ok(index < steps.findIndex(step => step.name === '门禁 full'))
+  const root = mkdtempSync(join(tmpdir(), 'ci-updater-'))
+  try {
+    const cwd = join(root, steps[index]['working-directory'])
+    const bin = join(root, 'bin')
+    mkdirSync(cwd, { recursive: true })
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'pnpm'), '#!/bin/sh\n[ "$PWD" = "$EXPECTED_CWD" ] || exit 81\n[ "$*" = "install --frozen-lockfile --ignore-scripts" ] || exit 82\nprintf "prepared\\n" > "$PWD/prepared"\nexit "$INSTALL_EXIT"\n', { mode: 0o700 })
+    for (const code of [0, 73]) {
+      const result = spawnSync('bash', ['-e', '-c', steps[index].run], {
+        cwd, encoding: 'utf8', timeout: 10000,
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, EXPECTED_CWD: realpathSync(cwd), INSTALL_EXIT: String(code) },
+      })
+      assert.equal(result.status, code, result.stderr)
+      assert.equal(readFileSync(join(cwd, 'prepared'), 'utf8'), 'prepared\n')
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('基线反向：每个 pipefail 步骤的 run 都必须真的有 pipefail', () => {

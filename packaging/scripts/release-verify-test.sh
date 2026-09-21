@@ -18,7 +18,7 @@
 # 与 `~/Library/Application Support/LUTE/releases/`。
 #
 # 用法: bash packaging/scripts/release-verify-test.sh
-# 退出码: 0 = 全部通过；1 = 有断言失败
+# 退出码: 0 = 全部通过；1 = 有断言失败；2 = 沙箱创建失败
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -34,7 +34,14 @@ no(){   FAIL=$((FAIL+1)); printf '  [FAIL] %s\n' "$1"; }
 [ -f "$SRC_VERIFY" ]  || { echo "找不到待测脚本: $SRC_VERIFY" >&2; exit 1; }
 [ -f "$SRC_RESTORE" ] || { echo "找不到待测脚本: $SRC_RESTORE" >&2; exit 1; }
 
-SANDBOX="$(mktemp -d -t lute-release-verify)"
+SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/lute-release-verify.XXXXXX")" || {
+  printf '%s\n' '无法创建发布验收沙箱，已停止' >&2
+  exit 2
+}
+[ -n "$SANDBOX" ] && [ -d "$SANDBOX" ] || {
+  printf '%s\n' '发布验收沙箱无效，已停止' >&2
+  exit 2
+}
 cleanup(){
   # 待测脚本会给产物加 uchg，先解锁再删，否则沙箱删不干净。
   [ -n "$SANDBOX" ] && { chflags -R nouchg "$SANDBOX" 2>/dev/null || true; rm -rf "$SANDBOX"; }

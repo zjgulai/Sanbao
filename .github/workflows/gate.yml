@@ -151,6 +151,10 @@ jobs:
             echo "::notice title=无锁文件::pnpm-lock.yaml 不在版本控制内（白名单式 .gitignore），本次为无锁安装"
           fi
 
+      - name: 安装更新检查包依赖
+        working-directory: packages/platform/dsh-update-local
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
       - name: 门禁 full
         run: |
           set -o pipefail

@@ -2,7 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { runFile } from "../lib/index.js";
 
-test("runFile isolates child process environment from sentinel secrets", async () => {
+test("runFile isolates child process environment from sentinel secrets", async (t) => {
+  const saved = { SENTINEL_SECRET: process.env.SENTINEL_SECRET, OPENAI_API_KEY: process.env.OPENAI_API_KEY };
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
   // 设置父进程敏感标记
   process.env.SENTINEL_SECRET = "leaked-sentinel-key";
   process.env.OPENAI_API_KEY = "sk-leaked-key";
@@ -23,8 +30,4 @@ test("runFile isolates child process environment from sentinel secrets", async (
   assert.equal(out.openai, undefined);
   // 安全基线 PATH 必须存在
   assert.equal(out.path, true);
-
-  // 清理
-  delete process.env.SENTINEL_SECRET;
-  delete process.env.OPENAI_API_KEY;
 });

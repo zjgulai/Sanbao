@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, stat, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { spawnSync } from 'node:child_process'
+import { nodeCommand } from '../../../../scripts/lib/real-node.mjs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { existsSync } from 'node:fs'
@@ -97,6 +100,28 @@ test('每个脚本引用的路径都必须存在（死脚本守卫）', () => {
   }
 
   assert.deepEqual(missing, [], `以下脚本引用了不存在的路径：${missing.join('; ')}`)
+})
+
+test('默认测试命令收集两种后缀，任一后缀失败都会判红', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'loopx-test-collection-'))
+  try {
+    await mkdir(join(root, 'test'))
+    const { env: nodeEnv } = nodeCommand()
+    const env = { ...nodeEnv }
+    // 子 runner 必须独立收集，不能继承父 runner 的测试子进程身份。
+    delete env.NODE_TEST_CONTEXT
+    for (const failedSuffix of ['', 'spec', 'test']) {
+      for (const suffix of ['spec', 'test']) {
+        await writeFile(join(root, 'test', `probe.${suffix}.mjs`), `import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { writeFileSync } from 'node:fs';\ntest('collected-${suffix}', () => { writeFileSync('${suffix}.ran', 'ran'); assert.equal(${JSON.stringify(failedSuffix === suffix)}, false); });\n`)
+        await rm(join(root, `${suffix}.ran`), { force: true })
+      }
+      const result = spawnSync('sh', ['-c', manifest.scripts.test], { cwd: root, env, encoding: 'utf8', timeout: 15000 })
+      assert.equal(result.status, failedSuffix === '' ? 0 : 1, result.stdout + result.stderr)
+      for (const suffix of ['spec', 'test']) assert.equal(await readFile(join(root, `${suffix}.ran`), 'utf8'), 'ran')
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 /** 递归收集 .d.ts 相对路径。 */
