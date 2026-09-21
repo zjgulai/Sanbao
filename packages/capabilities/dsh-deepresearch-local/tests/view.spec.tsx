@@ -3,14 +3,16 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import React from 'react'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ResearchView } from '../src/client/ResearchView.tsx'
+import { removePlanQuestion, reportExportContent, type EditableQuestion } from '../src/client/research-view-model.ts'
 import type { ResearchViewApi } from '../src/client/view-types.ts'
 import { zh, type DeepResearchKey } from '../src/client/locales.ts'
 import { ResearchEvidenceId, ResearchId, ResearchQuestionId, type ResearchProject } from '../src/types.ts'
 import { DEFAULT_THEME_STUDIO_SETTINGS, THEME_IDS } from '../../../platform/dsh-theme-local/src/theme-settings.ts'
 import { buildThemeTokenOverrides } from '../../../platform/dsh-theme-local/src/client/theme-tokens.ts'
+import { expectModalLayers, materializeClient } from './client-artifact.ts'
 
 const t = (key: DeepResearchKey, params?: Record<string, unknown>) =>
   Object.entries(params ?? {}).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), zh[key])
@@ -61,7 +63,12 @@ const visualCss = [
   readFileSync(resolve(process.cwd(), 'src/client/views.module.css'), 'utf8'),
   readFileSync(resolve(process.cwd(), 'src/client/sidebar-entry.module.css'), 'utf8'),
 ].join('\n')
-const researchViewSource = readFileSync(resolve(process.cwd(), 'src/client/ResearchView.tsx'), 'utf8')
+const researchViewSource = [
+  'ResearchView.tsx',
+  'ResearchComposer.tsx',
+  'ResearchWorkspace.tsx',
+  'research-view-model.ts', // Includes the moved HTML export presentation.
+].map(file => readFileSync(resolve(process.cwd(), 'src/client', file), 'utf8')).join('\n')
 
 describe('Deep Research Codex visual contract', () => {
   it('uses the shared canvas, panel, and modal token hierarchy', () => {
@@ -99,12 +106,40 @@ describe('Deep Research Codex visual contract', () => {
     expect(visualCss).toContain('@media (max-width: 620px)')
   })
 
-  it('uses semantic modal layers below the Settings shell', () => {
-    expect(visualCss).toContain('--dsh-deepresearch-modal-layer: 2147481000')
-    expect(visualCss).toContain('--dsh-deepresearch-confirm-layer: 2147481100')
+  it('uses emitted semantic modal layers below the Settings shell', () => {
+    const { styles } = materializeClient(readFileSync(resolve(process.cwd(), 'lib/client.js'), 'utf8'))
+    expectModalLayers(styles)
     expect(visualCss).toMatch(/z-index:\s*var\(--dsh-deepresearch-modal-layer\)/)
     expect(visualCss).toMatch(/z-index:\s*var\(--dsh-deepresearch-confirm-layer\)/)
     expect(visualCss).not.toMatch(/z-index:\s*(?:100|110)\b/)
+  })
+})
+
+describe('Deep Research report export', () => {
+  const hostileTitle = `</title></h1><script>window.exportInjected = true</script><img onerror="window.exportInjected = true"> & < > " '`
+  const hostileReport = `<img onerror='window.exportInjected = true'><script>window.exportInjected = true</script> & &amp; < > " '\nsecond line\n\nlast line`
+  const done = project({
+    id: ResearchId('export-fixture'), title: hostileTitle, question: 'Question & <text>',
+    goal: 'Goal & <text>', phase: 'done', report: hostileReport,
+  })
+
+  it('renders hostile HTML title and report as literal text with line breaks', () => {
+    const html = reportExportContent(done, [], 'html')
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    expect(doc.querySelectorAll('script, img, [onerror], [onload]')).toHaveLength(0)
+    expect(doc.querySelector('title')?.textContent).toBe(hostileTitle)
+    expect(doc.querySelector('h1')?.textContent).toBe(hostileTitle)
+    const body = doc.querySelector('body > div')!
+    expect(body.querySelectorAll('*')).toHaveLength(3)
+    expect(body.querySelectorAll('br')).toHaveLength(3)
+    body.querySelectorAll('br').forEach(br => br.replaceWith('\n'))
+    expect(body.textContent).toBe(hostileReport)
+    for (const entity of ['&amp;', '&lt;', '&gt;', '&quot;', '&#39;']) expect(html).toContain(entity)
+  })
+
+  it('keeps Markdown and mindmap exports literal and unchanged', () => {
+    expect(reportExportContent(done, [], 'md')).toBe(`# ${hostileTitle}\n\n${hostileReport}\n\n## 引用来源与证据链\n`)
+    expect(reportExportContent(done, [], 'mindmap')).toBe(`# ${hostileTitle}\n## 核心目标\n- Goal & <text>\n## 调研子课题\n`)
   })
 })
 
@@ -184,6 +219,55 @@ describe('Deep Research view', () => {
     expect(screen.getByText('依赖')).toBeTruthy()
     expect(screen.getByText('需先完成 01 · 上游基线')).toBeTruthy()
     expect(screen.queryByDisplayValue('只在创建时填写')).toBeNull()
+  })
+
+  it('removes a plan question without mutating the original questions or dependency arrays', () => {
+    const questions: EditableQuestion[] = [
+      { text: 'A', criteria: ['A'], dependsOn: [] },
+      { text: 'B', criteria: ['B'], dependsOn: [0] },
+      { text: 'C', criteria: ['C'], dependsOn: [0, 1] },
+      { text: 'D', criteria: ['D'] },
+    ]
+    const before = structuredClone(questions)
+    for (const question of questions) { Object.freeze(question.dependsOn); Object.freeze(question) }
+    Object.freeze(questions)
+    const remaining = removePlanQuestion(questions, 0)
+    expect(questions).toEqual(before)
+    expect(remaining).toEqual([
+      { text: 'B', criteria: ['B'], dependsOn: [] },
+      { text: 'C', criteria: ['C'], dependsOn: [0] },
+      { text: 'D', criteria: ['D'] },
+    ])
+    expect(remaining[1]?.dependsOn).not.toBe(questions[2]?.dependsOn)
+  })
+
+  it.each([
+    { removed: 'A', index: 0, input: ['A', 'B', 'C'], surviving: ['B', 'C'], dependencies: [[], [0]] },
+    { removed: 'B', index: 1, input: ['A', 'B', 'C'], surviving: ['A', 'C'], dependencies: [[], []] },
+    { removed: 'D', index: 3, input: ['A', 'B', 'C', 'D'], surviving: ['A', 'B', 'C'], dependencies: [[], [], [1]] },
+  ])('deleting plan question $removed preserves dependency targets in the submitted plan', async ({ removed, index, input, surviving, dependencies }) => {
+    const draft = project({
+      id: ResearchId('plan-delete-fixture'), title: 'Editable plan', question: 'Question', goal: 'Goal',
+      phase: 'awaiting_plan_confirm',
+      questions: input.map(text => ({
+        id: ResearchQuestionId(text), text, dependsOn: text === 'C' ? [ResearchQuestionId('B')] : [],
+        status: 'pending', gaps: [], handoff: '',
+        criteria: [{ id: text, text: `Verify ${text}`, status: 'missing', summary: '', gap: '', warning: '', verification: '', toolCount: 0 }],
+      })),
+    })
+    const updatePlan = vi.fn<ResearchViewApi['updatePlan']>(() => new Promise<never>(() => undefined))
+    render(<ResearchView {...props({ list: async () => [draft], get: async () => draft, updatePlan })} />)
+    fireEvent.click(await screen.findByRole('button', { name: '打开研究：Editable plan' }))
+    const questionRow = screen.getByDisplayValue(removed).closest('section')!
+    fireEvent.click(within(questionRow).getByRole('button', { name: t('plan.removeQuestion') }))
+    fireEvent.click(screen.getByRole('button', { name: t('action.saveChanges') }))
+    await waitFor(() => expect(updatePlan).toHaveBeenCalledOnce())
+    expect(updatePlan.mock.calls[0]?.[0]).toEqual({
+      id: draft.id, goal: draft.goal, constraints: draft.constraints, depth: draft.depth,
+      questions: surviving.map((text, i) => ({ text, criteria: [`Verify ${text}`], dependsOn: dependencies[i] })),
+    })
+    if (index === 1) expect(screen.queryByText(/需先完成/)).toBeNull()
+    else expect(screen.getByText(`需先完成 ${index === 0 ? '01' : '02'} · B`)).toBeTruthy()
   })
 
   it('keeps plan and investigate tabs reachable on completed projects', async () => {

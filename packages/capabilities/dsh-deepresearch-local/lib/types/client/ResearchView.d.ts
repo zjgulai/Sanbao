@@ -1,7 +1,6 @@
-/** Codemini-aligned Deep Research library, plan review, and live investigation workspace. */
+/** Codemini-aligned Deep Research library and its project/delete presentation. */
 import type { ResearchViewApi } from './view-types.ts';
-import type { DeepResearchKey } from './locales.ts';
-type Translate = (key: DeepResearchKey, params?: Record<string, unknown>) => string;
+import { type Translate } from './research-view-model.ts';
 /** Props for the global Deep Research workspace surface. */
 type ResearchViewProps = ResearchViewApi & {
     t: Translate;

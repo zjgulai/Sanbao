@@ -593,7 +593,10 @@
   `script:packages/capabilities/dsh-overseas-skills/scripts/scan-runtime-deps.mjs`（局部扫描
   `--skills` 写入 manifest 时**并入**既有条目而非整体覆盖，并把保留条数打进读数）、
   `script:packages/capabilities/dsh-overseas-skills/scripts/install-runtime-deps.sh`（中文渲染
-  自检失败即 `exit 1`；先建 venv 再探测，否则探测口径落在系统 Python 上、计划会漏项）。
+  自检失败即 `exit 1`；先建 venv 再探测，否则探测口径落在系统 Python 上、计划会漏项）、
+  `script:packages/capabilities/dsh-deepresearch-local/tests/build.spec.ts`（实际构建后执行 loader factory/apply，
+  并从注入样式的 CSSOM 核验层级表达式；源码数值正确不等于编译后仍精确。该包默认 test 收录，
+  产物同步与安全/依赖回归见 [ADR-0156](adr/ADR-0156.md)）。
 - **下一版默认动作**：给任何「装好了吗」类判据定判据时，先问**它量的是过程还是产物**：
   ① 凡是产出物的能力，判据必须**真的产出一次并对产物取样**（渲染、解析回读、字节比对），
   不许停在「依赖存在」「命令退出 0」。

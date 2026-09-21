@@ -165,6 +165,8 @@
 | ADR-0153 | **降级自报标志定为「挂起 ≠ 失败」**（DA-21，包 `dsh-newapp-local`）：放置走 rAF 而窗口不可见时 Chromium 冻结 rAF——宽限到点若 `document.hidden` 即**暂停**（不报、不对休眠显示器轮询），`visibilitychange`（监听在 `document`，该事件不冒泡到 window）恢复后给 1200ms 短宽限再判；**标志不得比它的条件活得久**——迟到归位时清除 `entry-unavailable` 并拆除定时器/观察者/监听；「可见 + 宽限过后仍无入口行」照旧响亮降级（**不许拉长宽限期掩盖**）。 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-newapp-degrade-window-hidden.md) |
 
 | ADR-0154 | 验收入口显式准备依赖、全量收集测试与沙箱失败停止 | accepted（2026-09-21） | [Note](../notes/implemented/contract/2026-09-21-acceptance-entrypoints.md) |
+| ADR-0155 | ResearchView 首片拆分：内部 hooks / 纯 model / 展示分离，保持调用契约、生命周期与失败语义；DA-07 只部分结算。 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-research-view-separation.md) |
+| ADR-0156 | Deep Research 出货产物同步与终审缺陷修复 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-deepresearch-artifact-sync.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

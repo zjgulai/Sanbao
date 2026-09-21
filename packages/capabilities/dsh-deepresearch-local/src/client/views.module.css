@@ -14,8 +14,9 @@
   --deepresearch-control-height: 36px;
   --deepresearch-control-radius: 8px;
   --deepresearch-panel-radius: 10px;
-  --dsh-deepresearch-modal-layer: 2147481000;
-  --dsh-deepresearch-confirm-layer: 2147481100;
+  /* Keep exact layer offsets through Lightning CSS's large-number serialization. */
+  --dsh-deepresearch-modal-layer: calc(2147480000 + 1000);
+  --dsh-deepresearch-confirm-layer: calc(2147480000 + 1100);
 }
 
 .content,

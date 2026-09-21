@@ -12,6 +12,11 @@
   "files": [
     "src/client/index.ts",
     "src/client/ResearchView.tsx",
+    "src/client/ResearchComposer.tsx",
+    "src/client/ResearchWorkspace.tsx",
+    "src/client/research-view-model.ts",
+    "src/client/use-research-library.ts",
+    "src/client/use-research-workspace.ts",
     "src/client/DeepResearchSidebarEntry.tsx",
     "src/client/DeepResearchOverlay.tsx",
     "src/client/client-face.ts",

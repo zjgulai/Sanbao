@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { Service } from "@deepseek-ai/cordis";
 import s from "@deepseek-ai/schemastery";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
@@ -7,7 +8,6 @@ import { SessionId } from "@deepseek-ai/dsh-session";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 import { access, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { load } from "cheerio";
 import { constants } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
@@ -201,12 +201,12 @@ function budgetForProject(project) {
 }
 const MAX_DEP_CONTEXT_CHARS = 4e3;
 const MAX_URL_TEXT_FOR_VERIFY = 2500;
-const SETTLED_QUESTION = new Set([
+const SETTLED_QUESTION = /* @__PURE__ */ new Set([
 	"covered",
 	"partial",
 	"blocked"
 ]);
-const TERMINAL_COVERAGE = new Set([
+const TERMINAL_COVERAGE = /* @__PURE__ */ new Set([
 	"covered",
 	"partial",
 	"blocked"
@@ -846,7 +846,7 @@ function lastAssistantText(handle) {
 }
 function inFlightAssistantText(events) {
 	let parts = [];
-	for (const event of events) {
+	for (const event of events ?? []) {
 		if (event.type === "step/start") parts = [];
 		if (event.type === "assistant/chunk") {
 			const chunk = event.data?.chunk;
@@ -1310,7 +1310,7 @@ function sqliteMounted(ctx) {
 function canMountHttpFetch(ctx) {
 	const web = ctx.get("web");
 	if (web === void 0 || typeof web.registerFetchProvider !== "function") return false;
-	return !web.fetchProviders.has("http");
+	return !web.fetchProviders?.has("http");
 }
 function isAlreadyMountedError(error) {
 	const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
@@ -1589,7 +1589,6 @@ let DeepResearchService = (() => {
 		];
 		static Config = s.object({
 			runnerEnabled: s.boolean().required(),
-			// D7/CWD governance (2026-09-10): empty-string sentinel replaces the load-time process.cwd() default (Electron resolves it to /); the consumption point resolves it at apply time to ~/.dsh/data/research-runner.
 			runnerCwd: s.string().default(""),
 			storageRoot: s.string(),
 			maxProjects: s.number().step(1).min(1).required(),
@@ -2419,14 +2418,16 @@ let DeepResearchService = (() => {
 					confidence: candidate.confidence,
 					status: "accepted"
 				}).catch((error) => {
-					// (2026-09-10 fix) A silently swallowed rejection skewed coverage stats with no trace: warn loudly and record the reason on the criterion.
 					this.ctx.logger.warn(`deepresearch: addEvidence rejected (question ${questionId}, criterion ${criterionId}): ${String(error)}`);
 					this.update(id, (current) => ({
 						...current,
-						questions: current.questions.map((item) => item.id !== questionId ? item : ({
+						questions: current.questions.map((item) => item.id !== questionId ? item : {
 							...item,
-							criteria: item.criteria.map((c) => c.id === criterionId ? { ...c, warning: `addEvidence rejected: ${String(error)}` } : c)
-						}))
+							criteria: item.criteria.map((c) => c.id === criterionId ? {
+								...c,
+								warning: `addEvidence rejected: ${String(error)}`
+							} : c)
+						})
 					})).catch((updateError) => this.ctx.logger.warn(`deepresearch: criterion warning write-back failed: ${String(updateError)}`));
 				});
 			}
@@ -2637,7 +2638,7 @@ let DeepResearchService = (() => {
 								evaluatorDraft: draft
 							})
 						};
-					});
+					}).catch((err) => this.ctx.logger.warn(`deepresearch: evaluator draft write-back failed: ${String(err)}`));
 				},
 				lastText: (text) => {
 					if (submitted !== null) return;
@@ -2718,7 +2719,7 @@ let DeepResearchService = (() => {
 					this.update(id, (current) => current.phase === "writing" ? {
 						...current,
 						report: text
-					} : current);
+					} : current).catch((err) => this.ctx.logger.warn(`deepresearch: report write-back failed: ${String(err)}`));
 				}
 			});
 		}

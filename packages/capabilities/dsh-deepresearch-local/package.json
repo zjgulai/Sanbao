@@ -75,7 +75,7 @@
   "scripts": {
     "verify": "node --check lib/index.js && node --check lib/client.js && node --check lib/typert.host.js",
     "typecheck": "tsc -b --pretty false",
-    "build": "tsc -b --pretty false",
+    "build": "tsc -b --pretty false && tsdown",
     "test": "vitest run"
   },
   "license": "BSD-3-Clause",
@@ -137,8 +137,10 @@
     "@types/react": "~18.3.1",
     "@types/react-dom": "^18.3.5",
     "jsdom": "^25.0.0",
+    "lightningcss": "^1.32.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tsdown": "0.22.2",
     "typescript": "~5.7.2",
     "vitest": "^4.1.8"
   }
