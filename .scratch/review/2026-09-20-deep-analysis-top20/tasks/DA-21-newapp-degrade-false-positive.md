@@ -1,7 +1,7 @@
 # DA-21 · newapp 降级文案的误归因与陈旧标志（窗口不可见 ≠ 侧边栏改版）
 
 - 优先级：P1
-- 状态：`open`
+- 状态：`local-done`（2026-09-21 批次 E 结算：`09f1c08`；实机读数待窗口可见，见结算 §5）
 - 依赖：无（修法需先落「挂起 ≠ 失败」语义；实机验证需可见窗口）
 - 估算：S
 - 来源：DA-06 补读轮的活体故障现场（2026-09-21）
@@ -41,3 +41,60 @@ Chromium 冻结 rAF**：屏幕休眠/锁定、窗口被完全遮挡都会命中�
 
 语义是「挂起 ≠ 失败」——别把宽限期整体拉长来掩盖问题；真改版必须仍然响亮降级
 （ADR-0019 的自报机制不许变哑）。
+
+## 结算（2026-09-21，批次 E；提交 `09f1c08`，ADR-0153）
+
+**修法按工单注意项执行：语义是「挂起 ≠ 失败」，没有拉长宽限期；真改版仍然响亮降级。**
+
+### 1. 语义拆分（`watchPlacement()`）
+
+- **隐藏 → 暂停**：宽限到点若 `document.hidden` 则既不报降级、也不重新武装定时器
+  （不对休眠显示器轮询），等可见性变化再判。
+- **恢复可见 → 短宽限**：`visibilitychange`（监听在 **`document`**）后以 1200ms 重判，
+  给 rAF 一帧的时间。**实现期被测试抓到一个真错**：第一版把监听挂在 `window` 上——
+  `visibilitychange` 在 document 派发且**不冒泡**，window 上的监听永远不会触发；
+  新用例 `gives the restored visibility a grace period…` 直接判红。
+- **迟到归位 → 清标志**：报出降级后挂 `document.body` 观察者，见到入口行即
+  `reportDegraded(undefined)` 并拆除定时器 / 观察者 / 可见性监听——标志不得比它的条件活得久。
+- **可见 + 宽限过后仍无入口行 → 照旧响亮降级**（报 `entry-unavailable` + `console.warn`）。
+
+### 2. 判据（`tests/sidebar-entry-stacked.spec.ts`）
+
+- 三条新用例：`stays silent while the document is hidden`、`gives the restored visibility a
+  grace period before judging`、`clears a flag it already raised once a late placement lands`；
+  文件 **12/12 通过**（`npx vitest run tests/sidebar-entry-stacked.spec.ts`）。
+- **红绿成对**：RED 用旧实现跑三条新用例 → 三条全部违背预期（stderr 三次 「restructured the
+  sidebar」告警、恢复宽限用例断言失败）；GREEN 换新实现 → 12/12。
+- **恒真/恒假两个方向都能说「不」**：反向突变（`evaluate` 改成恒不降级）→「grace period」与既有
+  「shell never renders 要说出来」两条判红（2 failed）；正向由 hidden 用例守住。
+- **顺带修掉夹具的状态泄漏（真故障）**：插件装的是 document 级监听与观察者，用例结束不释放会把
+  状态带进下一个用例——实测 vitest 跑满 CPU（94%）20+ 分钟不出结果、也不退出。修法 =
+  `afterEach` 统一执行 effects 的 disposer（`appliedDisposers`）。
+
+### 3. 装配与门禁
+
+- 重新构建 `lib/client.js`（该产物不进 git，交付面在 profile）+ 同步装载点
+  `~/.dsh/profiles/desktop/node_modules/dsh-newapp-local`；旧副本备份在
+  `/tmp/da21-loadpoint-backup/client.js.bak-20260921`。
+- 门禁 quick **119/123**：唯一红是并发会话的 4 处 bundle 漂移（本切片顺带消掉其中 newapp 的旧构建）；
+  `changed-packages` 6/6、adr 三口判据与 docs-link-integrity 全绿。
+
+### 4. 验收对表
+
+| 验收项 | 读数 |
+| --- | --- |
+| 三个用例各自红绿成对（含恒真桩突变红） | ✅ RED（旧实现 ≥3 条违背）→ GREEN 12/12；反向突变 2 红 |
+| 实机：休眠 → 唤醒后 `data-dsh-newapp-degraded` 不出现或已清除 | **未读**（见下） |
+| 实机：`singleton-count-live` 读到 `entry-newapp=1`（exit 0） | **未读**（同下） |
+
+### 5. 未验收（如实，与 DA-06 同批）
+
+两条实机读数都要求 **app 带 `--remote-debugging-port=9333` 重启且屏幕可见**（窗口不可见时
+Chromium 冻结 rAF，读数本身无效——这正是本单的题面）。不能在会话内触发重启（会连带杀掉当前会话），
+由用户双击 `scripts/acceptance/Restart-DSH-CDP.command` 后补跑：
+
+```bash
+node scripts/acceptance/singleton-count-live.mjs   # 期望 entry-newapp=1、exit 0
+```
+
+唤醒后还应顺带确认 `<html>` 上没有 `data-dsh-newapp-degraded`（或它已被清除）。

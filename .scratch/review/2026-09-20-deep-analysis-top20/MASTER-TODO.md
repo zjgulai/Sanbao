@@ -26,13 +26,13 @@
 | [DA-07](tasks/DA-07-source-hotspot-split.md) | 源码热点拆分（ResearchView.tsx / wanzh lib/index.js 等） | 图谱：39 函数/552 调用边；31 函数纯 JS 源 | L | `open` |
 | [DA-08](tasks/DA-08-test-depth-plan.md) | 测试纵深计划：四个零覆盖边核心包定最低测试面 | 图谱 tested_by 仅 85 边 | L | `open` |
 | [DA-09](tasks/DA-09-mgt-ship-prerequisites.md) | MGT 管理层出货前置推进（或复核边界并记录） | ADR-0129 / architecture.md §3 | M | `done`（09-21） |
-| [DA-10](tasks/DA-10-auto-update-first-steps.md) | 自动更新路线第一步（不白做的两步） | docs/plans/2026-09-13-auto-update-route.md | M | `open` |
+| [DA-10](tasks/DA-10-auto-update-first-steps.md) | 自动更新路线第一步（不白做的两步） | docs/plans/2026-09-13-auto-update-route.md | M | `local-done`（09-21：①feed 管道 `ff4d721` + ②骨架 `bf7438a`；Developer ID 决策＝暂不采购，③–⑦ 挂起） |
 | [DA-11](tasks/DA-11-x64-universal-gap.md) | x64 / universal 构建缺口补齐（或记录单架构决策） | 2.5.0 CHANGELOG「登记下轮」 | M | `done`（09-21） |
 | [DA-12](tasks/DA-12-production-machine-baseline.md) | 生产机基座现状核对并落记录 | architecture.md §1（2026-09-10 观察，未核实） | S | `done`（09-21） |
 | [DA-13](tasks/DA-13-scratch-cleanup.md) | .scratch 42 个工作流清场（按 DA-04 顺序） | historical-artifacts 层 205 节点 | L | 依赖 DA-04 |
 | [DA-14](tasks/DA-14-agt-shared-source-guard.md) | AGT 共享源改动 → 50 全量重生成护栏 | research/16 §3.6（目前是阅读纪律） | M | `done`（09-21） |
 | [DA-15](tasks/DA-15-jev-remaining-gaps.md) | Jev 语义层剩余口子复核 | CHANGELOG Unreleased vs 项目记忆对账 | S | `done`（09-21） |
-| [DA-21](tasks/DA-21-newapp-degrade-false-positive.md) | newapp 降级文案误归因 + 陈旧标志（窗口不可见被读成「侧边栏改版」） | DA-06 补读轮活体现场（2026-09-21） | S | `open` |
+| [DA-21](tasks/DA-21-newapp-degrade-false-positive.md) | newapp 降级文案误归因 + 陈旧标志（窗口不可见被读成「侧边栏改版」） | DA-06 补读轮活体现场（2026-09-21） | S | `local-done`（09-21，`09f1c08`；实机读数与 DA-06 同批待窗口可见） |
 
 ## 4. P2 · 保鲜与纪律（5 项）
 
@@ -51,8 +51,14 @@
 批次 B（文档与现状核对）：DA-05 + DA-12（同批）  DA-15
 批次 C（结构，与在飞工作重叠）：DA-07  DA-08  DA-09  DA-10  DA-11  DA-14
 批次 D（清场，依赖 A 的 DA-04）：DA-13
+批次 E（用户 09-21 拍板）：DA-10（①feed 管道 + ②更新器骨架）  DA-21（降级标志「挂起 ≠ 失败」）
 例行（每发布窗口）：DA-16  DA-17  DA-18
 ```
+
+**批次 E 结算（2026-09-21）**：DA-10 两步落地（`ff4d721` ①feed 契约 ADR-0151 / `bf7438a` ②骨架
+ADR-0152；Developer ID **暂不采购**——更新器停在「检查 + 提示」）+ DA-21（`09f1c08`，ADR-0153）。
+欠读数（与 DA-06 同批，需 app 带 CDP 重启且屏幕可见）：`singleton-count-live` 的 `entry-newapp=1`、
+唤醒后 `data-dsh-newapp-degraded` 缺席、更新器在 app 内实际装载。
 
 ## 6. 结算
 
