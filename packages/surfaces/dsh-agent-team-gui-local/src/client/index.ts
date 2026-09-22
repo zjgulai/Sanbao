@@ -53,8 +53,13 @@ export function apply(ctx: ClientContext): void {
   if (typeof ctx.slots?.inject !== 'function') {
     throw new Error('agent-team-gui: ctx.slots.inject 不可用；小队界面需要客户端运行时提供该能力（详见 ClientContext 注释）')
   }
-  const connection = ctx.get('connection') as ConnectionHandle
-  const locale = ctx.get('locale') as LocaleService
+  const connection = ctx.get('connection') as ConnectionHandle | undefined
+  const locale = ctx.get('locale') as LocaleService | undefined
+  // 客户端 ctx.get 对缺席服务的语义没有实测读数（ClientContext 注释的 TODO），不能假设
+  // 返回 undefined——缺失时给出可操作的错误，避免四个 slot 无声不注册（ADR-0038 同型）。
+  if (connection === undefined || locale === undefined) {
+    throw new Error('agent-team-gui: 客户端 connection/locale 服务不可用；小队界面需要客户端运行时提供两者（详见 ClientContext 注释）')
+  }
   const call = async <T,>(endpoint: string, payload: unknown, signal?: AbortSignal): Promise<T> => {
     const result = await connection.rpc.call(RPC_CHANNEL, endpoint, payload, signal)
     if (!result.ok) {

@@ -72,12 +72,16 @@ export class AgentTeamService extends ExecutionApplicationService {
     }
 
     this.ctx.tools.register(createDispatchToSquadTool(this))
-    const systemPrompt = this.ctx.get('systemPrompt') as SystemPromptService
-    systemPrompt.section({
-      name: 'agent-team:squad-mode',
-      order: 118,
-      text: context => this.squadModeGuidance(context.agent),
-    })
+    const systemPrompt = this.ctx.get('systemPrompt') as SystemPromptService | undefined
+    if (systemPrompt === undefined) {
+      this.ctx.logger.warn('[agent-team-gui] systemPrompt 服务缺席，squad-mode 提示段未注册（其余功能不受影响）')
+    } else {
+      systemPrompt.section({
+        name: 'agent-team:squad-mode',
+        order: 118,
+        text: context => this.squadModeGuidance(context.agent),
+      })
+    }
     this.registerConversationOrchestration()
     registerAgentTeamRpc(this.ctx, this)
     this.ctx.logger.info('[agent-team-gui] v0.5 bounded DAG orchestration, durable runs, recipes and insights ready')

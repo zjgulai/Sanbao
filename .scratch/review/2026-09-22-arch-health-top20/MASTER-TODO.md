@@ -31,7 +31,7 @@
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | [DA-22](tasks/DA-22-service-consumption-matrix.md) | 服务消费面清单 + 漂移判据 | P1 | M | 无 | `done`（09-22，EX-06：登记处 19 文件/20 服务/4 动态 + 判据双绿；突变挖出连字符盲区已修） |
-| [DA-23](tasks/DA-23-dual-channel-compliance.md) | 双通道探测合规审计（22:1 执行率分诊） | P1 | M | DA-22 | `open` |
+| [DA-23](tasks/DA-23-dual-channel-compliance.md) | 双通道探测合规审计（22:1 执行率分诊） | P1 | M | DA-22 | `local-done`（09-22，EX-07：分诊表落盘——纪律适用面本就只有 1 处、17 处豁免、2 处待拍板 + ADR-0061 勘误建议） |
 | [DA-24](tasks/DA-24-optional-service-failure-audit.md) | 可选服务保守失败态抽查（ADR-0038 模式复检） | P2 | S | DA-22 | `open` |
 
 ### 批次 B · 消融实验矩阵（4 项，用户 09-22 拍板：DA-25 走重版）
