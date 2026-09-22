@@ -1,7 +1,7 @@
 /** Materializes the tracked profile seed plus the built host runtime into a runnable profile. */
 
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { composeProfileManifest, hostEntryPath, overlayPath, planMaterialize, type CopyPlan, type ProfileManifest } from './layout.js'
@@ -16,7 +16,15 @@ export interface MaterializedProfile {
 
 function assertPlan(plan: CopyPlan, seedDir: string): void {
   for (const entry of plan.entries) {
-    if (existsSync(entry.from)) continue
+    if (existsSync(entry.from)) {
+      // 递归目录条目只查「目录存在」会静默放过内容残缺（2026-09-23 DA-26 消融实测：
+      // 抽走 lib/index.js 后 materialize 仍 exit=0，profile 声明 bundle 但宿主入口缺失）。
+      // 空目录是能机器判出的最小完整性下界；逐文件清单的完整枚举超出此处。
+      if (entry.recursive === true && readdirSync(entry.from).length === 0) {
+        throw new Error(`lute shell: composed package directory ${entry.from} is empty — run pnpm run build in the owning package`)
+      }
+      continue
+    }
     if (entry.kind === 'seed') throw new Error(`lute shell: missing seed file ${entry.from}`)
     if (entry.kind === 'composed-package') {
       throw new Error(`lute shell: missing composed package file ${entry.from} — run pnpm run build in the owning package`)

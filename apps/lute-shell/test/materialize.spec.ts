@@ -144,6 +144,20 @@ describe('materializeProfile', () => {
     })).rejects.toThrow(/^lute shell: missing composed package file /u)
   })
 
+  it('fails loud when a composed package lib exists but is empty (ablation-discovered, DA-26)', async () => {
+    const shellRoot = stubShellRoot()
+    const libDir = join(shellRoot, COMPOSED_PACKAGES[0]?.dir ?? '', 'lib')
+    rmSync(libDir, { recursive: true, force: true })
+    mkdirSync(libDir, { recursive: true })
+    await expect(materializeProfile({
+      seedDir,
+      shellRoot,
+      repoRoot: shellRoot,
+      profileDir: tempDir('profile'),
+      install: vi.fn(async () => {}),
+    })).rejects.toThrow(/^lute shell: composed package directory .* is empty/u)
+  })
+
   it('fails loud when a seed file is missing', async () => {
     const shellRoot = stubShellRoot()
     await expect(materializeProfile({
