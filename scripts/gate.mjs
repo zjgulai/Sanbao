@@ -378,6 +378,16 @@ const CHECKS = [
     },
   },
   {
+    name: 'lute-shell-pin-selftest',
+    remediation:
+      '跑 node --test scripts/gates/lute-shell-pin.test.mjs 看红在哪条：本项必须能说「不」——seed 与壳 devDependencies 任一侧的 range 型 specifier、两侧同名包版本错位、任一侧没有任何 @deepseek-ai/* 依赖、'
+      + '协议常量漂移于 submodule 参照（FRAME_MAGIC 等 7 项）、electron 非精确 / 缺失 / 与 dsh-plugin-desktop 不一致、治理三字段缺失或取值非 self/lute/false、'
+      + 'seed 用户层声明了 LUTE 插件、fixture 掉出 git 跟踪，都必须判红；submodule 未初始化与 vendor 参照缺失是显式 skip note，不是通过（ADR-0139 / P-02）',
+    run() {
+      return runNodeTestFile('scripts/gates/lute-shell-pin.test.mjs', '薄壳 pin 判据的反向自测失败')
+    },
+  },
+  {
     name: 'gitignore-whitelist',
     remediation: '删除 .gitignore 中指向不存在路径的白名单条目（ADR-0013）',
     run() {
