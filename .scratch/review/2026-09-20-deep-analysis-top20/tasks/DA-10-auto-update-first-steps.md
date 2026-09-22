@@ -181,9 +181,26 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
 - **quick 档那一处变化不是失败，是覆盖收缩**：`changed-packages` 的 typedSkip 为
   `no-changes-in-range`（「改动射程为空——本项**未检查任何包**」）。即该轮 CI 的 quick
   没有核对任何改动包的治理规则，与基线（9 个包）不可比。
-- **未解释的不一致**：同一轮 CI 的 full 档同一判据却是 pass（3 个包）。两档的 base 解析
-  走的是同一条 `DSH_GATE_BASE_SHA`（`github.event.before`），为何一档得空射程、另一档得 3 个包，
-  **只凭报告推不出机制**；已列为本轮未收口项，不写成「两档一致」。
+- **未解释的不一致 → 已查明（同一窗口内补记）**：同一轮 CI 的 full 档同一判据却是 pass（3 个包）。
+  两档的 base 完全相同（报告 `note` 都是 `DSH_GATE_BASE_SHA@889c49ce（event-base-sha）`），
+  差异在**工作树**：quick 是 `unstaged=0` → 射程为空 → skip；full 是 `unstaged=53` → 命中 3 个包 → pass。
+  53 个跟踪文件从哪来？**门禁自己写的。**
+
+  `scripts-runnable` 标着 `modes: ['full']`、排在判据表第 89 位，而 `changed-packages` 排第 92 位。
+  前者按包执行 `typecheck → test → build`（`packageScriptOrder`，ADR-0055），它会真的跑 `build`；
+  该判据自己的注释就写着「产物已入库：先 build 会用新字节盖掉它」。于是：
+  **本机**（与入库产物同平台同工具链）重写后字节相同 → `git diff` 为空 → 射程干净；
+  **CI 的 Linux runner** 上重写结果不同 → 53 个跟踪文件被判「已修改」→ 后置的 `changed-packages`
+  把这份写入当成改动面 → 报 pass。
+
+  结论修正：**full 档那条 `pass` 是假绿**——它核对的 3 个包是门禁自己刚弄脏的，不是这次推送改的；
+  这次推送（`889c49c..9d9cc2a`）只动文档，正确读数就是 quick 档那个 `skip`。
+  与 P-02（仪器假绿）同族，机制是新的：**同一门禁里靠前的判据写盘，靠后的判据把自己的尾气当读数**。
+  同一现象也解释了本机两次 full 读数里 `changed-packages` 的 2→3 与 `permission-bits` 的 120→122。
+
+  修法候选（未动，待拍板）：(a) 门禁启动时**快照射程**，后置判据复用同一份（无顺序耦合，推荐）；
+  (b) 把这两个判据排到任何写盘判据之前（脆弱，将来加判据会再犯）；
+  (c) `scripts-runnable` 改在临时副本里跑（最干净但最贵，且会改变该判据的语义）。
 - 两次推送导致前一轮 run 被取消，是本次探针式对比的**结构性干扰**：本次实测读数只覆盖
   `9d9cc2a` 的那一段改动，代码提交那一段的 CI 覆盖被取消的运行带走了。下次要一次推完再取读数。
 - 除上述一处外，两档其余判据与 `skippedChecks` 集合均与基线相同；旧 CI 的 vendor 未初始化、
