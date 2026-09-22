@@ -162,3 +162,29 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
 - 除上述变化与耗时噪声外，已输出的违例原文及 skippedChecks 集合不变；旧 CI 的 vendor 未初始化、包级依赖缺失、Linux 缺 CoreText 等阻塞仍在。由于本轮授权的 CI 改动仅为更新包准备步骤，未擅自更换 runner、新增安装矩阵或降级判据。
 - 两个 job 均在门禁步骤终止，后续 attestation 步骤未执行；远端验收尚未收口。
 - CDP 9333 连接失败，DA-06 / DA-10 / DA-21 的三项实机读数仍未运行；未自行重启应用。
+
+### 9. 第二窗口推送的远端验收（2026-09-22）
+
+推送 `4788320..889c49c`（三个提交）后再推 `889c49c..9d9cc2a`（doc-only 一笔，登记推送读数）。
+**第一次推送触发的 run `35683510320` 被第二次推送取代取消**（`cancelled`，两 job 均未跑完），
+生效的是 [run 35683582821](https://github.com/zjgulai/Sanbao/actions/runs/35683582821)（HEAD `9d9cc2a`），
+两个 job 仍为 failure——与历史各轮同形。报告已下载到 `/tmp/sanbao-ci-9d9cc2a.GVEwpS/`。
+
+逐项对比（基线 `4788320` 的报告在 `/tmp/sanbao-ci-4788320.sY49ph/`，只归一化 `duration_ms` 与时钟类字面量）：
+
+| 档 | 基线 total/pass/skip/fail | 本轮 | 有差异的判据 |
+| --- | --- | --- | --- |
+| full | 132 / 90 / 22 / 20 | 132 / 90 / 22 / 20 | **0 个**（`skippedChecks` 集合也相同） |
+| quick | 124 / 88 / 17 / 19 | 124 / 87 / 18 / 19 | 1 个：`changed-packages` pass → **skip** |
+
+- **full 档是强的「零新增红」**：状态与违例原文逐条相同，无增无减。
+- **quick 档那一处变化不是失败，是覆盖收缩**：`changed-packages` 的 typedSkip 为
+  `no-changes-in-range`（「改动射程为空——本项**未检查任何包**」）。即该轮 CI 的 quick
+  没有核对任何改动包的治理规则，与基线（9 个包）不可比。
+- **未解释的不一致**：同一轮 CI 的 full 档同一判据却是 pass（3 个包）。两档的 base 解析
+  走的是同一条 `DSH_GATE_BASE_SHA`（`github.event.before`），为何一档得空射程、另一档得 3 个包，
+  **只凭报告推不出机制**；已列为本轮未收口项，不写成「两档一致」。
+- 两次推送导致前一轮 run 被取消，是本次探针式对比的**结构性干扰**：本次实测读数只覆盖
+  `9d9cc2a` 的那一段改动，代码提交那一段的 CI 覆盖被取消的运行带走了。下次要一次推完再取读数。
+- 除上述一处外，两档其余判据与 `skippedChecks` 集合均与基线相同；旧 CI 的 vendor 未初始化、
+  包级依赖缺失、Linux 缺 CoreText 等阻塞仍在，本轮**未擅自更换 runner、新增安装矩阵或降级判据**。
