@@ -771,6 +771,17 @@ const CHECKS = [
     },
   },
   {
+    name: 'wanzh-host-contract',
+    remediation:
+      '跑 node --test packages/capabilities/dsh-wanzh-hulian/test/wanzh-hulian.spec.mjs；修复 host 归一化与 URL 凭证安全行为（SEC-RT-001）',
+    run() {
+      return runNodeTestFile(
+        'packages/capabilities/dsh-wanzh-hulian/test/wanzh-hulian.spec.mjs',
+        'Wanzh host 归一化与 URL 凭证安全契约自测失败',
+      )
+    },
+  },
+  {
     name: 'fullstack-catalog',
     remediation:
       '运行 node packages/capabilities/dsh-overseas-skills/scripts/verify-fullstack.mjs --json；mapping 与 extra 必须先合成唯一 catalog，再逐项修复 missing、metadata、来源或产物语法问题（ADR-0096）',

@@ -176,12 +176,13 @@ export function normalizeGateResult(raw, { name = 'unnamed-check' } = {}) {
  * 「分母 = 这个模式看得见的全部校验项」而不是「这次恰好跑了哪些」（ADR-0102）。
  *
  * @param {Array<{name: string, run: () => unknown, remediation?: string}>} checks
- * @param {{requireNoSkip?: boolean, notCovered?: string[]}} [options]
- * @returns {{results: Array<GateResult & {name: string, remediation?: string}>, summary: ReturnType<typeof summarizeGateResults>, exitCode: number}}
+ * @param {{requireNoSkip?: boolean, notCovered?: string[], now?: () => number}} [options]
+ * @returns {{results: Array<GateResult & {name: string, durationMs: number, remediation?: string}>, summary: ReturnType<typeof summarizeGateResults>, exitCode: number}}
  */
-export function runGateChecks(checks, { requireNoSkip = false, notCovered = [] } = {}) {
+export function runGateChecks(checks, { requireNoSkip = false, notCovered = [], now = () => performance.now() } = {}) {
   const safeChecks = Array.isArray(checks) ? checks : []
   const results = safeChecks.map((check, index) => {
+    const startedAt = now()
     const name = typeof check?.name === 'string' && check.name.trim() !== '' ? check.name : `unnamed-check-${index + 1}`
     let result
     if (typeof check?.run !== 'function') {
@@ -197,6 +198,7 @@ export function runGateChecks(checks, { requireNoSkip = false, notCovered = [] }
     return {
       name,
       ...result,
+      durationMs: now() - startedAt,
       ...(typeof check?.remediation === 'string' ? { remediation: check.remediation } : {}),
     }
   })

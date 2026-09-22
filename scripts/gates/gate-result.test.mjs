@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import {
   assertRemediationDeclared,
   computeNotCovered,
+  isCheckActive,
   normalizeGateResult,
   renderGateSummary,
   runGateChecks,
@@ -145,6 +147,85 @@ test('非法返回值 fail-closed 且不回显原始对象', () => {
   assert.equal(result.failed, 1)
   assert.match(result.reason, /null-result.*result schema invalid/)
   assert.deepEqual(result.typedSkips, [])
+})
+
+test('runGateChecks 逐项记录精确 durationMs，包含 throw 与非法 checker', () => {
+  const ticks = [10, 11.25, 20, 22.5, 30, 30, 40, 44.75, 50, 51, 60, 60.5]
+  const run = runGateChecks([
+    { name: 'pass', run: () => PASS },
+    { name: 'skip', run: () => ({ passed: true, skipped: true, violations: [], note: 'optional fixture absent' }) },
+    { name: 'fail', run: () => ({ passed: false, violations: ['fixture failure'] }) },
+    { name: 'throw', run() { throw new Error('fixture exploded') } },
+    { name: 'invalid', run: () => null },
+    { name: 'missing-run' },
+  ], { now: () => ticks.shift() })
+
+  assert.deepEqual(run.results.map((result) => result.durationMs), [1.25, 2.5, 0, 4.75, 1, 0.5])
+  assert.equal(ticks.length, 0)
+  assert.deepEqual(run.results.map((result) => result.status), ['pass', 'skip', 'fail', 'fail', 'fail', 'fail'])
+  for (const result of run.results) {
+    assert.deepEqual(validateGateResult(result), { valid: true, errors: [] })
+  }
+  assert.match(run.results[3].violations[0], /checker threw Error: fixture exploded/)
+  assert.equal(run.summary.failed, 4)
+  assert.equal(run.exitCode, 1)
+})
+
+test('durationMs 不改变判词、计数、摘要或退出码，默认调用仍兼容', () => {
+  const pass = { name: 'pass', run: () => PASS }
+  const skip = { name: 'skip', run: () => ({ passed: true, skipped: true, violations: [], note: 'optional fixture absent' }) }
+  const fail = { name: 'fail', run: () => ({ passed: false, violations: ['fixture failure'] }) }
+  const withoutTiming = (report) => ({
+    ...report,
+    results: report.results.map(({ durationMs, ...result }) => result),
+  })
+
+  for (const checks of [[], [pass], [pass, skip], [pass, skip, fail]]) {
+    const defaultRun = runGateChecks(checks)
+    for (const result of defaultRun.results) {
+      assert.equal(typeof result.durationMs, 'number')
+      assert.ok(Number.isFinite(result.durationMs))
+    }
+    assert.deepEqual(withoutTiming(defaultRun), withoutTiming(runGateChecks(checks, { now: () => 0 })))
+    for (const requireNoSkip of [false, true]) {
+      const options = { requireNoSkip, notCovered: ['scripts-runnable'] }
+      let clock = 100
+      const fast = runGateChecks(checks, { ...options, now: () => 0 })
+      const slow = runGateChecks(checks, { ...options, now: () => (clock += 250) })
+      assert.deepEqual(withoutTiming(slow), withoutTiming(fast))
+      assert.deepEqual(
+        renderGateSummary(slow.summary, { mode: 'quick', otherModes: 'full' }),
+        renderGateSummary(fast.summary, { mode: 'quick', otherModes: 'full' }),
+      )
+    }
+  }
+})
+
+test('wanzh-host-contract 的实际 quick 注册项调用指定 leaf 并传播失败', () => {
+  // 只执行真实注册项，避免导入 gate.mjs 触发整个门禁；本测试补充而不替代真实 leaf 测试。
+  const source = readFileSync(new URL('../gate.mjs', import.meta.url), 'utf8')
+  const registry = source.match(/^const CHECKS = \[([\s\S]*?)^\]/m)
+  assert.ok(registry, 'CHECKS registry must be extractable')
+  const item = registry[1].match(/^  \{\n    name: 'wanzh-host-contract',[\s\S]*?^  \},/m)
+  assert.ok(item, 'wanzh-host-contract must be registered in CHECKS')
+  const createCheck = new Function('runNodeTestFile', `return (${item[0].trim().slice(0, -1)})`)
+
+  for (const passed of [true, false]) {
+    const calls = []
+    const violations = passed ? [] : ['host fixture failure']
+    const check = createCheck((...args) => {
+      calls.push(args)
+      return { passed, violations }
+    })
+    const report = runGateChecks([check].filter((entry) => isCheckActive(entry, 'quick')))
+    assert.deepEqual(calls.map(([file]) => file), ['packages/capabilities/dsh-wanzh-hulian/test/wanzh-hulian.spec.mjs'])
+    assert.equal(report.results.length, 1)
+    assert.equal(report.results[0].status, passed ? 'pass' : 'fail')
+    assert.deepEqual(report.results[0].violations, violations)
+    assert.equal(report.summary.passed, passed ? 1 : 0)
+    assert.equal(report.summary.failed, passed ? 0 : 1)
+    assert.equal(report.exitCode, passed ? 0 : 1)
+  }
 })
 
 test('runGateChecks 捕获 checker throw 并返回可追溯 fail', () => {
