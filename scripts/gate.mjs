@@ -122,7 +122,7 @@ import { checkUpdateFeeds } from './gates/update-feed.mjs'
 import { describeTestRunFailure, runScript } from './lib/run-script.mjs'
 import { nodeCommand } from './lib/real-node.mjs'
 import { collectManagedManifests, collectPackages } from './gates/package-collect.mjs'
-import { CHANGE_SOURCES, LOCAL_BASE_REF, createGitRunner, resolveChangedScope } from './gates/changed-packages.mjs'
+import { CHANGE_SOURCES, LOCAL_BASE_REF, createGitRunner, readChangedScope, resolveChangedScope, takeChangedScope } from './gates/changed-packages.mjs'
 import { checkPermissionBits } from './gates/permission-bits.mjs'
 import { INTAKE_SURFACE_FILES, scanIntakeSurface } from './gates/intake-placeholders.mjs'
 import { renderCatalog } from './gen-catalog.mjs'
@@ -1546,7 +1546,9 @@ const CHECKS = [
     run() {
       const manifests = collectManifests().filter((entry) => entry.dir !== '.')
       const exempted = JSON.parse(readIfExists(EXEMPTIONS_PATH) || '[]').map((row) => row.package)
-      const scope = resolveChangedScope({
+      // 优先用门禁启动时的射程快照：本项排在第 92 位，前面有会写盘的判据
+      // （`scripts-runnable` 真跑 build 会覆写已入库产物），否则量到的是门禁自己的尾气。
+      const scope = readChangedScope() ?? resolveChangedScope({
         git: createGitRunner({ cwd: repoRoot }),
         env: process.env,
         packages: manifests,
@@ -1592,7 +1594,9 @@ const CHECKS = [
       + '2026-09-18 实测，编辑工具改写路径曾把含 scripts/gate.mjs 在内的三个文件留成 000，'
       + '该形态会被 git 静默提交，且会冒充「并发写入污染」这个更贵的结论（P-45）',
     run() {
-      const scope = resolveChangedScope({
+      // 同上：优先复用启动时的射程快照（本项只用 scope.sources 与 ok/reason，
+      // 不关心包归属，故与 changed-packages 共用同一份即可）。
+      const scope = readChangedScope() ?? resolveChangedScope({
         git: createGitRunner({ cwd: repoRoot }),
         env: process.env,
         packages: [],
@@ -3247,6 +3251,16 @@ function main() {
   // （10 处 TS2339 + 6 处测试类型错）正是这样对提交前门禁隐形的——只跑了 quick 就
   // 声称通过，是 P-04 的变体。
   const notCovered = computeNotCovered(CHECKS, mode)
+  // 射程快照：必须在**任何判据跑之前**取一次。`scripts-runnable`（full-only）会按包真跑
+  // `typecheck → test → build`，其中 build 会把已入库产物用新字节盖掉；排在它后面的
+  // changed-packages / permission-bits 若自己现算射程，读到的就是这份写入而不是本次改动
+  // （2026-09-22 CI 实测：full 档 unstaged=53 → 射程污染成 3 个包并报假绿，同轮 quick 档
+  // 不跑 scripts-runnable 因而给出正确的空射程）。快照把这条因果切断。
+  takeChangedScope({
+    git: createGitRunner({ cwd: repoRoot }),
+    env: process.env,
+    packages: collectManifests().filter((entry) => entry.dir !== '.'),
+  })
   const report = runGateChecks(active, { requireNoSkip, notCovered })
   if (json) {
     process.stdout.write(`${JSON.stringify({

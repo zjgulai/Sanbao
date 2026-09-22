@@ -1634,3 +1634,28 @@
   加一次比较；并发环境下看到的间歇红，先按本条归因，再决定是改仪器还是修被测物——
   **不许用「它有点不稳」当理由把断言删掉**。
 - **详见**：[Note](notes/implemented/surface/2026-09-20-boot-wordmark-and-spin.md)
+
+## P-55 · 仪器读自己的尾气：判据的射程被同一轮里靠前的写盘判据污染
+
+- **症状**：2026-09-22 远端 CI，同一轮 run 的两个 job 对**同一个判据**给出相反读数——
+  quick 报 `skip`（`no-changes-in-range`，空射程），full 报 `pass`（「3 个改动包与治理规则已核对」）。
+  两档基线相同，差异在**工作树**：quick `unstaged=0`、full `unstaged=53`。
+  53 个被跟踪文件是**门禁自己写的**：`scripts-runnable`（`full-only`，判据表第 89 位）按包真跑
+  `typecheck → test → build`，`build` 把已入库产物用新字节盖掉（该判据注释自己写着这件事），
+  而 `changed-packages` 排第 92 位、现算射程——于是它读到的不是「这次推送改了什么」，
+  而是「门禁刚把什么改脏了」，并就此报了一个**假绿**：它核对的 3 个包与本次推送无关。
+  本机看不见：重写后字节与入库产物相同、`git diff` 为空（同平台同工具链），
+  同一漂移在本地两次 full 读数里表现为 `changed-packages` 2→3、`permission-bits` 120→122。
+- **根因类**：判据的射程在**长跑中途**测量，而写盘者与测量者在同一轮里、顺序由判据表的排列隐式决定——
+  顺序是一条没有任何判据守着的契约。假绿不来自判据本身，来自**判据的输入被同侪污染**
+  （P-02 的新形态）。与 P-11（射程没有定义）相邻但不同：那里口径没定义，这里口径清楚、读的时候被写脏。
+- **已落地机制**：`gate:changed-packages` 与 `gate:permission-bits` 复用门禁启动时的**射程快照**
+  （`takeChangedScope()` 在 `runGateChecks()` 之前调用一次，两个判据用 `readChangedScope()` 读回；
+  取不到快照时退回各自原有路径），由 `gate:changed-packages-selftest` 与 `gate:permission-bits-selftest` 守护。
+  端到端实测：跑到中途往 `packages/capabilities/dsh-browser-local/lib/index.js` 追加一字节，
+  报告的 `unstaged` 仍为写入前的 3、命中包 0 个；同一写入走现算路径则立刻进射程（3→4，包命中）。
+- **下一版默认动作**：写下任何「量工作树状态」的判据之前，先问一句「我跑的时候，前面有谁会写盘」；
+  射程类读数一律**在门禁启动时快照**、不要在判据内部现算。看到同一判据在同一轮的两个 job 上
+  给出不同射程，先按本条查工作树差（`note` 里的 `staged/unstaged/untracked` 就是线索），
+  不要当成「两档本来就该不一样」或「环境噪声」。
+- **详见**：[Note](notes/implemented/contract/2026-09-22-gate-scope-snapshot.md)

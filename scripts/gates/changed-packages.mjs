@@ -103,6 +103,37 @@ function firstLine(text) {
 }
 
 /**
+ * 射程快照：门禁启动时算一次，供后置判据复用。
+ *
+ * **为什么需要它**：`changed-packages` / `permission-bits` 量的是「工作树相对基线的改动」，
+ * 但它们在判据表里排得很靠后（实测第 92 位），前面有会写盘的判据——`scripts-runnable`
+ * （full-only）按包真跑 `typecheck → test → build`，而 `build` 会把**已入库**的产物用新字节
+ * 盖掉（`packageScriptOrder` 的注释自己写着这件事）。于是后置判据读到的是「门禁自己刚改出来的
+ * 文件」，不是这次推送改了什么：本机与入库产物同平台、重写后字节相同，所以本地看不出来；
+ * CI 的 Linux runner 上 2026-09-22 实测 53 个跟踪文件被判「已改」，射程被污染成 3 个包并报
+ * `pass`——**假绿**（P-02），而同一轮 CI 的 quick 档（不跑 scripts-runnable）给出的是正确的空射程。
+ *
+ * 快照在**任何判据执行之前**取，切断这条因果；取不到快照时各判据仍走各自的 resolve 分支。
+ */
+let changedScopeSnapshot = null
+
+/**
+ * 取一次射程快照并记住它。由 gate 在跑判据之前调用。
+ *
+ * @param {{git: (args: string[]) => {ok: boolean, stdout: string, stderr: string}, env?: NodeJS.ProcessEnv, packages: Array<{relPath?: string, dir?: string}>}} input
+ * @returns {ReturnType<typeof resolveChangedScope>}
+ */
+export function takeChangedScope({ git, env = process.env, packages }) {
+  changedScopeSnapshot = resolveChangedScope({ git, env, packages })
+  return changedScopeSnapshot
+}
+
+/** 读回快照；未取过返回 null（调用方自行 resolve）。 */
+export function readChangedScope() {
+  return changedScopeSnapshot
+}
+
+/**
  * 解析改动基线。
  *
  * @param {{git: (args: string[]) => {ok: boolean, stdout: string, stderr: string}, env?: NodeJS.ProcessEnv}} input
