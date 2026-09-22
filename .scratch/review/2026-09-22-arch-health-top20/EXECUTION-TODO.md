@@ -96,3 +96,4 @@ EX-04/EX-05（两个 L 级大头）按 spec 各开独立窗口，不在本阶段
 - EX-07 · 2026-09-22 · DA-23 local-done：分诊完成——22:1 实为「纪律适用面只有 1 处」（launcher 本身就是 ADR-0061 样板）；17 处失败态已保守登记豁免；**2 处待拍板**（agent-team-gui 客户端 connection/locale 无守卫直用 + 宿主侧 systemPrompt 直用）+ ADR-0061 适用判据勘误建议。见 [DA-23 分诊表](tasks/DA-23-dual-channel-compliance.md)。
 - EX-07 收口 · 2026-09-22 · DA-23 done：用户指示按推荐继续——桶 C 两处补守卫（66/66 绿 + 装载点同步）+ ADR-0061 勘误落盘（`dbf0949`，未推）。
 - EX-08 · 2026-09-22 · DA-24 done：fail-open 终扫零命中；pair-access 栅栏 fail-closed 被 access.spec.ts 具名负例证明（读不到=拒绝 + 拒绝 revoked）；放行型缺陷清零。批次 A（EX-06/07/08）整体关账。**CI 归因附记**：Sanbao 远端 09-20 起 20 项环境红（vendor submodule 未初始化 / GH_TOKEN 缺失 / 本机路径假设），df9c661 与 1e8ff77 两轮失败集逐项一致——本批推送零新增；登记与基线对照在 DA-10 §6/§8。
+- EX-10 · 2026-09-22 · DA-31 done：判型结论**两个文件均不拆**——load.mjs 是 eval 基础设施的内聚工具箱（消费面同契约、拆分不减导入边），taxonomy.js 是分类契约的单一数据源（ADR-0009 的应用，220 行无体量压力）。判型三问（同契约？导入边减？体量超压？）留档可复用。DA-07 热点线整体收口。读数见 [DA-31 结算段](tasks/DA-31-paper2skills-hotspot-split.md)。
