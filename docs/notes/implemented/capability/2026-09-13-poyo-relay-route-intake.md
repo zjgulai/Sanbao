@@ -122,7 +122,7 @@ GET https://api.poyo.ai/v1/catalog/models?service_type=chat     # 免 key，分�
 
 - **只接对话面、不接媒体面** —— 用户的原问题是「加进设置页」，故必须回答；但媒体面（异步任务）才是这家站的主场，且它对工具能力零要求。保留为主用法。
 - **只建一条 `poyo` 路由** —— 会留下一个「能选中、能出字、干不了活」的模型位，比不接更坏。
-- **让 `claude-*` 走 Anthropic 面绕开工具缺口** —— DSH 确实支持 `anthropic-messages`，但站方给这 12 个 claude 模型只提供**一份** schema（`openai-chat` 形状），却同时宣称支持 `anthropic` 协议；这份 schema 无法证明工具能力，拿它当验收依据等于猜。留作拿到 key 后的显式实验。
+- **让 `claude-*` 走 Anthropic 面绕开工具缺口** —— DSH 确实支持 `anthropic-messages`，但站方给这 12 个 claude 模型只提供**一份** schema（`openai-chat` 形状），却同时宣称支持 `anthropic` 协议；这份 schema 无法证明工具能力，拿它当验收依据等于猜。留作拿到 key 后的显式实验——**已于 2026-09-20 完成并收官**，结论与接入见 [2026-09-20-poyo-opus5-anthropic-route.md](2026-09-20-poyo-opus5-anthropic-route.md)。
 - **按模型族估高 `defaultContextWindow`** —— 该站不公开上下文窗口数字。估高直接 400，估低只让压缩早触发，代价不对称，故取保守下界 131072 并明确标注未实测。
 - **全量登记 29 个模型** —— ~~26 个无工具，全量只会让模型选择器变噪音~~。**修正后的理由仍然成立但依据不同**：29 个里只有 14 个实测具备工具能力（11 个放行且工具稳定 + 3 个 responses），其余 15 个要么不产 `tool_calls`、要么上游 500。选择器里不该出现不能干活的行。
 

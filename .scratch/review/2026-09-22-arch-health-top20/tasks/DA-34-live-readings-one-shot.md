@@ -31,6 +31,15 @@
 - 无「重启后症状消失」类假象：读数时确认非喘息态（重试计数 attempt=1、看门狗零告警）；
 - 第一批 MASTER-TODO 状态同步更新。
 
+## 当前阻塞（2026-09-23 续跑）
+
+实跑 `node scripts/acceptance/singleton-count-live.mjs --port 9333`：exit 2，
+`[exit 2 · 仪器不可用] CDP 端口 9333 连不上（fetch failed）`。
+独立 Chrome MCP 仅看到 JEV 文档页，不是 Sanbao 会话，不能替代本卡实机证据。
+当前生命周期文件只有 22 行历史记录，末条时间 2026-09-21；本轮没有新启动样本。
+未重启、唤醒或修改生产应用；需要用户确认可中断当前会话的重启窗口，
+再按既有 relaunch-dsh-cdp.sh 执行。依赖本窗口的 DA-25/DA-32 不记通过。
+
 ## 注意
 
 - 窗口可见是硬前置（window-hidden 闸门会拦读数，DA-06 已踩过）；

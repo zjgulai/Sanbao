@@ -27,6 +27,24 @@ DA-13 立项清场 .scratch（第一批时 42 项，现 45 项），依赖的 DA
 - `gate:docs-link-integrity` 绿（无死链）；
 - 每项归档有「承诺检查结论」一行记录（有/无、是什么）。
 
+## 本轮只读盘点（2026-09-23）
+
+实跑 `node scripts/cleanup-inventory.mjs <.scratch 顶层目录逐项参数> --json`：
+44个目录，26个 protected、18个 suggested；另 git 跟踪文件分布于41个顶层工作流。
+这三个分母不同，不沿用45或42的历史数量。
+
+工具的18个建议候选：codex-ui-ux-rollout、theme-triad-live、p2s-card-generation、
+p2s-parse-audit、capability-hub-pages、compaction-hardening、release-surface-migration、
+`lv tcac gate`、pre-merge-stash、sanbao-experience、dmg-repack-pipeline、preset-lint-repair、
+xmind-agent-skills、dsh-native-skill-driver-doc、vod-route-hardening、sensitivity-analysis、
+clean-checkout-protocol、release-tag-gap。
+
+**本轮不执行归档**：suggested 只表示工具未找到它覆盖的承诺/代码引用，
+不代表可删。capability-hub-pages、pre-merge-stash、sanbao-experience 有其他会话
+未跟踪工作，明确排除；review 和 lute-refactor 等被保护目录继续保留。
+其余候选须再查未关闭 TODO 和文档引用，并由用户确认逐项移出范围后才能移动。
+未删除、移动任何目录，也未改 AGENTS.md。
+
 ## 注意
 
 - 本批与第一批工单目录**绝不在清场射程内**；

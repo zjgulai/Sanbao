@@ -39,7 +39,7 @@
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | [DA-25](tasks/DA-25-capability-ablation-matrix.md) | 能力组消融矩阵（含宿主启动 + UI 降级实机验证） | **P0** | L | 与 DA-34 同批 | `open` |
-| [DA-26](tasks/DA-26-shell-materialize-ablation.md) | 薄壳物资消融（materialize 缺件降级路径） | P1 | M | 无 | `done`（09-23，EX-09：**消融抓到「lib 空目录」静默通过缺陷已修**（assertPlan 补空目录校验）；部分缺件登记边界） |
+| [DA-26](tasks/DA-26-shell-materialize-ablation.md) | 薄壳物资消融（materialize 缺件降级路径） | P1 | M | 无 | `in-progress`（09-23 二轮：清单级预检已落地 55/55+125/125+隔离 CLI exit=1，待门禁归因+提交收口） |
 | [DA-27](tasks/DA-27-protocol-constant-drift-ablation.md) | 帧协议常量漂移消融（lute-shell-pin 反向突变） | P1 | S | 无 | `done`（09-22，EX-02：既有 19 用例 selftest 接进门禁 + FRAME_MAGIC 突变红→恢复绿闭环） |
 | [DA-28](tasks/DA-28-loadpoint-missing-file-ablation.md) | 装载点缺件消融（profile-files-sync 分母运行时证明） | P1 | S | 无 | `done`（09-22，EX-03：删→双判红→恢复→绿四步闭环，原 inode 保住） |
 
@@ -47,8 +47,8 @@
 
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [DA-29](tasks/DA-29-spec-reachability-batch.md) | 32 个未点名 spec 分批接线 | **P0** | L | 无 | `open` |
-| [DA-30](tasks/DA-30-tested-by-reconciliation.md) | tested_by 对账读数（图谱 106 边 vs 2870 测试文件） | P2 | S | 无 | `open` |
+| [DA-29](tasks/DA-29-spec-reachability-batch.md) | 测试可达性与 quick 策略差异接线 | **P0** | L | 无 | `in-progress`（09-23：SEC-RT-001 接线落地（wanzh-host-contract 注册+反向突变）；全表核对完成——6 条登记声明 quick 但仅条件执行，处置 A/B/C 待拍板） |
+| [DA-30](tasks/DA-30-tested-by-reconciliation.md) | tested_by 关系索引对账（不作覆盖证据） | P2 | S | 无 | `done`（09-23：187=38已关联+102仅节点+47缺节点；旧2870分母撤回，见本卡口径） |
 
 ### 批次 D · 效率与热点（3 项）
 
@@ -56,7 +56,7 @@
 | --- | --- | --- | --- | --- | --- |
 | [DA-31](tasks/DA-31-paper2skills-hotspot-split.md) | DA-07 剩余热点：paper2skills load.mjs / taxonomy.js | P1 | M | 无 | `done`（09-22，EX-10 判型：两文件均「不拆」——load=内聚工具箱、taxonomy=单一数据源；判型三问留档） |
 | [DA-32](tasks/DA-32-startup-timeline-baseline.md) | 启动时序基线判据（startup.jsonl 权威读数） | P1 | M | 无 | `open` |
-| [DA-33](tasks/DA-33-gate-cost-profiling.md) | gate 113 项耗时画像 + CI 两档射程漂移监控 | P2 | S | 无 | `open` |
+| [DA-33](tasks/DA-33-gate-cost-profiling.md) | gate 113 项耗时画像 + CI 两档射程漂移监控 | P2 | S | 无 | `in-progress`（09-23 R4：durationMs 仪器落地；quick 首轮 1420s@load16（AV 竞争下界）+ Top12 画像；干净基线重跑与 full 隔离副本待做） |
 
 ### 批次 E · 欠账收口（4 项）
 
@@ -71,10 +71,10 @@
 
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [DA-38](tasks/DA-38-package-placement-audit.md) | 29 包 × 5 组归属审计（图谱层 vs package.json 对账） | P1 | M | 无 | `done`（09-23，EX-12：30 包全绿零错位；立项假设被复核推翻〔theme 定位正确、shared 是分发机制〕；登记盘上空壳目录） |
+| [DA-38](tasks/DA-38-package-placement-audit.md) | 包职责归属审计 | P1 | M | 无 | `needs-revalidation`（09-23：29生产包+根清单=30；旧“全部宿主侧/全部apply”不成立，不迁移方向暂留） |
 | [DA-39](tasks/DA-39-ship-boundary-review.md) | 出货面 / 本机装配边界复核（ADR-0056/0061） | P2 | S | 无 | `open` |
 | [DA-40](tasks/DA-40-patch-replay-dryrun.md) | 补丁重放脚本干跑演练（下次升级前最后保险） | P1 | S | 无 | `done`（09-22，EX-13：四步全绿+幂等；**抓到 rollback 全坏缺陷已修**；发现 rollback=整文件还原语义） |
-| [DA-41](tasks/DA-41-hardlink-snapshot-refill-drill.md) | 硬链接快照补件演练（补件 + 判据验证完整链路） | P2 | S | 无 | `open` |
+| [DA-41](tasks/DA-41-hardlink-snapshot-refill-drill.md) | 硬链接快照补件演练（补件 + 判据验证完整链路） | P2 | S | 无 | `done`（09-23：独占临时 profile 真实 CLI 缺件补回、原子替换别名保护、源11文件未改，SOP已落） |
 
 ## 4. 依赖与批次
 
