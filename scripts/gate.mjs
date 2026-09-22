@@ -723,7 +723,7 @@ const CHECKS = [
   {
     name: 'wanzh-persistence-and-oauth',
     remediation:
-      '跑 node --test packages/capabilities/dsh-wanzh-hulian/test/{atomic-store,persistence,persistence-failclosed,persistence-inventory,oauth-flow,oauth-routes}.spec.mjs 看红在哪条：状态落盘必须只经原子写入器（同目录临时文件 + fsync + rename 前校验权限位 + 目录 fsync）；损坏或形状不对的配置必须 fail-closed 且原字节不改写；「文件不存在」与「内容损坏」必须是两个读数；OAuth 流程同时最多一个 listener、到期必须关端口、注册与回收必须全等。重点是恒真桩突变（P-02 / P-32）：去掉 chmod、去掉 rename 前校验、改回直写、去掉排他槽位、去掉到期定时器、去掉 supersede、去掉 closeAllConnections 都必须有用例变红（ADR-0099）',
+      '跑 node --test packages/capabilities/dsh-wanzh-hulian/test/{atomic-store,persistence,persistence-failclosed,persistence-inventory,oauth-flow,oauth-routes,list-response}.spec.mjs 看红在哪条：状态落盘必须只经原子写入器（同目录临时文件 + fsync + rename 前校验权限位 + 目录 fsync）；损坏或形状不对的配置必须 fail-closed 且原字节不改写；「文件不存在」与「内容损坏」必须是两个读数；OAuth 流程同时最多一个 listener、到期必须关端口、注册与回收必须全等；`/list` 的响应投影必须只来自运行时注册表（凭证不外泄、健康问题按文件顺序、401/405 拒绝先于凭证解析、响应过程不改盘）。重点是恒真桩突变（P-02 / P-32）：去掉 chmod、去掉 rename 前校验、改回直写、去掉排他槽位、去掉到期定时器、去掉 supersede、去掉 closeAllConnections 都必须有用例变红（ADR-0099）',
     run() {
       return runNodeTestFiles([
         'packages/capabilities/dsh-wanzh-hulian/test/atomic-store.spec.mjs',
@@ -732,6 +732,7 @@ const CHECKS = [
         'packages/capabilities/dsh-wanzh-hulian/test/persistence-inventory.spec.mjs',
         'packages/capabilities/dsh-wanzh-hulian/test/oauth-flow.spec.mjs',
         'packages/capabilities/dsh-wanzh-hulian/test/oauth-routes.spec.mjs',
+        'packages/capabilities/dsh-wanzh-hulian/test/list-response.spec.mjs',
       ], 'Wanzh 原子持久化与 OAuth 生命周期契约自测失败')
     },
   },
