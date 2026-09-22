@@ -1,9 +1,9 @@
 /** Materializes the tracked profile seed plus the built host runtime into a runnable profile. */
 
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join, sep } from 'node:path'
 import { composeProfileManifest, hostEntryPath, overlayPath, planMaterialize, type CopyPlan, type ProfileManifest } from './layout.js'
 
 /** One materialized profile ready to be handed to the host child process. */
@@ -14,12 +14,44 @@ export interface MaterializedProfile {
   readonly installed: boolean
 }
 
-function assertPlan(plan: CopyPlan, seedDir: string): void {
+function assertComposedArtifacts(manifestPath: string, plan: CopyPlan): void {
+  let manifest: unknown
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  } catch (cause) {
+    throw new Error(`lute shell: invalid composed package manifest ${manifestPath}: expected readable JSON`, { cause })
+  }
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)
+    || !('files' in manifest) || !Array.isArray(manifest.files) || manifest.files.length === 0) {
+    throw new Error(`lute shell: invalid composed package manifest ${manifestPath}: files must be a nonempty array of literal relative file paths`)
+  }
+  const packageDir = dirname(manifestPath)
+  const realPackageDir = realpathSync(packageDir)
+  for (const file of manifest.files) {
+    if (typeof file !== 'string' || file.trim() !== file || /[\\:*?[\]{}()!\u0000-\u001f\u007f]/u.test(file)
+      || file.split('/').some(part => part === '' || part === '.' || part === '..')) {
+      throw new Error(`lute shell: unsupported composed package files entry ${JSON.stringify(file)} in ${manifestPath}: expected a literal relative file path without patterns or traversal`)
+    }
+    const path = join(packageDir, file)
+    if (!existsSync(path)) {
+      throw new Error(`lute shell: missing composed package file ${path} — run pnpm run build in the owning package (${packageDir})`)
+    }
+    if (!statSync(path).isFile()) {
+      throw new Error(`lute shell: unsupported composed package artifact ${path}: expected a regular file; directory expansion is not supported`)
+    }
+    if (!realpathSync(path).startsWith(`${realPackageDir}${sep}`)) {
+      throw new Error(`lute shell: unsafe composed package artifact ${path}: resolves outside its package`)
+    }
+    if (!plan.entries.some(entry => entry.kind === 'composed-package'
+      && (entry.from === path || (entry.recursive === true && path.startsWith(`${entry.from}${sep}`))))) {
+      throw new Error(`lute shell: unsupported composed package artifact ${path}: not covered by the copy plan`)
+    }
+  }
+}
+
+function assertPlan(plan: CopyPlan): void {
   for (const entry of plan.entries) {
     if (existsSync(entry.from)) {
-      // 递归目录条目只查「目录存在」会静默放过内容残缺（2026-09-23 DA-26 消融实测：
-      // 抽走 lib/index.js 后 materialize 仍 exit=0，profile 声明 bundle 但宿主入口缺失）。
-      // 空目录是能机器判出的最小完整性下界；逐文件清单的完整枚举超出此处。
       if (entry.recursive === true && readdirSync(entry.from).length === 0) {
         throw new Error(`lute shell: composed package directory ${entry.from} is empty — run pnpm run build in the owning package`)
       }
@@ -30,6 +62,12 @@ function assertPlan(plan: CopyPlan, seedDir: string): void {
       throw new Error(`lute shell: missing composed package file ${entry.from} — run pnpm run build in the owning package`)
     }
     throw new Error(`lute shell: built host runtime is missing ${entry.from} — run pnpm run build in apps/lute-shell`)
+  }
+  // A nonempty lib can still lack artifacts promised by its manifest.
+  for (const entry of plan.entries) {
+    if (entry.kind === 'composed-package' && basename(entry.from) === 'package.json') {
+      assertComposedArtifacts(entry.from, plan)
+    }
   }
 }
 
@@ -81,7 +119,7 @@ export async function materializeProfile(input: {
   install?: (profileDir: string) => Promise<void>
 }): Promise<MaterializedProfile> {
   const plan = planMaterialize(input)
-  assertPlan(plan, input.seedDir)
+  assertPlan(plan)
   for (const entry of plan.entries) {
     await mkdir(dirname(entry.to), { recursive: true })
     if (entry.recursive === true) await cp(entry.from, entry.to, { recursive: true })

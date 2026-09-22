@@ -1,8 +1,7 @@
 # DA-26 · 薄壳物资消融（materialize 缺件降级路径）
 
 - 优先级：P1
-- 状态：`done`（2026-09-23，EX-09：**消融抓到「目录在内容空」静默通过缺陷并已修**；
-  部分内容缺件登记为已知边界）
+- 状态：`in-progress`（2026-09-23 重开：最初复现的非空目录缺入口仍被放行，需补清单级预检；第二轮清单级预检已落地，待门禁绿+提交后收口）
 - 依赖：无
 - 估算：M
 - 来源：2026-09-22 诊断读数（薄壳 materialize 链路 91 行，缺件时的启动行为从未读数）
@@ -56,14 +55,44 @@ lute-shell 用 npm 上的 harness 运行时启动 cordis host，`src/profile/mat
 下界。红→绿：先写消融形状的测试（红）→ 修复 → 10/10 绿 → `pnpm run build` 重建 lib →
 端到端空目录消融 exit=1 复验。
 
-### 已知边界（登记，不在本卡修）
+### 已知边界（已闭合，2026-09-23 第二轮）
 
-「目录非空但缺个别文件」仍静默通过——完整性枚举需要每包的文件清单
-（类似 files-coverage 的清单对账），而 composed 包的清单事实分散在各包
-`package.json` 的 `files` 字段。**若该边界需要闭合，正确路径是把
-`files` 清单接进 planMaterialize**——那是独立工作量，不在本消融卡射程。
-风险面评估：`lib/` 非空但缺入口的场景要求构建被中断在「产出了部分文件」的
-中间态，pnpm/tsc 构建要么全成要么可重跑，实际发生概率低。
+第一轮把「目录非空但缺个别文件」登记为边界，理由是「完整性枚举需要每包文件清单」。
+第二轮用户复审指出：**原始反例（抽走 index.js）都还放行，不能算完成**——边界的
+理由里恰好写着修法（`files` 清单），于是直接闭合（见下节）。此边界不再存在。
+
+## 结算补记（2026-09-23 第二轮，清单级预检）
+
+### 重开事实
+
+第一轮的空目录校验只拦「空目录」，原始反例「非空 lib 缺 index.js」仍 exit=0 静默放行
+——profile 声明 bundle、宿主入口缺失，与消融目的（清晰报错）背道而驰。
+
+### 修法（`materialize.ts` assertComposedArtifacts）
+
+manifest 清单级预检：对每个 composed 包的 `package.json` 读 `files` 字段，逐项验证后
+才允许拷贝。任一异常都在**写 profile 之前**抛错（fail-closed）：
+
+| 校验面 | 拦截形状 |
+| --- | --- |
+| manifest 可解析 | 非法 JSON / null / 数组 / 标量 / 缺 files / files 非数组 / 空数组 |
+| 条目形态 | 非字符串、首尾空白、glob（`*` `**` `?` `[]`）、花括号展开、`!` 取反、控制字符 |
+| 路径安全 | 空段、`.` `..` 段、反斜杠、绝对路径、盘符相对（`C:`）、NUL |
+| 存在性 | 缺文件 → `missing composed package file … — run pnpm run build in the owning package` |
+| 类型 | 目录代替文件 → `expected a regular file; directory expansion is not supported` |
+| 符号链接 | realpath 逃出包目录 → `unsafe … resolves outside its package`（file 与 parent dir 两种形状） |
+| 拷贝计划 | 条目不在 composed-package 拷贝计划内 → `not covered by the copy plan` |
+
+`assertPlan` 签名同步从 `(plan, seedDir)` 收窄为 `(plan)`（seedDir 从未被消费）。
+
+### 证据
+
+- 红→绿：`npx vitest run test/materialize.spec.ts` → **55/55**（新增 30+ 用例：恶意清单
+  9 形态、unsupported entries 24 形态、symlink 逃逸、目录代替文件、拷贝计划外、缺件后恢复）；
+- 全套件：`npx vitest run` → **125/125**；
+- 隔离 CLI 复验（`LUTE_SHELL_PROFILE` 指向临时目录，抽走 index.js）：
+  exit=1、stderr 指明缺失文件与恢复命令、profileCreated:false、clientStillExists:true。
+
 
 ### 附带发现
 
