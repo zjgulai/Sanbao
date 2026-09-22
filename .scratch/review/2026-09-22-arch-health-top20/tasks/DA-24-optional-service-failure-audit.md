@@ -1,8 +1,8 @@
 # DA-24 · 可选服务保守失败态抽查
 
 - 优先级：P2
-- 状态：`open`
-- 依赖：DA-22（复用消费面清单）
+- 状态：`done`（2026-09-22，EX-08）
+- 依赖：DA-22（已 done，登记处为输入）
 - 估算：S
 - 来源：ADR-0038（栅栏读不到配对服务 = 拒绝）模式复检；2026-09-12 实测共享栅栏 403 分支不可达的前科
 
@@ -29,3 +29,27 @@ ADR-0038 确立的模式：可选服务的判据一律包保护，失败态按**
 
 - 这是抽查不是全量重写——发现一个修一个，不顺手重构（超出任务范围）；
 - 「测试里 mock 了服务在场」不等于「运行时服务在场」，测试绿不能当运行证据（P-02）。
+
+## 结算（2026-09-22，EX-08）
+
+**射程说明**：EX-07（DA-23）分诊时已对登记处全部 19 个消费文件逐点核对读法
+（分诊表见 [DA-23](DA-23-dual-channel-compliance.md) 桶 B/C，每点附代码行证据）——
+本卡抽查表**不复述**那份读法，只补它未覆盖的三件事：
+
+1. **fail-open 终扫**：对全部消费点做「读不到 → 是否放行/当无限制」模式扫描——
+   **零命中**。限额/栅栏类消费的失败态全部保守：
+   - `pair-access`（安全栅栏，5 包共享单源）：`pairing === undefined → return false`，
+     `isPairedDevice` 抛异常也 `return false`（shared/host/pair-access.ts:85-93）；
+     且有具名负例测试守着（access.spec.ts：『refuses a LAN client when no pairing
+     service is present』『refuses … when pairing returns false』）——读不到=拒绝
+     且被测试证明，不是只写在注释里。
+   - `attachments.imageLimits`：缺服务走 `?.` 缺省（限额不放大）；
+   - `official-usage-meter`：缺 `sessionProjections` 返回空 async（计量降级为空，不虚报）。
+2. **EX-07 同日修复的 2 处**（agent-team-gui connection/locale/systemPrompt 补守卫）
+   已把最后两处「无守卫直用」收口——放行型缺陷清零成立。
+3. **ADR-0038 模式一致性结论**：19 文件里唯一安全语义消费点（pair-access 栅栏）
+   是该 ADR 的原始样板且被测试证明；其余消费点是功能降级语义（缺服务=功能缺席），
+   与「读不到=拒绝」的安全语义不冲突。
+
+**结论**：放行型缺陷清零，无新增债务；抽查依据（逐点读法）与处置记录在 DA-23 分诊表，
+本卡不另造第二份（一份事实一个家）。
