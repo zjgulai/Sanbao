@@ -99,3 +99,56 @@ full **77 项（76 pass / 1 skip / 0 fail）**，两者 exit 0。新增的 6 类
 
 **仍未解决**（审证也确认过）：跨进程互斥；真实 OAuth 回调的端到端复现（需要真实 tokenEndpoint）；
 客户端渲染 `health`；宿主对未处理 rejection 的策略（审证未定位到 `ctx.webServer` 的派发实现，不下结论）。
+
+## 2026-09-22：列表响应组装抽离（DA-07）
+
+### Problem
+
+`lib/index.js` 同时承担存储、凭证、OAuth、工具和 HTTP 路由。列表响应的组装可以独立验证，
+但原先仍与这些职责放在一起。本片只拆 `handleList`，不改变本 Note 与 ADR-0099 的既有行为契约。
+
+### Decision
+
+- `lib/board-list.js` 导出内部工厂 `createListHandler`，接收六个现有读函数/汇总函数；
+  `lib/index.js` 保留路由注册、鉴权、方法检查、错误处理和 disposer。
+- 读取顺序、凭证配置态、Getnote 字段、板块顺序和健康问题顺序保持不变。
+  工具名称通过回调在请求时读取，不在模块初始化时访问尚未初始化的 `toolDefs`。
+- 同批将新模块加入 `package.json.files`；公共 exports、依赖、客户端代码不变。
+- `test/list-response.spec.mjs` 调用真实 `apply` 注册的 `/list` handler，只执行路由 effect，
+  不启动 MCP 或技能写入；临时 HOME 使用仓库已有的 `mutationRoot`，不写包目录。
+
+### Alternatives considered
+
+- 同时拆 OAuth 与写入流程：涉及独立的生命周期与状态一致性契约，本片不扩大范围。
+- 只对新工厂喂假结果：不能证明真实路由接线，改用宿主注册入口验证响应、拒绝路径和磁盘不变。
+- 只同步本机新文件而不修改 `files`：会让全新安装缺模块，不接受。
+
+### Consequences
+
+- 定向特征测试：原版 10/10；临时将 `apiKeyConfigured` 改为恒假后 3 条失败；恢复及抽离后 10/10。
+- 协调者在完整相对目录布局的隔离副本、随后在主树分别运行包自己的 `typecheck` 与 `test`：
+  类型检查 exit 0，测试 100/100。故意损坏配置的既有测试会打印 MCP 拒载诊断，不宣称零日志。
+- `npm pack --dry-run --json --ignore-scripts --offline` 共 11 个文件，新模块在内；
+  `checkPackageFilesCoverage` 核对 11/11，去掉新模块的清单项时判红并点名 `lib/board-list.js`。
+- 独立复审确认抽离前后 handler 行为等价。包没有 build 或 validate-build 脚本，二者不适用；客户端未改。
+- 用户批准后，仅同步本包 `lib/board-list.js`、`lib/index.js`、`package.json` 到 profile 的 vendor 与 node_modules。
+  两侧旧字节及新文件原本缺席的状态已备份至仓库外 `Magpie-Horch-backups/wanzh-list-20260922-RBkZ73/`；
+  `manifest.json` 记录旧/新 SHA-256、权限和完成项。按新模块→入口→清单顺序 tmp+rename，写前复核旧哈希，
+  写后 6/6 文件哈希匹配，源码未受影响；`sync-profile --check --loadpoint` 与 `--check --only-metadata` 均 exit 0（27 个包）。
+  未重启 DSH、未验收实机，不将磁盘同步计为运行实例已更新，也不将此片计为整张 DA-07 完成。
+
+### 门禁可达性（2026-09-22 补）
+
+- 本 spec 原先**谁也跑不到**：门禁的包级测试是显式点名式（无自动发现），CI 只跑 `scripts/gate.mjs`，
+  根仓 `test:gate` 只覆盖 `scripts/`。静态读数：全仓 42 个包级 `*.spec.mjs`，门禁点名 9 个。
+- 经用户 2026-09-22 拍板，把它接进既有门禁项 `wanzh-persistence-and-oauth`（该判据声明含
+  「路由注册与回收由同一份清单驱动」，本 spec 走的正是真实 `apply` 注册与 disposer），
+  同批更新该判据的 remediation 文案。ADR-0099 以**带日期追加**记录，不改写 09-16 的历史读数。
+  接线后门禁点名 10/42。
+- **反向突变（证明接线承重，不是加了就算）**：把 `lib/board-list.js` 的
+  `mergeHealth(state.health, connsHealth, mcpHealth)` 换成 `mergeHealth(connsHealth, state.health, mcpHealth)`
+  ——只换健康问题的排序。旧 6 个 spec 对同一突变 **59 pass / 0 fail**（全盲）；
+  接入后同一突变在具名用例 `/list reports corrupt state, connections and MCP health in order without rewriting evidence`
+  （`list-response.spec.mjs:255`）变红，exit 1。突变后文件已还原，`sha256=739e3c48…` 与改前一致。
+- **仍未覆盖**：其余 32 个包级 spec 依然不在门禁射程内——这是既有状态（DA-08 按四包最低测试面收口），
+  本条只接上本片新增的那一个，不把「全仓包级 spec 可达性」记成已解决。

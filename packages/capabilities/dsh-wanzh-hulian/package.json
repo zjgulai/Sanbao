@@ -15,6 +15,7 @@
   "files": [
     "lib/index.js",
     "lib/atomic-store.js",
+    "lib/board-list.js",
     "lib/boards.js",
     "lib/bounded-body.js",
     "lib/business-meta.js",

@@ -11,8 +11,9 @@ import { BodyLimitError, readBoundedJson, SETTINGS_JSON_MAX_BYTES, SETTINGS_READ
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { PIXPIX_BUSINESS_META, SHOPIFY_BUSINESS_META, APIFY_BUSINESS_META, MCP_STATIC_TOOL_META, staticToolMetaFor } from "./business-meta.js";
 import * as McpClient from "@deepseek-ai/dsh-mcp-client";
-import { buildBoards, errorMessage, fetchShopifyAdmin, mergeRegisteredTools, normalizeShopifyHost, resolveShopifyToken } from "./host-util.js";
-import { BOARDS, GETNOTE_LOGO } from "./boards.js";
+import { errorMessage, fetchShopifyAdmin, normalizeShopifyHost, resolveShopifyToken } from "./host-util.js";
+import { GETNOTE_LOGO } from "./boards.js";
+import { createListHandler } from "./board-list.js";
 
 /**
  * dsh-wanzh-hulian — Host half（万物互联）。
@@ -1350,51 +1351,14 @@ function textOutput() {
 }
 
 /* ── 路由 ─────────────────────────────────────────────────────────────── */
-async function handleList(credentials) {
-  const state = await readState();
-  const creds = await resolveCreds(credentials);
-  const { connections: conns, health: connsHealth } = await readConnections();
-  const connections = [];
-  for (const conn of conns) {
-    const item = { ...conn };
-    const st = {
-      enabled: conn.enabled !== false,
-      modelInvoke: conn.id === "getnote-brain" ? state.modelInvoke : undefined,
-      defaultTopicId: conn.id === "getnote-brain" ? (state.defaultTopicId ?? null) : null,
-      cliAuthed: conn.id === "getnote-brain" ? creds.cliAuthed : false,
-      credSource: conn.id === "getnote-brain" ? creds.source : "none"
-    };
-    if (conn.id === "getnote-brain") {
-      st.apiKeyConfigured = Boolean(creds.apiKey);
-      st.clientIdConfigured = Boolean(creds.clientId);
-    } else {
-      // 通用：按 authFields 逐 ref 检查配置态
-      for (const f of conn.authFields ?? []) {
-        try {
-          const r = await credentials.resolve(f.ref);
-          st[f.ref + "Configured"] = typeof r?.value === "string" && r.value !== "";
-          if (typeof r?.value === "string" && r.value) st.credSource = st.credSource === "none" ? "form" : st.credSource;
-        } catch { st[f.ref + "Configured"] = false; }
-      }
-    }
-    // getnote 旧字段兼容
-    if (conn.id === "getnote-brain") {
-      Object.assign(item, mergeRegisteredTools(item, getnoteToolNames()));
-      item.command = conn.command ?? item.command;
-      item.oauthCmd = conn.oauthCmd;
-    }
-    item.state = st;
-    connections.push(item);
-  }
-  const boards = buildBoards({ boards: BOARDS, connections });
-  const { health: mcpHealth } = await readMcpServers();
-  return {
-    status: 200,
-    // health 是给设置页的结构化读数：损坏的持久化文件在这里逐条列出，
-    // 能力侧已按 fail-closed 关闭（connections 逐条 enabled:false）。
-    body: { ok: true, boards, connections, health: mergeHealth(state.health, connsHealth, mcpHealth) }
-  };
-}
+const handleList = createListHandler({
+  readState,
+  resolveCreds,
+  readConnections,
+  readMcpServers,
+  getnoteToolNames,
+  mergeHealth
+});
 
 async function handleTopics(credentials) {
   const r = await getnoteRequest(credentials, "GET", "/resource/knowledge/list", { scope: "DEFAULT" });
