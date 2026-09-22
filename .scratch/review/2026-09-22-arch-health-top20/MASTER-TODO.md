@@ -73,7 +73,7 @@
 | --- | --- | --- | --- | --- | --- |
 | [DA-38](tasks/DA-38-package-placement-audit.md) | 29 包 × 5 组归属审计（图谱层 vs package.json 对账） | P1 | M | 无 | `open` |
 | [DA-39](tasks/DA-39-ship-boundary-review.md) | 出货面 / 本机装配边界复核（ADR-0056/0061） | P2 | S | 无 | `open` |
-| [DA-40](tasks/DA-40-patch-replay-dryrun.md) | 补丁重放脚本干跑演练（下次升级前最后保险） | P1 | S | 无 | `open` |
+| [DA-40](tasks/DA-40-patch-replay-dryrun.md) | 补丁重放脚本干跑演练（下次升级前最后保险） | P1 | S | 无 | `done`（09-22，EX-13：四步全绿+幂等；**抓到 rollback 全坏缺陷已修**；发现 rollback=整文件还原语义） |
 | [DA-41](tasks/DA-41-hardlink-snapshot-refill-drill.md) | 硬链接快照补件演练（补件 + 判据验证完整链路） | P2 | S | 无 | `open` |
 
 ## 4. 依赖与批次

@@ -157,8 +157,10 @@ def rollback_one(f, sig, desc):
     if not orig.exists():
         print(f"== {desc}: no .orig backup, skip")
         return True
-    r = subprocess.run(["node", "--check", str(orig)], capture_output=True, text=True)
-    if r.returncode != 0:
+    # .orig 无 .js 扩展名，node 按文件路径 --check 会以 ERR_UNKNOWN_FILE_EXTENSION
+    # 拒绝加载（2026-09-22 干跑实测：rollback 在任何机器上永远 ABORT）。
+    # 复用 apply 路径的 syntax_ok_text（写临时 .js 再 check）。
+    if not syntax_ok_text(orig.read_text(encoding="utf-8")):
         print(f"!! {desc}: .orig fails node --check; abort rollback for safety")
         return False
     shutil.copyfile(orig, f)
