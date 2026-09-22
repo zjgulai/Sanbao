@@ -43,6 +43,31 @@ TS 包的 `lib/*.js` 是 tsc/tsdown 产物，不计入本条。
 - **终审修复波次**：scope 订正、HTML 注入、删除依赖错位、CSS 产物精度四项已处置；保留当前 SOURCE 的 workbench/overlay-only 入口及预算/来源/编辑/导出能力。
   实际 built factory/apply、CSSOM、DOM 和点击提交 payload 的 RED/GREEN，最终全包/强制编译/build/verify 输出与最终哈希归
   [产物同步 Note](../../../../docs/notes/implemented/surface/2026-09-21-deepresearch-artifact-sync.md)。协调者已复验 84/84 测试与实际 bundle 浏览器 8/8；定向复审四项全关闭，无新增阻塞项。首片本地验收通过，不标整卡完成。
-- **不是全卡完成**：wanzh / investigation / gate 拆分未做；主树与 worktree 均缺 manifest 声明的 21 个旧版开发运行时 tarball，
-  完整从零安装未验证；validate-build 脚本不存在；source 与实际 bundle 的隔离浏览器交互已补证，DSH 集成未验证，整仓门禁仍失败。
+- **当时未完成的范围**：wanzh / investigation / gate 拆分未做；主树与 worktree 均缺 manifest 声明的 21 个旧版开发运行时 tarball，
+  完整从零安装未验证；validate-build 脚本不存在；source 与实际 bundle 的隔离浏览器交互已补证，DSH 集成未验证，整仓门禁当时仍失败。
   读数与剩余边界见同一 Note 的协调者验收章节，不用组件预览替代实机读数。
+
+## 第二片部分结算（2026-09-22）
+
+- ResearchView 首片已合入并随 `4788320` 推送；该提交的本地 full 复验和远端 CI 结果见
+  [DA-10 §8](DA-10-auto-update-first-steps.md)，不再沿用「未合入主树」的旧状态。
+- Wanzh 只抽离列表响应组装：新增内部 `lib/board-list.js`，保留全部路由守卫和其他处理器，
+  同步 `files` 清单；测试与复审证据统一见
+  [Wanzh Note 的 DA-07 补片](../../../../docs/notes/implemented/capability/2026-09-16-wanzh-persistence-and-oauth-lifecycle.md)。
+- 源码已落回主树、尚未提交；用户批准后已备份并局部同步两处运行副本，详见同一 Note。未重启应用、实机未验证。
+  Wanzh 其余职责、investigation 与 gate 核心尚未拆分，整卡继续 `in-progress`。
+
+### 第二片收尾复验（2026-09-22，本轮独立重跑）
+
+- **不沿用上轮结论，逐项重算**：包内 `node --test test/*.spec.mjs` **100/100 pass**；`tsc -p tsconfig.json` 无输出；
+  `npm pack --dry-run --json` **11 个文件含 `lib/board-list.js`**；`lib/board-list.js`、`lib/index.js`、`package.json`
+  三者的 `sha256` 在**仓库 / vendor 副本 / 装载点副本**三处**逐一相等**（6/6 匹配）。
+- `sync-profile --check --loadpoint` → `ok 装载点与仓库源一致（对比 27 个包）`，exit 0。
+- 代码复核：`index.js` 中被注入的六个函数都是 1354 行之前的 hoisted `function` 声明，`handleList` 在 1636 行
+  才被路由调用，无 TDZ 风险。
+- **门禁可达性缺口已闭**（用户当日拍板）：本片新增的 `test/list-response.spec.mjs` 原先不在任何判据射程内
+  （全仓 42 个包级 spec，门禁点名 9 个）。已接进 `wanzh-persistence-and-oauth`，并做反向突变为证：
+  同一突变下旧 6 个 spec **59 pass / 0 fail**、接入后具名用例变红。读数与还原哈希见
+  [Wanzh Note 的门禁可达性节](../../../../docs/notes/implemented/capability/2026-09-16-wanzh-persistence-and-oauth-lifecycle.md)。
+- 完整门禁（`gate:full`）与提交状态见本目录 [MASTER-TODO](../../MASTER-TODO.md) 与 [DA-10](DA-10-auto-update-first-steps.md)。
+- **仍未验证**：实机（设备上重启后 `/list` 真实读数）、Wanzh 其余职责、investigation 与 gate 核心的拆分。

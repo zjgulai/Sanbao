@@ -127,7 +127,38 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
 聚合层 `runNodeTestFile` 把它丢了，于是超时被写成「反向自测失败」。
 判据本身没失败，是**仪器没读到结论**（总账 P-21 的修法自己复发了一次）。
 
-**环境事实（未处理，需用户拍板）**：本机挂着四组父进程已是 init 的 `dsh-newapp-local`
-vitest worker（起跑 09-21 11:53–12:28，11 小时以上，每组 10 worker），load 9.7／10 核。
-它同时是 `repo-attest.test.mjs` 逼近 120s、以及 `run-script.test.mjs` 那条
-「烧 CPU 的进程要出现在前 5 名」翻红的直接原因。清进程属机器级动作，不在本批擅自执行。
+**环境事实（未处理，需用户拍板）**：09-21 观察到 `dsh-newapp-local` 的四组父进程为 init 的 vitest 树，另有一个被 init 领养的独立 worker；五个高 CPU worker 的工作目录相同。
+这能解释当时 CPU 前五名被占满，不能仅凭同时发生就断言它是见证耗时超出 120s 的唯一原因；未做清理后的对照实验。清进程属机器级动作，不在本批擅自执行。
+
+**处置（2026-09-22，用户当日拍板后执行）**：`ps` 实测共 **41 个**进程（4 棵树各 1 父 + 9 worker，另加 1 个被 init 领养的独立 worker），
+起跑 09-21 11:53–12:28，工作目录同为 `packages/surfaces/dsh-newapp-local`，五个 worker 各占 ~95–99% CPU。
+`kill -TERM` 后 4 秒**全部存活**（忙循环不处理信号），改 `kill -9` 才清掉；复核 vitest 进程数 **41 → 0**，
+`load averages` 10.04 → 4.59（1/5/15 分钟均值随采样窗口回落）。**动作只针对这一批 09-21 的 vitest 残留**，未触碰其他进程。
+清完当场**仍不静**：`Notes.app`（pid 54460，父进程 init）独占 ~100% CPU，Kaspersky `kavd` 45%、`logd` 34% 仍在——
+所以「机器干净」这个前提**不成立**，后续墙钟类读数依旧带噪声，只是比 5 核被吃满时好。
+
+**清理后的门禁读数（对照，不作因果断言）**：同日晚些时候的 `pnpm run gate:full --json` 得
+**132 项：129 通过 / 3 跳过 / 0 失败**，exit 0，耗时约 18 分钟（上一轮同口径为 1404.97 秒）。
+跳过项仍是 `live-presets`、`resource-path-reachability`、`dmg-layout-doc`；`gate-concurrency-selftest`、
+`repo-attest-selftest`、`run-script-selftest`、`scripts-runnable` 均通过，且本轮**全程未写工作树**，
+未出现上轮那种「因外部写入而跳过见证」的情况。耗时差异当中混着 Notes.app 占核与任务构成变化，
+**未做单变量对照，不写成「清进程让门禁变快」**。
+
+### 8. 推送前复验与远端验收（2026-09-22）
+
+- 先前 `/tmp/sanbao-pushfull.uFA1c2` 虽 exit 0，实际为 132 项：128 通过、4 跳过；
+  `gate-concurrency-selftest` 因本会话同时修改 `MASTER-TODO.md` 而跳过。453 秒不是完成十轮见证的耗时，该轮不作为并发验收证据。
+- 停止本会话对工作树的写入后运行 `pnpm run gate:full --json`，得到 132 项：129 通过、3 跳过、0 失败、exit 0，耗时 1404.97 秒。
+  `repo-attest-selftest`、`gate-concurrency-selftest`、`run-script-selftest`、`scripts-runnable` 均通过；
+  3 个跳过仍为 `live-presets`、`resource-path-reachability`、`dmg-layout-doc`，不写成全部验收通过。
+  原始报告：`/tmp/sanbao-integration-verify.CTU3Ju/full.json`，stderr 同目录，启动 HEAD 为 `4788320e921843e16726fb7248eb967cbbb50cf1`。
+- 仅将已批准的 7 个提交 `1734914` 至 `4788320` 推送至 Sanbao/main，远端 SHA 已回读一致；
+  Laya 与其他会话的未提交文件不在该推送内。
+- 新 [CI 35636234340](https://github.com/zjgulai/Sanbao/actions/runs/35636234340) 已完成：quick 为 88 通过 / 17 跳过 / 19 失败，full 为 90 通过 / 22 跳过 / 20 失败，两个 job 均失败。
+  原始报告在 `/tmp/sanbao-ci-4788320.sY49ph/`；对照 [CI 35566626883](https://github.com/zjgulai/Sanbao/actions/runs/35566626883) 的 quick/full 报告（`/tmp/sanbao-ci-baseline.k0DAiR/`），只归一化 `duration_ms` 数字，其余违例原文保留。
+- 具体变化：新增 `run-script-selftest` 在两档均通过；full 的 `scripts-runnable` 从 65 条违例降至 64 条，更新包的 `TS2688` 消失。Deep Research 的两条诊断仍为缺依赖，但截尾位置变成新抽离文件中的 `react` 缺失；不能将短尾文本比较当成完整编译错误集的无回归证明。
+- 发布自测两档都从 14 条失败降至 2 条：V1–V8、F1–F3 和 R3 已不再报失败；R1/R2 变成 `rc=2 缺失:无 留档数=1`，说明不再是沙箱缺失的原路径。
+  本机沙箱中仅令 `chflags` 返回 127，得到同样两条失败并打印「无法锁定」，证据 `/tmp/sanbao-restore-lock-proof.EAatSy/`；这是锁定能力缺失的诊断对照，不是 Linux 锁定成功的证明。未用恒成功锁定桩换绿。
+- 除上述变化与耗时噪声外，已输出的违例原文及 skippedChecks 集合不变；旧 CI 的 vendor 未初始化、包级依赖缺失、Linux 缺 CoreText 等阻塞仍在。由于本轮授权的 CI 改动仅为更新包准备步骤，未擅自更换 runner、新增安装矩阵或降级判据。
+- 两个 job 均在门禁步骤终止，后续 attestation 步骤未执行；远端验收尚未收口。
+- CDP 9333 连接失败，DA-06 / DA-10 / DA-21 的三项实机读数仍未运行；未自行重启应用。

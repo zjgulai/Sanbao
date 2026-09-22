@@ -23,8 +23,8 @@
 
 | ID | 事项 | 证据 | 估算 | 状态 |
 | --- | --- | --- | --- | --- |
-| [DA-07](tasks/DA-07-source-hotspot-split.md) | 源码热点拆分（ResearchView.tsx / wanzh lib/index.js 等） | 图谱：39 函数/552 调用边；31 函数纯 JS 源 | L | `in-progress`（09-21：先拆 ResearchView，隔离工作区，行为验收后再碰下一文件） |
-| [DA-08](tasks/DA-08-test-depth-plan.md) | 测试纵深计划：四包最低测试面与默认套件可达性 | 图谱零边不代表零测试，见工单无语料反证 | L | `local-done`（09-21：无语料反证、LoopX 漏收修复及评审通过；未合入主树） |
+| [DA-07](tasks/DA-07-source-hotspot-split.md) | 源码热点拆分（ResearchView.tsx / wanzh lib/index.js 等） | 图谱：39 函数/552 调用边；31 函数纯 JS 源 | L | `in-progress`（09-22：ResearchView 首片已推；Wanzh 列表组装已抽离并独立复验，运行副本双同步 6/6 哈希相符；新 spec 已接进门禁并做反向突变；未验实机，待提交） |
+| [DA-08](tasks/DA-08-test-depth-plan.md) | 测试纵深计划：四包最低测试面与默认套件可达性 | 图谱零边不代表零测试，见工单无语料反证 | L | `done`（09-22：修复已合入并推送，主树 LoopX 默认套件复验 11/11） |
 | [DA-09](tasks/DA-09-mgt-ship-prerequisites.md) | MGT 管理层出货前置推进（或复核边界并记录） | ADR-0129 / architecture.md §3 | M | `done`（09-21） |
 | [DA-10](tasks/DA-10-auto-update-first-steps.md) | 自动更新路线第一步（不白做的两步） | docs/plans/2026-09-13-auto-update-route.md | M | `local-done`（09-21：①feed 管道 `ff4d721` + ②骨架 `bf7438a`；Developer ID 决策＝暂不采购，③–⑦ 挂起） |
 | [DA-11](tasks/DA-11-x64-universal-gap.md) | x64 / universal 构建缺口补齐（或记录单架构决策） | 2.5.0 CHANGELOG「登记下轮」 | M | `done`（09-21） |
@@ -60,12 +60,20 @@ ADR-0152；Developer ID **暂不采购**——更新器停在「检查 + 提示�
 欠读数（与 DA-06 同批，需 app 带 CDP 重启且屏幕可见）：`singleton-count-live` 的 `entry-newapp=1`、
 唤醒后 `data-dsh-newapp-degraded` 缺席、更新器在 app 内实际装载。
 
-**集成与验收收口（2026-09-21 夜 → 09-22）**：批次 E + DA-07/DA-08 的已评审改动整理成五个提交
-（`1734914` 验收入口 / `a9a6696` ResearchView 拆分 / `e7306c2` 门禁存量最小修复 /
-`82f1361` 工单结算 / `689f7bf` 超时判词 + `7001d3c` 重建物归位）。
-主树完整门禁 131 项：基线 4 红 → 集成后 1 红，最后那红归因为**墙钟预算**（用例 9/9 全绿），
-已按 P-21 的判词分类修法收口。归因全过程与未处理的环境事实见
-[DA-10 §7](tasks/DA-10-auto-update-first-steps.md)。
+**集成与验收收口（2026-09-22）**：`1734914` 至 `4788320` 的 7 个已批准提交已推送至 Sanbao/main。
+主树完整门禁与并发见证已复验，仍有明示的未覆盖面；新远端 CI 的逐项对比与实机缺口统一见
+[DA-10 §8](tasks/DA-10-auto-update-first-steps.md)。Laya 的本地建议型入口未包含在这次推送中。
+回滚材料的只读哈希核验已补至 [DA-18](tasks/DA-18-rollback-baseline.md)，不等同于恢复演练完成。
+
+**DA-07 第二片收尾与本机环境处置（2026-09-22，第二窗口）**：本轮不沿用上轮结论，逐项独立重跑——
+wanzh 包内 100/100、typecheck 无输出、`npm pack` 11 个文件含新模块、三处副本 6/6 哈希相符、
+`sync-profile --check --loadpoint` exit 0。发现并关闭一处**门禁可达性缺口**：本片新增的
+`test/list-response.spec.mjs` 原先不在任何判据射程内；经用户拍板接进 `wanzh-persistence-and-oauth`
+（第 7 个 spec），并以反向突变证明接线承重（旧 6 个 spec 对同一突变 59 pass / 0 fail，接入后具名用例变红）。
+全仓可达性基线读数（42 个包级 spec / 门禁点名 10）留档在 [DA-08](tasks/DA-08-test-depth-plan.md)。
+机器侧：09-21 遗留的 5 棵孤儿 vitest（41 个进程）经用户批准清除，load 10.04 → 4.59；
+`Notes.app` 100% / `kavd` 45% 仍在，故**不宣称环境已干净**——读数与边界见 [DA-10 §7](tasks/DA-10-auto-update-first-steps.md)。
+本节为本轮结算文本，**先于**门禁复跑落盘、跑期间不写工作树，因此该轮 `gate:full` 取证的树包含本节。
 
 ## 6. 结算
 
