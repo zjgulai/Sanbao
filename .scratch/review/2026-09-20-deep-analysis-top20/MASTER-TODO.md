@@ -38,7 +38,7 @@
 
 | ID | 事项 | 证据 | 估算 | 状态 |
 | --- | --- | --- | --- | --- |
-| [DA-16](tasks/DA-16-graph-freshness.md) | 图谱保鲜：排除 TS 包 lib/ + 发布窗口后例行增量重跑 | 本次实测：lib 构建产物双计入图 | S | `open` |
+| [DA-16](tasks/DA-16-graph-freshness.md) | 图谱保鲜：排除 TS 包 lib/ + 发布窗口后例行增量重跑 | 本次实测：lib 构建产物双计入图 | S | `done`（09-22：规则落地 + 定向增量 53 批重跑；lib/ 文件节点 0 残留、热点全指源文件、meta 对齐 HEAD） |
 | [DA-17](tasks/DA-17-baseline-checkups.md) | 基线类清单例行体检（theme-tokens / dead-instruments / exemptions） | 只减不增需有人推着清 | S | `done`（09-21：主题基线 6、豁免 0、死仪器 5；五项检查通过，后续窗口仍例行） |
 | [DA-18](tasks/DA-18-rollback-baseline.md) | 双基座回滚基线显式维护 | pin 注释：0.1.2-rc.1 仅回滚对照 | S | `open` |
 | [DA-19](tasks/DA-19-docs-link.md) | 本报告入 docs 索引，避免死指针 | P-09 | S | `done`（本收尾已执行） |
