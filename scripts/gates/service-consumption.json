@@ -1,0 +1,25 @@
+{
+  "$comment": "服务消费面登记处（DA-22 / ADR-0011 包边界的运行时面）。契约：每条登记一个消费 ctx.get() 的源文件——services 是该文件消费的字面量服务名全集（多算少算都判红），dynamic=true 表示该文件还有 ctx.get(<非字面量>) 的动态消费（名字运行时才定，静态不可枚举——该文件的新增字面量消费同样要登记）。登记范围：packages/ 与 apps/ 的源码，排除 lib/、node_modules/、test/、构建快照。背景：跨包 imports = 0，包间协作全部走 cordis 服务注入，此前这份耦合干线没有任何静态守卫（新消费点无人察觉）。判据见 scripts/gates/service-consumption.mjs（gate:service-consumption）。加条门槛：新消费点随提交登记——登记动作本身就是在回答「这个包依赖宿主的什么」。",
+  "schemaVersion": 1,
+  "consumptions": [
+    { "file": "apps/lute-shell/src/host/index.ts", "services": ["clientModules", "connection", "typertGateway"] },
+    { "file": "apps/lute-shell/src/host/streams.ts", "services": ["typertGateway"] },
+    { "file": "packages/capabilities/dsh-browser-local/src/index.ts", "services": ["attachments", "systemPrompt"] },
+    { "file": "packages/capabilities/dsh-deepresearch-local/src/index.ts", "services": ["web"] },
+    { "file": "packages/capabilities/dsh-deepresearch-local/src/platform.ts", "services": ["web"] },
+    { "file": "packages/platform/dsh-theme-local/src/index.ts", "services": ["desktopRuntime", "settings"] },
+    { "file": "packages/surfaces/dsh-agent-team-gui-local/src/client/index.ts", "services": ["connection", "locale"] },
+    { "file": "packages/surfaces/dsh-agent-team-gui-local/src/index.ts", "services": ["systemPrompt"] },
+    { "file": "packages/surfaces/dsh-agent-team-gui-local/src/tools/application/execution-service.ts", "services": ["jobs"] },
+    { "file": "packages/surfaces/dsh-agent-team-gui-local/src/tools/infrastructure/official-usage-meter.ts", "services": ["sessionProjections"] },
+    { "file": "packages/surfaces/dsh-algo-skills-local/src/pair-access.ts", "services": ["remoteWebUiPairing"] },
+    { "file": "packages/surfaces/dsh-capability-hub-local/src/client/index.ts", "services": [], "dynamic": true },
+    { "file": "packages/surfaces/dsh-newapp-local/src/client/launcher.ts", "services": [], "dynamic": true },
+    { "file": "packages/surfaces/dsh-newapp-local/src/pair-access.ts", "services": ["remoteWebUiPairing"] },
+    { "file": "packages/surfaces/dsh-qoder-sidebar-local/src/index.ts", "services": ["sessions"] },
+    { "file": "packages/surfaces/dsh-role-matrix-local/src/client/index.ts", "services": [], "dynamic": true },
+    { "file": "packages/surfaces/dsh-role-matrix-local/src/pair-access.ts", "services": ["remoteWebUiPairing"] },
+    { "file": "packages/surfaces/dsh-skill-center-local/src/client/index.ts", "services": [], "dynamic": true },
+    { "file": "packages/surfaces/dsh-skill-center-local/src/pair-access.ts", "services": ["remoteWebUiPairing"] }
+  ]
+}

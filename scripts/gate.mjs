@@ -45,6 +45,7 @@ import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } f
 import { checkProfileBundleSync, checkProfileFilesSync, checkProfileMetadata } from './gates/sync-profile.mjs'
 import { checkPackageFilesCoverage, createFileSource, listPackageTree } from './gates/package-files-coverage.mjs'
 import { checkPluginEntryContract } from './gates/plugin-entry-contract.mjs'
+import { checkServiceConsumption, collectConsumptionFiles } from './gates/service-consumption.mjs'
 import { buildExpectedSet, readProfileManifest, summarizeTarget } from './gates/profile-coverage.mjs'
 import { checkSharedSync } from './gates/sync-shared.mjs'
 import { checkLivePresetsAgainstInventory, toCanonicalLivePresetResult } from './gates/live-presets.mjs'
@@ -534,6 +535,29 @@ const CHECKS = [
       + '要么补回入口/apply，要么从 package.json 的 dsh.bundle.patch 里去掉声明',
     run() {
       return checkPluginEntryContract(collectManifests(), readRepoText)
+    },
+  },
+  {
+    name: 'service-consumption',
+    remediation:
+      '按报错方向处置：新消费点（文件或服务名）→ 在 scripts/gates/service-consumption.json 登记（登记动作就是在回答「这个包依赖宿主的什么」）；'
+      + '陈旧条目 → 删掉不再消费的服务名或整条；动态消费（ctx.get(<非字面量>)）→ 该文件条目加 dynamic: true。'
+      + '改完复跑本项，登记处与扫描必须逐字面量一致（DA-22 / ADR-0011 包边界的运行时面）',
+    run() {
+      return checkServiceConsumption({
+        registryText: readRepoText('scripts/gates/service-consumption.json'),
+        files: collectConsumptionFiles(repoRoot),
+      })
+    },
+  },
+  {
+    name: 'service-consumption-selftest',
+    remediation:
+      '跑 node --test scripts/gates/service-consumption.test.mjs 看红在哪条：本项必须能说「不」——新消费服务未登记、消费文件不在登记处、'
+      + '登记的服务已不再消费（陈旧）、登记的文件已不消费、动态消费未标 dynamic、登记处读不出/解析失败/为空，都必须判红；'
+      + '注释行不计消费（扫描近似，note 里声明）（P-02 / P-03）',
+    run() {
+      return runNodeTestFile('scripts/gates/service-consumption.test.mjs', '服务消费面判据的反向自测失败')
     },
   },
   {

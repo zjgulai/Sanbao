@@ -66,9 +66,30 @@ EX-06 ──→ EX-07
 4. 涉及决策的（EX-06 判据、EX-07 ADR、EX-12 并组提案）：补 Note（ADR-0015）；
 5. 独立提交，只取自己 hunks（P-43）。
 
+## 阶段 2 执行方案（2026-09-22 定稿，阶段 0 本地部分完成后）
+
+阶段目标：把「运行时耦合显性化」（批次 A 串行线）与五个无阻塞并行项推完。
+EX-04/EX-05（两个 L 级大头）按 spec 各开独立窗口，不在本阶段混做。
+
+**推进顺序**（成本配方：子代理合并批次、先样本后全量）：
+
+1. **EX-06（DA-22）服务消费面清单**——串行线头部，解锁 EX-07/08。
+   步骤：全仓扫描 `ctx.get(` / `ctx.<attr>` 属性读 / `connection.api.` 三种形态
+   （排除 lib/、node_modules、test）→ 产出「文件 × 消费服务」矩阵落数据文件 →
+   写判据 `service-consumption`（新消费点未登记判红）→ 反向自测进门禁。
+2. **EX-07（DA-23）双通道分诊**——复用 EX-06 清单，三桶归类 + ADR-0061 修订。
+3. **EX-08（DA-24）失败态抽查**——复用 EX-06 清单筛「可能不在场」消费点。
+4. **并行池（任意窗口取做）**：EX-10（DA-31 paper2skills 判型）→ EX-13（DA-40 补丁干跑）→
+   EX-09（DA-26 materialize 消融）→ EX-12（DA-38 归属审计）→ EX-11（DA-32 启动基线，
+   宜与 EX-01 同开机，可后置）。
+5. EX-14（清场）等 EX-01 完成后错峰开。
+
+每项完成仪式不变（工单结算 + MASTER 状态 + 判据类附 Note + 独立提交）。
+
 ## 执行记录
 
 （按切片结算时追加，格式：`EX-xx · 日期 · 一行结论 + 指向工单读数的链接`）
 
 - EX-02 · 2026-09-22 · DA-27 done：既有 selftest（19 用例）从未进门禁——已接 `lute-shell-pin-selftest` 判据项并做 FRAME_MAGIC 突变闭环（红 fail+exit=1 → 恢复绿 exit=0 双绿）。勘误与读数见 [DA-27 结算段](tasks/DA-27-protocol-constant-drift-ablation.md)。
 - EX-03 · 2026-09-22 · DA-28 done：装载点删 `lib/bounded-body.js` → `profile-files-sync` + `profile-bundle-sync` 双判红（exit=1，点名 `~lib/bounded-body.js`）→ mv 恢复原 inode → check 绿（27 包一致）+ 哈希闭环。消融两问判据在两个 S 级消融上验证完毕，EX-04 前置满足。读数见 [DA-28 结算段](tasks/DA-28-loadpoint-missing-file-ablation.md)。
+- EX-06 · 2026-09-22 · DA-22 done：服务消费面登记处（19 文件/20 服务/4 动态）+ `service-consumption`/`-selftest` 双判据进门禁（127/130 绿）。突变挖出判据自身连字符盲区（服务名正则漏 `brand-new-fake-service` 型名字）——已修并固化用例，第三次实证「没有反向突变的接线不算完成」。EX-07/08 已解锁。读数见 [DA-22 结算段](tasks/DA-22-service-consumption-matrix.md)。
