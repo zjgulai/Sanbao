@@ -63,7 +63,7 @@
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | [DA-34](tasks/DA-34-live-readings-one-shot.md) | 实机读数一次收口（DA-06/10/21 三件共用通道） | **P0** | S | 无（需窗口可见） | `open` |
-| [DA-35](tasks/DA-35-scratch-cleanup-execution.md) | DA-13 .scratch 45 项清场执行（按 DA-04 顺序） | P1 | L | DA-04 已满足 | `open` |
+| [DA-35](tasks/DA-35-scratch-cleanup-execution.md) | DA-13 .scratch 45 项清场执行（按 DA-04 顺序） | P1 | L | DA-04 已满足 | `done`（09-23，R7：15 个候选用户拍板全归档至 ~/project/_archive/Magpie-Horch-20260923/，4 处引用先行改写，44→30） |
 | [DA-36](tasks/DA-36-rollback-drill.md) | DA-18 回滚演练（超越哈希核对，真做一次恢复） | P2 | M | 无（建议备份机） | `open` |
 | [DA-37](tasks/DA-37-production-machine-channel.md) | 生产机读数通道方案设计（或明确弃案） | P2 | M | 无 | `open` |
 
