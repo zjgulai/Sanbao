@@ -1,0 +1,351 @@
+{
+  "schema_version": 1,
+  "status": "proposed",
+  "observed_at": "2026-09-24",
+  "intent": "提供 Magpie-Horch 的工程能力拓扑、运行时装配边界与优先解耦接缝；它不是功能完成清单，也不是运行态验收记录。",
+  "canonical_sources": {
+    "managed_package_inventory": "../catalog/packages.md",
+    "architecture_contract": "../architecture.md",
+    "discussion_note": "../notes/proposed/architecture/2026-09-24-subproject-capability-graph.md",
+    "relationship_cards": "seam-relationship-cards.md"
+  },
+  "evidence_limits": [
+    "包归类来自目录墙；包被目录收录不等于它已在当前宿主运行。",
+    "desktop profile 快照只说明声明态，未包含 DSH Desktop 的实机加载、界面可见或用户价值验收。",
+    "关系只描述已知治理与装配边界；跨包调用、数据所有权、服务注入和端到端用户流须在后续关系卡中取证。"
+  ],
+  "terms": {
+    "managed_package": "受目录墙治理的包；不自动等于 profile 已安装、bundle 已注册或宿主已生效。",
+    "host": "运行插件和界面的宿主。当前 DSH Desktop 与 Lute Shell 是不同宿主，不可默认互相替代。",
+    "runtime_composition": "源码到 profile 的 file 依赖、bundle 注册再到宿主加载的链路。",
+    "seam": "跨边界交接处；每一处必须可说清 owner、契约、回滚和可验证读数。",
+    "declared_state": "package.json、profile 或 manifest 的配置读数；不是运行或业务结果的证明。"
+  },
+  "hosts": [
+    {
+      "id": "dsh-desktop",
+      "name": "DSH Desktop",
+      "role": "当前优先的既有插件宿主",
+      "evidence_state": "profile declaration observed; live runtime not verified",
+      "boundary": "通过 desktop profile 的 file 依赖和 dsh.profile.bundles 进行装配。"
+    },
+    {
+      "id": "lute-shell",
+      "name": "Lute Shell",
+      "role": "自有 Electron 薄壳与独立宿主路径",
+      "evidence_state": "repository architecture observed; parity and production readiness not verified",
+      "boundary": "不是当前 DSH Desktop 的自动替代品；迁移前需要单独的兼容性和验收矩阵。"
+    }
+  ],
+  "desktop_profile_snapshot": {
+    "scope": "2026-09-24 对 desktop profile package.json 的声明态读取",
+    "direct_file_dependencies": 27,
+    "bundle_declarations": 41,
+    "managed_packages_joined": 29,
+    "managed_packages_declared_and_bundled": 26,
+    "managed_packages_file_dependency_only": 1,
+    "managed_packages_not_declared": 2,
+    "external_bundle_declarations": 15,
+    "runtime_evidence": "not collected"
+  },
+  "packages": [
+    {
+      "id": "lute-agentic-system",
+      "category": "infrastructure",
+      "capability": "仓库治理、构建与聚合门禁",
+      "desktop_profile_state": "not_applicable"
+    },
+    {
+      "id": "dsh-team-hub",
+      "category": "infrastructure",
+      "capability": "团队协同基础设施",
+      "desktop_profile_state": "file_dependency_only"
+    },
+    {
+      "id": "dsh-browser-local",
+      "category": "capability",
+      "capability": "浏览器能力桥接",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-deepresearch-local",
+      "category": "capability",
+      "capability": "深度研究工作流",
+      "desktop_profile_state": "declared_and_bundled",
+      "special_boundary": "含本地运行时依赖；与存储和网页获取的实际装配须另行取证。"
+    },
+    {
+      "id": "dsh-loopx-plugin",
+      "category": "capability",
+      "capability": "会话目标与循环协作",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-overseas-skills",
+      "category": "capability",
+      "capability": "出海技能导入与编排",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-overseas-tools",
+      "category": "capability",
+      "capability": "出海工具接入",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-paper2skills",
+      "category": "capability",
+      "capability": "论文到技能提取",
+      "desktop_profile_state": "not_declared"
+    },
+    {
+      "id": "dsh-wanzh-hulian",
+      "category": "capability",
+      "capability": "MCP、API 与企业应用连接",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-agent-team-gui-local",
+      "category": "surface",
+      "capability": "多 Agent 团队界面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-algo-skills-local",
+      "category": "surface",
+      "capability": "算法技能入口",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-capability-hub-local",
+      "category": "surface",
+      "capability": "能力目录与管理界面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-my-quotes",
+      "category": "surface",
+      "capability": "个人引用界面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-newapp-local",
+      "category": "surface",
+      "capability": "应用启动与新建入口",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-onboarding-carousel-local",
+      "category": "surface",
+      "capability": "引导轮播表面",
+      "desktop_profile_state": "not_declared"
+    },
+    {
+      "id": "dsh-qoder-sidebar-local",
+      "category": "surface",
+      "capability": "Qoder 侧栏表面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-role-matrix-local",
+      "category": "surface",
+      "capability": "角色矩阵表面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-skill-center-local",
+      "category": "surface",
+      "capability": "技能中心表面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-task-board-local",
+      "category": "surface",
+      "capability": "任务看板表面",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-auto-compact-local",
+      "category": "platform",
+      "capability": "自动上下文压缩",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-cost-guard-local",
+      "category": "platform",
+      "capability": "成本守卫",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-file-upload-local",
+      "category": "platform",
+      "capability": "文件上传",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-rename-conversations",
+      "category": "platform",
+      "capability": "会话重命名",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-root-brand-local",
+      "category": "platform",
+      "capability": "品牌根部装配",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-settings-shell-local",
+      "category": "platform",
+      "capability": "设置壳",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-theme-local",
+      "category": "platform",
+      "capability": "主题",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-ui-polish-local",
+      "category": "platform",
+      "capability": "通用界面润色",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-update-local",
+      "category": "platform",
+      "capability": "本地更新器",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-preset-lint-local",
+      "category": "contract",
+      "capability": "Preset 静态校验",
+      "desktop_profile_state": "declared_and_bundled"
+    },
+    {
+      "id": "dsh-skill-subset",
+      "category": "contract",
+      "capability": "技能子集约束",
+      "desktop_profile_state": "declared_and_bundled"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "lute-agentic-system",
+      "to": "managed_packages",
+      "type": "governance_and_gate",
+      "evidence_state": "architecture contract documented"
+    },
+    {
+      "from": "managed_package_source",
+      "to": "desktop_profile",
+      "type": "file_dependency",
+      "evidence_state": "declaration snapshot only"
+    },
+    {
+      "from": "desktop_profile",
+      "to": "dsh-desktop",
+      "type": "bundle_composition",
+      "evidence_state": "declaration snapshot only"
+    },
+    {
+      "from": "lute-shell",
+      "to": "dsh-desktop",
+      "type": "separate_host_path",
+      "evidence_state": "architecture contract documented"
+    },
+    {
+      "from": "surface_packages",
+      "to": "capability_packages",
+      "type": "user_value_projection",
+      "evidence_state": "topology hypothesis; source-level relation cards required"
+    },
+    {
+      "from": "contract_packages",
+      "to": "managed_packages",
+      "type": "static_contract_guard",
+      "evidence_state": "architecture contract documented"
+    }
+  ],
+  "seams": [
+    {
+      "id": "S0-runtime-composition",
+      "relationship_card": "seam-relationship-cards.md#s0-runtime-composition",
+      "priority": "first",
+      "owner": "工程与发布",
+      "boundary": "源码、profile file 依赖、bundle 注册、宿主加载",
+      "problem": "声明、安装、注册和实机生效容易被误当作同一件事。",
+      "contract": "每一步分别记录 declared、installed、bundled、live 四种读数；profile metadata、files 和 bundle 三面门禁共同覆盖声明与装载前契约。",
+      "rollback": "保留原 profile 与 bundle 组合，按既有同步流程回退。",
+      "verification": "门禁读数加目标宿主的显式加载与行为检查。"
+    },
+    {
+      "id": "S0-service-consumption",
+      "relationship_card": "seam-relationship-cards.md#s0-service-consumption",
+      "priority": "first_code_pilot",
+      "owner": "插件契约",
+      "boundary": "服务提供者、inject 声明、消费者读取与失败处理",
+      "problem": "同一行多次 ctx.get 调用的检测盲区会让可选服务契约遗漏。",
+      "contract": "服务消费者明确 inject、可选读取和保守失败行为；检测器可定位全部同类调用。",
+      "rollback": "仅回退检测器和其最小测试，不改变业务服务数据。",
+      "verification": "先补 Red/Green 测试，再运行相关门禁。"
+    },
+    {
+      "id": "S1-work-item-identity",
+      "relationship_card": "seam-relationship-cards.md#s1-work-item-identity",
+      "priority": "after_product_D3",
+      "owner": "产品与数据模型",
+      "boundary": "Task Board、Agent Team、LoopX、DeepResearch、Qoder 活动的工作对象",
+      "problem": "这些面当前有各自工作状态；尚无已证实的统一 work item 身份。",
+      "contract": "先确定一个用户价值流和主身份，再定义映射、生命周期、权限与审计边界。",
+      "rollback": "在统一身份得到验证前，各模块保留原有本地身份。",
+      "verification": "跨模块场景回放、重复项和状态漂移检查。"
+    },
+    {
+      "id": "S1-host-portability",
+      "relationship_card": "seam-relationship-cards.md#s1-host-portability",
+      "priority": "after_host_choice",
+      "owner": "宿主与发布",
+      "boundary": "DSH Desktop 与 Lute Shell 的运行和发布路径",
+      "problem": "两条宿主路径的依赖、装配和验收不可默认等价。",
+      "contract": "按能力建立宿主兼容性矩阵，逐项给出支持、降级、数据边界和验收方式。",
+      "rollback": "保留 DSH Desktop 作为已存在的优先宿主路径。",
+      "verification": "同一最小场景在两宿主独立验收。"
+    },
+    {
+      "id": "S2-slot-renderer-boundary",
+      "relationship_card": "seam-relationship-cards.md#s2-slot-renderer-boundary",
+      "priority": "before_surface_change",
+      "owner": "表面模块与渲染",
+      "boundary": "官方 slot、二开挂载点和整块 renderer shadow",
+      "problem": "加性 slot 与整块替换的升级风险不同，未经识别会导致版本升级或样式变更失效。",
+      "contract": "每个界面改动先标明 slot、owner、输入输出和回退点；无可验证语义时不得假设挂载稳定。",
+      "rollback": "移除独立挂载或恢复既有 renderer 路径。",
+      "verification": "DOM/ARIA 语义、运行时视觉和交互回归。"
+    }
+  ],
+  "next_actions": [
+    {
+      "phase": "P2",
+      "action": "已建立五张关系卡，补齐当前 owner、代码入口、数据边界、契约、回退和验证读数；未证实项保持 UNVERIFIABLE 或 DECISION REQUIRED。"
+    },
+    {
+      "phase": "P3",
+      "action": "已完成 S0-service-consumption 同行多调用的最小检测器与测试修复：Red 真实失败、Green 12/12 通过、当前登记表对账保持 19/20/4；全量 quick gate 已完整运行，service-consumption 与 selftest PASS，但整体为 121/128 通过、4 项范围外失败，不外推为发布级通过。"
+    },
+    {
+      "phase": "P3.1",
+      "action": "已修复 repo-attest 在共享工作区仅跳过占位用例的问题；独占 clone 中 10 条见证测试均 PASS。安静探测之后若有新写者，当前共享工作区的见证结论仍不可归因。"
+    },
+    {
+      "phase": "P4",
+      "action": "产品 D3 确认后，只围绕一个用户价值流设计统一 work item，不直接合并所有模块的数据。"
+    },
+    {
+      "phase": "P5",
+      "action": "每个可验证切片独立提交和审查；文档、代码、profile 及实机验收不得混作一次完成。"
+    }
+  ]
+}

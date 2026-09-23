@@ -88,6 +88,10 @@
 - 出海：`dsh-overseas-skills/docs/`（maintenance-sop、skill-taxonomy-v2=分类 v3 终审稿、recent-changes-2026-09-08…）
 - 万物互联：`dsh-wanzh-hulian/docs/README.md`（产品形态总览 + 交付历史 + 方案；最新见 mcp-connections-2026-09-08.md）
 
+### 工程运行时能力图谱（提案）
+
+受管包身份、宿主、desktop profile 声明态与优先解耦接缝见 [机器可读图谱](architecture/subproject-capability-graph.json)；讨论边界和后续任务见 [提案 Note](notes/proposed/architecture/2026-09-24-subproject-capability-graph.md)，五条接缝的取证、回退与验证读数见 [关系卡](architecture/seam-relationship-cards.md)。目录墙仍是包数量与治理字段的唯一来源，图谱不替代运行态验收。
+
 ### 万物互联当前形态（2026-09-09）
 
 - 四板块：MCP 连接（4 服务器）/ API 连接（预留）/ 企业应用（Shopify + Apify）/ 知识库（得到大脑）
