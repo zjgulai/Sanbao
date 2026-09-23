@@ -38,7 +38,7 @@
 
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [DA-25](tasks/DA-25-capability-ablation-matrix.md) | 能力组消融矩阵（含宿主启动 + UI 降级实机验证） | **P0** | L | 与 DA-34 同批 | `open` |
+| [DA-25](tasks/DA-25-capability-ablation-matrix.md) | 能力组消融矩阵（含宿主启动 + UI 降级实机验证） | **P0** | L | 与 DA-34 同批 | `open`（事故后恢复对账与隔离边界见工单，实机消融未恢复） |
 | [DA-26](tasks/DA-26-shell-materialize-ablation.md) | 薄壳物资消融（materialize 缺件降级路径） | P1 | M | 无 | `in-progress`（09-23 二轮：清单级预检已落地 55/55+125/125+隔离 CLI exit=1，待门禁归因+提交收口） |
 | [DA-27](tasks/DA-27-protocol-constant-drift-ablation.md) | 帧协议常量漂移消融（lute-shell-pin 反向突变） | P1 | S | 无 | `done`（09-22，EX-02：既有 19 用例 selftest 接进门禁 + FRAME_MAGIC 突变红→恢复绿闭环） |
 | [DA-28](tasks/DA-28-loadpoint-missing-file-ablation.md) | 装载点缺件消融（profile-files-sync 分母运行时证明） | P1 | S | 无 | `done`（09-22，EX-03：删→双判红→恢复→绿四步闭环，原 inode 保住） |
