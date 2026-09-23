@@ -94,3 +94,16 @@ export function attestSkipReason(repoRoot) {
     + `「有人写这个工作树」与「这次运行有副作用」是两种事实，本项在此环境下没有读数。`
     + `把 DSH_ATTEST_REPO 指向一份独占副本（clean clone）即可拿到真读数。`
 }
+
+/**
+ * Build the native node:test options for every repository-attesting case.
+ *
+ * A shared checkout must skip each real witness test, not merely add a skipped
+ * placeholder beside tests that still read and judge the shared repository.
+ *
+ * @param {string|null} skipReason
+ * @returns {{skip: string|false}}
+ */
+export function attestTestOptions(skipReason) {
+  return { skip: skipReason ?? false }
+}
