@@ -41,3 +41,34 @@
 - 在 profile **副本**上做，不污染生产 profile；消融结束必须恢复并核对；
 - 「宿主正常起」要有旁路证据（lifecycle-events/startup.jsonl），不能只看无报错（挂死诊断纪律）；
 - 判据变红的分母要覆盖：摘包后「射程为空」的判据应报 skip 而不是 pass（DA-01 三态收口的延续）。
+
+## 事故记录（2026-09-23，R1 执行即中止）
+
+**发生了什么**：自写的消融轮脚本（/tmp/da25-round.sh）在**未经任何预演练**的情况下
+对生产 profile 槽位执行 swap（mv 换出→cp 副本→摘包→读数→rm 换入副本→mv 换回）。
+两个缺陷叠加：① `trap 'restore_now' ERR` 在 restore_now 自身失败时**递归触发**，
+造成每秒一次的恢复循环；② 主流程末尾 `rm -rf $P && mv $ASIDE $P` 不是原子操作——
+rm 成功后 mv 因 ASIDE 已被循环消费而失败，**生产 profile 目录被物理删除**
+（1.6G，无本地快照）。
+
+**恢复**：`~/project/Magpie-Horch-backups/pre-2.0.10-migration/lute-desktop-profile-20260917.tar`
+（SHA256 39d32b5b… 与清单一致）解包 → `sync-profile.mjs --apply`（15 包 vendor 副本面）
+→ `--apply --loadpoint`（25 包装载点）→ 补回 dsh-update-local（vendor 目录 + 依赖/
+bundles 条目 + node_modules）→ 重启 healthy。恢复后装载点与仓库一致（25 包）。
+
+**恢复边界（如实）**：基线是 09-17 快照；09-17~09-23 间 profile 的非仓库托管变化
+（第三方包的新增/升级）**可能有损**——事故前读数 41 依赖/42 bundles，恢复后
+40/41，差 1 个未知包（可能是其他会话安装的第三方包）。已同步 25 个受管包到仓库
+当前版，dsh-update-local 修复版已回位（host 日志 feed-unreadable 复现）。
+
+**根因教训（P 条目级候选）**：
+1. 「看起来合理的恢复脚本」= 未演练的恢复路径（P-01 变体）：trap 递归与
+   rm-then-mv 非原子两处缺陷都是**离线可预演**的形状，我跳过了预演直接上生产；
+2. 对生产槽位做破坏性操作前没有做「恢复本身」的演练（先在一棵假树上跑通
+   swap→恢复循环再上真树）；
+3. trap 内不得再触发 trap；恢复路径禁用 rm（用 mv 两段式：换出与换回都是 mv）。
+
+**本卡状态**：消融方式需重新设计并获用户拍板后才继续。候选：纯 mv 两段式交换 +
+假树预演；或先给 profile 加选择器（宿主侧，超出本卡射程）；或降档为
+「声明级消融」（只改副本 package.json 摘 bundles，不换生产槽位——宿主 boot
+只读 bundles 清单，摘声明即可验证降级，判据红由 sync --check 对副本跑）。
