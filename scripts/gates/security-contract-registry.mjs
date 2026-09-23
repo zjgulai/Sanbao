@@ -10,6 +10,11 @@
  * - testFiles: 对应的 Green 测试用例或验证套件
  * - faultPoints: 故障注入与变异断言描述
  * - runTier: 'quick' | 'full'
+ *   'quick' = gate.mjs 有判据无条件点名执行该 testFile（每轮 quick 必跑）；
+ *   'full'  = 无无条件 quick 入口，实际覆盖 = changed-packages 条件执行
+ *   （本包进改动射程时 quick 跑其 test 脚本）+ scripts-runnable 在 full 无条件跑。
+ *   残余 gap（quick 抓不到跨包回归，full 推送前仍抓）2026-09-23 经 DA-29 处置
+ *   A 拍板接受：宁要登记与事实一致，不要声明 quick 却没有无条件入口。
  * - releaseBlocker: 是否为发布阻塞项 (P0/P1)
  */
 
@@ -57,7 +62,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       'fetch 脚本出现 trees/HEAD 或 /HEAD/ 浮动指针',
       'import-fullstack 出现 /tmp 回退',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {
@@ -75,7 +80,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       'NODE_OPTIONS 危险环境变量渗透',
       'extraEnv 注入非允许的 secret 前缀变量',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {
@@ -118,7 +123,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       'URL 编码绕过路径规范化',
       'admin 端点缺乏管理权限拦截',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {
@@ -138,7 +143,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       '慢速请求连接挂起超时',
       '畸形 JSON 请求体导致进程崩溃',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {
@@ -197,7 +202,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       '损坏 session.json 未经备份直接抹去',
       '内存缓存与磁盘未原子对齐',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {
@@ -219,7 +224,7 @@ export const SECURITY_CONTRACT_REGISTRY = [
       '跨域伪造状态修改请求 (CSRF 漏洞)',
       '恶意高频登录未触发 429 与指数退避',
     ],
-    runTier: 'quick',
+    runTier: 'full',
     releaseBlocker: true,
   },
   {

@@ -47,7 +47,7 @@
 
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [DA-29](tasks/DA-29-spec-reachability-batch.md) | 测试可达性与 quick 策略差异接线 | **P0** | L | 无 | `in-progress`（09-23：SEC-RT-001 接线落地（wanzh-host-contract 注册+反向突变）；全表核对完成——6 条登记声明 quick 但仅条件执行，处置 A/B/C 待拍板） |
+| [DA-29](tasks/DA-29-spec-reachability-batch.md) | 测试可达性与 quick 策略差异接线 | **P0** | L | 无 | `done`（09-23，EX-05：SEC-RT-001 接线 + 全表 runTier 核对 + 用户拍板 A——6 条改 full、5 条保持 quick，登记与执行路径一致） |
 | [DA-30](tasks/DA-30-tested-by-reconciliation.md) | tested_by 关系索引对账（不作覆盖证据） | P2 | S | 无 | `done`（09-23：187=38已关联+102仅节点+47缺节点；旧2870分母撤回，见本卡口径） |
 
 ### 批次 D · 效率与热点（3 项）
