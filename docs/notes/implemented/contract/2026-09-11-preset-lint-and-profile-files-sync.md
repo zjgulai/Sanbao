@@ -1,7 +1,7 @@
 # preset lint 静默失效与 profile 副本缺件通道（2026-09-11）
 
 > 本文件是本次修复的决策记录（ADR-0015 的 Note 侧；决定本身延伸 ADR-0014 的「契约级一律阻塞」，因而不新增 ADR）。
-> 规格：`.scratch/preset-lint-repair/spec.md`（status: ready-for-agent）。
+> 规格：preset-lint-repair 工作流 spec.md（status: ready-for-agent；工作流目录随归档移至 `~/project/_archive/Magpie-Horch-20260923/preset-lint-repair/`，ADR-0013）。
 
 ## Problem
 

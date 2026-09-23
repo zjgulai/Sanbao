@@ -97,7 +97,7 @@ ADR-0049 / ADR-0050 两轮收尾都停在同一句：**1,317 张已恢复，其�
 
 ## 取证
 
-可信度三档，逐条落在 `.scratch/p2s-parse-audit/`：
+可信度三档，逐条落在已归档的工作流目录（`~/project/_archive/Magpie-Horch-20260923/p2s-parse-audit/`，ADR-0013）：
 
 1. **可复算**：`recon1.py`（1,338 张围栏落单/散文命中）、`recon2.py`（四把尺子）、
    `recon3.py` + `canonical.pkl`（1,288 个真源文件）、`probe-defects.py`（逐卡缺陷定位）。

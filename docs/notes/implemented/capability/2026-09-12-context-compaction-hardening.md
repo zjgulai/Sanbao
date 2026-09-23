@@ -184,8 +184,8 @@ agent-presets: preset "lute-cordis" failed to mount:
 | profile | `~/.dsh/profiles/desktop/package.json` | 依赖 + bundles 增加 `@aiwayds/dsh-dcp@0.11.0` |
 | 预设 | `~/.dsh/.agent-presets/lute-cordis/` | 发行 `cordis` 的副本；压缩行换 dsh-dcp 并**在行内写入全部策略键**；`tool-cordis` 永久 disabled |
 
-备份：`.scratch/compaction-hardening/backup-20260912-004029/`（settings.yaml / package.json /
-cordis.patch.yml / pnpm-lock.yaml 四件套 + SHA256 指纹）。
+备份：`~/project/_archive/Magpie-Horch-20260923/compaction-hardening/backup-20260912-004029/`（settings.yaml / package.json /
+cordis.patch.yml / pnpm-lock.yaml 四件套 + SHA256 指纹；随工作流目录归档出工作树，ADR-0013）。
 
 ## 验收（分层）
 

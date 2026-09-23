@@ -55,7 +55,7 @@ HEAD 里**，只有 **2 张**是真正的源站独有。
 
 ## Consequences
 
-前后对账（`.scratch/p2s-card-generation/diff-before-after.py`，逐卡比对）：
+前后对账（逐卡比对；对账脚本随工作流目录归档至 `~/project/_archive/Magpie-Horch-20260923/p2s-card-generation/`，ADR-0013）：
 
 | 读数 | 改前 | 改后 |
 | --- | ---: | ---: |

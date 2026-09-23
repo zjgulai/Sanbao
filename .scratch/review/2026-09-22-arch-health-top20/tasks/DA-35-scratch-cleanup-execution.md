@@ -50,3 +50,19 @@ clean-checkout-protocol、release-tag-gap。
 - 本批与第一批工单目录**绝不在清场射程内**；
 - `.scratch/lute-refactor/spec.md` 是 AGENTS.md 常驻链接——先迁家后清，顺序反了会造死链；
 - 归档出工作树（ADR-0013 档），不留在仓库。
+
+## 引用清零（2026-09-23，R7 前置）
+
+精确复查（`.scratch/<dir>` 带前缀模式；首次复查的 compaction-hardening 三处命中是
+Note 文件名 `context-compaction-hardening.md` 的假阳性）。真实引用 4 处，已全部改写为
+归档去向（`~/project/_archive/Magpie-Horch-20260923/<dir>/`，ADR-0013 档，纯文本非链接）：
+
+| 目录 | 原引用方 | 处置 |
+| --- | --- | --- |
+| p2s-card-generation | 2026-09-12-paper2skills-fence-candidates.md | 对账脚本指向归档路径 |
+| p2s-parse-audit | 2026-09-12-paper2skills-parse-defects.md | 取证目录指向归档路径 |
+| compaction-hardening | 2026-09-12-context-compaction-hardening.md（备份四件套） | 备份指向归档路径 |
+| preset-lint-repair | 2026-09-11-preset-lint-and-profile-files-sync.md（spec 指针） | spec 指向归档路径 |
+
+其余 11 个候选零引用。**15 个候选的归档清单待用户逐项拍板**（归档批次名
+`Magpie-Horch-20260923` 已随引用改写锁定）。
