@@ -1,7 +1,7 @@
 # DA-32 · 启动时序基线判据
 
 - 优先级：P1
-- 状态：`open`
+- 状态：`done`（2026-09-23：5/5 样本落盘 + 基线建议 + 形态裁决=例行窗口体检不入本地 gate）
 - 依赖：无（读数采集可与 DA-34 同批开机共享）
 - 估算：M
 - 来源：用户 2026-09-22 需求（高效性）；lifecycle-events/startup.jsonl 是启动判定的权威读数源但从未做成基线
@@ -64,3 +64,23 @@ host-boot 占 80%（12467/15534）——该窗含 50+ 客户端包 combo 编译/
 electron-ready 428 / shell-environment 524 / runtime-bootstrap 14 / profile-selection 12 /
 profile-composition 386 / runtime-bootstrap(2nd) 112 / host-boot **11694** /
 renderer-startup **3912** / health-commit 94，总 **17184ms**，healthy。
+
+### 样本 3-5/5（2026-09-23 12:13-12:18，同条件重启循环）
+
+| # | runId 前缀 | 总时长 | host-boot | renderer-startup | load |
+| --- | --- | --- | --- | --- | --- |
+| 3 | 6c8fcda8 | 12305ms | 10124ms | 1183ms | 9.06 |
+| 4 | 9ab5aa2d | 18564ms | 16191ms | 1346ms | 10.12 |
+| 5 | 39798289 | 15925ms | 12106ms | 2964ms | 11.49 |
+
+五样本全 healthy（finalStage=health-commit）。同条件 = 冷启动 + CDP 参数 + 同 profile + 同机负载窗。
+
+### 基线建议（P95 + 余量，本卡决策点）
+
+- 总时长：12.3~18.6s，P95≈18.6s → 上限 **30s**（余量 1.6×）；
+- host-boot：10.1~16.2s，P95≈16.2s → 上限 **25s**；
+- renderer-startup：1.2~3.0s → 上限 **6s**。
+- 样本窗 load 9~16（AV 竞争）——本基线是**负载窗下界**；安静窗重采后可收紧。
+- **形态裁决**：采样需要实机重启 → 不进本地 gate 射程（避免恒 skip 噪声）；落
+  DA-34 型例行窗口体检（启动超限告警而非门禁红）。数据文件：采样记录在本卡；
+  后续若要判据，写脚本读 startup.jsonl 的 run.completed durationMs 对表。

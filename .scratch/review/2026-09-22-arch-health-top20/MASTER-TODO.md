@@ -55,7 +55,7 @@
 | ID | 事项 | 优先级 | 估算 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | [DA-31](tasks/DA-31-paper2skills-hotspot-split.md) | DA-07 剩余热点：paper2skills load.mjs / taxonomy.js | P1 | M | 无 | `done`（09-22，EX-10 判型：两文件均「不拆」——load=内聚工具箱、taxonomy=单一数据源；判型三问留档） |
-| [DA-32](tasks/DA-32-startup-timeline-baseline.md) | 启动时序基线判据（startup.jsonl 权威读数） | P1 | M | 无 | `open` |
+| [DA-32](tasks/DA-32-startup-timeline-baseline.md) | 启动时序基线判据（startup.jsonl 权威读数） | P1 | M | 无 | `done`（09-23：5/5 样本 healthy，基线 30s/25s/6s，形态=例行窗口体检） |
 | [DA-33](tasks/DA-33-gate-cost-profiling.md) | gate 113 项耗时画像 + CI 两档射程漂移监控 | P2 | S | 无 | `in-progress`（09-23 R4：durationMs 仪器落地；quick 首轮 1420s@load16（AV 竞争下界）+ Top12 画像；干净基线重跑与 full 隔离副本待做） |
 
 ### 批次 E · 欠账收口（4 项）
