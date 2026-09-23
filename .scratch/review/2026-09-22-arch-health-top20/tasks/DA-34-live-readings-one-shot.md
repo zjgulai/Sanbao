@@ -45,3 +45,20 @@
 - 窗口可见是硬前置（window-hidden 闸门会拦读数，DA-06 已踩过）；
 - 实机操作前保存现场（打开的会话/文档），别让生产环境为读数买单；
 - 若某件读数仍拿不到：记录拿不到的**具体阻塞**（不是「待下次」），阻塞本身是要解决的对象。
+
+## 会话执行记录（2026-09-23 窗口一）
+
+前置：app 原未运行（最后启动 09-21 03:40 healthy），`relaunch-dsh-cdp.sh` 直接冷启动带
+CDP（无退出步骤，零破坏）；GUI 就绪判据 = theme-live-gui 探针自检 exit 0。环境 load≈12
+（Kaspersky + 后台 gate:full）。
+
+| 件 | 读数 | 落账 |
+| --- | --- | --- |
+| 单例计数（DA-06） | exit=0，6/6：entry-newapp=1、entry-role-matrix=1、条件单例 0 | DA-06 实机绿读数段 |
+| 唤醒降级标志（DA-21） | 休眠 15s→唤醒后 `data-dsh-newapp-degraded` 缺席（null） | DA-21 实机读数段 |
+| 更新器装载（DA-10） | 装载达成（host 日志启动检查）；**真缺陷**：Helper execPath 解析 → 假 `current-not-lute` | DA-10 实机装载读数段 |
+| 启动采样（DA-32） | 样本 1/5：15.5s healthy，host-boot 12.5s（负载窗） | DA-32 采样记录 |
+| 消融轮（DA-25） | 未做——L 级矩阵需独立窗口（profile 副本 + 多轮摘包重启） | DA-25 仍 open |
+
+非喘息态确认：单次冷启动 healthy（attempt 无关）；窗口可见（document.hidden=false）。
+剩余：DA-32 样本 2-5（4 次重启，可延至 AV 安静窗）；DA-25 矩阵另行开窗。

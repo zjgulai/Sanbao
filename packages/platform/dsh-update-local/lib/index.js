@@ -30,17 +30,22 @@ const DEFAULT_TIMEOUT_MS = 8000;
 const START_DELAY_MS = 20000;
 
 /**
- * 从可执行文件路径往上找 .app bundle。
+ * 从可执行文件路径往上找 .app bundle，返回**最外层**的 .app。
+ * 必须取最外层：host 插件跑在 node.mojom NodeService utility 进程里时
+ * execPath 是嵌套的 Helper 二进制（`<主 app>.app/Contents/Frameworks/<Helper>.app/...`），
+ * Helper 的 CFBundleVersion 是短版本（无 -lute. 后缀）——停在第一个 .app 会把
+ * LUTE 构建误判成 current-not-lute（DA-10 实机读数，2026-09-23）。
  * @param {string} execPath
  * @returns {string | null}
  */
 export function appBundleFromExecPath(execPath) {
   let dir = path.dirname(String(execPath ?? ""));
-  for (let i = 0; i < 6 && dir !== path.dirname(dir); i += 1) {
-    if (dir.endsWith(".app")) return dir;
+  let outermost = null;
+  while (dir !== path.dirname(dir)) {
+    if (dir.endsWith(".app")) outermost = dir;
     dir = path.dirname(dir);
   }
-  return null;
+  return outermost;
 }
 
 /** @typedef {{ok: true, value: string} | {ok: false, detail: string}} BundleVersionRead */

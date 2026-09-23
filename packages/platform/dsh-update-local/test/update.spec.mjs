@@ -390,6 +390,21 @@ test("appBundleFromExecPath: 从 Contents/MacOS/<exe> 上溯到 .app", () => {
   assert.equal(appBundleFromExecPath("/usr/local/bin/node"), null);
 });
 
+test("appBundleFromExecPath: Helper execPath 必须上溯到最外层 .app（2026-09-23 实机缺陷回归）", () => {
+  // host 插件跑在 node.mojom NodeService utility 进程里，execPath 是 Helper 二进制；
+  // Helper 的 CFBundleVersion 是短版本（无 -lute. 后缀）——停在第一个 .app 会把
+  // LUTE 构建误判成 current-not-lute（DA-10 实机读数）。
+  assert.equal(
+    appBundleFromExecPath("/Applications/DSH Desktop.app/Contents/Frameworks/Sanbao Helper.app/Contents/MacOS/Sanbao Helper"),
+    "/Applications/DSH Desktop.app"
+  );
+  assert.equal(
+    appBundleFromExecPath("/Applications/DSH Desktop.app/Contents/Frameworks/Sanbao Helper (Renderer).app/Contents/MacOS/Sanbao Helper (Renderer)"),
+    "/Applications/DSH Desktop.app"
+  );
+  assert.equal(appBundleFromExecPath("node"), null);
+});
+
 // ---------------------------------------------------------------- 恒真桩突变
 
 test("恒真桩突变：判据必须能说「不」", () => {

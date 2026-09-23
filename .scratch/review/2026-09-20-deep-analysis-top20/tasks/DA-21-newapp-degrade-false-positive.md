@@ -98,3 +98,17 @@ node scripts/acceptance/singleton-count-live.mjs   # 期望 entry-newapp=1、exi
 ```
 
 唤醒后还应顺带确认 `<html>` 上没有 `data-dsh-newapp-degraded`（或它已被清除）。
+
+## 实机读数（2026-09-23，DA-34 会话）
+
+休眠→唤醒循环：`pmset displaysleepnow`（显示器休眠 15s）→ `caffeinate -u -t 1` 唤醒 →
+CDP 读 `<html>` 属性（探针 `/tmp/read-degraded.mjs`，只读）。
+
+| 时点 | `data-dsh-newapp-degraded` | 可见性 |
+| --- | --- | --- |
+| 休眠前基线 | `null`（缺席） | visible |
+| 唤醒后 | `null`（缺席）✓ | visible |
+
+验收第 1 条达成：唤醒后降级标志**不出现**——rAF 冻结误报路径未触发（修复
+`09f1c08` 的实机证据）。同步的 singleton-count 读数见 DA-06（`entry-newapp=1`，exit 0）。
+边界如实登记：休眠时长 15s（显示器级休眠，未做系统级深度休眠）。

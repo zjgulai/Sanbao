@@ -78,3 +78,15 @@ exit=2
 - **实机绿读数**（验收第 2 条）待窗口可见时一条命令补齐：屏幕唤醒后 `node scripts/acceptance/singleton-count-live.mjs --port 9333`，期望 `exit=0` 且 `entry-newapp=1 / entry-role-matrix=1`。
 - 清单中两个「恰好 1」的实机确认同样待绿读数轮：`entry-role-matrix` 的入口在正常态是否无条件在场（profile 已装该包、bundle 已装载是现有证据，但未见其真正落位）。
 - 探针未进 `dead-instruments.json` 的既有条目关系不变（该登记簿守的是「仪器别退化」；本探针的读不到路径已在 §1 的类型化里收口）。
+
+## 实机绿读数（2026-09-23，DA-34 会话）
+
+`node scripts/acceptance/singleton-count-live.mjs --port 9333` → **exit=0，单例判据 6/6 过**：
+
+- `entry-newapp=1`（期望 1）✓
+- `entry-role-matrix=1`（期望 1）✓
+- `entry-taskboard / entry-ssh / entry-skill-center / settings-shell-root` 各 0（条件单例未挂载，正常）✓
+- 窗口可见（`document.hidden=false`）——硬前置满足。
+
+读数环境：app 带 CDP 重启（`relaunch-dsh-cdp.sh`，09:39 启动，lifecycle healthy
+15.5s），同机 load≈12（Kaspersky + 后台 gate:full 竞争）。本单验收第 2 条达成。

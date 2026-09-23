@@ -212,3 +212,42 @@ Developer ID 采购作为独立决策项另行跟踪，本轮不动依赖它的�
   `9d9cc2a` 的那一段改动，代码提交那一段的 CI 覆盖被取消的运行带走了。下次要一次推完再取读数。
 - 除上述一处外，两档其余判据与 `skippedChecks` 集合均与基线相同；旧 CI 的 vendor 未初始化、
   包级依赖缺失、Linux 缺 CoreText 等阻塞仍在，本轮**未擅自更换 runner、新增安装矩阵或降级判据**。
+
+## 实机装载读数（2026-09-23，DA-34 会话）
+
+app 带 CDP 重启后 host 日志（`logs/host/dsh-2026-09-23.log` 09:39:26）出现：
+
+```
+[dsh-update] dsh-update: 启动检查未得出「已是最新」：current-not-lute——本机版本读不出
+LUTE 版本：CFBundleVersion=2.0.10 没有 -lute.<版本> 后缀（非 LUTE 构建）
+```
+
+**装载达成**（插件在 app 内实际装载并跑启动检查），但首读暴露真缺陷：
+
+- 装机 app 实际 `CFBundleVersion = 2.0.10-lute.2.5.0`（LUTE 签名，`defaults read` 直读）；
+- 更新器读到 `2.0.10`——`appBundleFromExecPath(process.execPath)` 爬到的是 **Sanbao Helper.app**
+  （Helper 的 CFBundleVersion 是短版本 2.0.10 无后缀；进程树有 `node.mojom.NodeService` utility 进程，
+  host 插件代码跑在 Helper execPath 的进程里）。离线复现：helper 形 execPath → 解析到
+  `Frameworks/Sanbao Helper.app`；主二进制 execPath → 正确解析主 app。
+- **后果**：LUTE 构建永远报 `current-not-lute`，更新器钉死在死态，永远到不了 feed 比较
+  （本单预期读数 `feed-unreadable（HTTP 404）` 被此短路遮蔽）。
+- 修复方向待拍板（A 取最外层 .app / B `app.getPath('exe')` 优先+回退 / C 宿主提供路径），
+  修复后需重跑 materialize + 装载点同步 + 重启复验。
+
+## 修复与实机闭环（2026-09-23）
+
+用户拍板处置 A（取最外层 .app）。红→绿：新增回归用例（Helper execPath 形状 ×2 +
+相对路径 null）28/29 红 → 实现 `appBundleFromExecPath` 爬满全路径取最外层 .app
+→ **29/29 绿 + typecheck + live-check 六态全符合预期**（本机正确解析 LUTE 2.5.0）。
+
+部署：`sync-profile.mjs --apply --loadpoint`（1 文件 tmp+mv 原子替换，27 包复检一致）
+→ 完整重启 → host 日志实机闭环：
+
+| 时点 | 读数 |
+| --- | --- |
+| 09:39（修复前） | `current-not-lute`（误读 CFBundleVersion=2.0.10） |
+| 10:06（修复后） | **`feed-unreadable——feed 读不到（http-error）：HTTP 404`** ✓ |
+
+立项预期的 `feed-unreadable（HTTP 404）` 读数达成——更新器现在正确解析本机 LUTE
+版本并走到 feed 比较，不再被 Helper 短版本钉死在死态。装载达成 + 检查结论正确，
+本单「更新器在 app 内的实际装载」验收闭环。
