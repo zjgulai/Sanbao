@@ -37,8 +37,8 @@ import { join } from 'node:path'
 /** 登记处路径（仓库根相对）。 */
 export const REGISTRY_REL_PATH = 'scripts/gates/service-consumption.json'
 
-/** 字面量服务名：ctx.get('name') / ctx.get("name")（可带第二参数；名字允许连字符，如 brand-new-fake-service）。 */
-const LITERAL_RE = /ctx\.get\(\s*["']([A-Za-z_$][\w$-]*)["']/
+/** 字面量服务名：ctx.get('name') / ctx.get("name")（可带第二参数；名字允许连字符，如 brand-new-fake-service）；全局枚举同一行的全部调用。 */
+const LITERAL_RE = /ctx\.get\(\s*["']([A-Za-z_$][\w$-]*)["']/g
 /** 动态消费：ctx.get( 后面跟的不是引号开头（含第二参数形态的误判容忍——见 isDynamicCall）。 */
 const CALL_RE = /ctx\.get\(\s*([^)]*)\)/g
 
@@ -53,8 +53,7 @@ export function scanServiceConsumption(text) {
   for (const line of text.split('\n')) {
     const t = line.trim()
     if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) continue
-    const literal = LITERAL_RE.exec(line)
-    if (literal) services.add(literal[1])
+    for (const literal of line.matchAll(LITERAL_RE)) services.add(literal[1])
     for (const match of line.matchAll(CALL_RE)) {
       const arg = match[1].trim()
       // 引号开头 = 字面量（已计）；其余（标识符、表达式）计一次动态
