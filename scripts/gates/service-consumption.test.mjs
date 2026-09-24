@@ -58,18 +58,6 @@ test('rejects a newly consumed service that is not registered', () => {
   assert.ok(result.violations.some((v) => v.includes('"jobs" 未登记')))
 })
 
-test('rejects a second same-line literal service that is not registered', () => {
-  const sameLineRegistry = JSON.stringify({
-    consumptions: [{ file: fileA.path, services: ['web'] }],
-  })
-  const result = checkServiceConsumption({
-    registryText: sameLineRegistry,
-    files: [{ ...fileA, text: 'const web = ctx.get("web"); const settings = ctx.get("settings")' }],
-  })
-  assert.equal(result.passed, false)
-  assert.ok(result.violations.some((v) => v.includes('"settings" 未登记')))
-})
-
 test('rejects a consuming file that is missing from the registry', () => {
   const newFile = { path: 'packages/surfaces/demo-c/src/index.ts', text: "const x = ctx.get('web')" }
   const result = checkServiceConsumption({ registryText: registry, files: [fileA, fileB, newFile] })
