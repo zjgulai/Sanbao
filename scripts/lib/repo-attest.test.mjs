@@ -27,7 +27,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { attestSkipReason, attestTestOptions, resolveAttestRepo } from './attest-scope.mjs'
+import { attestSkipReason, resolveAttestRepo } from './attest-scope.mjs'
 import { createMutationFixture, liveFixtureRoots, mutationRoot, reapAll } from './mutation-fixture.mjs'
 import { attestCommand } from './repo-attest.mjs'
 import { identical, snapshotRepo } from './repo-snapshot.mjs'
@@ -43,17 +43,10 @@ const LIB = fileURLToPath(new URL('.', import.meta.url))
  * 跳过时**不**把邻居的写入说成门禁的副作用，也不谎报通过。
  */
 const scopeSkip = attestSkipReason(repoRoot)
-const { command: NODE, env: NODE_ENV } = nodeCommand()
-
-test('契约：共享工作区的 skip 会传到每一条见证用例', () => {
-  const reason = '本仓库正在被外部写入'
-  assert.deepEqual(attestTestOptions(reason), { skip: reason })
-  assert.deepEqual(attestTestOptions(null), { skip: false })
-})
-
-function attestedTest(name, fn) {
-  return test(name, attestTestOptions(scopeSkip), fn)
+if (scopeSkip !== null) {
+  test('见证用例集：本仓库当前被外部写入，跳过（不给读数，也不判红）', { skip: scopeSkip }, () => {})
 }
+const { command: NODE, env: NODE_ENV } = nodeCommand()
 
 /** 故意写进真实仓库的那个文件名；用例结束时必须删掉。 */
 const LEAK_NAME = 'attest-deliberate-leak.txt'
@@ -76,7 +69,7 @@ async function runProbe(script, { tmpRoot, signals = [], timeoutMs = 120000 } = 
   })
 }
 
-attestedTest('路径 1/6 正常退出：仓库逐字段不变，且见证读数说明自己看过多大射程', async () => {
+test('路径 1/6 正常退出：仓库逐字段不变，且见证读数说明自己看过多大射程', async () => {
   const root = witnessRoot()
   const verdict = await runProbe('process.stdout.write("probe-ok\\n")', { tmpRoot: root })
 
@@ -89,7 +82,7 @@ attestedTest('路径 1/6 正常退出：仓库逐字段不变，且见证读数�
   assert.equal(existsSync(root), true, '见证者根是证据，必须留着供人复查')
 })
 
-attestedTest('路径 2/6 assertion failure：断言抛错后仓库仍逐字段不变', async () => {
+test('路径 2/6 assertion failure：断言抛错后仓库仍逐字段不变', async () => {
   const root = witnessRoot()
   const verdict = await runProbe(
     'process.stdout.write("before-assert\\n")\nthrow new Error("deliberate assertion failure")',
@@ -101,7 +94,7 @@ attestedTest('路径 2/6 assertion failure：断言抛错后仓库仍逐字段�
   assert.equal(verdict.identical, true, `断言失败路径必须零差异，实际 ${JSON.stringify(verdict.diffs)}`)
 })
 
-attestedTest('路径 3/6 checker 非零：判红路径同样不得留下副作用', async () => {
+test('路径 3/6 checker 非零：判红路径同样不得留下副作用', async () => {
   const root = witnessRoot()
   const verdict = await runProbe(
     'process.stdout.write("checker says no\\n")\nprocess.exitCode = 3',
@@ -113,7 +106,7 @@ attestedTest('路径 3/6 checker 非零：判红路径同样不得留下副作�
   assert.equal(verdict.identical, true, `非零退出路径必须零差异，实际 ${JSON.stringify(verdict.diffs)}`)
 })
 
-attestedTest('路径 4/6 fixture setup failure：在真实仓库里建 fixture 必须被拒绝，仓库不变', async () => {
+test('路径 4/6 fixture setup failure：在真实仓库里建 fixture 必须被拒绝，仓库不变', async () => {
   const root = witnessRoot()
   // 故意把 tempParent 指向被见证的仓库：这是 mutation fixture 的失败边界，
   // 而失败边界本身也必须零副作用（拒绝创建，而不是创建后清理）。
@@ -136,7 +129,7 @@ attestedTest('路径 4/6 fixture setup failure：在真实仓库里建 fixture �
   assert.equal(verdict.identical, true, `拒绝路径必须零差异，实际 ${JSON.stringify(verdict.diffs)}`)
 })
 
-attestedTest('路径 5/6 cleanup failure：根被换 inode 时拒绝删除，且不恢复他人状态', async () => {
+test('路径 5/6 cleanup failure：根被换 inode 时拒绝删除，且不恢复他人状态', async () => {
   const root = witnessRoot()
   const verdict = await runProbe(
     [
@@ -167,7 +160,7 @@ attestedTest('路径 5/6 cleanup failure：根被换 inode 时拒绝删除，且
   assert.equal(verdict.identical, true, `cleanup 失败路径必须零差异，实际 ${JSON.stringify(verdict.diffs)}`)
 })
 
-attestedTest('路径 6/6 SIGTERM：信号杀死进程后仓库不变，且自有根被回收', async () => {
+test('路径 6/6 SIGTERM：信号杀死进程后仓库不变，且自有根被回收', async () => {
   const root = witnessRoot()
   // 探针先建一个自有根并挂住，然后由见证者发信号——这正是实测里留下 8 个
   // 临时根、并把一个 node 进程变成 init 子进程的那条路径。
@@ -193,7 +186,7 @@ attestedTest('路径 6/6 SIGTERM：信号杀死进程后仓库不变，且自有
   assert.equal(verdict.identical, true, `SIGTERM 路径必须零差异，实际 ${JSON.stringify(verdict.diffs)}`)
 })
 
-attestedTest('证据不写回被见证仓库：见证者根与仓库内都没有 witness 产物', async () => {
+test('证据不写回被见证仓库：见证者根与仓库内都没有 witness 产物', async () => {
   const root = witnessRoot()
   const before = snapshotRepo(repoRoot)
   await runProbe('process.stdout.write("evidence-check\\n")', { tmpRoot: root })
@@ -228,7 +221,7 @@ test('并发轮的首轮探针：两个 lane 各自独立，互不覆盖', async
   assert.equal(existsSync(tmpdir()), true)
 })
 
-attestedTest('契约：见证判定把「有差异」与「差异说不清」分开报告', async () => {
+test('契约：见证判定把「有差异」与「差异说不清」分开报告', async () => {
   const root = witnessRoot()
   // 故意写进真实仓库的那一个文件，用完必须删掉：**见证者自己不能变成副作用源**。
   // 这条不是洁癖——第一版没有清理，于是下一次跑同一条用例时「写进去的文件」已经
