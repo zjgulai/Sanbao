@@ -21,16 +21,6 @@
 | **皮 / 换皮** | 只改品牌**表达**（图形、颜色、图像、文字、材质、字体），不改品牌**承载**（slot 挂载、事件通道、面板几何契约）。 | ADR-0130 |
 | **承载 / carrier** | 一个面如何挂在基座界面上（官方 `main` keyed slot + `sidebar.panellist`）。换皮不得触碰。 | ADR-0130 |
 
-## 工程拓扑
-
-| 术语 | 定义 | 归属 |
-| --- | --- | --- |
-| **受管包 / managed package** | 被目录墙收录并受治理的包；**不自动等于** profile 已安装、bundle 已注册或宿主已生效。 | `docs/catalog/packages.md` |
-| **宿主 / host** | 运行插件和界面的环境。DSH Desktop 与 Lute Shell 是两条不同的宿主路径，不能默认互相替代。 | `docs/architecture.md` |
-| **运行时装配 / runtime composition** | 源码经过 profile 的 `file:` 依赖、bundle 注册再被宿主加载的链路；每一段都要单独取证。 | `docs/architecture.md` |
-| **接缝 / seam** | 跨包、跨层或跨宿主的交接处；必须能说清 owner、契约、回退和可验证读数。 | `docs/architecture/subproject-capability-graph.json` |
-| **声明态 / declared state** | 从 `package.json`、profile 或 manifest 读取到的配置事实；不是进程加载、界面可见或业务结果的证明。 | `docs/architecture/subproject-capability-graph.json` |
-
 ## 射程（什么改、什么不改）
 
 | 术语 | 定义 |
