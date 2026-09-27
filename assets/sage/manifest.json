@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "path": "scripts/generate-sage-assets.mjs",
+    "version": 1
+  },
+  "source": {
+    "id": "sanbao-a-starsail-product-symbol-v1",
+    "rawUpstreamSha256": "9a90f439f48b597c4afc9459836cd036371705880573f1749970cae78631a4d1",
+    "geometrySha256": "a49c03f1a684f86fcaa5c9ea690002ad30b0e28212a96c277f31ddba5065cd1d"
+  },
+  "geometryExtraction": {
+    "method": "outer-group-transform-and-path-d-only",
+    "extractedPathCount": 6,
+    "excluded": [
+      "source title",
+      "source aria-label",
+      "source lockup",
+      "source wordmark"
+    ]
+  },
+  "outputs": [
+    {
+      "path": "AppIcon.iconset/icon_128x128.png",
+      "sha256": "a1730a48873a3afcc2c52aa72d68836c061c029068d1d95cb9f081653886ef17",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_128x128@2x.png",
+      "sha256": "ff7be960a57f916bb926060385a9606644bbfb01aca8f0acfc0182bfcb62a838",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_16x16.png",
+      "sha256": "ecd87a188cf649737447a25d9bdaf376fd668a141f15c64733b26852bef30c4c",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_16x16@2x.png",
+      "sha256": "1245ce08613e9b114fea40af21d642f70155d369cbb26b29cff3ad66da113cc4",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_256x256.png",
+      "sha256": "ff7be960a57f916bb926060385a9606644bbfb01aca8f0acfc0182bfcb62a838",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_256x256@2x.png",
+      "sha256": "ca5b4e938ed8c85d544fc8ef1bda2697a6a23aec2343d59200b5c6fd60d9614c",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_32x32.png",
+      "sha256": "1245ce08613e9b114fea40af21d642f70155d369cbb26b29cff3ad66da113cc4",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_32x32@2x.png",
+      "sha256": "80cdb2c4bb24f394f15fff0a31cfa4b61c4d0db1871dc026791c3b7a34809a2a",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_512x512.png",
+      "sha256": "ca5b4e938ed8c85d544fc8ef1bda2697a6a23aec2343d59200b5c6fd60d9614c",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "AppIcon.iconset/icon_512x512@2x.png",
+      "sha256": "a5e9be482a2848ea39510bb15b96f41c745fa56a4c63807a50b774eef2d79189",
+      "purpose": "macOS iconset candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "Sage-lockup.svg",
+      "sha256": "87b43add5f7399622bdbec3d5b6455a7ed4b89d2621a338dabc846946d647a61",
+      "purpose": "independent Sage lockup candidate",
+      "surfaces": [
+        "product lockup candidate"
+      ]
+    },
+    {
+      "path": "Sage.icns",
+      "sha256": "59fa5e340907f5c15984ccfc71a426a1f358db3ca128e09a1305ef587491cf3e",
+      "purpose": "macOS icon container candidate",
+      "surfaces": [
+        "Finder",
+        "Dock candidate"
+      ]
+    },
+    {
+      "path": "sage-symbol-dark.svg",
+      "sha256": "0462843b4f673cb70788846e332e4e81437f2f1e8e5cad4c927117347d277c42",
+      "purpose": "canonical Sage symbol candidate",
+      "surfaces": [
+        "product symbol candidate"
+      ]
+    },
+    {
+      "path": "sage-symbol-light.svg",
+      "sha256": "e47d9a3a57de272c1a0344384a8de267ff2eb40218d0cbfee1139d6722c8545f",
+      "purpose": "canonical Sage symbol candidate",
+      "surfaces": [
+        "product symbol candidate"
+      ]
+    },
+    {
+      "path": "sage-symbol-plain.svg",
+      "sha256": "36cf59bc1d32bf9e1090b1b182996cad1ebd4fa4f47f5bdcd72e84c4af818524",
+      "purpose": "canonical Sage symbol candidate",
+      "surfaces": [
+        "product symbol candidate"
+      ]
+    }
+  ],
+  "approval": {
+    "rights": "unapproved",
+    "trademark": "unapproved",
+    "visual": "unapproved",
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "releaseGate": {
+    "status": "blocked",
+    "phase": "P1 public release",
+    "reason": "rights, trademark, and visual approval are required before public release"
+  },
+  "manifestCanonicalSha256": "7a5bf6f6bbfe06d8b3012d7f27c3c7cb8b1503fefec618b2e590c7fc332e1d98"
+}

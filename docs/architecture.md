@@ -1,4 +1,4 @@
-# LUTE Agentic System · 架构与基座契约
+# Sage · 架构与基座契约
 
 本页是**有序地图**：只写组合、能力归属、扩展点与门禁契约；类型定义、逐包细节、决策理由一律在被链接的文档里（分层规则见根 [AGENTS.md](../AGENTS.md)）。
 
@@ -10,19 +10,27 @@
 | 壳层 fork | `vendor/dsh-desktop/` | 嵌套仓库，pin 见 `vendor/dsh-desktop.pin`；改 pin 与行为变更分开提交 |
 | 运行时来源 | `vendor/dsh-desktop/dsh-plugin-desktop/node_modules`（0.1.5-rc.2 物化，270/270 tgz） | 打包与 profile 实际使用的运行时产物；`vendor/dsh-runtime/0.1.2-rc.1/*.tgz` **仅作 2.0.5 回滚对照**保留，不再被构建消费（见 pin 注释与 [research/13](research/13-upgrade-2.0.10-execution-plan.md) §7-§8） |
 | 二开插件 | `packages/<能力组>/<包>/` | 28 个受管包（`package-files-coverage` 门禁读数）按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
-| 自有薄壳 | `apps/lute-shell/` | LUTE 自有的 Electron 薄壳，用 npm 上的 harness 运行时启动 cordis host（脱离 `vendor/dsh-desktop` fork）；**不在 package collector 射程内**（`package-layout.mjs` 只下钻 `packages/<五组>/`），版本与治理事实由独立门禁守，详见 [ADR-0139](adr/ADR-0139.md) |
+| 自有产品壳 | `apps/sage-shell/` | Sage 自有 Electron 壳，通过 Capability Adapter 消费 harness runtime；产品 renderer 不直接复用上游网页、Composer 或 Cordis 私有 DOM。该目录**不在 package collector 射程内**，版本、产品边界和数据隔离分别由独立门禁守，详见 [ADR-0159](adr/ADR-0159.md) |
 | 出海技能创作源 | `~/project/81-Skills/`（**仓库外**） | 81 个中文名原文，经 `dsh-overseas-skills/scripts/import-81skills.mjs` 转换后安装进 `~/.dsh/skills/`。2026-09-11 迁出仓库，与同包其余 3 个 importer（accio / marketing / fullstack）的「源在仓库外」设计一致 |
-| 门禁 | `scripts/gate.mjs` | 单命令聚合校验，退出码即契约（[ADR-0014](adr/ADR-0014.md)） |
+| 门禁 | `scripts/gate.mjs` | 同一 runner、两个显式 scope：默认产品命令使用 `sage` allowlist；历史平台、旧插件与发布链使用 `legacy` 全量注册表。退出码即契约（[ADR-0014](adr/ADR-0014.md)、[ADR-0160](adr/ADR-0160.md)） |
 
 **归档出工作树的资产不在仓库内**：按 [ADR-0013](adr/ADR-0013.md) 的「归档出工作树」档，根层游离件（旧 bundle、预览 HTML 群、已完成的补丁项目等）移至 `~/project/_archive/Magpie-Horch-<日期>/`，**该目录内的 `README.md` 是归档索引**（逐项列来源与去向）；仓库内不再保留副本，回溯时去那里找。刻意**未**归档的两项也记在该索引里：`dsh-rootoutlet-heal/`（白屏手册 §6.1 的运行时回滚基线）与 `.dsh-types/`（ADR-0017 的生成物）。
 
-门禁契约（`pnpm run gate` / `pnpm run gate:full`）：
+门禁契约分为两个不互相冒充的射程：
+
+- `pnpm run gate` / `pnpm run gate:full`：Sage BASE。固定 allowlist 覆盖 runner 自检、Node 解释器、pin、Sage Shell `typecheck → build → test`、三类 Sage 边界、动态仓根与 legacy packaging 路径卫生、候选资产一致性、gitignore、ADR、文档链接和服务消费对账。它不运行 live profile、旧插件、JEV、历史 UI、release / DMG、object store 或 `repo-attest`。
+- `pnpm run gate:legacy` / `pnpm run gate:legacy:full`：历史全量注册表。只在任务明确进入旧平台或发布链时运行；通过不代表 Sage.app 已完成 DMG、签名、公证或发布。
+- `pnpm run gate:list` 与 `pnpm run gate:legacy:list` 分别列出两套真实射程；JSON 报告携带 `scope`，不得混用证据。
+
+下表是共享注册表中的契约说明；是否进入默认 Sage 射程以 `pnpm run gate:list` 为准，其余由显式 legacy scope 承担：
 
 | 校验项 | 阻塞 | 依据 |
 | --- | --- | --- |
 | `package-identity` | 是 | 每个受管 `package.json` 必含 `luteOrigin` / `luteOwner` / `lutePublish`（ADR-0012） |
 | `pin-consistency` | 是 | `vendor/dsh-desktop.pin` 的 `harness-submodule` 必须等于子模块实际 HEAD（ADR-0008） |
-| `lute-shell-pin` | 是 | 薄壳（`apps/lute-shell/`）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 都必须**非空、精确、同名包同版本**（npm `latest` tag 指向旧线，range 会静默漂移）；壳 `devDependencies.electron` 精确且等于 `vendor/dsh-desktop/dsh-plugin-desktop` 的同名 pin（参照缺失则跳过并进 note）；7 个帧协议常量不漂移于 submodule 参照，治理三字段取 `self`/`lute`/`false`，seed 用户层剥注释后恰为 `[]`，12 个 test fixture 保持被跟踪（[ADR-0139](adr/ADR-0139.md)） |
+| `sage-shell-pin` | 是 | 产品壳（`apps/sage-shell/`）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 都必须非空、精确、同名包同版本；Electron pin、帧协议、治理字段和测试 fixture 必须保持可核验（[ADR-0139](adr/ADR-0139.md)） |
+| `sage-product-boundary` | 是 | Sage renderer 只消费固定 `/.sage/*` 合同；Capability Adapter 是唯一允许访问 host connection 的产品接缝（[ADR-0159](adr/ADR-0159.md)） |
+| `sage-data-isolation` | 是 | Sage 资料根、Electron 数据目录、host `DSH_HOME` 与 active profile generation 必须与旧 DSH 数据隔离，真实旧资料不得被原地改写（[ADR-0159](adr/ADR-0159.md)） |
 | `gitignore-whitelist` | 是 | 白名单条目必须指向真实路径，禁止幽灵条目（ADR-0013） |
 | `adr-index` | 是 | ADR 编号连续、索引与文件一致（ADR-0015） |
 | `adr-note-links` | 是 | ADR 的「决策记录」链接可达，且 Note 正文回引该 ADR 编号（ADR-0015） |
@@ -36,14 +44,16 @@
 | `package-files-coverage` | 是 | **交付清单侧**（与上面两项的**装载点侧**互补，不是同一个判据）：包里运行时模块图上的每个文件都必须在 `files` 射程内。`pnpm` 对 `file:` 依赖按 `files` 物化，所以缺件命中的是**全新安装**而不只是发布面，而全新安装没有同步步骤可补救（[ADR-0101](adr/ADR-0101.md)，总账 P-24）。判定器与真实 `npm pack` 对全部受管包逐文件校准；`package-files-coverage-selftest` 是它的反向自测 |
 | `skill-lines` | 是 | 三条技能线（出海 / AI全栈 / 通用）各自的验证器必须判绿。此前 `verify_static.mjs` 只写在 SOP §4 与 `pipeline.sh` 里、**不在 `pnpm run gate` 射程内**——规则只活在文档与人的自觉里（[ADR-0085](adr/ADR-0085.md)，总账 P-20）。本项与 `skill-runtime-preconditions` 是「装得上 / 跑得起来 / **挂得上**」三个不同问题各自的调用点；环境不在本机时跳过并写明（P-21） |
 
-退出码：`0` 全部通过 · `1` 存在失败校验 · `2` 用法错误。`--list` 输出全部校验项名称。
+退出码：`0` 当前 scope 全部通过 · `1` 当前 scope 存在失败校验 · `2` 用法错误。`--list` 只输出当前 scope 的校验项名称。
 跳过（skip）是**第三态**：日常模式下不改变退出码，但汇总行会独立成句地点名「未核对 N 项（不是通过）」；
-**发布前那一次运行**用 `pnpm run gate:strict`（= `--require-no-skip`），skip 计为非零退出（P-17 / ADR-0148）。
+**Sage 发布前那一次运行**用 `pnpm run gate:strict`（= Sage full + `--require-no-skip`），skip 计为非零退出（P-17 / ADR-0148）；历史平台对应 `pnpm run gate:legacy:strict`。
 
 ## 1. DSH 基座事实（发行线 LUTE 2.5.0 = DSH 2.0.10 / runtime 0.1.5-rc.2；生产机现状**未核实**）
 
-> 2026-09-21 更新（深度分析 TOP20 · DA-05）：发行线已到 **LUTE 2.5.0**——
-> `packaging/release/2.5.0/VERSION` 读数 `DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2`
+> 2026-09-21 历史观察（深度分析 TOP20 · DA-05；CLEAN-02A 前）：发行线已到 **LUTE 2.5.0**——
+> 当时由 `packaging/release/2.5.0/VERSION` 读得 `DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2`；
+> CLEAN-02A 已移除活动仓中的历史 release 副本，当前恢复证据与校验边界见
+> [本机活动仓基线](notes/implemented/process/2026-09-27-local-active-repository-baseline.md)。
 > （2026-09-18 发布）；源码 pin 见 `vendor/dsh-desktop.pin`（`upstream-tag: v2.0.10` /
 > `lute-branch: lute-v2.0.10`，checked-at 2026-09-17）。该窗口 **38 个补丁锚点全量重锚**
 > （`verify-patches-v2.sh` 38 锚 ALL VERIFIED；登记簿

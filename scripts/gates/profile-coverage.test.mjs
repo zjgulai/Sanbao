@@ -11,7 +11,8 @@
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { withMutationFixture } from '../lib/mutation-fixture.mjs'
 import { validateGateResult } from './gate-result.mjs'
@@ -27,6 +28,7 @@ import {
 } from './profile-coverage.mjs'
 
 const PROFILE_DIR = '/tmp/fixture-profile'
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 /** 造一份内存文件树：键是绝对路径。 */
 function memoryFs(entries) {
@@ -331,7 +333,7 @@ test('QG-004：对象级账目逐条判定，一个包出问题不会把别的�
 // ---------------------------------------------------------------------------
 
 test('QG-004 L2：真实受管清单能被完整路径匹配，且真实 profile 的声明全部对上', async () => {
-  const packages = collectManagedManifests('/Users/lute/project/Magpie-Horch').filter((entry) => entry.dir !== '.')
+  const packages = collectManagedManifests(REPO_ROOT).filter((entry) => entry.dir !== '.')
   // 用真实 profile 的声明形状（`file:./vendor/packages/<组>/<包>`）构造期望集，
   // 但不读真实 profile：本测试不依赖这台机器上 profile 的具体内容。
   const dependencies = Object.fromEntries(

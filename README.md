@@ -1,27 +1,34 @@
-# LUTE Agentic System
+# Sage
 
-基于 **DeepSeek Harness（DSH Desktop）** 的二次开发平台：出海技能体系 + 万物互联（连接 MCP / API / 企业应用 / 知识库）+ 全套工程插件与打包流水线。
+Sage 是面向跨境电商经营的桌面 AgenticOS。当前仓库以自有 `apps/sage-shell/` 为产品壳，通过 Capability Adapter 消费 Harness runtime；Sanbao 原型提供交互输入，Career 提供经营事项语义，历史插件暂时隔离、按需重新接入。
 
-> 当前版本：**v2.5.0**（2026-09-18，DSH 基座 2.0.10 / runtime 0.1.5-rc.2）· 仓库：monorepo · 变更历史见 [CHANGELOG.md](CHANGELOG.md)（基座升级全链研究见 docs/research/）
+> 当前开发状态：**Sage P0 本机工程基线，尚未形成可发布 Sage.app**。BASE-01～05 的恢复与隔离边界见 [ADR-0160](docs/adr/ADR-0160.md)。
 >
-> **客户安装**：下载 `DSH-Desktop-LUTE-<版本>-mac-arm64.dmg`，挂载后按 [安装手册](packaging/INSTALL-GUIDE.md) 安装（终端一条命令，或双击 `LUTE Setup.app`；一页速查见 [安装卡](packaging/INSTALL-CARD.md)）。
-> **本版起只发 DMG**：全仓无 `.pkg` 产物，「pkg 为主交付」的历史说法自 2.2.0 起作废。
+> 历史本地制品最高见 **v2.5.0**（DSH 2.0.10 / runtime 0.1.5-rc.2）；其正式发布状态与唯一分发渠道仍待核验。相关 DMG、安装说明、插件和打包流水线是 legacy / deferred 资产，不代表 Sage 已完成发布。
 
-## 平台组成
+## 当前主线
+
+| 模块 | 目录 | 当前边界 |
+| --- | --- | --- |
+| Sage 产品壳 | `apps/sage-shell/` | Electron 壳、产品状态、Capability Adapter、独立 profile / 数据根；本批不新增 UI |
+| Sage 候选资产 | `assets/sage/` | 仅供内部工程验收；权属、商标、视觉批准和 release gate 仍未通过 |
+| Harness runtime 参照 | `vendor/dsh-desktop/` | pin 的只读能力底座，不拥有 Sage 产品 UI |
+| 产品决策 | `docs/adr/ADR-0159.md`、`docs/adr/ADR-0160.md` | 自有桌面端、活动仓基线、历史能力隔离与验收边界 |
+
+## Legacy / deferred 能力
 
 | 模块 | 目录 | 说明 |
 | --- | --- | --- |
-| 出海技能 | `dsh-overseas-skills/` | 设置页「出海技能」（25 组 230 行卡片墙）：81-Skills 全量 81 + 营销存量 + AnySearch；技能卡片结构化引导（L1 30 模板 + L2/L3 兜底） |
-| 出海工具 | `dsh-overseas-tools/` | Exa 等外部工具原生接入（credentials 服务） |
-| 万物互联 | `dsh-wanzh-hulian/` | 设置页「万物互联」四板块：MCP / API / 企业应用 / 知识库；得到大脑 19 工具 + 分类整理 + OAuth/CLI 双通道 + MCP 宿主直挂 + Shopify 连接（配置化 connections.json）；输入区知识库选择器（右停靠面板） |
-| 技能子集 | `dsh-skill-subset/` | 预设技能白名单契约（respectFileFlags） |
+| 出海技能 | `packages/capabilities/dsh-overseas-skills/` | 历史技能体系；默认不接入 Sage 启动链 |
+| 出海工具 | `packages/capabilities/dsh-overseas-tools/` | 历史外部工具能力；凭证与运行边界需重新验收 |
+| 万物互联 | `packages/capabilities/dsh-wanzh-hulian/` | 历史 MCP / API / 企业应用 / 知识库集合；后续按 Sage 业务闭环选择性接入 |
+| 技能子集 | `packages/capabilities/dsh-skill-subset/` | 历史预设技能白名单契约 |
 | 宿主补丁集 | `dsh-patches/` | 宿主层补丁与 lint 工具 |
-| 支撑插件 | `dsh-*-local/`、`archify-local/` 等 | profile 依赖插件（deepresearch/noema/memory/loopx/agent-team/browser/theme…） |
-| 打包工程 | `packaging/` | DMG 流水线（assemble.sh → sign-and-dmg.sh；挂载后终端一条命令或 `LUTE Setup.app`，面向无终端客户） |
-| 技能源 | `81-Skills/` | 自研技能集（含安装与维护管线） |
+| 支撑插件 | `packages/**/dsh-*-local/` 等 | 历史 profile 插件；未明确启用前均为隔离状态 |
+| 打包工程 | `packaging/` | 历史 DSH/LUTE DMG 流水线；尚未成为 Sage.app 发布链 |
 | 文档 | `docs/`（ADR/架构/发布流程/白屏排查手册）、`doc/`（HTML 文档站）、`_doc-notes/` | 决策与知识资产 |
 
-## 安装
+## 历史安装资料（非 Sage.app）
 
 ### 客户安装（DMG）
 
@@ -34,18 +41,19 @@
 > 首启会被 Gatekeeper 拦（右键 → 打开）；**未公证与签名身份是两件事**：前者决定放行，后者决定 TCC 授权能否跨版本存活。
 > 逐步操作、Gatekeeper 处置表、授权两项、完整性校验与常见问题一律见 [安装手册](packaging/INSTALL-GUIDE.md)（速查：[安装卡](packaging/INSTALL-CARD.md)）。
 
-### 本机开发安装（profile file: 依赖）
+### Legacy profile 本机装配
 
 ```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd ~/.dsh/profiles/desktop
-pnpm add file:/Users/lute/project/Magpie-Horch/dsh-overseas-skills
+pnpm add "file:${REPO_ROOT}/packages/capabilities/dsh-overseas-skills"
 # 并在 package.json 的 dsh.profile.bundles 追加插件名
 ```
 
 详细维护与生效语义见 `docs/architecture.md` 与各插件 docs/。
 - 故障排查：`docs/dsh-desktop-white-screen-playbook.md`（DSH Desktop 白屏等二次开发常见故障速查，索引见 `docs/README.md`）。
 
-## 版本与发布
+## 历史版本与发布
 
 - 版本：平台侧使用单一版本 `vX.Y.Z`（git tag = 打包版本）；`CHANGELOG.md`（根）与 `packaging/CHANGELOG.md`（打包）双轨汇总。
 - 插件版本现状：各插件 `package.json` 保留自身版本，实测分布于 9 个取值（`0.0.3-alpha.1-port` … `1.0.1`），**尚未与平台版本对齐**；对齐机制与债务由 [ADR-0003](docs/adr/ADR-0003.md)、[ADR-0012](docs/adr/ADR-0012.md) 与门禁 `package-identity` 接管。
@@ -56,9 +64,11 @@ pnpm add file:/Users/lute/project/Magpie-Horch/dsh-overseas-skills
 ## 开发与验收
 
 ```bash
-pnpm run gate        # 提交前：契约级门禁（退出码即契约）
-pnpm run gate:full   # 推送前：完整门禁
-pnpm run test:gate   # 门禁自身的单元测试
+pnpm run gate               # Sage BASE 提交前门禁：壳质量、边界、数据隔离、路径与 ADR
+pnpm run gate:full          # Sage BASE 推送前门禁；当前与 quick 使用同一必跑集合
+pnpm run test:gate          # Sage BASE 门禁自身的反向测试
+pnpm run gate:legacy        # 仅在明确进入历史平台任务时运行全量 legacy quick
+pnpm run gate:legacy:full   # 历史平台完整门禁；不代表 Sage.app 已可发布
 ```
 
 规则与分层见 [AGENTS.md](AGENTS.md)；门禁校验项与阻塞级别见 [docs/architecture.md](docs/architecture.md) 第 0 节。

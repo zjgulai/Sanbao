@@ -100,6 +100,7 @@ test('绝对路径形态的依赖仍被收录（不得为修新形态而打破�
     {
       'dsh-gamma': 'file:/Users/lute/project/Magpie-Horch/packages/platform/dsh-theme-local',
       'dsh-delta': 'file:../../../project/Magpie-Horch/packages/platform/dsh-ui-polish-local',
+      'sage-epsilon': 'file:../../../project/Sage/apps/sage-shell',
     },
     expr,
   )
@@ -110,5 +111,9 @@ test('绝对路径形态的依赖仍被收录（不得为修新形态而打破�
   assert.ok(
     vendor.includes('packages/platform/dsh-ui-polish-local'),
     `相对根路径形态应被收录，实际=${JSON.stringify(vendor)}`,
+  )
+  assert.ok(
+    vendor.includes('apps/sage-shell'),
+    `Sage 相对根路径形态应被收录，实际=${JSON.stringify(vendor)}`,
   )
 })

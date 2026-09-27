@@ -1,6 +1,6 @@
-# docs 索引
+# Sage 文档索引
 
-本目录沉淀 LUTE Agentic System（DSH Desktop 二次开发平台）的决策与知识资产。
+本目录沉淀 Sage 当前产品主线，以及仍需作为 provenance / compatibility 保留的历史 DSH 二开决策。旧发布线、旧插件与历史证据不等于当前 Sage 已交付能力。
 
 本页是**人工入口**，不是事实源：分层规则见根 [AGENTS.md](../AGENTS.md)，门禁契约见 [architecture.md](architecture.md) 第 0 节。
 
@@ -12,6 +12,7 @@
 | 有序地图 | [architecture.md](architecture.md) | 仓库构成、门禁契约、基座事实、红线、模块地图 |
 | 决策时间线 | [adr/](adr/) | ADR-NNNN 编号时间线（决定**是什么**），索引见目录内 README |
 | 决策理由 | [notes/](notes/) | `{lifecycle}/{class}/yyyy-mm-dd-topic.md`（为什么改、放弃了什么），非机械改动必须附一篇 |
+| 本机活动仓基线 | [notes/implemented/process/2026-09-27-local-active-repository-baseline.md](notes/implemented/process/2026-09-27-local-active-repository-baseline.md) | BASE-01～05 的恢复边界、动态仓根规则、legacy 隔离与回退方式；后续任务开工前必读 |
 
 ## 故障排查（优先看）
 
@@ -25,6 +26,7 @@
 | 文档 | 说明 |
 | --- | --- |
 | [architecture.md](architecture.md) | 平台架构与维护/生效语义（含万物互联与出海技能当前产品形态，2026-09-09 对齐） |
+| [plans/2026-09-24-sage-self-owned-desktop-execution-plan.md](plans/2026-09-24-sage-self-owned-desktop-execution-plan.md) | Sage 自有桌面端的阶段边界与验收出口；accepted 不等于全部已实现 |
 | [upgrade-2.0.5-window-plan.md](upgrade-2.0.5-window-plan.md) | **升级窗口执行方案**（基座升级时整窗执行；含品牌/主题/导航的锚点处置现状与窗口复验清单） |
 | [release-process.md](release-process.md) | 版本发布 SOP |
 | [sop/profile-loadpoint-refill.md](sop/profile-loadpoint-refill.md) | 装载点缺件检查、原子补件、哈希复核及隔离演练读数 |

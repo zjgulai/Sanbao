@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// LUTE 打包：profile 的 file: 依赖路径重写（包内自洽，决策 D4）
+// Legacy LUTE 打包：profile 的 file: 依赖路径重写（包内自洽，决策 D4）
 //
-// 开发机布局：file:../../../project/Magpie-Horch/<name>（相对 profile 目录指向 fork 源）
+// 开发机布局：当前 Sage 仓路径，或 legacy Magpie-Horch profile 路径。
 // 目标机布局：fork 源随包落位 profile/vendor/<name> → 重写为 file:./vendor/<name>
 //
 // 用法：
@@ -9,6 +9,7 @@
 //   node rewrite-file-deps.mjs --check <profile-dir>  # 校验：仍有旧路径则退出 1（用于安装器自检）
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const check = args[0] === '--check';
@@ -16,7 +17,14 @@ const profileDir = path.resolve(args[check ? 1 : 0] ?? '.');
 const pkgPath = path.join(profileDir, 'package.json');
 const lockPath = path.join(profileDir, 'pnpm-lock.yaml');
 
-const OLD_PREFIXES = ['file:../../../project/Magpie-Horch/', 'file:/Users/lute/project/Magpie-Horch/'];
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..', '..');
+const OLD_PREFIXES = [
+  'file:../../../project/Sage/',
+  `file:${repoRoot}/`,
+  'file:../../../project/Magpie-Horch/',
+  'file:/Users/lute/project/Magpie-Horch/',
+];
 const NEW_PREFIX = 'file:./vendor/';
 
 let changed = 0;

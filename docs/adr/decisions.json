@@ -2775,6 +2775,188 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0157",
+      "title": "ADR-0157 · 深度开发前置基线：发布物保全、生产隔离与可核验执行",
+      "status": "accepted（2026-09-23）",
+      "date": "2026-09-23",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "深度开发先完成可核验基线：方案、执行 Todo、ADR/Note 与 Birdview 文件级计划；每个代码批在实施前展示范围，完成后只报告实际命令、退出码和未验证项。",
+          "constraints": [
+            "计划、历史证据与当前实跑结果必须分开表述",
+            "不得把历史绿灯、旧截图或 handoff 路线图当作当前验收"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "前置阶段不删除发布证据、不处理未知未跟踪项、不改生产 profile；清场工具必须递归识别嵌套发布清单，且只生成读数、不构成删除授权。",
+          "constraints": [
+            "packaging/release、.archive、仓库外归档和生产 profile 不在本轮写入或删除射程",
+            "首个代码批仅改清场判据及其回归测试，不改 DMG、清单、锁位或运行时产品行为"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "2.5.0 的正式状态与历史发布物留存策略均为显式决策门；在用户确认前保留制品，不补 tag、不改 feed、不重打同号、不删除。",
+          "constraints": [
+            "任何修改 ADR-0067 留存规则的方案必须另立 ADR，并证明可恢复副本与回滚路径",
+            "正式发布判断必须由 source commit、tag、分发资产、校验和和渠道共同核验"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "DA-25 生产恢复与功能开发隔离；后续验证只在用户指定的非生产可丢弃环境中进行。Role Presets handoff 必须先按当前 50 AGT + 3 MGT 结果完成只读 H0 rebase。",
+          "constraints": [
+            "不得利用生产 profile、锁文件、MCP 挂载或运行中的 DSH 作为功能开发试验场",
+            "handoff 是线索而非当前完成状态，过期基线不能直接消费"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0158",
+      "title": "ADR-0158 · 右栏远程内容采用受控原生 WebContentsView",
+      "status": "accepted（2026-09-24）",
+      "date": "2026-09-24",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "右栏远程内容使用独立 WebContentsView，React 侧只保留受限控制面和布局占位。",
+          "constraints": [
+            "不得使用 iframe 或 webview",
+            "不得修改 vendor、pin、profile 或共享 sidebar observer"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "桥接与导航按 fail-closed 策略处理，远程内容不获得 Node、preload 或 DSH API。",
+          "constraints": [
+            "HTTPS-only",
+            "拒绝本机与非公网字面量地址",
+            "权限/下载/popup/webview 默认拒绝"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "补丁链与实机验证分层；fixture 和锚点通过不等于真实应用已部署。",
+          "constraints": [
+            "专属可回滚备份",
+            "实机验收只在隔离 staging app/profile",
+            "DNS rebinding 的最终 socket 指向不作已验证承诺"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0159",
+      "title": "ADR-0159 · Sage 自有桌面端：产品壳、能力适配、独立身份与受控迁移",
+      "status": "accepted（2026-09-24）",
+      "date": "2026-09-24",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage Shell 通过唯一 Capability Adapter 消费 Harness 运行时；产品页面不直接消费上游网页、UI slot 或 Cordis 私有 DOM。",
+          "constraints": [
+            "受控原子迁移 apps/lute-shell 到 apps/sage-shell",
+            "vendor 和 pin 保持只读"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "首个产品闭环是经营事项：创建、证据、运行、审批、产物回执、失败重试。",
+          "constraints": [
+            "206 条原型状态是验收输入，不是功能完成声明",
+            "Jev 仅作为可插拔判断能力"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Sage 使用独立身份与数据根；旧 DSH 数据只复制、校验、可回滚导入。",
+          "constraints": [
+            "不写旧 desktop profile",
+            "旧 App、数据和发布物在迁移验收前保留"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "A StarSail Product symbol 的图形几何是 Sage 主图形来源；所有 Sage 可见品牌资产都从清洗后的派生物出货。",
+          "constraints": [
+            "不出货 SanBao 路径字标、概念图或生成记录",
+            "公开发布前须有资产来源、权属、商标、哈希和批准记录"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "P0 是内部工程验收，不发 DMG；清理采用只读盘点、名单和明确授权。",
+          "constraints": [
+            "用户可见面零原始品牌残留",
+            "第三方许可证与技术事实保留"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0160",
+      "title": "ADR-0160 · 本机活动仓基线与历史能力隔离",
+      "status": "accepted（2026-09-27）",
+      "date": "2026-09-27",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage 活动仓使用普通本地文件系统和 main，仓根必须动态发现。",
+          "constraints": [
+            "不新增机器绝对仓路径",
+            "不创建 worktree"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "重建前必须同时保存 Git 历史、三层 dirty 工作和 ignored 发布物。",
+          "constraints": [
+            "12 个历史 DMG 保留",
+            "恢复物在仓外",
+            "不 prune 历史 worktree"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "origin/main 是新基线；ECC commits 只归档，Sage P0 按显式路径回放。",
+          "constraints": [
+            "保留远端三个 revert",
+            "禁止整提交 cherry-pick 临时快照"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "旧插件和后续功能默认隔离，BASE 不写 UI、不接 packaging。",
+          "constraints": [
+            "controlled browser deferred",
+            "legacy gates deferred",
+            "DMG 发布 deferred"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "当前产品入口统一为 Sage，历史名称仅保留在事实与兼容边界中。",
+          "constraints": [
+            "不做全仓字符串替换",
+            "保留 provenance、许可证、vendor pin、兼容输入和历史记录"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "默认门禁只验证 Sage BASE，历史全量门禁必须显式进入。",
+          "constraints": [
+            "裸 CLI 默认 Sage",
+            "Sage 服务消费不扫描 legacy packages",
+            "Sage 与 legacy 报告携带独立 scope",
+            "BASE 只验证 packaging 路径卫生，不接入 DMG 发布链"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LUTE 打包组装器 —— DSH Desktop（基座版本随 pin）+ Magpie-Horch 全量定制层 → 可分发 payload
+# Legacy LUTE 打包组装器 —— DSH Desktop（基座版本随 pin）+ 仓内历史定制层 → 可分发 payload
 # 产出：staging/<VERSION>/payload/（安装器 + 载荷 tarball + 校验工具），Phase 3 由此制 dmg。
 #
 # 用法: VERSION=1.0.0 ./assemble.sh            # 默认 BASE=source（源码构建，彻底解耦）
@@ -7,10 +7,11 @@
 # 环境覆盖：BASE / DSH_APP / DSH_HOME / DSH_VENDOR / VERSION / OUT
 set -euo pipefail
 PKG_ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$PKG_ROOT/.." && pwd)"
 BASE="${BASE:-source}"
 DSH_APP="${DSH_APP:-/Applications/DSH Desktop.app}"
 DSH_HOME_DIR="${DSH_HOME:-$HOME/.dsh}"
-DSH_VENDOR="${DSH_VENDOR:-$HOME/project/Magpie-Horch}"
+DSH_VENDOR="${DSH_VENDOR:-$REPO_ROOT}"
 VENDOR_REPO="${VENDOR_REPO:-$DSH_VENDOR/vendor/dsh-desktop}"
 VENDOR_PIN="${VENDOR_PIN:-$DSH_VENDOR/vendor/dsh-desktop.pin}"
 PROFILE="${PROFILE:-$DSH_HOME_DIR/profiles/desktop}"
@@ -254,13 +255,21 @@ for f in package.json pnpm-lock.yaml pnpm-workspace.yaml cordis.patch.yml apply-
   [ -f "$PROFILE/$f" ] && cp "$PROFILE/$f" "$STAGEP/profile/"
 done
 
-# vendor 列表 = package.json 中指向 Magpie-Horch 的 file: 依赖 + dsh-patches
+# vendor 列表 = package.json 中指向当前 Sage 仓或 legacy Magpie-Horch 仓的 file: 依赖
 vendor_dirs="$(node -e "
 const p=require(process.argv[1]);
+const repoRoot=process.argv[2].replace(/\/+\$/,'');
+const prefixes=[
+  'file:../../../project/Sage/',
+  'file:../../../project/Magpie-Horch/',
+  'file:'+repoRoot+'/',
+  'file:/Users/lute/project/Magpie-Horch/',
+];
 const names=Object.entries(p.dependencies||{})
-  .filter(([,v])=>typeof v==='string'&&(v.startsWith('file:../../../project/Magpie-Horch/')||v.startsWith('file:/Users/lute/project/Magpie-Horch/')))
-  .map(([,v])=>v.startsWith('file:../../../project/Magpie-Horch/')?v.slice('file:../../../project/Magpie-Horch/'.length).replace(/\/+$/,''):v.slice('file:/Users/lute/project/Magpie-Horch/'.length).replace(/\/+$/,''));
-console.log(names.join(' '))" "$PROFILE/package.json")"
+  .map(([,v])=>({value:v,prefix:prefixes.find(prefix=>typeof v==='string'&&v.startsWith(prefix))}))
+  .filter(({prefix})=>prefix)
+  .map(({value,prefix})=>value.slice(prefix.length).replace(/\/+$/,''));
+console.log(names.join(' '))" "$PROFILE/package.json" "$DSH_VENDOR")"
 say "vendor 列表: $vendor_dirs"
 # 注意：**不**把 dsh-patches 拷进出货 profile 的 vendor。理由两条：
 #   ① 它不是装载点（ADR-0054：DSH 的包解析锚点是 profile 根 package.json → node_modules，
@@ -735,8 +744,19 @@ const p=require(process.argv[1]);
 const bundles=(p.dsh?.profile?.bundles||[]).map(b=>typeof b==='string'?b:b.name);
 const deps=Object.keys(p.dependencies||{});
 const vendorDirs=Object.entries(p.dependencies||{})
-  .filter(([,v])=>typeof v==='string'&&(v.startsWith('file:../../../project/Magpie-Horch/')||v.startsWith('file:/Users/lute/project/Magpie-Horch/')||v.startsWith('file:./vendor/')))
-  .map(([,v])=>v.startsWith('file:../../../project/Magpie-Horch/')?v.slice('file:../../../project/Magpie-Horch/'.length).replace(/\/+\$/,''):(v.startsWith('file:./vendor/')?v.slice('file:./vendor/'.length).replace(/\/+\$/,''):v.slice('file:/Users/lute/project/Magpie-Horch/'.length).replace(/\/+\$/,'')));
+  .filter(([,v])=>typeof v==='string'&&(
+    v.startsWith('file:./vendor/')||
+    v.startsWith('file:../../../project/Sage/')||
+    v.startsWith('file:../../../project/Magpie-Horch/')||
+    v.startsWith('file:/Users/lute/project/Magpie-Horch/')
+  ))
+  .map(([,v])=>v.startsWith('file:./vendor/')
+    ?v.slice('file:./vendor/'.length).replace(/\/+\$/,'')
+    :v.startsWith('file:../../../project/Sage/')
+      ?v.slice('file:../../../project/Sage/'.length).replace(/\/+\$/,'')
+      :v.startsWith('file:../../../project/Magpie-Horch/')
+        ?v.slice('file:../../../project/Magpie-Horch/'.length).replace(/\/+\$/,'')
+        :v.slice('file:/Users/lute/project/Magpie-Horch/'.length).replace(/\/+\$/,''));
 // dsh-patches 不进出货 profile 的 vendor（见上方注释），故 completeness.vendor 也不含它
 const allBundles=[...new Set([...bundles,...deps.filter(d=>typeof p.dependencies[d]==='string'&&!p.dependencies[d].startsWith('file:'))])];
 // skills 与 presets 都必须读**出货的那一份**（skills-presets.tar.gz 里的清单），不能读源目录

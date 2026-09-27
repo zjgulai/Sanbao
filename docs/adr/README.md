@@ -167,6 +167,10 @@
 | ADR-0154 | 验收入口显式准备依赖、全量收集测试与沙箱失败停止 | accepted（2026-09-21） | [Note](../notes/implemented/contract/2026-09-21-acceptance-entrypoints.md) |
 | ADR-0155 | ResearchView 首片拆分：内部 hooks / 纯 model / 展示分离，保持调用契约、生命周期与失败语义；DA-07 只部分结算。 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-research-view-separation.md) |
 | ADR-0156 | Deep Research 出货产物同步与终审缺陷修复 | accepted（2026-09-21） | [Note](../notes/implemented/surface/2026-09-21-deepresearch-artifact-sync.md) |
+| ADR-0157 | 深度开发前置基线：发布物保全、生产隔离与可核验执行；先修清场判据盲区，`2.5.0`、历史留存和 DA-25 环境仍是显式决策门。 | accepted（2026-09-23） | [Note](../notes/implemented/process/2026-09-23-deep-development-readiness-baseline.md) |
+| ADR-0158 | 右栏远程内容采用受控原生 WebContentsView：独立原生视图、fail-closed 控制面与可回滚补丁链。 | accepted（2026-09-24） | [Note](../notes/implemented/surface/2026-09-24-controlled-native-browser.md) |
+| ADR-0159 | Sage 自有桌面端：产品壳、能力适配、独立身份与受控迁移；Harness 留作能力运行时，首批以经营事项闭环验证。 | accepted（2026-09-24） | [Note](../notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| ADR-0160 | 本机活动仓基线与历史能力隔离：完整保全旧施工状态，以 `origin/main` 重建最小 Sage P0，并禁止新增机器绝对仓路径。 | accepted（2026-09-27） | [Note](../notes/implemented/process/2026-09-27-local-active-repository-baseline.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * LUTE 门禁入口。退出码即契约（ADR-0014）：
+ * Sage / legacy 门禁入口。退出码即契约（ADR-0014）：
  *   0 = 全部校验通过
  *   1 = 存在失败校验
  *   2 = 用法错误
  *
- * 用法：node scripts/gate.mjs [--mode quick|full] [--list] [--json] [--require-no-skip]
+ * 用法：node scripts/gate.mjs [--scope sage|legacy] [--mode quick|full] [--list] [--json] [--require-no-skip]
  *   quick（默认）提交前使用；full 推送前使用（含变更包 typecheck/test，二期接入 git 钩子后启用）。
  *
  * `--require-no-skip` 是**发布前那一次运行**用的开关，两种语义分开说清：
@@ -40,7 +40,10 @@ import {
   checkThemeTokensBaselineFrozen,
   checkTrackedIgnored,
 } from './gates/checks.mjs'
-import { checkLuteShellPin } from './gates/lute-shell-pin.mjs'
+import { checkSageShellPin } from './gates/sage-shell-pin.mjs'
+import { checkSageProductBoundary, collectSageProductBoundaryFiles } from './gates/sage-product-boundary.mjs'
+import { checkSageDataIsolation, collectSageDataIsolationFiles } from './gates/sage-data-isolation.mjs'
+import { checkSageBasePathHygiene, collectSageBasePathFiles } from './gates/sage-base-path-hygiene.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
 import { checkProfileBundleSync, checkProfileFilesSync, checkProfileMetadata } from './gates/sync-profile.mjs'
 import { checkPackageFilesCoverage, createFileSource, listPackageTree } from './gates/package-files-coverage.mjs'
@@ -130,6 +133,7 @@ import { renderCatalog } from './gen-catalog.mjs'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MODES = ['quick', 'full']
+const SCOPES = ['sage', 'legacy']
 
 /** 不参与包身份校验的目录（无 package.json 或属外部依赖）。 */
 const SCAN_SKIP = new Set(['node_modules', 'vendor', '.git', 'packaging', 'docs', '.scratch'])
@@ -157,6 +161,17 @@ const CHECKS = [
       '跑 node --test scripts/gates/gate-result.test.mjs；canonical/legacy 混用、计数不守恒、空射程 pass、throw 或 strict skip 任一反例都必须判红（ADR-0094）',
     run() {
       return runNodeTestFile('scripts/gates/gate-result.test.mjs', '统一 gate result schema 的反向自测失败')
+    },
+  },
+  {
+    name: 'sage-gate-scope-selftest',
+    remediation:
+      '跑 Sage scope 与 CI workflow 自测；裸 CLI 必须默认 Sage，Sage allowlist / CI 必须显式保持 Sage，CI 不得进入 legacy package，legacy 只能显式进入。',
+    run() {
+      return runNodeTestFiles(
+        ['scripts/gate-scope.test.mjs', 'scripts/gates/ci-workflow.test.mjs'],
+        'Sage / legacy 门禁射程与 CI workflow 自测失败',
+      )
     },
   },
   {
@@ -354,38 +369,102 @@ const CHECKS = [
     },
   },
   {
-    name: 'lute-shell-pin',
-    remediation: '把 apps/lute-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0139）',
+    name: 'sage-shell-quality',
+    remediation:
+      '在 apps/sage-shell 依次修复 typecheck、build、test；本项只验证 Sage 壳，不借用会遍历全部 legacy package 的 scripts-runnable。',
+    run() {
+      return runSageShellQuality()
+    },
+  },
+  {
+    name: 'sage-shell-pin',
+    remediation: '把 apps/sage-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0139）',
     run() {
       const reference = join('vendor', 'dsh-desktop', 'deepseek-harness', 'apps', 'desktop-host', 'src', 'wire.ts')
       let trackedFixturePaths = null
       try {
-        trackedFixturePaths = execSync('git ls-files apps/lute-shell/test/fixtures/', { cwd: repoRoot, encoding: 'utf8' })
+        trackedFixturePaths = execSync('git ls-files apps/sage-shell/test/fixtures/', { cwd: repoRoot, encoding: 'utf8' })
           .split('\n').filter((line) => line !== '')
       } catch {
         trackedFixturePaths = null
       }
-      return checkLuteShellPin({
-        shellManifestText: readRepoText('apps/lute-shell/package.json'),
-        seedManifestText: readRepoText('apps/lute-shell/seed/package.json'),
-        shellWorkspaceText: readRepoText('apps/lute-shell/pnpm-workspace.yaml'),
-        seedWorkspaceText: readRepoText('apps/lute-shell/seed/pnpm-workspace.yaml'),
-        protocolText: readRepoText('apps/lute-shell/src/protocol.ts'),
+      return checkSageShellPin({
+        shellManifestText: readRepoText('apps/sage-shell/package.json'),
+        seedManifestText: readRepoText('apps/sage-shell/seed/package.json'),
+        shellWorkspaceText: readRepoText('apps/sage-shell/pnpm-workspace.yaml'),
+        seedWorkspaceText: readRepoText('apps/sage-shell/seed/pnpm-workspace.yaml'),
+        protocolText: readRepoText('apps/sage-shell/src/protocol.ts'),
         referenceWireText: readRepoText(reference),
         vendorDesktopManifestText: readRepoText('vendor/dsh-desktop/dsh-plugin-desktop/package.json'),
-        seedUserPatchText: readRepoText('apps/lute-shell/seed/cordis.patch.yml'),
+        seedUserPatchText: readRepoText('apps/sage-shell/seed/cordis.patch.yml'),
         trackedFixturePaths,
       })
     },
   },
   {
-    name: 'lute-shell-pin-selftest',
+    name: 'sage-shell-pin-selftest',
     remediation:
-      '跑 node --test scripts/gates/lute-shell-pin.test.mjs 看红在哪条：本项必须能说「不」——seed 与壳 devDependencies 任一侧的 range 型 specifier、两侧同名包版本错位、任一侧没有任何 @deepseek-ai/* 依赖、'
+      '跑 node --test scripts/gates/sage-shell-pin.test.mjs 看红在哪条：本项必须能说「不」——seed 与壳 devDependencies 任一侧的 range 型 specifier、两侧同名包版本错位、任一侧没有任何 @deepseek-ai/* 依赖、'
       + '协议常量漂移于 submodule 参照（FRAME_MAGIC 等 7 项）、electron 非精确 / 缺失 / 与 dsh-plugin-desktop 不一致、治理三字段缺失或取值非 self/lute/false、'
-      + 'seed 用户层声明了 LUTE 插件、fixture 掉出 git 跟踪，都必须判红；submodule 未初始化与 vendor 参照缺失是显式 skip note，不是通过（ADR-0139 / P-02）',
+      + 'seed 用户层声明了 Sage 插件、fixture 掉出 git 跟踪，都必须判红；submodule 未初始化与 vendor 参照缺失是显式 skip note，不是通过（ADR-0139 / P-02）',
     run() {
-      return runNodeTestFile('scripts/gates/lute-shell-pin.test.mjs', '薄壳 pin 判据的反向自测失败')
+      return runNodeTestFile('scripts/gates/sage-shell-pin.test.mjs', '薄壳 pin 判据的反向自测失败')
+    },
+  },
+  {
+    name: 'sage-product-boundary',
+    remediation:
+      'Sage renderer 只能访问固定 `/.sage/*` 合同；移除上游 frontend / Composer / raw stream / 通用 API 消费，并确保仅 apps/sage-shell/src/adapter/capability-adapter.ts 调用 ctx.get(\'connection\')。新建 source 文件未暂存时也在本项工作树射程内。',
+    run() {
+      return checkSageProductBoundary({ files: collectSageProductBoundaryFiles(repoRoot) })
+    },
+  },
+  {
+    name: 'sage-product-boundary-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-product-boundary.test.mjs；缺自有 product/adapter、上游 token 回流、产品层直读 ctx、Composer/stream 残留或空射程都必须判红。',
+    run() {
+      return runNodeTestFile('scripts/gates/sage-product-boundary.test.mjs', 'Sage 产品边界判据的反向自测失败')
+    },
+  },
+  {
+    name: 'sage-data-isolation',
+    remediation:
+      '恢复 Sage 独立数据根：apps/sage-shell/src/profile/paths.ts 必须拒绝 ~/.dsh，Host child 只能收到 Sage harnessHome 作为 DSH_HOME，Host 必须校验 active profile，且 Electron 的 userData/sessionData/crashDumps/logs 必须在 ready 前设为 Sage 路径。新建 source 文件未暂存时也在本项工作树射程内。',
+    run() {
+      return checkSageDataIsolation({ files: collectSageDataIsolationFiles(repoRoot) })
+    },
+  },
+  {
+    name: 'sage-data-isolation-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-data-isolation.test.mjs；缺隔离源文件、lute-shell/lute-host/LUTE_SHELL_ 回流、默认 .dsh、继承 DSH_HOME、Host mkdir、未校验 active profile、child argv 漂移或 Electron 存储在 ready 后设置均必须判红。',
+    run() {
+      return runNodeTestFile('scripts/gates/sage-data-isolation.test.mjs', 'Sage 数据隔离判据的反向自测失败')
+    },
+  },
+  {
+    name: 'sage-base-path-hygiene',
+    remediation:
+      '用 import.meta.url、脚本目录或 git 根动态发现仓根；不得把当前 Sage、旧 iCloud、恢复集或 worktree 绝对路径写回活动入口。legacy Magpie-Horch 只可作为 packaging 兼容输入保留。',
+    run() {
+      return checkSageBasePathHygiene({ files: collectSageBasePathFiles(repoRoot) })
+    },
+  },
+  {
+    name: 'sage-base-path-hygiene-selftest',
+    remediation:
+      '跑 Sage 路径卫生反例、packaging file: 改写、profile / JEV 动态仓根测试与 bash -n packaging/assemble.sh；本项只校验路径卫生，不执行 DMG 装配。',
+    run() {
+      return runSageBasePathSelftests()
+    },
+  },
+  {
+    name: 'sage-assets-generated',
+    remediation:
+      '运行 node scripts/generate-sage-assets.mjs --check，并按 manifest 修复 Sage 候选资产的字节或元数据漂移；本项不把 blocked release gate 误报为已获批准。',
+    run() {
+      return runSageAssetsCheck()
     },
   },
   {
@@ -535,6 +614,27 @@ const CHECKS = [
       + '要么补回入口/apply，要么从 package.json 的 dsh.bundle.patch 里去掉声明',
     run() {
       return checkPluginEntryContract(collectManifests(), readRepoText)
+    },
+  },
+  {
+    name: 'sage-service-consumption',
+    remediation:
+      '只核对 apps/sage-shell 的 ctx.get() 与 scripts/gates/sage-service-consumption.json；旧 packages 的消费漂移必须转到显式 legacy scope 处理。',
+    run() {
+      const registryRelPath = 'scripts/gates/sage-service-consumption.json'
+      return checkServiceConsumption({
+        registryText: readRepoText(registryRelPath),
+        registryRelPath,
+        files: collectConsumptionFiles(repoRoot, ['apps/sage-shell']),
+      })
+    },
+  },
+  {
+    name: 'sage-service-consumption-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-service-consumption.test.mjs；Sage 扫描不得进入 packages/，独立登记必须与当前壳逐项一致且射程非空。',
+    run() {
+      return runNodeTestFile('scripts/gates/sage-service-consumption.test.mjs', 'Sage 服务消费隔离自测失败')
     },
   },
   {
@@ -2335,6 +2435,44 @@ const CHECKS = [
   },
 ]
 
+// Sage BASE 的默认射程是显式 allowlist：新增 legacy 检查不会自动进入日常产品门禁。
+// 任何删名/改名都会由 checksForScope() 响亮报错，不能静默缩小分母。
+const SAGE_CHECK_NAMES = Object.freeze([
+  'gate-result-selftest',
+  'sage-gate-scope-selftest',
+  'node-interpreter',
+  'pin-consistency',
+  'sage-shell-quality',
+  'sage-shell-pin',
+  'sage-shell-pin-selftest',
+  'sage-product-boundary',
+  'sage-product-boundary-selftest',
+  'sage-data-isolation',
+  'sage-data-isolation-selftest',
+  'sage-base-path-hygiene',
+  'sage-base-path-hygiene-selftest',
+  'sage-assets-generated',
+  'gitignore-whitelist',
+  'adr-index',
+  'adr-note-links',
+  'sage-service-consumption',
+  'sage-service-consumption-selftest',
+  'adr-agent-records',
+  'adr-agent-records-selftest',
+  'docs-link-integrity',
+  'docs-link-integrity-selftest',
+])
+
+function checksForScope(scope) {
+  if (scope === 'legacy') return CHECKS
+  const byName = new Map(CHECKS.map((check) => [check.name, check]))
+  const missing = SAGE_CHECK_NAMES.filter((name) => !byName.has(name))
+  if (missing.length > 0) {
+    throw new Error(`Sage gate allowlist 指向不存在的检查：${missing.join('、')}`)
+  }
+  return SAGE_CHECK_NAMES.map((name) => byName.get(name))
+}
+
 // 注册表级自检（P-08）：每个注册项必须声明非空 remediation——第 87 条悄悄不写时，
 // 摘要会静默少一行「怎么修」。此断言在任何模式启动前执行，违规即响亮退出，
 // 不依赖任何测试去跑它（断言函数本身由 gate-result-selftest 守着）。
@@ -2697,6 +2835,58 @@ function runNodeTestFiles(relPaths, failureLabel, timeoutMs = 120000) {
   }
 }
 
+function commandFailure(label, result) {
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim().split('\n').slice(-8).join(' / ')
+  const code = result.code === null ? '未给出退出码' : `退出码 ${result.code}`
+  const note = result.note === undefined ? '' : `；${result.note}`
+  return `${label} 失败（${code}${note}）${output === '' ? '' : `：${output}`}`
+}
+
+/** Sage 默认门禁只跑自有壳的可构建性，不遍历 legacy packages。 */
+function runSageShellQuality() {
+  const shellRoot = join(repoRoot, 'apps', 'sage-shell')
+  const violations = []
+  for (const step of ['typecheck', 'build', 'test']) {
+    const result = runScript(shellRoot, `pnpm run ${step}`, 300000)
+    if (result.code !== 0) violations.push(commandFailure(`apps/sage-shell ${step}`, result))
+  }
+  return {
+    passed: violations.length === 0,
+    violations,
+    note: '已依次执行 Sage Shell typecheck → build → test；未遍历 legacy packages',
+  }
+}
+
+/** BASE-05 路径行为自测；不执行 assemble，不生成 DMG。 */
+function runSageBasePathSelftests() {
+  const suite = runNodeTestFiles([
+    'scripts/gates/sage-base-path-hygiene.test.mjs',
+    'packaging/scripts/rewrite-file-deps.test.mjs',
+    'packaging/scripts/completeness-vendor.test.mjs',
+    'scripts/gates/profile-coverage.test.mjs',
+    'scripts/jev/egress-boundary.test.mjs',
+  ], 'Sage BASE 动态仓根与 legacy packaging 路径卫生自测失败', 300000)
+  const syntax = runScript(repoRoot, 'bash -n packaging/assemble.sh', 120000)
+  const violations = [...suite.violations]
+  if (syntax.code !== 0) violations.push(commandFailure('bash -n packaging/assemble.sh', syntax))
+  return {
+    passed: violations.length === 0,
+    violations,
+    note: '只验证动态仓根、file: 改写和 assemble 语法；没有执行 legacy 打包或 DMG 接线',
+  }
+}
+
+function runSageAssetsCheck() {
+  const { command, env } = nodeCommand()
+  const script = join(repoRoot, 'scripts', 'generate-sage-assets.mjs')
+  const result = runScript(repoRoot, `"${command}" "${script}" --check`, 120000, env)
+  return {
+    passed: result.code === 0,
+    violations: result.code === 0 ? [] : [commandFailure('Sage 候选资产一致性检查', result)],
+    note: '只检查已生成资产与 manifest；资产 releaseGate 仍由 manifest 的 blocked 状态决定',
+  }
+}
+
 /**
  * 收集 `docs-link-integrity` 要校验的文档：`docs/` 全部 Markdown + 仓库根的两份。
  *
@@ -3055,6 +3245,7 @@ function listFilesRecursive(root, relPrefix = '', depth = 0) {
 
 function parseArgs(argv) {
   let mode = 'quick'
+  let scope = 'sage'
   let list = false
   let json = false
   let requireNoSkip = false
@@ -3072,6 +3263,10 @@ function parseArgs(argv) {
       } else {
         attest = `${join(repoRoot, 'scripts', 'gate.mjs')}`
       }
+    } else if (argv[i] === '--scope') {
+      if (argv[i + 1] === undefined) return { error: '--scope 缺少值（sage / legacy）' }
+      scope = argv[i + 1]
+      i += 1
     } else if (argv[i] === '--mode') {
       if (argv[i + 1] === undefined) return { error: '--mode 缺少值（quick / full）' }
       mode = argv[i + 1]
@@ -3080,8 +3275,9 @@ function parseArgs(argv) {
       return { error: `未知参数：${argv[i]}` }
     }
   }
+  if (!SCOPES.includes(scope)) return { error: `未知 scope：${scope}（可用：${SCOPES.join(' / ')}）` }
   if (!MODES.includes(mode)) return { error: `未知模式：${mode}（可用：${MODES.join(' / ')}）` }
-  return { mode, list, json, requireNoSkip, attest }
+  return { mode, scope, list, json, requireNoSkip, attest }
 }
 
 /**
@@ -3197,7 +3393,7 @@ function measureQuietWindow(repoRoot) {
  * @param {boolean} json
  * @returns {Promise<number>} 退出码
  */
-async function runAttestation(target, mode, json) {
+async function runAttestation(target, mode, json, scope) {
   const { attestCommand } = await import('./lib/repo-attest.mjs')
   const { mkdtempSync } = await import('node:fs')
   const { tmpdir } = await import('node:os')
@@ -3206,13 +3402,14 @@ async function runAttestation(target, mode, json) {
   const verdict = await attestCommand({
     repoRoot,
     command: process.execPath,
-    args: [target, '--mode', mode, '--json'],
+    args: [target, '--scope', scope, '--mode', mode, '--json'],
     tmpRoot: witnessRoot,
     timeoutMs: 30 * 60 * 1000,
   })
   const report = {
     schemaVersion: 1,
     kind: 'gate-attestation',
+    scope,
     mode,
     target,
     witnessRoot,
@@ -3260,16 +3457,24 @@ async function runAttestation(target, mode, json) {
 
 /** 程序入口：解析参数、跑校验、按失败数设置退出码。 */
 function main() {
-  const { mode, list, json, requireNoSkip, attest, error } = parseArgs(process.argv.slice(2))
+  const { mode, scope, list, json, requireNoSkip, attest, error } = parseArgs(process.argv.slice(2))
   if (error) {
     process.stderr.write(`${error}\n`)
+    process.exitCode = 2
+    return
+  }
+  let scopedChecks
+  try {
+    scopedChecks = checksForScope(scope)
+  } catch (failure) {
+    process.stderr.write(`${failure instanceof Error ? failure.message : String(failure)}\n`)
     process.exitCode = 2
     return
   }
   if (attest !== null) {
     // 异步入口：见证要等子进程真的结束（含信号路径），不能靠顶层 await 之外的
     // 同步流程。退出码由 runAttestation 决定，与门禁自身的失败数分开。
-    runAttestation(attest, mode, json).then((code) => {
+    runAttestation(attest, mode, json, scope).then((code) => {
       process.exitCode = code
     }, (failure) => {
       process.stderr.write(`见证失败：${failure?.message ?? String(failure)}\n`)
@@ -3278,9 +3483,9 @@ function main() {
     return
   }
   if (list) {
-    const checks = CHECKS.map((check) => ({ name: check.name, modes: check.modes ?? MODES }))
+    const checks = scopedChecks.map((check) => ({ name: check.name, modes: check.modes ?? MODES }))
     process.stdout.write(json
-      ? `${JSON.stringify({ schemaVersion: 1, kind: 'gate-list', checks }, null, 2)}\n`
+      ? `${JSON.stringify({ schemaVersion: 1, kind: 'gate-list', scope, checks }, null, 2)}\n`
       : `${checks.map((check) => check.name).join('\n')}\n`)
     return
   }
@@ -3289,34 +3494,40 @@ function main() {
   // （`computeNotCovered` = 它的补集）。两者一旦各写各的，就会出现「既没跑、
   // 也没报未覆盖」的项，而守恒（跑到的 + 未覆盖的 = 注册表全量）正是这条读数
   // 唯一的判据（ADR-0102）。
-  const active = CHECKS.filter((check) => isCheckActive(check, mode))
+  const active = scopedChecks.filter((check) => isCheckActive(check, mode))
   // 未被本模式覆盖的校验项（`scripts-runnable` 等 7 条是 full-only）。它们不进入分母，
   // 因此必须**在读数里被说出来**：否则「75/76 项通过」会被读成「门禁看过了 76 项，
   // 其余不存在」，而实际是这个模式根本没碰过它们。2026-09-16 的 typecheck 回归
   // （10 处 TS2339 + 6 处测试类型错）正是这样对提交前门禁隐形的——只跑了 quick 就
   // 声称通过，是 P-04 的变体。
-  const notCovered = computeNotCovered(CHECKS, mode)
+  const notCovered = computeNotCovered(scopedChecks, mode)
   // 射程快照：必须在**任何判据跑之前**取一次。`scripts-runnable`（full-only）会按包真跑
   // `typecheck → test → build`，其中 build 会把已入库产物用新字节盖掉；排在它后面的
   // changed-packages / permission-bits 若自己现算射程，读到的就是这份写入而不是本次改动
   // （2026-09-22 CI 实测：full 档 unstaged=53 → 射程污染成 3 个包并报假绿，同轮 quick 档
   // 不跑 scripts-runnable 因而给出正确的空射程）。快照把这条因果切断。
-  takeChangedScope({
-    git: createGitRunner({ cwd: repoRoot }),
-    env: process.env,
-    packages: collectManifests().filter((entry) => entry.dir !== '.'),
-  })
+  // 当前 Sage allowlist 没有 changed-scope 消费者；只为 legacy 注册表取这份全仓快照。
+  // 否则默认产品门禁虽然不执行旧插件判据，仍会为了无人读取的分母枚举全部旧包。
+  if (scope === 'legacy') {
+    takeChangedScope({
+      git: createGitRunner({ cwd: repoRoot }),
+      env: process.env,
+      packages: collectManifests().filter((entry) => entry.dir !== '.'),
+    })
+  }
   const report = runGateChecks(active, { requireNoSkip, notCovered })
   if (json) {
     process.stdout.write(`${JSON.stringify({
       schemaVersion: 1,
       kind: 'gate-report',
+      scope,
       mode,
       requireNoSkip,
       summary: report.summary,
       results: report.results,
     }, null, 2)}\n`)
   } else {
+    process.stdout.write(`gate scope=${scope} mode=${mode}\n`)
     for (const result of report.results) {
       const label = result.status === 'pass' ? 'ok  ' : result.status === 'skip' ? 'skip' : 'fail'
       const accounting = `expected=${result.expected}, discovered=${result.discovered}, checked=${result.checked}, skipped=${result.skipped}, failed=${result.failed}`

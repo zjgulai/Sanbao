@@ -29,9 +29,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -168,7 +166,7 @@ test('变异 11：步骤带 continue-on-error 字段 → 判红（卡面明令�
 test('变异 12：命令加 `|| true` 吞掉退出码 → 判红', () => {
   expectRed(
     '命令吞退出码',
-    (text) => text.replace('node scripts/gate.mjs --mode quick --json | tee gate-quick.json', 'node scripts/gate.mjs --mode quick --json | tee gate-quick.json || true'),
+    (text) => text.replace('node scripts/gate.mjs --mode quick --scope sage --json | tee gate-quick.json', 'node scripts/gate.mjs --mode quick --scope sage --json | tee gate-quick.json || true'),
     /吞掉退出码/,
   )
 })
@@ -188,8 +186,8 @@ test('变异 14：写死机器路径 → 判红', () => {
   expectRed(
     '写死 /Users 路径',
     (text) => text.replace(
-      /^( {10})node scripts\/gate\.mjs --mode quick --json \| tee gate-quick\.json$/m,
-      '$1cd /Users/lute/project/Magpie-Horch\n$1node scripts/gate.mjs --mode quick --json | tee gate-quick.json',
+      /^( {10})node scripts\/gate\.mjs --mode quick --scope sage --json \| tee gate-quick\.json$/m,
+      '$1cd /Users/lute/project/Magpie-Horch\n$1node scripts/gate.mjs --mode quick --scope sage --json | tee gate-quick.json',
     ),
     /机器\/用户路径/,
   )
@@ -203,8 +201,8 @@ test('变异 16：quick job 跑 full 模式 → 判红', () => {
   expectRed(
     'quick job 跑 full',
     (text) => text.replace(
-      /^( {10})node scripts\/gate\.mjs --mode quick --json \| tee gate-quick\.json$/m,
-      '$1node scripts/gate.mjs --mode full --json | tee gate-quick.json',
+      /^( {10})node scripts\/gate\.mjs --mode quick --scope sage --json \| tee gate-quick\.json$/m,
+      '$1node scripts/gate.mjs --mode full --scope sage --json | tee gate-quick.json',
     ),
     /不在允许集合 quick 内/,
   )
@@ -267,7 +265,7 @@ test('解析器自证：块标量里的正文必须原样读到（否则判据�
   assert.match(install.run, /pnpm install --frozen-lockfile/, '锁文件安装的命令必须原样可读')
   assert.match(install.run, /if \[ -f pnpm-lock\.yaml \]/, '壳语法必须原样保留')
   const gateStep = doc.jobs.quick.steps.find((step) => step.name === '门禁 quick')
-  assert.match(gateStep.run, /node scripts\/gate\.mjs --mode quick --json/, '门禁命令必须原样可读')
+  assert.match(gateStep.run, /node scripts\/gate\.mjs --mode quick --scope sage --json/, '门禁命令必须原样可读')
 })
 
 test('解析器负例：不支持的 YAML 构造必须抛错，不得静默降级', () => {
@@ -316,28 +314,22 @@ test('变异 22：门禁命令进管道但没有 pipefail → 判红（2026-09-1
   )
 })
 
-test('full 在门禁前于更新包目录执行锁文件安装，且安装失败不会被吞掉', () => {
-  const steps = parseWorkflowYaml(baseline).jobs.full.steps
-  const index = steps.findIndex(step => step['working-directory'] === 'packages/platform/dsh-update-local')
-  assert.ok(index >= 0, 'full 未准备更新包依赖')
-  assert.ok(index < steps.findIndex(step => step.name === '门禁 full'))
-  const root = mkdtempSync(join(tmpdir(), 'ci-updater-'))
-  try {
-    const cwd = join(root, steps[index]['working-directory'])
-    const bin = join(root, 'bin')
-    mkdirSync(cwd, { recursive: true })
-    mkdirSync(bin)
-    writeFileSync(join(bin, 'pnpm'), '#!/bin/sh\n[ "$PWD" = "$EXPECTED_CWD" ] || exit 81\n[ "$*" = "install --frozen-lockfile --ignore-scripts" ] || exit 82\nprintf "prepared\\n" > "$PWD/prepared"\nexit "$INSTALL_EXIT"\n', { mode: 0o700 })
-    for (const code of [0, 73]) {
-      const result = spawnSync('bash', ['-e', '-c', steps[index].run], {
-        cwd, encoding: 'utf8', timeout: 10000,
-        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, EXPECTED_CWD: realpathSync(cwd), INSTALL_EXIT: String(code) },
-      })
-      assert.equal(result.status, code, result.stderr)
-      assert.equal(readFileSync(join(cwd, 'prepared'), 'utf8'), 'prepared\n')
+test('Sage CI 不得进入 legacy package 目录', () => {
+  const jobs = parseWorkflowYaml(baseline).jobs
+  for (const [jobName, job] of Object.entries(jobs)) {
+    for (const step of job.steps ?? []) {
+      const workingDirectory = step['working-directory'] ?? ''
+      assert.doesNotMatch(
+        workingDirectory,
+        /^packages\/(?:capabilities|surfaces|platform|contract|infra)(?:\/|$)/u,
+        `job \`${jobName}\` 的步骤「${step.name}」隐式进入 legacy package：${workingDirectory}`,
+      )
+      assert.doesNotMatch(
+        step.run ?? '',
+        /packages\/(?:capabilities|surfaces|platform|contract|infra)(?:\/|\b)/u,
+        `job \`${jobName}\` 的步骤「${step.name}」命令隐式引用 legacy package`,
+      )
     }
-  } finally {
-    rmSync(root, { recursive: true, force: true })
   }
 })
 

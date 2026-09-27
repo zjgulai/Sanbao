@@ -1,0 +1,143 @@
+/**
+ * Sage P0-2 product boundary gate.
+ *
+ * It protects the ownership split rather than trying to prove runtime health:
+ * the renderer is self-owned, only the adapter reads a Cordis service, and the
+ * retired upstream page/stream surfaces cannot re-enter through source drift.
+ */
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join, relative } from 'node:path'
+
+const SOURCE_ROOT = 'apps/sage-shell/src'
+const PRODUCT_ROOT = SOURCE_ROOT + '/product/'
+const ADAPTER_ROOT = SOURCE_ROOT + '/adapter/'
+
+const REQUIRED_FILES = [
+  PRODUCT_ROOT + 'contracts.ts',
+  PRODUCT_ROOT + 'state.ts',
+  PRODUCT_ROOT + 'renderer.ts',
+  ADAPTER_ROOT + 'contracts.ts',
+  ADAPTER_ROOT + 'capability-adapter.ts',
+  ADAPTER_ROOT + 'handler.ts',
+  SOURCE_ROOT + '/host/assets.ts',
+  SOURCE_ROOT + '/host/index.ts',
+  SOURCE_ROOT + '/profile/layout.ts',
+]
+
+const RETIRED_FILES = [
+  SOURCE_ROOT + '/host/composer-adapter.ts',
+  SOURCE_ROOT + '/host/composer-view.ts',
+  SOURCE_ROOT + '/host/streams.ts',
+]
+
+const UPSTREAM_TOKENS = [
+  '@deepseek-ai/dsh-web-frontend',
+  '@deepseek-ai/dsh-client-modules',
+  '@deepseek-ai/dsh-api-gateway',
+  '@deepseek-ai/dsh-host-webserver',
+  'clientModules',
+  'createSharedFetchHandler',
+  'typertGateway',
+  '__DSH_TRANSPORT__',
+  'data-sanbao-composer',
+  'composer-adapter',
+  'composer-view',
+]
+
+const PRODUCT_TOKENS = [
+  '/api',
+  '/plugins',
+  '/.dsh/remote-stream',
+  '/.sanbao/',
+  '__DSH_TRANSPORT__',
+  'localStorage',
+  'ctx.get(',
+  '@deepseek-ai/',
+  '../host/',
+]
+
+function meaningfulText(text) {
+  return text.split('\n')
+    .filter((line) => {
+      const trimmed = line.trim()
+      return !trimmed.startsWith('//') && !trimmed.startsWith('*') && !trimmed.startsWith('/*') && !trimmed.startsWith('*/')
+    })
+    .join('\n')
+}
+
+function hasToken(text, token) {
+  return meaningfulText(text).includes(token)
+}
+
+/**
+ * Read the current source tree, including files not yet staged for a commit.
+ * @param {string} repoRoot
+ * @returns {Array<{path: string, text: string}>}
+ */
+export function collectSageProductBoundaryFiles(repoRoot) {
+  const root = join(repoRoot, SOURCE_ROOT)
+  if (!existsSync(root)) return []
+  return readdirSync(root, { recursive: true })
+    .filter((entry) => entry.endsWith('.ts'))
+    .map((entry) => {
+      const absolute = join(root, entry)
+      return {
+        path: relative(repoRoot, absolute),
+        text: readFileSync(absolute, 'utf8'),
+      }
+    })
+}
+
+/**
+ * @param {{files: Array<{path: string, text: string}>}} input
+ * @returns {{passed: boolean, violations: string[], note: string}}
+ */
+export function checkSageProductBoundary({ files }) {
+  const violations = []
+  if (files.length === 0) {
+    return {
+      passed: false,
+      violations: [SOURCE_ROOT + ' contains no readable source files — boundary scan has no object to check'],
+      note: 'scanned 0 Sage source files',
+    }
+  }
+
+  const byPath = new Map(files.map((file) => [file.path, file.text]))
+  for (const path of REQUIRED_FILES) {
+    if (!byPath.has(path)) violations.push(path + ' is required for the P0-2 Sage product boundary')
+  }
+  for (const path of RETIRED_FILES) {
+    if (byPath.has(path)) violations.push(path + ' is retired; its upstream product path must not remain in Sage source')
+  }
+
+  for (const [path, text] of byPath) {
+    for (const token of UPSTREAM_TOKENS) {
+      if (hasToken(text, token)) violations.push(path + ' still contains retired upstream token ' + JSON.stringify(token))
+    }
+    if (!path.startsWith(ADAPTER_ROOT) && hasToken(text, 'ctx.get(')) {
+      violations.push(path + ' calls ctx.get outside the sole Sage Capability Adapter directory')
+    }
+  }
+
+  for (const [path, text] of byPath) {
+    if (!path.startsWith(PRODUCT_ROOT)) continue
+    for (const token of PRODUCT_TOKENS) {
+      if (hasToken(text, token)) violations.push(path + ' crosses the product boundary with ' + JSON.stringify(token))
+    }
+  }
+
+  const adapter = byPath.get(ADAPTER_ROOT + 'capability-adapter.ts')
+  if (adapter !== undefined && !hasToken(adapter, "ctx.get('connection')")) {
+    violations.push(ADAPTER_ROOT + 'capability-adapter.ts must own the explicit connection availability probe')
+  }
+  const layout = byPath.get(SOURCE_ROOT + '/profile/layout.ts')
+  if (layout !== undefined && (hasToken(layout, 'dsh-onboarding-carousel') || hasToken(layout, 'composer') || hasToken(layout, 'streams'))) {
+    violations.push(SOURCE_ROOT + '/profile/layout.ts still composes a retired product package or runtime module')
+  }
+
+  return {
+    passed: violations.length === 0,
+    violations,
+    note: 'scanned ' + files.length + ' Sage source files; comments are excluded from token checks',
+  }
+}

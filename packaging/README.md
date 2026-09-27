@@ -1,6 +1,6 @@
-# packaging/ —— DSH Desktop × Magpie-Horch 集成打包工程
+# packaging/ —— Legacy DSH Desktop / LUTE 集成打包工程
 
-> 方案与决策：见 `PLAN.md`。本目录产出**可安装包**（Phase 3 起为 `.dmg`）。
+> 方案与决策：见 `PLAN.md`。本目录保留历史可安装包流水线；它尚未成为 Sage.app 的发布链，BASE 不用它声明 Sage 已可发布。
 
 ## 目录
 
@@ -55,7 +55,7 @@ VERSION=2.3.1 ./assemble.sh                    # 产出 staging/2.3.1/payload
 ./sign-and-dmg.sh staging/2.3.1/payload 2.3.1  # 产出 release/2.3.1/*.dmg
 ```
 
-环境覆盖：`DSH_APP`（默认 /Applications/DSH Desktop.app）、`DSH_HOME`（默认 ~/.dsh）、`DSH_VENDOR`（默认 ~/project/Magpie-Horch）。
+环境覆盖：`DSH_APP`（默认 /Applications/DSH Desktop.app）、`DSH_HOME`（默认 ~/.dsh）、`DSH_VENDOR`（默认由 `assemble.sh` 自身位置推导仓根）。旧 Magpie-Horch profile 路径只作为迁移输入兼容。
 
 产物 `payload/`：
 - `DSH Desktop.app.tar.gz` —— 已补丁 app（app-update.yml 禁用更新 + `CFBundleVersion=2.0.5-lute.<ver>` + `LUTE Code Signing` 深签名；含 P0 系补丁与 G1/G2 运行时守卫）

@@ -1,13 +1,14 @@
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertEgressSourceTracked, JevEgressBoundaryError } from './egress-boundary.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = resolve(HERE, '..', '..')
 /** 本仓里一份真实被跟踪的文件——闸门的阳性对照（committed 2026-09-20）。 */
 const TRACKED_IN_REPO = join(HERE, 'samples.json')
 
@@ -22,7 +23,7 @@ function repoDir(files, { track = true } = {}) {
 test('本仓被跟踪的文件：放行并回出仓库内相对路径', () => {
   const result = assertEgressSourceTracked(TRACKED_IN_REPO)
   assert.equal(result.relPath, 'scripts/jev/samples.json')
-  assert.ok(result.repoRoot.endsWith('Magpie-Horch'), result.repoRoot)
+  assert.equal(result.repoRoot, REPO_ROOT)
 })
 
 test('URL 与字符串两种形态同判', () => {

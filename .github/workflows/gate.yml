@@ -96,12 +96,12 @@ jobs:
           # gate-quick.json 写着 `"status": "fail", "failed": 6`。本仓库把这类缺陷叫做
           # 「仪器假绿」，判据 `ci-workflow-contract` 现在会拦住没有 pipefail 的管道。
           set -o pipefail
-          node scripts/gate.mjs --mode quick --json | tee gate-quick.json
+          node scripts/gate.mjs --mode quick --scope sage --json | tee gate-quick.json
 
       - name: 见证：门禁没有改动被见证的仓库
         run: |
           set -o pipefail
-          node scripts/gate.mjs --attest scripts/gate.mjs --mode quick --json | tee attestation-quick.json
+          node scripts/gate.mjs --attest scripts/gate.mjs --mode quick --scope sage --json | tee attestation-quick.json
 
       - name: 失败也留证据
         if: always()
@@ -151,19 +151,15 @@ jobs:
             echo "::notice title=无锁文件::pnpm-lock.yaml 不在版本控制内（白名单式 .gitignore），本次为无锁安装"
           fi
 
-      - name: 安装更新检查包依赖
-        working-directory: packages/platform/dsh-update-local
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: 门禁 full
         run: |
           set -o pipefail
-          node scripts/gate.mjs --mode full --json | tee gate-full.json
+          node scripts/gate.mjs --mode full --scope sage --json | tee gate-full.json
 
       - name: 见证：门禁没有改动被见证的仓库
         run: |
           set -o pipefail
-          node scripts/gate.mjs --attest scripts/gate.mjs --mode full --json | tee attestation-full.json
+          node scripts/gate.mjs --attest scripts/gate.mjs --mode full --scope sage --json | tee attestation-full.json
 
       - name: 失败也留证据
         if: always()

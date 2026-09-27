@@ -34,7 +34,7 @@
 | platform | `packages/platform/dsh-update-local` | `dsh-update-local` | `self` | `lute` | `false` |
 | contract | `packages/contract/dsh-preset-lint-local` | `dsh-preset-lint-local` | `self` | `lute` | `false` |
 | contract | `packages/contract/dsh-skill-subset` | `dsh-skill-subset` | `self` | `lute` | `false` |
-| infra | `.` | `lute-agentic-system` | `self` | `lute` | `false` |
+| infra | `.` | `sage-agentic-os` | `self` | `lute` | `false` |
 | infra | `packages/infra/dsh-team-hub` | `dsh-team-hub` | `self` | `lute` | `false` |
 
 ## 分组统计

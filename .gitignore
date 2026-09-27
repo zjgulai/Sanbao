@@ -1,4 +1,4 @@
-# —— LUTE Agentic System · monorepo 白名单式 .gitignore ——
+# —— Sage · monorepo 白名单式 .gitignore ——
 # 策略：默认忽略全部 → 恢复目录 → 仅纳入经审批的目录与根级元文件
 # （一次性补丁脚本/预览 HTML/构建产物/临时文件不入库）
 # 维护规则：白名单条目必须指向磁盘上真实存在的路径；门禁 verify:* 会拒绝幽灵条目（ADR-0013）
@@ -32,6 +32,8 @@
 !dsh-rootoutlet-heal/**
 !apps/**
 !brand/**
+!assets/
+!assets/sage/**
 
 # —— vendor 嵌套仓库：源码不入库，仅 pin 文件入库 ——
 !vendor/
@@ -49,7 +51,7 @@ __pycache__/
 staging/
 dist/
 generated/
-apps/lute-shell/lib/
+apps/sage-shell/lib/
 packages/**/eval/out/
 *.tgz
 .env
@@ -79,12 +81,8 @@ packaging/.app-cache/
 !packages/**/test/**
 # fixture 的 node_modules 必须入库（干净克隆上 composition.spec.ts 才跑得起来）；
 # 第 42 行 node_modules/ 排除的是目录本身，git 不会进入被排除的目录，故目录与内容各需一行否定。
-!apps/lute-shell/test/fixtures/**/node_modules/
-!apps/lute-shell/test/fixtures/**/node_modules/**
-# frontend fixture 的 dist 必须入库（干净克隆上 assets.spec.ts 才跑得起来）；
-# 第 46 行 dist/ 同理排除的是目录本身，故目录与内容各需一行否定。
-!apps/lute-shell/test/fixtures/frontend/dist/
-!apps/lute-shell/test/fixtures/frontend/dist/**
+!apps/sage-shell/test/fixtures/**/node_modules/
+!apps/sage-shell/test/fixtures/**/node_modules/**
 !packages/**/tsconfig.json
 
 # ADR-0017：从内建运行时 tgz 解出的 DSH 类型来源，可重建，不入库

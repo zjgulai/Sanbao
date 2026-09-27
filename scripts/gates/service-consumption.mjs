@@ -30,7 +30,7 @@
  *
  * @module
  */
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -66,14 +66,14 @@ export function scanServiceConsumption(text) {
 
 /**
  * 对账登记处与扫描结果。
- * @param {{registryText: string|null|undefined, files: Array<{path: string, text: string}>}} input
+ * @param {{registryText: string|null|undefined, registryRelPath?: string, files: Array<{path: string, text: string}>}} input
  * @returns {{passed: boolean, violations: string[], note: string}}
  */
-export function checkServiceConsumption({ registryText, files }) {
+export function checkServiceConsumption({ registryText, registryRelPath = REGISTRY_REL_PATH, files }) {
   if (typeof registryText !== 'string') {
     return {
       passed: false,
-      violations: [`${REGISTRY_REL_PATH}: 读不出——「读不到登记处」不等于「没有消费面」，判红而不是当作空登记`],
+      violations: [`${registryRelPath}: 读不出——「读不到登记处」不等于「没有消费面」，判红而不是当作空登记`],
       note: '登记处读不到，本项未核对任何消费点',
     }
   }
@@ -83,18 +83,18 @@ export function checkServiceConsumption({ registryText, files }) {
   } catch (error) {
     return {
       passed: false,
-      violations: [`${REGISTRY_REL_PATH}: 解析失败（${error.message}）`],
+      violations: [`${registryRelPath}: 解析失败（${error.message}）`],
       note: '登记处损坏，本项未核对任何消费点',
     }
   }
   const entries = Array.isArray(parsed?.consumptions) ? parsed.consumptions : null
   if (entries === null) {
-    return { passed: false, violations: [`${REGISTRY_REL_PATH}: 缺 consumptions 数组`], note: '登记处形状非法' }
+    return { passed: false, violations: [`${registryRelPath}: 缺 consumptions 数组`], note: '登记处形状非法' }
   }
   if (entries.length === 0) {
     return {
       passed: false,
-      violations: [`${REGISTRY_REL_PATH}: consumptions 为空——空登记处让本项恒绿（P-02）`],
+      violations: [`${registryRelPath}: consumptions 为空——空登记处让本项恒绿（P-02）`],
       note: '登记 0 个消费文件',
     }
   }
@@ -138,12 +138,17 @@ export function checkServiceConsumption({ registryText, files }) {
 }
 
 /**
- * 收集扫描射程内的文件（git 跟踪的 packages/ 与 apps/ 源码）。
+ * 收集扫描射程内的文件。默认保持历史契约（git 跟踪的 packages/ 与 apps/）；
+ * Sage BASE 必须显式传入 `['apps/sage-shell']`，避免旧插件漂移污染产品门禁。
  * @param {string} repoRoot
+ * @param {string[]} [roots]
  * @returns {Array<{path: string, text: string}>}
  */
-export function collectConsumptionFiles(repoRoot) {
-  const listed = execSync('git ls-files packages apps', { cwd: repoRoot, encoding: 'utf8' })
+export function collectConsumptionFiles(repoRoot, roots = ['packages', 'apps']) {
+  if (!Array.isArray(roots) || roots.length === 0 || roots.some((root) => typeof root !== 'string' || root.trim() === '' || root.startsWith('-'))) {
+    throw new TypeError('服务消费扫描 roots 必须是非空、非选项路径数组')
+  }
+  const listed = execFileSync('git', ['-C', repoRoot, 'ls-files', '--', ...roots], { encoding: 'utf8' })
     .split('\n')
     .filter(Boolean)
     .filter((f) => /\.(ts|js|mjs)$/.test(f))

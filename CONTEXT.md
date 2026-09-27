@@ -2,24 +2,40 @@
 
 本文件是**纯术语表**：只定义词义，不放实现细节、不放规格说明。
 同一结论的完整表述住在它该住的地方（ADR / docs/architecture.md / 各能力组 README），
-此处只留一句可判真的定义。当前正在收敛的术语来自 **Sanbao 全维度换皮** 这一轮（视觉语言取自 WorldPilot 素材源仓）。
+此处只留一句可判真的定义。当前正在收敛的术语来自 Sage 自有桌面壳设计树；未落地的实现不得由本表表述为已交付。
 
 ## 品牌与身份
 
 | 术语 | 定义 | 归属 |
 | --- | --- | --- |
-| **Sanbao / 三宝** | 收口后唯一的对外产品品牌。两个字形是**同一名字的两种书写**，不是两个名字。 | ADR-0136 D1/D3 |
+| **Sage / 三宝** | 唯一的对外产品品牌：`Sage` 是英文产品名，「三宝」是中文产品名；二者是同一产品的本地化表达。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **Sanbao** | 退役的罗马字品牌名；只允许出现在历史证据、兼容迁移和尚未完成的源代码改造面，不得新增到用户可见面。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
 | **WorldPilot** | **视觉语言供体**，不是产品名。本仓采纳它的色彩/材质/排印/图像/动效契约；不得在任何出货可见面上当产品名使用。 | ADR-0136 D1 |
-| **字顺分工** | 拉丁 `Sanbao` 管图形与文件名（字标/图标/favicon/DMG 名/卷名/签名身份/`short_name`/`CFBundle*`）；中文「三宝」管描述语、文档标题与中文文案位。 | ADR-0136 D3 |
+| **字顺分工** | 拉丁 `Sage` 管英文 UI、字标、图标、Finder 名、DMG 名、`short_name` 与未来原生身份；中文「三宝」管中文 UI、中文文档标题与中文文案位。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
 | **品牌名源** | 产品名字的唯一可编辑源，所有含名字的产物由它生成。改名 = 改这一个源 + 重跑生成。 | ADR-0136 D2 |
-| **slogan** | 中「三宝出海，货通四方」；英 `Sanbao — Your AI Fleet to Global Markets`。**愿景式口号**，不是「面向 X 客户群」的可证伪断言。 | ADR-0136 D4 |
-| **占位字母标** | 本轮字标位用的中性几何图形，不含 W/P 语义。图形字母标是后置待办 T1，占位**不得**记作已完成。 | ADR-0136 D5 |
-| **LUTE** | 收口后退为**内部标识**：仓库、包名、目录、治理字段、代码符号继续使用，不再出现在任何出货可见面。 | ADR-0131 |
+| **slogan** | 中「三宝出海，货通四方」；英 `Sage — Your AI Fleet to Global Markets`。**愿景式口号**，不是「面向 X 客户群」的可证伪断言。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **Sage 图标母版** | Sage 的唯一主图形来源是 Sanbao Logo Kit 的 `A_StarSail_Product_symbol.svg` 图形几何；它与官网已选 A 路线同源，但进入 Sage 前必须派生为无 `SanBao` 元数据的资产。 | [ADR-0159](docs/adr/ADR-0159.md) |
+| **受控品牌衍生物** | 由 Sage 图标母版生成的 `sage-symbol`、深浅色版、AppIconset / `Sage.icns` 与新的 Sage lockup；源仓字标、概念图和生成记录不进入出货物。 | [ADR-0159](docs/adr/ADR-0159.md) |
+| **LUTE** | 历史内部标识；产品壳源码已受控迁移 `apps/lute-shell/` → `apps/sage-shell/`。`lute-shell` profile、`lute-host`、`LUTE_SHELL_*` 与治理字段仍是显式兼容接口，不得进入新用户可见面或新产品命名。 | [ADR-0159](docs/adr/ADR-0159.md) |
 | **单品牌收口** | 一个产品只有一套对外名字。不存在「底座名 + 皮名」并存的中间态。 | ADR-0131 |
 | **视觉语言 / 产品名（解耦）** | 色板、材质、排印签名、头像、动效与产品名无关，可独立采纳；字标、字母标、文件名、签名身份绑产品名。本轮 60% / 40% 的分界即由此而来。 | ADR-0136 |
-| **基座 / harness** | DSH Desktop（DeepSeek Harness）。只 pin 不改，其官方 UI 与 `--dsw-*` token 定义不归本仓库所有。 | ADR-0008 |
-| **皮 / 换皮** | 只改品牌**表达**（图形、颜色、图像、文字、材质、字体），不改品牌**承载**（slot 挂载、事件通道、面板几何契约）。 | ADR-0130 |
-| **承载 / carrier** | 一个面如何挂在基座界面上（官方 `main` keyed slot + `sidebar.panellist`）。换皮不得触碰。 | ADR-0130 |
+| **Harness Capability Runtime** | 在过渡期提供 agent、插件与 Cordis 能力的上游运行时；它不是 Sage 的产品 UI、窗口系统或导航壳。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **Sage Shell** | Sage 自己拥有的桌面窗口、路由、交互、产品状态与发布身份；只通过稳定适配边界消费 Harness 能力。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **Capability Adapter** | Sage Shell 与 Harness Capability Runtime 之间唯一允许的能力、事件和状态翻译边界；产品页面不得直接依赖 Cordis 或上游 UI。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **原型契约** | 原型中被确认的页面、状态、跳转和交互意图；它是 Sage Shell 的产品输入，不是可直接挂载的运行时包。 | [Sage 自有桌面壳设计树](docs/notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
+| **产品主线（product spine）** | 首版优先打通的跨境经营 AgenticOS 闭环：经营事项创建 → 证据输入 → 运行活动 → 澄清/人工审批 → 产物回执 → 失败重试。 | [ADR-0159](docs/adr/ADR-0159.md) |
+| **经营事项** | Sage 的首要领域对象，统一持有范围与版本、证据和未知、可比较选项、依赖就绪度、授权动作、产物、回执与经验；它不是 DSH 会话或侧栏的别名。 | [ADR-0159](docs/adr/ADR-0159.md) |
+| **可见品牌清零** | Sage 的窗口、Dock / Finder、启动、空态、侧栏、设置、错误框、安装器和产品页面均不得出现原桌面品牌；许可证、依赖字节、vendor pin 与历史证据保留真实第三方归属。 | [ADR-0159](docs/adr/ADR-0159.md) |
+
+## 工程拓扑
+
+| 术语 | 定义 | 归属 |
+| --- | --- | --- |
+| **受管包 / managed package** | 被目录墙收录并受治理的包；不自动等于 profile 已安装、bundle 已注册或宿主已生效。 | `docs/catalog/packages.md` |
+| **宿主 / host** | 运行插件和界面的环境。DSH Desktop 与 Sage Shell 是两条不同的宿主路径，不能默认互相替代。 | `docs/architecture.md` |
+| **运行时装配 / runtime composition** | 源码经过 profile 的 `file:` 依赖、bundle 注册再被宿主加载的链路；每一段都要单独取证。 | `docs/architecture.md` |
+| **Sage 数据根** | Sage 自有 Bundle ID、profile、host 与用户数据的默认隔离位置；首次迁移仅复制、校验和回滚，不原地改写旧 `~/.dsh` 或当前 DSH Desktop 数据。 | [ADR-0159](docs/adr/ADR-0159.md) |
+| **受控清理** | 先只读盘点，再将每项标为保留、归档或删除；删除必须有明确名单、恢复副本和单独授权。未知发布物、旧 App 与运行数据在 Sage 验收前一律保留。 | [ADR-0159](docs/adr/ADR-0159.md) |
 
 ## 射程（什么改、什么不改）
 

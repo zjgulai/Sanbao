@@ -1,0 +1,14 @@
+packages:
+  - .
+
+nodeLinker: hoisted
+autoInstallPeers: false
+allowBuilds:
+  "@deepseek-ai/dsh-subprocess-local": true
+  koffi: false
+  node-pty: false
+  "@google/genai": false
+  protobufjs: false
+overrides:
+  "@deepseek-ai/dsh-type-meta": "npm:empty-npm-package@1.0.0"
+  "@deepseek-ai/dsh-user-interaction": "npm:empty-npm-package@1.0.0"
