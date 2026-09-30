@@ -1985,7 +1985,7 @@
     {
       "id": "ADR-0139",
       "title": "ADR-0139 · LUTE 自有 Electron 薄壳（P1 骨架）：宿主走子进程 + FD3/FD4 DSH3 管道、profile 用仓库 seed + 运行时物化、宿主运行时就位在 profile 内以保单一 cordis 实例",
-      "status": "accepted（2026-09-19）",
+      "status": "accepted（2026-09-19；D1 / D4 的 lifecycle version equality 部分由 ADR-0168 于 2026-09-28 前向取代）",
       "date": "2026-09-19",
       "decisions": [
         {
@@ -1993,7 +1993,7 @@
           "text": "薄壳的 AI 宿主跑在独立子进程里，与 Electron 主进程之间只走 FD3/FD4 上的 DSH3 v3 帧协议；不在主进程内 boot，也不走 harness 自带的 HTTP 服务面。",
           "constraints": [
             "宿主入口由薄壳自己持有（apps/lute-shell/src/host/），因为 @deepseek-ai/dsh-desktop-host 未发布到 npm（实测 ERR_PNPM_FETCH_404）",
-            "协议常量必须与 submodule 参照 wire.ts 逐值对齐，漂移由门禁 lute-shell-pin 判红",
+            "协议常量必须与 submodule 参照 wire.ts 逐值对齐，漂移由门禁 lute-shell-pin 判红〔2026-09-28：此约束现只适用于六个 FD3/FD4 framing 常量；SHELL_HOST_PROTOCOL_VERSION equality 由 ADR-0168 D2 前向取代〕",
             "父进程必须保留三段拆机阶梯（IPC shutdown + destroy 请求管道 → 10s → SIGTERM → 5s → SIGKILL → 5s → 抛错），不得简化：父进程停止读 FD4 会让 drain 永不 settle，stop() 卡住且不发 fatal",
             "hasBody:false 的请求绝不发 end 帧（end 只用来结束请求体）；多发一个 end 帧会让宿主 fatal 拆机",
             "父进程收到任何 fatal 后主动收尸，不依赖子进程自杀——boot() 被拒那条路径没有 disposal",
@@ -2026,7 +2026,7 @@
           "id": "D4",
           "text": "薄壳的版本与治理事实由独立静态门禁 lute-shell-pin 守，不把 apps/ 纳入 package collector。",
           "constraints": [
-            "八条守卫：两侧精确版本、两侧同名包同版本、两个 workspace override、7 个协议常量不漂移、治理三字段取 self/lute/false、seed cordis.patch.yml 用户层剥注释后恰为 []、12 个 fixture 保持被 git 跟踪、壳 electron 精确且与 vendor 桌面插件同版本",
+            "八条守卫：两侧精确版本、两侧同名包同版本、两个 workspace override、7 个协议常量不漂移、治理三字段取 self/lute/false、seed cordis.patch.yml 用户层剥注释后恰为 []、12 个 fixture 保持被 git 跟踪、壳 electron 精确且与 vendor 桌面插件同版本〔2026-09-28：7 常量 equality 的 lifecycle 1 项由 ADR-0168 D2 前向取代；现行门禁独立守 Sage lifecycle v4，并继续逐值 pin 其余 6 个 framing 常量〕",
             "空依赖集判违规而不是判通过：空分母会让两道版本守卫同时静默（gate-result.mjs:116 的 checked > 0 教义，P-15）",
             "参照缺失（submodule 未初始化 / vendor manifest 不在）时跳过比对并进 note，不得静默判绿；note 必须说出跳过了几项",
             "治理三字段查值不查类型：luteOrigin:\"\" 与 lutePublish:true 都曾是静默通过路径",
@@ -3068,6 +3068,976 @@
             "无凭据时服务器 exit 1 而非静默空答",
             "未标定 action 语义如实透出",
             "产品面不得据此自动执行"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0163",
+      "title": "ADR-0163 · Identity / Policy Resolver：可信身份、组织授权与 BusinessMatter 决策分层",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage 将可信身份验证、组织政策授权和 BusinessMatter 事项审批分为三层；任一层的成功不得冒充另一层成功。",
+          "constraints": [
+            "HumanRoleRef 不是登录凭证",
+            "UI、插件与 HTTP body 不得自报可信身份",
+            "领域规则继续独立重验"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "WT-02B.1 在 src/security 建立纯、确定性、fail-closed 的 Identity / Policy Resolver kernel，不折叠进 domain 或未来 Application Service。",
+          "constraints": [
+            "不执行领域命令",
+            "不读写文件、数据库或网络",
+            "不依赖真实 profile、Host 或插件"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Resolver 只在受信 issuer、subject、固定 audience、session、organization、政策 roleAssignments 与 grants、版本化政策和有效期全部精确匹配时允许，并输出不可变 authority provenance。",
+          "constraints": [
+            "默认拒绝",
+            "sessionId 不是 subject、token 或岗位证明",
+            "请求不能自报 audience、organization、subject 或 actor",
+            "重复 role assignment 和重复或冲突 grant 拒绝",
+            "effectClass 与 requiresDecision 正交"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Resolver 的 allowed 只表示组织策略允许继续进入领域命令，不生成或替代 BusinessMatter decision、attempt 或 receipt。",
+          "constraints": [
+            "requiresDecision 仍由领域规则执行",
+            "撤销和过期仍由领域重验",
+            "WT-02D 才接入产品调用链"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "长期选择在 decision / receipt 事实链保留最小可审计 AuthoritySnapshot；WT-02B.1 只输出 provenance，不修改 v1 event schema。",
+          "constraints": [
+            "真实 provider 选择仍 pending",
+            "PII、retention 与删除传播先决策",
+            "事件持久化另批授权"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "测试 provider 只证明 kernel 合同，不证明真实身份、组织授权或产品验收；旧 DSH/JEV/plugin/UI/Host/store 均不在本批授权范围。",
+          "constraints": [
+            "不接真实账号或资料",
+            "不新增 dependency",
+            "不修改 package 或 lockfile"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0164",
+      "title": "ADR-0164 · 真实身份与 Authority 数据治理：OIDC、最小证据与删除传播",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage 真实登录首版采用系统浏览器 OIDC Authorization Code + PKCE 的 native public client，不使用 embedded WebView、不内置 client secret，也不在本阶段自建 Identity Broker。",
+          "constraints": [
+            "真实 issuer 与 client registration 是源码批前置输入",
+            "验证 issuer/audience/redirect/state/nonce/PKCE/signature/expiry",
+            "refresh rotation 与撤销失败即拒绝"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Identity Provider 只证明认证；Sage-owned mapping 产生内部 opaque subjectRef；Organization Policy Provider 独立决定组织、岗位与 grant。",
+          "constraints": [
+            "以 issuer+subject 解释外部主体",
+            "mapping 的候选 organization 不是 membership 证明",
+            "Organization Policy Provider 独占 active membership/role/grant authority",
+            "WT-02B.1 assertion organization 是待迁移过渡接口",
+            "email/name/tenant/group claim 不授予 Sage 权限",
+            "UI/Host/Harness/plugin 不得自报 authority"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "access/ID token 只驻留 Electron main 内存，refresh token 只进入 main-owned OS-backed vault；token、raw provider subject 与 bearer session secret 不得进入产品或长期数据面。",
+          "constraints": [
+            "renderer/sessionData/profile/Host/Harness/plugin 不接触凭证",
+            "event/SQLite/log/export/backup 不保存凭证",
+            "Sage session reference 非 bearer 且非秘密"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "首版 offline 是只读上限，authority-scoped projection 默认拒绝；所有受保护命令、写入、外部副作用和 privileged 边界必须在线重新求值并 fail closed。",
+          "constraints": [
+            "本批没有 offline projection 例外",
+            "未来 public/local-only allowlist 需独立批准分类、scope、staleness、清理、UI 与 owner",
+            "provider/policy unavailable 或 revoked 时拒绝",
+            "长任务副作用前重新授权",
+            "历史 evidence 不可重放为权限"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Runtime AuthoritySnapshot 与 Persistable AuthorityEvidence 是两个合同；长期事实只保留最小、不可重放的 pseudonymous evidence，永不持久化 sessionId、token、raw provider subject 或完整 claims。",
+          "constraints": [
+            "subjectRef 按 organization/audience 隔离并使用高熵随机 surrogate",
+            "禁止由 raw subject 做无密钥 deterministic hash",
+            "rotation/migration 维持唯一性和删除边界",
+            "identity mapping 位于可删除 vault",
+            "policy evidence 与 authority evidence 同期限治理",
+            "本决策部分修订 ADR-0163 D5"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "retention matrix 未经产品/合规 owner 批准前，不持久化真实身份或敏感经营数据；删除必须传播并在 backup restore 前应用 deletion ledger。",
+          "constraints": [
+            "期限不得凭空设为 30/90/365 天",
+            "token/session/authorization cache 不受 hold 且立即清除",
+            "有效 hold 只隔离 mapping/evidence 并记录 pending deletion",
+            "hold 到期或解除后幂等 purge",
+            "legal hold 具名、可审计、限定范围且可到期或解除",
+            "含 PII 的追加流只走授权 whole-stream purge 或 crypto-shredding"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "WT-02B.2A 只完成七文件治理落档，不修改 v1 或任何源码；真实 provider、AuthorityEvidence 持久化、compatibility 与产品编排继续分批确认。",
+          "constraints": [
+            "WT-02B.2B 才实现 OIDC/vault",
+            "WT-02B.3 才决定 schema 与持久化",
+            "WT-02C/WT-02D 分别拥有 compatibility 与 orchestration"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0165",
+      "title": "ADR-0165 · Compatibility Authority：revision-bound target、可信 runtime inventory 与 immutable matrix",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "CompatibilityTargetProvider、RuntimeInventoryProvider、CompatibilityMatrixProvider 与纯 CompatibilityResolver 四个责任分离；Application Service 只编排，不拥有 authority 内容。",
+          "constraints": [
+            "target 绑定当前 matter/revision",
+            "inventory 由 Electron main 组合受信证据",
+            "resolver 无 I/O 且确定性"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Compatibility target 必须绑定 canonical revision digest、精确 action policy、permission/data boundary 与完整 capability requirements；UI、插件、Host、模型和 action body 不得提交 target。",
+          "constraints": [
+            "本批不修改 v1 event schema",
+            "revision 或安全相关语义变化产生新 target digest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Runtime inventory 必须同时包含 immutable artifact attestation 与 boot-scoped live observation，并绑定 active generation/receipt、配置、运行代和完整 capability provenance。",
+          "constraints": [
+            "自报版本、进程存在、工具数量、ready 或单次 probe 均不足",
+            "缺失或无法验证时为 unknown"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Sage Compatibility Authority 独占 immutable matrix 发布；matrixId 由 canonical matrix bytes 的 SHA-256 派生，修正生成新 ID，撤销单独留痕。",
+          "constraints": [
+            "首版 app-bundled",
+            "禁止 latest/可变别名",
+            "历史 matrix 按 retention 保留"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "只有可信 target、inventory 与未撤销 matrix 唯一精确命中时才返回 equivalent；已知语义变化返回 requires-new-revision，其余缺失、冲突、歧义或不可验证状态返回 unknown，后二者都阻断。",
+          "constraints": [
+            "默认拒绝",
+            "不从 SemVer、Host ready 或 live probe 自动推导 equivalent"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "Compatibility 与 availability 分层；历史 equivalent 不证明当前健康、权限或可执行性，每个真实副作用边界必须重新取得新鲜 authority 与 preflight。",
+          "constraints": [
+            "当前 v1 strict replay 只重放持久化 DTO，不查询 matrix",
+            "reconfirmRevision 不是 standing compatibility"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "UI、插件、Host 与模型只能提交 intent 或 observation；WT-02D Application Service 是 identity/policy、compatibility、BusinessMatter、store 与 Capability Adapter 的唯一产品编排入口。",
+          "constraints": [
+            "不得提交 outcome/matrixId/executionSnapshot/authoritative targetDigest 或 inventoryDigest，也不得把自报 digest 当 authority",
+            "继承 DSH entry 默认不是 Sage 产品 capability"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "真实 OIDC 等待期间只允许纯 resolver、UI fixture/blocked projection 与插件 inventory 开发；真实 mutation、敏感数据和外部副作用继续阻断。",
+          "constraints": [
+            "WT-02B、WT-02C、WT-02D 独立关闭",
+            "fixture 不进入生产完成证据"
+          ]
+        },
+        {
+          "id": "D9",
+          "text": "校准 ADR-0162 D2：每侧依赖精确 pin、两侧同名包同版；只有双方共同消费才要求双侧登记，runtime-only 包可 seed-only，但必须进入 lock 与未来 inventory evidence。",
+          "constraints": [
+            "禁止 range 或 npm latest",
+            "该决定部分修订 ADR-0162 D2"
+          ]
+        },
+        {
+          "id": "D10",
+          "text": "matrixId 只标识 immutable matrix bytes，不标识一次 compatibility evaluation；当前 v1 replay 只重放持久化 DTO，未来必须以独立 CompatibilityEvaluationEvidence 绑定 target、inventory、matched rule 与 outcome。",
+          "constraints": [
+            "不得拿当前 matrix 重新求值并改写历史",
+            "evidence retention 与 schema 由 WT-02C.3 / WT-02D 另行确认"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0166",
+      "title": "ADR-0166 · Compatibility 双层 exact-digest：稳定语义摘要与单次完整证据分离",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Compatibility 采用双层 exact-digest：immutable matrix 只匹配 targetSemanticDigest 与 runtimeDescriptorDigest；每次求值另行验证 targetEvidenceDigest 与 inventoryEvidenceDigest。",
+          "constraints": [
+            "stable pair 只用于 lookup",
+            "full evidence 绑定 revision、boot、time 与 provenance",
+            "默认拒绝"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Target semantic descriptor 只保留 action、permission/data policy 与完整 runtime requirement；Runtime descriptor 只保留 artifact、contract 与行为配置语义，实例 identity 和 observation 进入 full evidence。",
+          "constraints": [
+            "不得机械裁剪旧 digest",
+            "不得从自由文本猜测 descriptor",
+            "安全相关语义变化必须改变 stable digest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "MatrixV2 只允许唯一 exact stable pair，不支持 range、wildcard、selector DSL、priority 或 first-match；缺失、重复、冲突或歧义均返回 unknown。",
+          "constraints": [
+            "ruleId 全局唯一",
+            "stable pair 全局唯一",
+            "matrix 只能预发布且不可变"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "CompatibilityEvaluationEvidence 必须绑定 stable pair、full evidence pair、matrixId、matchedRuleId、outcome、evaluation time、action scope 与当时 provenance/revocation；历史 outcome 不使用当前 matrix 重算。",
+          "constraints": [
+            "stable digest 不是 authorization token",
+            "真实副作用前 fresh preflight",
+            "禁止跨 revision/boot replay"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Digest 内容身份与 provider 来源真实性分离；matrix、descriptor、artifact 与 inventory 必须由各自受信 owner 证明 provenance，自报 issuer、version 或 digest 不构成 authority。",
+          "constraints": [
+            "app-owned matrix provider",
+            "main-owned inventory",
+            "Capability Registry allowlist 与 revoke",
+            "缺 provenance 为 unknown"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "C1 v1 冻结为 fixed-fixture/migration evidence；v2 使用新 schema 与 digest namespace，迁移期允许 dual-compute/shadow compare，不允许 dual-authorize 或 v2 miss 后 fallback 到 v1。",
+          "constraints": [
+            "不原地改变 v1 digest 语义",
+            "禁止动态 per-instance matrix",
+            "产品接线只接受 v2 trusted composition"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0167",
+      "title": "ADR-0167 · 安装后 Runtime Artifact Attestation 与 profile 激活前封存",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "InstalledArtifactSetV1 以 root package/lock SHA-256、generation-relative node_modules file bytes/executable 与安全 relative symlink topology 形成 portable content identity。",
+          "constraints": [
+            "hardlink 每个逻辑路径单独读取",
+            "目录不进入 subject",
+            "code-unit 排序",
+            "sha256 lowercase hex"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "只有 node_modules/.modules.yaml 与 node_modules/.pnpm-workspace-state-v1.json 从 portable subject 精确排除，并单独形成 installerMetadataDigest。",
+          "constraints": [
+            "禁止 glob 排除",
+            "近似名称仍进入 portable set",
+            "metadata 漂移必须使 attestation 验证失败"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "RuntimeArtifactAttestationV1 绑定 generation、ownedProfileDigest、artifactSetDigest、installerMetadataDigest 与 producerContractVersion，并以固定 0600 文件写入 staging。",
+          "constraints": [
+            "exact 8-key wire shape",
+            "exclusive create",
+            "未知字段默认拒绝",
+            "不绑定最终 receipt digest"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "materializer 必须在 activation 前 fresh verify attestation，并把 attestation 文件纳入现有 profile receipt；失败不切 active pointer。",
+          "constraints": [
+            "create 与 verify 两次独立观察",
+            "失败清理 staging",
+            "receipt 复验后才 rename generation",
+            "旧 generation 保持可读"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Artifact digest 只证明 canonical content，attestation digest 只证明一次 materialization observation；它们不构成 provenance、Registry、Matrix、availability、compatibility 或 execution authority。",
+          "constraints": [
+            "C2B/C2C/C2D/C3/WT-02D pending",
+            "真实副作用前仍需 fresh authority preflight",
+            "不修改 v1 event schema"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "当前实现接受可观察 TOCTOU 与 installer profile 外副作用为 residual risk，不声称提供 sandbox 或对抗同 UID 主动攻击者的完整隔离。",
+          "constraints": [
+            "文件 no-follow 与 handle stat",
+            "目录和全树稳定性复验",
+            "外部副作用由后续 policy/provenance/sandbox 处理"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0168",
+      "title": "ADR-0168 · Boot-scoped Host live inventory projection 与生命周期失效",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Electron main 为每个 Host child 创建 namespaced UUID bootId 与正整数 runtimeGeneration，并只暴露冻结的 active 或 unavailable snapshot。",
+          "constraints": [
+            "Host 不产生 bootId 或 authority",
+            "陈旧 ready 不得激活新 epoch",
+            "每次生命周期失效推进 runtime epoch"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Sage Host IPC lifecycle event protocol v4 的 ready 精确绑定已验证的 profile generation、manifest SHA-256、Loader active 与 Harness version；FD3/FD4 frame 继续保持 DSH3 v3 与六个上游 framing 常量逐值对齐，ready 后任一 Loader transition 或 process lifecycle 变化立即失效。",
+          "constraints": [
+            "SHELL_HOST_PROTOCOL_VERSION 不再等同 vendor lifecycle version",
+            "六个 frame 常量继续 pin upstream",
+            "Loader settle 与 ACTIVE audit 后才 ready",
+            "runtime-invalidated/fatal/exit/disconnect/stop fail closed",
+            "失效优先于 TTL"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "HostLiveInventoryProjectionV1 采用 Host A、profile A、C2A fresh verify、profile B、Host B 的稳定观察，最后取 main clock并使用固定 30 秒半开窗口。",
+          "constraints": [
+            "双 Host/profile binding exact match",
+            "clock rollback 拒绝",
+            "pointer/receipt/epoch 漂移拒绝"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "旧 generation 缺少 receipt-sealed runtime attestation 时仍可一般读取，但 live projection unavailable，且禁止隐式 backfill。",
+          "constraints": [
+            "兼容旧 profile",
+            "不伪造历史 activation evidence",
+            "C2A verify 必须 fresh"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Compatibility V2 activeGeneration 使用真实 generation string，runtimeGeneration 只接受 positive safe integer；V1 canonical contract 完全冻结。",
+          "constraints": [
+            "只重算受影响 V2 inventory goldens",
+            "V1 prefix和goldens不变",
+            "不新增 fallback"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "Host live projection 只是 boot-scoped observation，不构成完整 inventory、provenance、Registry、Matrix compatibility、availability或execution authority。",
+          "constraints": [
+            "C2C/C2D/C3/WT-02D pending",
+            "不修改v1 event schema",
+            "不接main/index、product、UI或插件"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0169",
+      "title": "ADR-0169 · External MCP Capability Evidence：同代工具合同、可审计 artifact subject 与 boot-scoped availability 分层",
+      "status": "accepted（2026-09-28）",
+      "date": "2026-09-28",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "ExternalCapabilityEvidenceProvider 由 Electron main 拥有并只把 Host/MCP bridge 的同代 raw observation 转化为受信 evidence；Host、server、plugin、renderer 和模型不能提交 authoritative digest、availability、compatibility 或授权结论。",
+          "constraints": [
+            "main 验证但不替 Registry 审批",
+            "Resolver 不访问 Host/MCP/filesystem",
+            "缺 provenance 或 binding 即 unavailable"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "ExternalCapabilityDescriptorV1 保存跨 boot 稳定的 identity/artifact/tool-contract/launch/bridge 语义；ExternalCapabilityObservationV1 单独绑定 C2B、connection generation、完整 discovery 与 freshness。",
+          "constraints": [
+            "stable 与 full digest 分离",
+            "boot/time/path/account 不进 stable",
+            "实例变化必须改变 observation digest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Local stdio capability 的 artifact subject 覆盖实际 bridge/SDK/launcher/interpreter/server/dependency closure bytes、executable、safe links 与结构化行为配置；版本、自报和启动成功不能替代。",
+          "constraints": [
+            "远端无 immutable provenance 时保持 unknown",
+            "动态 shell/PATH/secret 无法分类时拒绝",
+            "机器路径和 secret 不进入 evidence"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Tool contract 必须来自执行时同一 MCP connection generation 的完整有界分页；cursor 原样传递，重复/空 cursor、重复名称、超限或任一页失败均不产生新 evidence。",
+          "constraints": [
+            "禁止第二连接冒充执行连接",
+            "分页边界不进 stable digest",
+            "完整页集才可 canonicalize"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Normalized tool contract 保守绑定 raw name、effective description、input/output schema、bridge enforcement、taskSupport、protocol revision 与 bridge contract；unknown extension 阻断，annotations 不构成权限依据。",
+          "constraints": [
+            "不声明 JSON Schema 语义等价",
+            "工具按 raw name 排序",
+            "presentation metadata 与安全语义分开"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "list_changed、transport reconnect/close、Host/profile/artifact/config drift、expiry 或 clock rollback 立即使当前 observation unavailable，只有新的同代完整观察才能恢复。",
+          "constraints": [
+            "旧注册工具不等于旧 evidence 有效",
+            "失效优先于 freshness",
+            "reason 不泄漏 path/secret/raw exception"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "Transport、discovery、contract 与 operation preflight 是正交状态；C2C 不调用真实业务工具，未来 preflight 必须绑定 Registry/Adapter operation、Identity/Policy 与数据边界。",
+          "constraints": [
+            "禁止单一 healthy boolean",
+            "readOnlyHint 和工具名不是 effect authority",
+            "preflight 只进入 full evidence"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "WT-02C.2C.0 revision 18 只落治理合同，不实现源码、真实 MCP、插件启用、Registry、完整 inventory、matrix/evaluation、v1 event、Application Service 或 UI。",
+          "constraints": [
+            "源码 0 文件",
+            "tools/list 和 tools/call 均不执行",
+            "不暂存不提交不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0170",
+      "title": "ADR-0170 · C2C same-generation observation seam：bridge-owned 受控只读端口",
+      "status": "accepted（2026-09-29）",
+      "date": "2026-09-29",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "C2C observation 只能通过 bridge-owned 的正式受控只读 seam 取得，Sage 不另开 MCP connection，也不从 ctx.tools 反推 raw contract。",
+          "constraints": [
+            "同一执行 connection generation",
+            "bridge 继续拥有 Client/transport/lifecycle",
+            "seam 不暴露 Client、transport、registry disposer 或执行句柄"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "正式 seam 必须提供完整有界 tools/list raw snapshot、opaque generation reference、protocol facts 与 list_changed/close/reconnect/dispose/分页失败失效事件。",
+          "constraints": [
+            "第一页不带 cursor",
+            "后续 cursor 原样传递",
+            "所有页收齐前不产生 snapshot",
+            "失败或超限 fail closed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "只有 bridge 源码 / 可复现 fork 正式发布 seam 后，才允许独立 ticket 更新 dependency specifier 与 lockfile；当前禁止修改 node_modules/vendor/store 或 monkey patch。",
+          "constraints": [
+            "发布版本可审计",
+            "lockfile 与 package specifier 同批复验",
+            "不得把本地解析副本当作发布事实"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "WT-02C.2C.2 在正式 seam、隔离 fake server、完整分页和零 tools/call 证据齐备前保持 pending/blocked。",
+          "constraints": [
+            "只读 observation",
+            "list_changed/close/reconnect 立即失效",
+            "不启用插件、不接 Registry/UI/产品"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0171",
+      "title": "ADR-0171 · Sage-owned Capability Registry：不可变 allowlist 与生命周期分层",
+      "status": "accepted（2026-09-29）",
+      "date": "2026-09-29",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage product/security governance 独占 Capability Registry allowlist 与生命周期 owner；其他层只能提交候选或 observation。",
+          "constraints": [
+            "Host/bridge/plugin/renderer/model 无批准权",
+            "Registry 不产生 compatibility 或 authorization"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Registry entry 必须绑定 verified descriptor/provenance、artifact/launch/tool-contract digest、精确 Adapter operation mapping、owner approval 与有效时间；typed URN 或自报 digest 不足。",
+          "constraints": [
+            "C2C.5 provider 未完成前不得有 real approved entry",
+            "mapping 缺失或冲突 fail closed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Registry 只使用 candidate、approved、disabled、revoked 四态；mounted、observed、enabled、compatible、authorized、available 保持正交。",
+          "constraints": [
+            "任何单轴通过不抬升其他轴",
+            "fixture/工具可见/进程存在不能转为 approved"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "每次状态迁移产生新的内容寻址 immutable snapshot；禁止原地修改、可变 latest 别名或 revoked entry 原地复活。",
+          "constraints": [
+            "revoked 为终态",
+            "disabled→approved 必须重新验证并重新批准",
+            "历史 bytes 按 retention 保留"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "精确 Adapter mapping 是 approved 的必要条件，必须声明 effect、data boundary、输入/输出 contract、无副作用 preflight 与 revoke 行为。",
+          "constraints": [
+            "未知 effect/data boundary/mapping 冲突 fail closed",
+            "没有真实 Adapter 不铸造 mapping digest"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "Registry 只证明 product allowlist 与生命周期；Compatibility、Identity/Policy 和 Application Service 仍按各自 owner 在真实动作前重新求值。",
+          "constraints": [
+            "不启用插件",
+            "不接真实 MCP",
+            "不修改 v1 event schema"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0172",
+      "title": "ADR-0172 · Compatibility Target Requirements：revision-bound immutable requirement registry",
+      "status": "accepted（2026-09-29）",
+      "date": "2026-09-29",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "CompatibilityTargetProvider 由 Sage product/security governance 拥有，只消费 app-owned immutable requirement snapshot；UI、插件、Host、模型和普通调用方不能提交 authoritative target。",
+          "constraints": [
+            "candidate metadata 不等于 target authority",
+            "provider 只读且内容寻址",
+            "Application Service 只编排，不拥有 requirement bytes"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "target requirement 使用独立 sage.compatibility-target-requirement.v1 schema，不修改 v1 event schema；stable semantic 与 full target evidence 分层。",
+          "constraints": [
+            "独立 canonicalization version 与 digest namespace",
+            "v1 event 继续冻结",
+            "C3 是否持久化另行决策"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "stable target 只包含 exact action/effect/decision、permission/data-boundary 语义与 Provider/Model/Agent/Preset/Capability exact requirements；matter、revision、资源边界、时间和 provenance 只进 full evidence。",
+          "constraints": [
+            "stable key 不包含账户、boot、时间或 mutable alias",
+            "full evidence 必须绑定 current revision",
+            "实例变化不能改写 stable semantics"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "requirements 必须 exact-parse；SemVer range、wildcard、自由文本推导、未分类字段、普通调用方 digest、工具名和 package display name 均 fail closed。",
+          "constraints": [
+            "unknown/duplicate/conflict/expired/revoked 返回 unavailable 或 unknown",
+            "不得静默丢字段",
+            "不得从 UI selection 猜测安全 requirement"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "requirement snapshot 只能追加发布，每次发布或撤销产生新的 immutable content-addressed snapshot；禁止 latest、原地编辑或 revoked entry 原地恢复。",
+          "constraints": [
+            "owner decision、effective/expiry/revoke 与 lineage 必须留痕",
+            "禁止按 matter/boot 动态铸造长期 stable key",
+            "真实 provider 另票实现"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "WT-02C.2T revision 26 只关闭治理合同，不实现 provider、real target、MatrixV2、UI、插件、真实 identity/MCP/Registry/Adapter 或 v1 event schema。",
+          "constraints": [
+            "不读取真实数据根",
+            "不执行 tools/list 或 tools/call",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0173",
+      "title": "ADR-0173 · CompatibilityEvaluationEvidence：不可变旁路证据、历史矩阵与严格回放",
+      "status": "accepted（2026-09-29）",
+      "date": "2026-09-29",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "CompatibilityEvaluationEvidence 使用独立 sage.compatibility-evaluation-evidence.v1 schema 与独立 canonicalization / digest namespace，作为 BusinessMatter v1 event 的旁路事实；v1 event 与 hash 链保持冻结。",
+          "constraints": [
+            "不得把 evaluation evidence 字段塞回 v1 event",
+            "evidence 由 Sage main-owned persistence boundary 管理",
+            "raw token/claim/secret/机器绝对路径不得进入 evidence"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "每份 evidence 必须绑定 matter/revision/action、stable/full 四层 digest、matrixId、matchedRuleId、outcome、reason、evaluatedAt、resolver contract 与当时 provider / revocation provenance。",
+          "constraints": [
+            "matrix reference 必须内容寻址且可验证",
+            "caller/plugin 自报 digest 不构成 authority",
+            "字段未分类时 fail closed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "strict replay 只验证封存的 historical evidence 与 canonical artifact，返回原始结果；禁止调用当前 matrix/target/runtime provider、当前时间或 replay 产生新授权。",
+          "constraints": [
+            "历史 bytes 缺失或篡改返回 historical-artifact-unavailable / evidence-corrupt",
+            "历史结果不能直接作为当前 action authorization",
+            "不得用当前 matrix 重算历史"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "evidence append、attempt / decision receipt 与兼容性 gate 结果必须在同一 Sage main-owned SQLite transaction / adapter boundary 内 durable commit；失败则 action fail closed。",
+          "constraints": [
+            "不得 best-effort 补写 evidence",
+            "跨 store 需要另立 outbox/compensation ADR",
+            "prepare/commit/recovery 必须幂等且留痕"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "evidence、matrix bytes、revocation/provenance 与 purge/export/restore receipt 按关联数据类治理，支持 active、retention-expired、legal-hold、deletion-pending、purged 生命周期；不预设全局 TTL。",
+          "constraints": [
+            "legal hold 只暂停允许的 purge",
+            "purge 不改写 append-only event hash 链",
+            "备份未确认或关联 artifact 未处理时不得报告 purge 完成"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "WT-02C.3.0 只关闭 CompatibilityEvaluationEvidence 的数据治理与原子性合同；C3.1 pure codec、C3.2 persistence 与 WT-02D Application Service 另票实现。",
+          "constraints": [
+            "源码/测试/package/lockfile/v1 event/UI/plugin 改动为 0",
+            "不接真实 provider、clock、MCP、Registry 或 action",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0174",
+      "title": "ADR-0174 · Electron-main Application Service 唯一编排边界",
+      "status": "accepted（2026-09-30）",
+      "date": "2026-09-30",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Electron main 独占 Application Service；它是 BusinessMatter command 与安全 projection 的唯一产品入口，目标形态的 /.sage/* 业务 route 在 main 精确终止。",
+          "constraints": [
+            "Host/renderer/plugin/model 不得拥有平行业务 route",
+            "当前 Host-owned route 在 revision 37 保持不变",
+            "main 与 Host 只走窄 typed port"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "产品端口分为 projection read 与 command submission；renderer 只读脱敏 ViewState、只提交 exact ActionIntent，preview 不是 command。",
+          "constraints": [
+            "ActionIntent 不接受 actor/authority/outcome/matrix/digest/executionSnapshot/completed",
+            "Intent origin 只是产品 provenance，不是 transport caller identity 或授权输入",
+            "projection query/body 不接受 caller 自选 session reference",
+            "main 验证 caller binding 后注入 active non-bearer session context",
+            "missing/unverifiable caller binding fail closed",
+            "fixture/live 共用公开 shape 但 fixture 永久可见"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Projection read policy 与 action authorization 分离；真实 projection 最小化读取，每个 action 重新做 fresh Identity/Policy 求值。",
+          "constraints": [
+            "projection read 顺序为 verified caller binding → main-injected active session → read policy → minimal lookup/projection/redaction",
+            "未授权 denied/not-found 不枚举 matter 存在性",
+            "action grant 不推导读取权",
+            "历史 projection/decision/equivalent 不是 standing authority",
+            "缺 read policy 时 production projection unavailable-first"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Application Service 按 main-side verified caller binding + exact validation、session resolution + initial matter-load/access Identity/Policy precheck、strict rehydrate、trusted target/action policy、fresh action-scoped Identity/Policy、runtime inventory 与 matrix resolver、Registry/preflight、domain revalidation、durable evidence/event、Adapter、receipt 的固定顺序执行。",
+          "constraints": [
+            "细化但不改写 ADR-0165 正文第 8 条（产品只有一个编排入口）",
+            "initial precheck 只授权定位/载入且不替代后续 action authorization",
+            "caller binding 不得来自 Intent origin 或不受信 header",
+            "authority-scoped 持久写入前与 Adapter dispatch 前分别 fresh recheck current authority/revision/operation",
+            "两道 freshness barrier 都重新生成或核验 current target provenance/effective/expiry/revoke 并以 current inventory/matrix/revocation 重跑 compatibility",
+            "两道 barrier 都重检 Registry mapping 与 availability preflight，drift/unknown/requires-new-revision/unavailable 均 fail closed",
+            "只持久化 WT-02B.3 批准的最小不可重放 Persistable AuthorityEvidence 与本次实际 compatibility evidence，不持久化 runtime AuthoritySnapshot 或秘密",
+            "任一步失败停止后续并禁止 Adapter 调用",
+            "caller 不得提交 authority 输入",
+            "领域 replay 保持 deterministic"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "Production composition 对缺失 provider、clock、inventory、matrix/revocation、Registry real entry、Adapter mapping、preflight 或 store/evidence port 一律 unavailable-first。",
+          "constraints": [
+            "禁止 fixture/placeholder/default digest 补 authority",
+            "Host ready/历史 equivalent/测试 provider 不构成 production evidence"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "Application Service 拥有 operation idempotency、取消、重试和 outcome-unknown 收口；dispatch 后断线不等于取消，未知结果禁止自动重放。",
+          "constraints": [
+            "caller requestId 只做重发关联",
+            "transport caller binding 每次验证但不作为 durable replay identity",
+            "replay uniqueness key=stable opaque Sage-internal actor/subject scope + organization + matter + requestId",
+            "record 不可变绑定 canonical intent digest：同 key 同 digest replay、同 key 异 digest conflict",
+            "operation/idempotency identity 由 scoped request key + canonical intent digest 派生并 durable",
+            "raw subject/token/session/window/frame 不进入 durable key",
+            "不同 scope 不共享 requestId 或 receipt",
+            "receipt lookup/纯本地 status query 重新验证 read/access authorization 且保持 anti-oracle",
+            "任何 Adapter interaction/receipt append/domain transition/re-dispatch/人工裁定都按 reconciliation action 或 governed system principal 走 full authorization + domain + transaction",
+            "只读 query 不能把 outcome-unknown 改成 resolved"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "产品错误与 service receipt 必须稳定、脱敏且只证明 exact intent 的处理阶段；事项 completed 仍由 BusinessMatter 与责任人 receipt 决定。",
+          "constraints": [
+            "不得泄漏 token/session/raw subject/secret/path/stack/raw Host / MCP error",
+            "artifact 或 response 结束不等于业务完成"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "WT-02D 按 .0.1 route/port skeleton、.1 fixture/blocked read-only E2E、.2 production command path 分批确认；.2 还必须等待 WT-02B.3 最小 Persistable AuthorityEvidence schema/governance/persistence，revision 37 只关闭架构治理。",
+          "constraints": [
+            "源码/测试/package/lockfile/v1 event/runtime route/UI/plugin/action 改动为 0",
+            "后续每票重新 Birdview 计划与确认",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0175",
+      "title": "ADR-0175 · Electron 43.3 caller-binding 预检与 WT-02D.0.1 阻断",
+      "status": "accepted（2026-09-30）",
+      "date": "2026-09-30",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "WT-02D.0.1-PREFLIGHT revision 38 的结论为 NO-GO：Electron 43.3.0 的 webRequest gate 能在 protocol handler 前识别并取消未授权来源，但不能证明已放行请求随 caller 导航或销毁而失效。",
+          "constraints": [
+            "trusted navigation、WebContents destruction 与 explicit renderer abort 后 Request.signal 在 2 秒内均未 abort",
+            "probe passed=false，外层绿色测试只证明该失败可重复",
+            "不得把局部 gate 能力写成完整 caller binding 通过"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "WT-02D.0.1 保持 blocked，当前 Host-owned route 保持不变；不得在 caller 生命周期缺口存在时迁移 production route 或接业务副作用。",
+          "constraints": [
+            "Origin/Referer/body/query/custom header 不是 caller identity",
+            "URL token、事件顺序和时间窗口不得用于伪造 webRequest 与 handler 的安全关联",
+            "production src、package、lockfile 与 Electron pin 在 revision 38 不修改"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "IPC/preload、Electron pin 升级或其他 main-owned transport 必须另建 Birdview 计划、决策和用户确认，不能由 revision 38 自动切换。",
+          "constraints": [
+            "新方案重新验证 sender identity、caller lifecycle、cancellation、single ownership 与 rollback",
+            "preflight evidence 不等于 production guard、authorization 或 live route",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0176",
+      "title": "ADR-0176 · Electron 43.3 IPC/preload caller-binding 预检与 WT-02D.0.1 阻断",
+      "status": "accepted（2026-09-30）",
+      "date": "2026-09-30",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "WT-02D.0.1 IPC/preload preflight revision 39 的结论为 NO-GO：same-origin child 可以借用 top-frame contextBridge API，并被 Electron main 观察为合格的 current main-frame IPC sender。",
+          "constraints": [
+            "probe 运行于 pinned Electron 43.3.0，raw child outcome=no-go、passed=false、exit=2",
+            "direct child IPC rejection 与其他通过 case 不得覆盖 top-bridge 反例",
+            "外层绿色测试只证明该 NO-GO 可重复"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "只用 process.isMainFrame、event.sender/senderFrame、expected WebContents/Session、current main frame 与 exact origin，不能在 top bridge 对同源 descendant 可达时证明 JavaScript caller 是 top document。",
+          "constraints": [
+            "preload 仍只暴露具名 read/action/cancel，不暴露 raw ipcRenderer",
+            "每次 direct IPC 与 durable boundary 仍须执行 platform binding 与 lifecycle recheck",
+            "不得把 operation reference、payload 字段或 renderer 自报值提升为 caller authority"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "WT-02D.0.1、.1 与 .2 继续 blocked；same-origin principal、frame prohibition、替代 bridge/transport 或 Electron pin 变更必须另建 Birdview 计划和用户确认。",
+          "constraints": [
+            "revision 39 不修改 production src、route、package、lockfile 或 Electron pin",
+            "当前 Host-owned route 保持不变",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0177",
+      "title": "ADR-0177 · Electron 43.3 single-frame caller-binding 预检（帧禁用候选不变量）",
+      "status": "accepted（2026-09-30）",
+      "date": "2026-09-30",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "WT-02D.0.1 single-frame preflight revision 40 结论为 PASS：在 pinned Electron 43.3.0 下，main-owned frame 观察 + document generation 污染状态机 + entry / durable barrier 双重核验，使 revision 39 的全部 child 形态 fail closed，只有 clean top cross-document reload 恢复信任。",
+          "constraints": [
+            "raw child outcome=pass、passed=true、exit=0；failures 与 harnessErrors 为空",
+            "control 窗口仍复现 top-bridge allow，证明 PASS 来自帧禁用判定本身",
+            "外层绿色测试只证明该 PASS 可重复且可证伪"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "帧禁用候选不变量确认：Sage privileged renderer 禁止 nested browsing context；出现 child 即污染当前 document generation，直到 clean top cross-document reload；child 移除与 same-document navigation 均不洗白。",
+          "constraints": [
+            "sticky contamination 必要：tree-only 检查在 child 移除后重新放行，不得写成等价实现",
+            "该不变量是本票候选，不是已采纳 production 合同",
+            "preload 仍只暴露具名 read/action，不暴露 raw ipcRenderer"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "WT-02D.0.1、.1 与 .2 继续 blocked；production 采纳该不变量（production CSP、导航图、embedding 政策与 UX 影响）必须另建 Birdview 计划和用户确认。",
+          "constraints": [
+            "revision 40 不修改 production src、route、package、lockfile 或 Electron pin",
+            "当前 Host-owned route 保持不变",
+            "不暂存、不提交、不推送"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0178",
+      "title": "ADR-0178 · Sage privileged renderer 帧禁用不变量 production 采纳",
+      "status": "accepted（2026-09-30）",
+      "date": "2026-09-30",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "帧禁用不变量成为 production 合同：Sage privileged renderer 禁止 nested browsing context；出现 child 即污染当前 document generation，直到 clean top cross-document reload；child 移除与 same-document navigation 不洗白。",
+          "constraints": [
+            "privileged 窗口只能经 src/main/window.ts 的 createSageWindow 创建",
+            "污染事件以 stdout tripwire 可观测",
+            "本票不引入 preload / IPC bridge，WT-02D.0.1 route 迁移仍 blocked"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "strict CSP（SAGE_DOCUMENT_CSP）随 Sage 文档下发，但只是并积层：被 CSP 拦截加载的 iframe 仍触发 frame-created tripwire，CSP 不能替代 main-owned generation 状态机。",
+          "constraints": [
+            "CSP 允许 inline script/style 与 same-origin fetch，其余 default-src 'none'",
+            "真实读数：文档功能在 CSP 下完好；iframe 被拦仍污染 generation"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "嵌内容出路定为合同：HTML 预览、外部网页等必须走独立非特权 WebContentsView（独立 session、无 preload、无 privileged IPC 通道），实现后置到具体 UI 票。",
+          "constraints": [
+            "privileged renderer 永不嵌 frame，无 iframe/webview 例外",
+            "未来 bridge 票的 IPC entry / durable barrier 必须检查 isTrustedGeneration() 并在 durable boundary 前重验"
           ]
         }
       ]
