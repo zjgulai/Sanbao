@@ -2957,6 +2957,120 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0161",
+      "title": "ADR-0161 · BusinessMatter 权威事件存储：Sage 主进程、node:sqlite 与严格重放",
+      "status": "accepted（2026-09-27）",
+      "date": "2026-09-27",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "BusinessMatter 权威事件库由 Sage Electron main process 和 app-owned 数据根持有，Harness、renderer、Host、Capability Adapter 与 profile 不得直接写库。",
+          "constraints": [
+            "P0-3B 继续阻断",
+            "不读取或改写旧 DSH 数据根",
+            "正常业务只有一个写入口"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "首版通过内部 adapter 使用已钉住 Electron 自带的 node:sqlite，以单事务实现 expectedVersion CAS、连续 streamVersion、事件批次和 append 幂等。",
+          "constraints": [
+            "不新增 dependency",
+            "不修改 lockfile",
+            "禁止 blind append、save、upsert、replaceEvents 与 forceAppend"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "持久化输入只有经过 envelope 完整性验证、schema decode、连续版本检查和完整领域语义重放后，才能恢复为 BusinessMatter。",
+          "constraints": [
+            "未知 schema fail closed",
+            "损坏 stream 只读隔离",
+            "不得跳过、截尾或回退为空事项"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "digest chain 只证明损坏检测与 tamper evidence，不等同 authenticated encryption、真实性或不可抵赖性。",
+          "constraints": [
+            "真实敏感数据继续阻断",
+            "加密、Keychain、retention、purge、export 与 backup 另立生产门"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "WT-02A 按合同、严格重放、SQLite store、对抗性验证四个可审阅阶段推进，accepted ADR 不等于实现或产品验收。",
+          "constraints": [
+            "每阶段单独 Birdview 范围",
+            "不触碰 product、adapter、Host、profile 或 lockfile",
+            "不提交除非用户另行授权"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0162",
+      "title": "ADR-0162 · 能力装配契约：外部能力经 MCP client 条目挂入 Sage 壳（首例 Jev 判断层）",
+      "status": "accepted（2026-09-27）",
+      "date": "2026-09-27",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "外部能力（首例 Jev 判断层）以 @deepseek-ai/dsh-mcp-client 的 stdio client 条目挂入 Sage 壳装配面；不引入 npm 发布线、不打包成 cordis 插件、不改 JEV 源码。",
+          "constraints": [
+            "工具名形如 mcp__jev__judge / mcp__jev__list_judgments",
+            "只覆盖判断层两个工具",
+            "闭环工具化另立"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "每一侧出现的 @deepseek-ai/* 依赖必须精确 pin，两侧同名重叠包必须同版；只有双方共同消费才要求双侧登记，runtime-only 包可 seed-only，但必须进入 lock 与未来可信 runtime inventory 证据。",
+          "constraints": [
+            "由 sage-shell-pin 门禁守精确 pin 与同名同版",
+            "不得用 range 或 npm latest",
+            "ADR-0165 部分修订原 D2"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "壳提供实例本地补丁层：宿主启动时若 <Sage root>/cordis.local.patch.yml 存在则作为最后一层合并（可覆盖仓库层任何行），机器相关的外部能力条目只写进该文件，仓库不承载机器内容。",
+          "constraints": [
+            "不在仓库新增机器绝对路径（ADR-0160）",
+            "文件缺失时零行为（opt-in）",
+            "回滚=删除或改名 + 重启"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "装配条目必须带 insert: 包装；凭证经 spawn 时来源供给、不落仓库与日志；宿主变更重启生效。",
+          "constraints": [
+            "无 insert: 会静默丢弃",
+            "Finder 启动无 PATH，node 用绝对路径",
+            "凭证仅在指定落点按需读取"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "外部能力运行状态显式指向 Sage 实例数据根，不得复用或读写旧 DSH 数据面（含缺省的 ~/.local/state/jev-dsh）。",
+          "constraints": [
+            "JEV_STATE_DIR 由条目显式指定",
+            "不读写 ~/.dsh",
+            "数据隔离由 sage-data-isolation 守护"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "装配完成以端到端只读调用证据判定（mcp__jev__list_judgments 真实返回），失败 fail-closed；accepted 不等于已装配。",
+          "constraints": [
+            "无凭据时服务器 exit 1 而非静默空答",
+            "未标定 action 语义如实透出",
+            "产品面不得据此自动执行"
+          ]
+        }
+      ]
     }
   ]
 }

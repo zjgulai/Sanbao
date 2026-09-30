@@ -171,6 +171,8 @@
 | ADR-0158 | 右栏远程内容采用受控原生 WebContentsView：独立原生视图、fail-closed 控制面与可回滚补丁链。 | accepted（2026-09-24） | [Note](../notes/implemented/surface/2026-09-24-controlled-native-browser.md) |
 | ADR-0159 | Sage 自有桌面端：产品壳、能力适配、独立身份与受控迁移；Harness 留作能力运行时，首批以经营事项闭环验证。 | accepted（2026-09-24） | [Note](../notes/proposed/architecture/2026-09-24-sage-self-owned-desktop-design-tree.md) |
 | ADR-0160 | 本机活动仓基线与历史能力隔离：完整保全旧施工状态，以 `origin/main` 重建最小 Sage P0，并禁止新增机器绝对仓路径。 | accepted（2026-09-27） | [Note](../notes/implemented/process/2026-09-27-local-active-repository-baseline.md) |
+| ADR-0161 | BusinessMatter 权威事件存储：Sage main process 独占写入口，使用隔离的 `node:sqlite` adapter、事务 CAS / 幂等与严格重放；真实敏感数据继续受生产门阻断。 | accepted（2026-09-27） | [Note](../notes/proposed/architecture/2026-09-27-business-matter-event-store.md) |
+| ADR-0162 | 能力装配契约：外部能力（首例 Jev 判断层）经 MCP client 条目挂入 Sage 壳；依赖按消费面精确 pin、两侧同名同版，机器相关条目落实例本地用户层，状态隔离到 Sage 数据根。 | accepted（2026-09-27；D2 由 ADR-0165 部分修订） | [Note](../notes/proposed/architecture/2026-09-27-capability-mounting-contract.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 
