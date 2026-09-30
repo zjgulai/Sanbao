@@ -26,6 +26,8 @@ describe('resolveHostRuntime', () => {
     expect(runtime.env.ELECTRON_RUN_AS_NODE).toBe('1')
     expect(runtime.profileDir).toBe(activeProfile.profileDir)
     expect(runtime.sageRoot).toBe(paths.root)
+    expect(runtime.expectedProfileGeneration).toBe(activeProfile.generation)
+    expect(runtime.expectedManifestSha256).toBe(activeProfile.manifestSha256)
   })
 
   it('points the entry at the active Sage host runtime', () => {

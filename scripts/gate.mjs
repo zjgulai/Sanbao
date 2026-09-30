@@ -378,7 +378,7 @@ const CHECKS = [
   },
   {
     name: 'sage-shell-pin',
-    remediation: '把 apps/sage-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；协议常量以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0139）',
+    remediation: '把 apps/sage-shell 与 seed 两侧的 @deepseek-ai/* 对齐到同一精确版本；Sage Host IPC lifecycle protocol 独立固定为 v4，FD3/FD4 的六个 framing 常量继续以 vendor/dsh-desktop/deepseek-harness/apps/desktop-host/src/wire.ts 为准（ADR-0139 / ADR-0168）',
     run() {
       const reference = join('vendor', 'dsh-desktop', 'deepseek-harness', 'apps', 'desktop-host', 'src', 'wire.ts')
       let trackedFixturePaths = null
@@ -405,7 +405,7 @@ const CHECKS = [
     name: 'sage-shell-pin-selftest',
     remediation:
       '跑 node --test scripts/gates/sage-shell-pin.test.mjs 看红在哪条：本项必须能说「不」——seed 与壳 devDependencies 任一侧的 range 型 specifier、两侧同名包版本错位、任一侧没有任何 @deepseek-ai/* 依赖、'
-      + '协议常量漂移于 submodule 参照（FRAME_MAGIC 等 7 项）、electron 非精确 / 缺失 / 与 dsh-plugin-desktop 不一致、治理三字段缺失或取值非 self/lute/false、'
+      + 'Sage Host IPC lifecycle protocol 不是 v4、FD3/FD4 framing 常量漂移于 submodule 参照（FRAME_MAGIC 等 6 项）、electron 非精确 / 缺失 / 与 dsh-plugin-desktop 不一致、治理三字段缺失或取值非 self/lute/false、'
       + 'seed 用户层声明了 Sage 插件、fixture 掉出 git 跟踪，都必须判红；submodule 未初始化与 vendor 参照缺失是显式 skip note，不是通过（ADR-0139 / P-02）',
     run() {
       return runNodeTestFile('scripts/gates/sage-shell-pin.test.mjs', '薄壳 pin 判据的反向自测失败')

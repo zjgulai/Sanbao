@@ -25,7 +25,7 @@ import {
   type HostEvent,
   type HostRequestFrame,
 } from '../protocol.js'
-import { assertActiveProfile, resolveSagePaths } from '../profile/paths.js'
+import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
 import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
 import { createSageCapabilityAdapter } from '../adapter/capability-adapter.js'
 import { createSageCapabilityHandler } from '../adapter/handler.js'
@@ -47,6 +47,10 @@ export interface HostFetchCommand {
 export interface HostController {
   /** Installed dsh version carried by this host. */
   readonly dshVersion: string
+  /** Loader state audited by dsh-app-boot before this controller is returned. */
+  readonly loaderPhase: 'active'
+  /** Begin treating subsequent Cordis lifecycle changes as runtime invalidation. */
+  armRuntimeInvalidation(): void
   /** Dispatch one custom-protocol request and stream its response to the response pipe. */
   fetch(command: HostFetchCommand, body: ReadableStream<Uint8Array> | null): Promise<void>
   /** Abort one in-flight request. */
@@ -93,7 +97,10 @@ function readDshVersion(profileDir: string): string {
 export async function runShellHost(input: {
   profileDir: string
   overlayPatchPath: string
+  /** Instance-local patch file merged after the overlay (ADR-0162); absent on fresh instances. */
+  localPatchPath?: string
   writeResponse: (frame: Buffer) => Promise<void>
+  onRuntimeInvalidated?: () => void
 }): Promise<HostController> {
   const { writeResponse } = input
   // startHostProcess validates this against the active Sage generation before it reaches the host.
@@ -104,6 +111,7 @@ export async function runShellHost(input: {
   const composition = composeShellPatches({
     profileDir,
     overlayPatchPath: input.overlayPatchPath,
+    ...(input.localPatchPath === undefined ? {} : { localPatchPath: input.localPatchPath }),
   })
   for (const [index, layerDir] of composition.layerDirs.entries()) {
     if (!isInside(profileRoot, layerDir)) {
@@ -112,11 +120,29 @@ export async function runShellHost(input: {
   }
   const environment = loadLayeredEnv(SHELL_LABEL)
   let current: Context | undefined
+  let loaderSettled = false
+  let runtimeInvalidationArmed = false
+  let runtimeInvalidationPending = false
+  let runtimeInvalidationSent = false
+  const notifyRuntimeInvalidated = (): void => {
+    if (runtimeInvalidationSent) return
+    runtimeInvalidationSent = true
+    input.onRuntimeInvalidated?.()
+  }
   const ctx = await boot(SHELL_LABEL, rootConfig, composition.patches, (hostCtx) => {
     current = hostCtx
     hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
     provideCmdline(hostCtx, { args: [], exit: () => {} })
+    hostCtx.on('internal/status', () => {
+      if (!loaderSettled || runtimeInvalidationSent) return
+      if (!runtimeInvalidationArmed) {
+        runtimeInvalidationPending = true
+        return
+      }
+      notifyRuntimeInvalidated()
+    })
   })
+  loaderSettled = true
   current = ctx
   const adapter = createSageCapabilityAdapter(ctx)
   const handlers: Record<RouteTarget, FetchHandler> = {
@@ -139,6 +165,11 @@ export async function runShellHost(input: {
 
   return {
     dshVersion: readDshVersion(profileDir),
+    loaderPhase: 'active',
+    armRuntimeInvalidation() {
+      runtimeInvalidationArmed = true
+      if (runtimeInvalidationPending) notifyRuntimeInvalidated()
+    },
     cancel(streamId) {
       requests.get(streamId)?.abort()
     },
@@ -205,6 +236,7 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
   const profileDir = activeProfile.profileDir
   // The materializer places this bundle at <profile>/sage-host/host/index.js beside the overlay.
   const overlayPatchPath = fileURLToPath(new URL('../shell.cordis.patch.yml', import.meta.url))
+  const localPatchPath = join(paths.root, LOCAL_PATCH_FILE)
   const requestPipe = createReadStream('', { fd: SHELL_REQUEST_PIPE_FD, autoClose: false })
   const responsePipe = createWriteStream('', { fd: SHELL_RESPONSE_PIPE_FD, autoClose: false })
   let responseWriteTail: Promise<void> = Promise.resolve()
@@ -226,12 +258,22 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
       if ((error as NodeJS.ErrnoException).code !== 'ERR_IPC_CHANNEL_CLOSED') throw error
     }
   }
-  const controller = await runShellHost({ profileDir, overlayPatchPath, writeResponse })
+  const controller = await runShellHost({
+    profileDir,
+    overlayPatchPath,
+    localPatchPath,
+    writeResponse,
+    onRuntimeInvalidated: () => { send({ type: 'runtime-invalidated' }) },
+  })
   send({
     type: 'ready',
     protocolVersion: SHELL_HOST_PROTOCOL_VERSION,
     dshVersion: controller.dshVersion,
+    profileGeneration: activeProfile.generation,
+    manifestSha256: activeProfile.manifestSha256,
+    loaderPhase: controller.loaderPhase,
   })
+  controller.armRuntimeInvalidation()
   const decoder = new HostRequestDecoder()
   const requestBodies = new Map<number, ReadableStreamDefaultController<Uint8Array>>()
   const blockedRequests = new Set<number>()

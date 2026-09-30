@@ -1,7 +1,9 @@
 /** Versioned control messages and framed request/response bytes for the Sage shell host transport. */
 
+import { types as utilTypes } from 'node:util'
+
 /** Protocol version shared with the Electron shell. */
-export const SHELL_HOST_PROTOCOL_VERSION = 3 as const
+export const SHELL_HOST_PROTOCOL_VERSION = 4 as const
 
 /** Child descriptor that receives Electron request frames. */
 export const SHELL_REQUEST_PIPE_FD = 3
@@ -18,6 +20,9 @@ export const SHELL_PIPE_CHUNK_BYTES = 64 * 1024
 export const FRAME_MAGIC = 0x44534833
 export const FRAME_HEADER_BYTES = 13
 export const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
+
+const PROFILE_GENERATION = /^[a-z0-9][a-z0-9-]{0,63}$/u
+const RAW_SHA256 = /^[0-9a-f]{64}$/u
 
 const REQUEST_FRAME_START = 1
 const REQUEST_FRAME_DATA = 2
@@ -84,6 +89,11 @@ export type HostEvent = {
   readonly type: 'ready'
   readonly protocolVersion: typeof SHELL_HOST_PROTOCOL_VERSION
   readonly dshVersion: string
+  readonly profileGeneration: string
+  readonly manifestSha256: string
+  readonly loaderPhase: 'active'
+} | {
+  readonly type: 'runtime-invalidated'
 } | {
   readonly type: 'fatal'
   readonly message: string
@@ -331,14 +341,57 @@ export function isHostCommand(message: unknown): message is HostCommand {
     && (message as Record<string, unknown>).type === 'shutdown'
 }
 
+function snapshotPlainDataRecord(message: unknown): Record<string, unknown> | undefined {
+  try {
+    if (typeof message !== 'object' || message === null || utilTypes.isProxy(message)
+      || Object.getPrototypeOf(message) !== Object.prototype) {
+      return undefined
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(message)
+    const snapshot: Record<string, unknown> = Object.create(null)
+    for (const key of Reflect.ownKeys(descriptors)) {
+      if (typeof key !== 'string') return undefined
+      const descriptor = descriptors[key]
+      if (descriptor === undefined || !Object.hasOwn(descriptor, 'value') || descriptor.enumerable !== true) {
+        return undefined
+      }
+      snapshot[key] = descriptor.value
+    }
+    return snapshot
+  } catch {
+    return undefined
+  }
+}
+
+function hasExactKeys(candidate: Record<string, unknown>, expected: readonly string[]): boolean {
+  const keys = Object.keys(candidate)
+  return keys.length === expected.length && keys.every(key => expected.includes(key))
+}
+
 export function isHostEvent(message: unknown): message is HostEvent {
-  if (typeof message !== 'object' || message === null || !('type' in message)) return false
-  const candidate = message as Record<string, unknown>
+  const candidate = snapshotPlainDataRecord(message)
+  if (candidate === undefined) return false
   switch (candidate.type) {
     case 'ready':
-      return candidate.protocolVersion === SHELL_HOST_PROTOCOL_VERSION && typeof candidate.dshVersion === 'string'
+      return hasExactKeys(candidate, [
+        'type',
+        'protocolVersion',
+        'dshVersion',
+        'profileGeneration',
+        'manifestSha256',
+        'loaderPhase',
+      ])
+        && candidate.protocolVersion === SHELL_HOST_PROTOCOL_VERSION
+        && typeof candidate.dshVersion === 'string'
+        && typeof candidate.profileGeneration === 'string'
+        && PROFILE_GENERATION.test(candidate.profileGeneration)
+        && typeof candidate.manifestSha256 === 'string'
+        && RAW_SHA256.test(candidate.manifestSha256)
+        && candidate.loaderPhase === 'active'
+    case 'runtime-invalidated':
+      return hasExactKeys(candidate, ['type'])
     case 'fatal':
-      return typeof candidate.message === 'string'
+      return hasExactKeys(candidate, ['type', 'message']) && typeof candidate.message === 'string'
     default:
       return false
   }

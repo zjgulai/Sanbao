@@ -15,7 +15,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test": "vitest run",
+    "test": "node scripts/test.mjs run",
     "materialize": "node scripts/materialize.mjs",
     "preview": "node scripts/preview.mjs",
     "smoke": "node scripts/smoke.mjs",

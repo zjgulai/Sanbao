@@ -28,6 +28,8 @@ export interface HostRuntime {
   readonly entry: string
   readonly sageRoot: string
   readonly profileDir: string
+  readonly expectedProfileGeneration: string
+  readonly expectedManifestSha256: string
   readonly env: Record<string, string | undefined>
 }
 
@@ -61,6 +63,8 @@ export function resolveHostRuntime(input: {
     entry: hostEntryPath(input.activeProfile.profileDir),
     sageRoot: input.paths.root,
     profileDir: input.activeProfile.profileDir,
+    expectedProfileGeneration: input.activeProfile.generation,
+    expectedManifestSha256: input.activeProfile.manifestSha256,
     env,
   }
 }

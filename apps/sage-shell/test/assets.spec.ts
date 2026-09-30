@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createAssetHandler } from '../src/host/assets.js'
+import { SAGE_DOCUMENT_CSP } from '../src/product/contracts.js'
 
 function request(path: string, method = 'GET'): Request {
   return new Request(`dsh-app://app${path}`, { method })
@@ -13,6 +14,12 @@ describe('Sage asset handler', () => {
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8')
       expect(response.headers.get('cache-control')).toBe('no-store')
+      expect(response.headers.get('content-security-policy')).toBe(SAGE_DOCUMENT_CSP)
+      expect(SAGE_DOCUMENT_CSP).toContain("frame-src 'none'")
+      expect(SAGE_DOCUMENT_CSP).toContain("child-src 'none'")
+      expect(SAGE_DOCUMENT_CSP).toContain("frame-ancestors 'none'")
+      expect(SAGE_DOCUMENT_CSP).toContain("object-src 'none'")
+      expect(SAGE_DOCUMENT_CSP).toContain("connect-src 'self'")
       const body = await response.text()
       expect(body).toContain('<title>Sage</title>')
       expect(body).toContain('/.sage/state')

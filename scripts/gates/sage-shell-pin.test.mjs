@@ -21,7 +21,7 @@ const seedManifest = JSON.stringify({
 })
 const vendorDesktopManifest = JSON.stringify({ devDependencies: { electron: '43.3.0' } })
 const workspace = 'overrides:\n  "@deepseek-ai/dsh-type-meta": "npm:empty-npm-package@1.0.0"\n  "@deepseek-ai/dsh-user-interaction": "npm:empty-npm-package@1.0.0"\n'
-const protocol = `export const SHELL_HOST_PROTOCOL_VERSION = 3 as const
+const protocol = `export const SHELL_HOST_PROTOCOL_VERSION = 4 as const
 export const SHELL_REQUEST_PIPE_FD = 3
 export const SHELL_RESPONSE_PIPE_FD = 4
 export const SHELL_CONTROL_IPC_FD = 5
@@ -65,7 +65,7 @@ const good = {
   trackedFixturePaths: TRACKED_FIXTURES,
 }
 
-test('passes on a consistent pin', () => {
+test('allows Sage lifecycle v4 while the vendor frame reference remains DSH3 v3', () => {
   assert.deepEqual(checkSageShellPin(good), { passed: true, violations: [] })
 })
 
@@ -143,7 +143,25 @@ test('rejects a missing override for the two unpublished internal packages', () 
   assert.match(result.violations[0], /dsh-type-meta/u)
 })
 
-test('rejects protocol constants that drift from the submodule reference', () => {
+test('rejects Sage lifecycle protocol v3 independently of the vendor reference', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol.replace('SHELL_HOST_PROTOCOL_VERSION = 4', 'SHELL_HOST_PROTOCOL_VERSION = 3'),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /SHELL_HOST_PROTOCOL_VERSION.*Sage lifecycle protocol v4/u)
+})
+
+test('ignores the vendor lifecycle version when the six framing constants remain aligned', () => {
+  const result = checkSageShellPin({
+    ...good,
+    referenceWireText: referenceWire.replace('DESKTOP_HOST_PROTOCOL_VERSION = 3', 'DESKTOP_HOST_PROTOCOL_VERSION = 99'),
+  })
+  assert.deepEqual(result, { passed: true, violations: [] })
+})
+
+test('rejects framing constants that drift from the submodule reference', () => {
   const result = checkSageShellPin({
     ...good,
     protocolText: protocol.replace('0x44534833', '0x44534834'),
@@ -152,11 +170,22 @@ test('rejects protocol constants that drift from the submodule reference', () =>
   assert.match(result.violations[0], /FRAME_MAGIC/u)
 })
 
+test('rejects a missing Sage framing constant', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol.replace('export const SHELL_RESPONSE_PIPE_FD = 4\n', ''),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /SHELL_RESPONSE_PIPE_FD = undefined/u)
+})
+
 test('skips the reference comparison when the submodule is not initialized', () => {
   const result = checkSageShellPin({ ...good, referenceWireText: null })
   assert.equal(result.passed, true)
   assert.deepEqual(result.violations, [])
-  assert.match(result.note, /7 项协议常量比对全部未跑/u)
+  assert.match(result.note, /6 项 FD3\/FD4 framing 常量比对全部未跑/u)
+  assert.match(result.note, /lifecycle v4 仍已独立校验/u)
 })
 
 test('notes the per-pair skip count when the reference renamed a constant', () => {
@@ -166,7 +195,7 @@ test('notes the per-pair skip count when the reference renamed a constant', () =
   })
   assert.equal(result.passed, true)
   assert.deepEqual(result.violations, [])
-  assert.match(result.note, /1\/7 项协议常量在参照里找不到同名常量/u)
+  assert.match(result.note, /1\/6 项 FD3\/FD4 framing 常量在参照里找不到同名常量/u)
 })
 
 test('fails loud when the shell package is absent', () => {

@@ -1,6 +1,6 @@
 /** Serves the self-owned Sage document and no upstream client assets. */
 
-import { isExactSageAppUrl } from '../product/contracts.js'
+import { isExactSageAppUrl, SAGE_DOCUMENT_CSP } from '../product/contracts.js'
 import { renderSageDocument } from '../product/renderer.js'
 import type { FetchHandler } from './handler.js'
 
@@ -24,6 +24,7 @@ export function createAssetHandler(): FetchHandler {
         headers: {
           'cache-control': 'no-store',
           'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': SAGE_DOCUMENT_CSP,
         },
       })
     },

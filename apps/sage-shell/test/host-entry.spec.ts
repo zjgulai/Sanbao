@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -26,6 +26,28 @@ function copyProfile(bundleOutside: boolean): string {
     symlinkSync(outside, bundle, 'dir')
   }
   return profileDir
+}
+
+function emptyProfile(): { profileDir: string; overlayPatchPath: string } {
+  const base = mkdtempSync(join(tmpdir(), 'sage-shell-empty-profile-'))
+  tempBases.push(base)
+  const profileDir = join(base, 'profile')
+  mkdirSync(join(profileDir, 'node_modules', '@deepseek-ai', 'dsh'), { recursive: true })
+  writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
+    name: 'sage-shell-empty-profile',
+    private: true,
+    type: 'module',
+    dsh: { profile: { bundles: [] } },
+  }))
+  writeFileSync(join(profileDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), JSON.stringify({
+    name: '@deepseek-ai/dsh',
+    version: '0.1.5-rc.2',
+    type: 'module',
+  }))
+  writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
+  const overlayPatchPath = join(base, 'overlay.patch.yml')
+  writeFileSync(overlayPatchPath, '[]\n')
+  return { profileDir, overlayPatchPath }
 }
 
 async function writeResponse(): Promise<void> {}
@@ -77,5 +99,26 @@ describe('runShellHost bundle containment', () => {
     expect(outcome).not.toMatch(/resolved outside the profile/u)
     expect(outcome).not.toMatch(/has no installed @deepseek-ai\/dsh/u)
     expect(outcome).not.toMatch(/declares no dsh\.bundle in its package\.json/u)
+  })
+})
+
+describe('runShellHost lifecycle', () => {
+  it('reports active only after settled boot and emits one invalidation after readiness is armed', async () => {
+    const invalidations: string[] = []
+    const profile = emptyProfile()
+    const controller = await runShellHost({
+      ...profile,
+      writeResponse,
+      onRuntimeInvalidated: () => { invalidations.push('runtime-invalidated') },
+    })
+
+    expect(controller.loaderPhase).toBe('active')
+    expect(invalidations).toEqual([])
+
+    controller.armRuntimeInvalidation()
+    await controller.dispose()
+    await controller.dispose()
+
+    expect(invalidations).toEqual(['runtime-invalidated'])
   })
 })

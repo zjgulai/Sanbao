@@ -14,6 +14,11 @@ import {
   type SagePaths,
 } from './paths.js'
 import { composeProfileManifest, hostEntryPath, overlayPath, planMaterialize, type CopyPlan, type ProfileManifest } from './layout.js'
+import {
+  RUNTIME_ARTIFACT_ATTESTATION_FILE,
+  createRuntimeArtifactAttestation,
+  verifyRuntimeArtifactAttestation,
+} from './runtime-artifact-attestation.js'
 
 const PROFILE_MANIFEST_SCHEMA_VERSION = 1
 const GENERATION_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/u
@@ -25,6 +30,8 @@ export interface MaterializedProfile {
   readonly hostEntry: string
   readonly overlay: string
   readonly manifestSha256: string
+  readonly artifactSetDigest: string
+  readonly artifactAttestationDigest: string
   readonly installed: true
 }
 
@@ -53,6 +60,20 @@ interface ProfileReceipt {
 
 function sha256(content: Uint8Array): string {
   return createHash('sha256').update(content).digest('hex')
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+function computeOwnedProfileDigest(files: readonly ProfileReceiptFile[]): string {
+  const canonical = JSON.stringify({
+    schemaVersion: 'sage.owned-profile-file-set.v1',
+    files: [...files]
+      .sort((left, right) => compareStrings(left.path, right.path))
+      .map(file => ({ path: file.path, sha256: file.sha256 })),
+  })
+  return `sha256:${sha256(Buffer.from(canonical, 'utf8'))}`
 }
 
 function isLiteralRelativePath(value: string): boolean {
@@ -375,8 +396,30 @@ export async function materializeProfile(input: MaterializeProfileInput): Promis
     const expectedFiles = await snapshotOwnedFiles(stage, plan)
     await (input.install ?? defaultInstall)(stage)
     await assertOwnedFilesMatch(stage, expectedFiles)
-    const manifestSha256 = await writeProfileReceipt(stage, generation, expectedFiles)
-    const verifiedManifestSha256 = await validateProfileReceipt(stage, generation, plan, expectedFiles)
+    const ownedProfileDigest = computeOwnedProfileDigest(expectedFiles)
+    const attestation = await createRuntimeArtifactAttestation({
+      profileDir: stage,
+      generation,
+      ownedProfileDigest,
+    })
+    const verifiedAttestation = await verifyRuntimeArtifactAttestation({
+      profileDir: stage,
+      generation,
+      ownedProfileDigest,
+      expectedArtifactAttestationDigest: attestation.artifactAttestationDigest,
+    })
+    if (attestation.artifactSetDigest !== verifiedAttestation.artifactSetDigest
+      || attestation.artifactAttestationDigest !== verifiedAttestation.artifactAttestationDigest) {
+      throw new Error('sage shell: runtime artifact attestation changed during validation')
+    }
+    const attestationPath = join(stage, RUNTIME_ARTIFACT_ATTESTATION_FILE)
+    assertRegularFile(attestationPath)
+    const receiptFiles = [
+      ...expectedFiles,
+      { path: RUNTIME_ARTIFACT_ATTESTATION_FILE, sha256: sha256(await readFile(attestationPath)) },
+    ].sort((left, right) => compareStrings(left.path, right.path))
+    const manifestSha256 = await writeProfileReceipt(stage, generation, receiptFiles)
+    const verifiedManifestSha256 = await validateProfileReceipt(stage, generation, plan, receiptFiles)
     if (manifestSha256 !== verifiedManifestSha256) {
       throw new Error('sage shell: profile receipt changed during validation')
     }
@@ -394,6 +437,8 @@ export async function materializeProfile(input: MaterializeProfileInput): Promis
       hostEntry: hostEntryPath(destination),
       overlay: overlayPath(destination),
       manifestSha256,
+      artifactSetDigest: attestation.artifactSetDigest,
+      artifactAttestationDigest: attestation.artifactAttestationDigest,
       installed: true,
     }
   } finally {

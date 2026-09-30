@@ -5,6 +5,7 @@ import {
   HostRequestDecoder,
   HostResponseDecoder,
   MAX_CONTROL_PAYLOAD_BYTES,
+  SHELL_HOST_PROTOCOL_VERSION,
   SHELL_PIPE_CHUNK_BYTES,
   encodeRequestCancel,
   encodeRequestData,
@@ -146,10 +147,48 @@ describe('ipc guards', () => {
     expect(isHostCommand(null)).toBe(false)
   })
 
-  it('accepts ready and fatal events only at the current protocol version', () => {
-    expect(isHostEvent({ type: 'ready', protocolVersion: 3, dshVersion: '0.1.5-rc.2' })).toBe(true)
-    expect(isHostEvent({ type: 'ready', protocolVersion: 2, dshVersion: '0.1.5-rc.2' })).toBe(false)
+  const ready = {
+    type: 'ready',
+    protocolVersion: 4,
+    dshVersion: '0.1.5-rc.2',
+    profileGeneration: 'sage-dev',
+    manifestSha256: 'a'.repeat(64),
+    loaderPhase: 'active',
+  }
+
+  it('accepts only the exact v4 ready, runtime-invalidated, and fatal events', () => {
+    expect(SHELL_HOST_PROTOCOL_VERSION).toBe(4)
+    expect(isHostEvent(ready)).toBe(true)
+    expect(isHostEvent({ ...ready, protocolVersion: 3 })).toBe(false)
+    expect(isHostEvent({ ...ready, profileGeneration: 'Sage/Dev' })).toBe(false)
+    expect(isHostEvent({ ...ready, manifestSha256: 'A'.repeat(64) })).toBe(false)
+    expect(isHostEvent({ ...ready, manifestSha256: 'a'.repeat(63) })).toBe(false)
+    expect(isHostEvent({ ...ready, loaderPhase: 'loading' })).toBe(false)
+    expect(isHostEvent({ ...ready, bootId: 'host-owned-is-forbidden' })).toBe(false)
+    expect(isHostEvent({ type: 'runtime-invalidated' })).toBe(true)
+    expect(isHostEvent({ type: 'runtime-invalidated', reason: 'reload' })).toBe(false)
     expect(isHostEvent({ type: 'fatal', message: 'x' })).toBe(true)
     expect(isHostEvent({ type: 'fatal' })).toBe(false)
+    expect(isHostEvent({ type: 'fatal', message: 'x', code: 'E_X' })).toBe(false)
+  })
+
+  it('rejects hostile or non-plain event values without invoking accessors or leaking traps', () => {
+    const accessor = { ...ready }
+    Object.defineProperty(accessor, 'type', {
+      enumerable: true,
+      get: () => { throw new Error('accessor must not run') },
+    })
+    const wrongPrototype = Object.assign(Object.create(null) as Record<string, unknown>, ready)
+    const transparentProxy = new Proxy(ready, {})
+    const throwingProxy = new Proxy({}, {
+      getPrototypeOf: () => { throw new Error('proxy trap') },
+    })
+
+    expect(() => isHostEvent(accessor)).not.toThrow()
+    expect(isHostEvent(accessor)).toBe(false)
+    expect(isHostEvent(wrongPrototype)).toBe(false)
+    expect(isHostEvent(transparentProxy)).toBe(false)
+    expect(() => isHostEvent(throwingProxy)).not.toThrow()
+    expect(isHostEvent(throwingProxy)).toBe(false)
   })
 })

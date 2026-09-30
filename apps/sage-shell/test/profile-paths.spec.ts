@@ -1,9 +1,11 @@
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   ACTIVE_PROFILE_FILE,
+  PROFILE_MANIFEST_FILE,
   ensureSageDirectories,
   ensureSageDirectoriesSync,
   generationProfileDir,
@@ -91,6 +93,19 @@ describe('Sage profile paths', () => {
     expect(existsSync(join(target, 'Sage'))).toBe(false)
   })
 
+  it('rejects a Sage root inside the physical target of a symlinked legacy root before writing', () => {
+    const home = temporary('home')
+    const physicalLegacyRoot = temporary('physical-legacy-root')
+    const sageRoot = join(physicalLegacyRoot, 'sage-shadow')
+    mkdirSync(home, { recursive: true })
+    mkdirSync(physicalLegacyRoot, { recursive: true })
+    symlinkSync(physicalLegacyRoot, join(home, '.dsh'))
+    const paths = resolveSagePaths({ home, root: sageRoot })
+
+    expect(() => ensureSageDirectoriesSync(paths)).toThrow(/legacy/u)
+    expect(existsSync(sageRoot)).toBe(false)
+  })
+
   it('treats a missing active pointer as not materialized and malformed pointers as failures', async () => {
     const root = temporary('root')
     const paths = resolveSagePaths({ home: temporary('home'), root })
@@ -101,5 +116,39 @@ describe('Sage profile paths', () => {
     await expect(readActiveProfile(paths)).rejects.toThrow(/not valid JSON/u)
     expect(generationProfileDir(paths, 'first-generation')).toBe(join(paths.generationsDir, 'first-generation'))
     expect(() => generationProfileDir(paths, '../outside')).toThrow(/invalid profile generation/u)
+  })
+
+  it('keeps pre-attestation generations generally readable without inventing an attestation receipt row', async () => {
+    const root = temporary('legacy-root')
+    const paths = resolveSagePaths({ home: temporary('legacy-home'), root })
+    await ensureSageDirectories(paths)
+    const generation = 'legacy-generation'
+    const profileDir = generationProfileDir(paths, generation)
+    mkdirSync(profileDir, { recursive: true })
+    const legacyBytes = 'legacy profile bytes\n'
+    writeFileSync(join(profileDir, 'legacy.txt'), legacyBytes)
+    const receipt = `${JSON.stringify({
+      schemaVersion: 1,
+      generation,
+      files: [{ path: 'legacy.txt', sha256: createHash('sha256').update(legacyBytes).digest('hex') }],
+    }, null, 2)}\n`
+    writeFileSync(join(profileDir, PROFILE_MANIFEST_FILE), receipt)
+    const manifestSha256 = createHash('sha256').update(receipt).digest('hex')
+    writeFileSync(paths.activeProfileFile, `${JSON.stringify({
+      schemaVersion: 1,
+      generation,
+      manifestSha256,
+      activatedAt: '2026-09-28T00:00:00.000Z',
+    }, null, 2)}\n`)
+
+    const active = await readActiveProfile(paths)
+
+    expect(active).toEqual({
+      generation,
+      profileDir,
+      manifestSha256,
+      activatedAt: '2026-09-28T00:00:00.000Z',
+    })
+    expect(active).not.toHaveProperty('runtimeArtifactAttestationSha256')
   })
 })

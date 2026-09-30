@@ -17,6 +17,14 @@ export const ACTIVE_PROFILE_FILE = 'profile-current.json'
 /** Receipt written into every materialized generation. */
 export const PROFILE_MANIFEST_FILE = 'profile-manifest.json'
 
+// `paths.js` is copied into the minimal Host runtime without the C2A scanner.
+// Keep this receipt row literal isolated here; runtime-inventory integration
+// tests bind it to the producer's exported filename.
+const RECEIPT_RUNTIME_ARTIFACT_ATTESTATION_FILE = 'runtime-artifact-attestation.json'
+
+/** Instance-local patch layer merged after the shell overlay (ADR-0162); absent until an instance opts in. */
+export const LOCAL_PATCH_FILE = 'cordis.local.patch.yml'
+
 const POINTER_SCHEMA_VERSION = 1
 const GENERATION_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/u
 
@@ -48,6 +56,8 @@ export interface ActiveProfile {
   readonly profileDir: string
   readonly manifestSha256: string
   readonly activatedAt: string
+  /** Receipt-verified file SHA; absent on pre-attestation profile generations. */
+  readonly runtimeArtifactAttestationSha256?: string
 }
 
 interface ActiveProfilePointer {
@@ -174,6 +184,7 @@ function assertSageDirectoryContainment(paths: SagePaths, directories: readonly 
   const realRoot = realpathSync(paths.root)
   const legacyDshRoot = legacyDshRootOf(paths)
   assertSafeRoot(realRoot, legacyDshRoot)
+  assertSageRootIsolatedFromLegacyDsh(paths)
   for (const directory of directories.slice(1)) {
     const realDirectory = realpathSync(directory)
     if (!isInside(realRoot, realDirectory)) {
@@ -193,9 +204,32 @@ function canonicalPathBeforeCreation(path: string): string {
   return join(realpathSync(ancestor), relative(ancestor, path))
 }
 
-function legacyDshRootOf(paths: SagePaths): string {
+function realpathIfPresent(path: string): string | undefined {
+  try {
+    return realpathSync(path)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+function legacyDshRootOf(paths: Pick<SagePaths, 'home'>): string {
   const physicalHome = existsSync(paths.home) ? realpathSync(paths.home) : paths.home
   return join(physicalHome, '.dsh')
+}
+
+/**
+ * Reject a Sage root that overlaps either the lexical legacy root or the
+ * physical target behind it. This check is read-only and safe before mkdir.
+ */
+export function assertSageRootIsolatedFromLegacyDsh(
+  paths: Pick<SagePaths, 'home' | 'root'>,
+): void {
+  const sageRoot = realpathIfPresent(paths.root) ?? canonicalPathBeforeCreation(paths.root)
+  const legacyDshRoot = legacyDshRootOf(paths)
+  assertSafeRoot(sageRoot, legacyDshRoot)
+  const physicalLegacyDshRoot = realpathIfPresent(legacyDshRoot)
+  if (physicalLegacyDshRoot !== undefined) assertSafeRoot(sageRoot, physicalLegacyDshRoot)
 }
 
 /**
@@ -209,6 +243,7 @@ export function ensureSageDirectoriesSync(paths: SagePaths): void {
   // This preflight happens before mkdir: a symlinked parent must not redirect
   // even the first Sage root write into a legacy data tree.
   assertSafeRoot(canonicalPathBeforeCreation(paths.root), legacyDshRootOf(paths))
+  assertSageRootIsolatedFromLegacyDsh(paths)
   for (const directory of directories) {
     if (existsSync(directory)) assertDirectorySync(directory)
     else {
@@ -283,6 +318,7 @@ export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile
     throw new Error(`sage shell: active profile receipt has an unsupported shape for ${pointer.generation}`)
   }
   const seen = new Set<string>()
+  let runtimeArtifactAttestationSha256: string | undefined
   for (const item of record.files) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new Error(`sage shell: active profile receipt has an invalid file row for ${pointer.generation}`)
@@ -301,12 +337,16 @@ export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile
     if (sha256(await readFile(path)) !== file.sha256) {
       throw new Error(`sage shell: active profile file checksum does not match receipt: ${file.path}`)
     }
+    if (file.path === RECEIPT_RUNTIME_ARTIFACT_ATTESTATION_FILE) {
+      runtimeArtifactAttestationSha256 = file.sha256
+    }
   }
   return {
     generation: pointer.generation,
     profileDir,
     manifestSha256: pointer.manifestSha256,
     activatedAt: pointer.activatedAt,
+    ...(runtimeArtifactAttestationSha256 === undefined ? {} : { runtimeArtifactAttestationSha256 }),
   }
 }
 

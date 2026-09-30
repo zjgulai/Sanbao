@@ -13,6 +13,14 @@ export const SAGE_APP_ORIGIN = 'dsh-app://app' as const
 export const SAGE_REQUEST_TIMEOUT_MS = 5_000
 
 /**
+ * Strict CSP for the privileged Sage document (ADR-0178): no frames, no objects, no
+ * embeddable ancestors; inline script/style from the self-owned document and same-origin
+ * fetch only. This is a defense-in-depth layer on top of the main-owned frame policy,
+ * never a substitute for it.
+ */
+export const SAGE_DOCUMENT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; frame-src 'none'; child-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" as const
+
+/**
  * Keep the custom-scheme contract exact: no alternate port, credentials, query, or fragment.
  * The product has no legitimate need for any of those variants in P0-2.
  */

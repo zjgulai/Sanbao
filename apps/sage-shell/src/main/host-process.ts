@@ -1,6 +1,7 @@
 /** Host child lifecycle and streaming custom-protocol carrier. */
 
 import { spawn, type ChildProcess } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { Readable, Writable } from 'node:stream'
 import {
@@ -48,10 +49,40 @@ async function exitsWithin(exit: Promise<void>, milliseconds: number): Promise<b
 }
 
 /** Ready facts reported by one installed dsh child. */
-export interface HostReady {
-  readonly protocolVersion: typeof SHELL_HOST_PROTOCOL_VERSION
-  readonly dshVersion: string
+export type HostReady = Extract<HostEvent, { readonly type: 'ready' }>
+
+export type ShellHostUnavailableReason =
+  | 'not-ready'
+  | 'invalidated'
+  | 'fatal'
+  | 'exit'
+  | 'disconnect'
+  | 'stopped'
+
+/** Main-owned live facts for the one active Host epoch. */
+export interface ShellHostActiveRuntimeSnapshot {
+  readonly kind: 'active'
+  readonly bootId: string
+  readonly runtimeGeneration: number
+  readonly activeGeneration: string
+  readonly manifestSha256: string
+  readonly loaderPhase: 'active'
+  readonly hostProtocolVersion: string
+  readonly harnessVersion: string
 }
+
+/** Main-owned marker retained after a Host epoch becomes unusable. */
+export interface ShellHostUnavailableRuntimeSnapshot {
+  readonly kind: 'unavailable'
+  readonly bootId: string
+  readonly runtimeGeneration: number
+  readonly reason: ShellHostUnavailableReason
+}
+
+/** Frozen snapshot consumed by the main-owned runtime inventory projection. */
+export type ShellHostRuntimeSnapshot =
+  | ShellHostActiveRuntimeSnapshot
+  | ShellHostUnavailableRuntimeSnapshot
 
 /** One dsh backend running as a plain-Node child process. */
 export class ShellHostProcess {
@@ -71,25 +102,55 @@ export class ShellHostProcess {
   })
   private exitPromise: Promise<void> | undefined
   private stderr = ''
+  private readonly bootId = `sage-host:${randomUUID()}`
+  private runtimeGeneration = 1
+  private snapshot: ShellHostRuntimeSnapshot
+  private started = false
+  private terminal = false
+  private readyState: 'pending' | 'resolved' | 'rejected' = 'pending'
 
   /**
    * @param runtime - resolved node binary, host entry, profile directory, and scrubbed child environment.
    */
-  constructor(private readonly runtime: HostRuntime) {}
+  constructor(private readonly runtime: HostRuntime) {
+    this.snapshot = Object.freeze({
+      kind: 'unavailable',
+      bootId: this.bootId,
+      runtimeGeneration: this.runtimeGeneration,
+      reason: 'not-ready',
+    })
+  }
+
+  /** Read the immutable current Host lifecycle snapshot. */
+  readSnapshot(): ShellHostRuntimeSnapshot {
+    return this.snapshot
+  }
 
   /** Start the child once and resolve only after its complete composition is active. */
   async start(): Promise<HostReady> {
-    if (this.child !== undefined) return this.readyPromise
-    const child = spawn(this.runtime.node, [this.runtime.entry, this.runtime.sageRoot, this.runtime.profileDir], {
-      cwd: this.runtime.profileDir,
-      env: this.runtime.env,
-      stdio: ['ignore', 'pipe', 'pipe', 'pipe', 'pipe', 'ipc'],
-    })
+    if (this.started) return this.readyPromise
+    this.started = true
+    if (this.terminal) {
+      this.rejectReady(new Error('sage shell: host lifecycle cannot be reused'))
+      return this.readyPromise
+    }
+    let child: ChildProcess
+    try {
+      child = spawn(this.runtime.node, [this.runtime.entry, this.runtime.sageRoot, this.runtime.profileDir], {
+        cwd: this.runtime.profileDir,
+        env: this.runtime.env,
+        stdio: ['ignore', 'pipe', 'pipe', 'pipe', 'pipe', 'ipc'],
+      })
+    } catch (error) {
+      this.fail(errorOf(error, 'sage shell: failed to spawn host'), 'fatal')
+      return this.readyPromise
+    }
     const requestPipe = child.stdio[SHELL_REQUEST_PIPE_FD]
     const responsePipe = child.stdio[SHELL_RESPONSE_PIPE_FD]
     if (!(requestPipe instanceof Writable) || !(responsePipe instanceof Readable)) {
       child.kill('SIGTERM')
-      throw new Error('sage shell: host did not expose the required byte pipes and IPC channel')
+      this.fail(new Error('sage shell: host did not expose the required byte pipes and IPC channel'), 'fatal')
+      return this.readyPromise
     }
     this.child = child
     this.requestPipe = requestPipe
@@ -101,27 +162,30 @@ export class ShellHostProcess {
     responsePipe.once('end', () => {
       try {
         this.responseDecoder.finish()
-        this.fail(new Error('sage shell: host response pipe ended'))
+        this.fail(new Error('sage shell: host response pipe ended'), 'fatal')
       } catch (error) {
-        this.fail(errorOf(error, 'sage shell: host response pipe failed'))
+        this.fail(errorOf(error, 'sage shell: host response pipe failed'), 'fatal')
       }
     })
-    requestPipe.once('error', (error) => { this.fail(error) })
-    responsePipe.once('error', (error) => { this.fail(error) })
+    requestPipe.once('error', (error) => { this.fail(error, 'fatal') })
+    responsePipe.once('error', (error) => { this.fail(error, 'fatal') })
     child.on('message', (message: unknown) => {
       if (!isHostEvent(message)) {
-        this.fail(new Error('sage shell: host sent an invalid IPC event'))
+        this.fail(new Error('sage shell: host sent an invalid IPC event'), 'fatal')
         child.kill('SIGTERM')
         return
       }
       this.handleMessage(message)
     })
-    child.once('error', (error) => { this.fail(error) })
+    child.once('error', (error) => { this.fail(error, 'fatal') })
+    child.once('disconnect', () => {
+      this.fail(new Error('sage shell: host IPC disconnected'), 'disconnect')
+    })
     this.exitPromise = new Promise<void>((resolve) => {
       child.once('exit', (code) => {
         const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
-        if (code !== 0 && code !== null) this.fail(new Error(`sage shell: host exited with ${String(code)}${suffix}`))
-        else this.fail(new Error(`sage shell: host stopped${suffix}`))
+        if (code !== 0 && code !== null) this.fail(new Error(`sage shell: host exited with ${String(code)}${suffix}`), 'exit')
+        else this.fail(new Error(`sage shell: host stopped${suffix}`), 'exit')
         resolve()
       })
     })
@@ -132,7 +196,7 @@ export class ShellHostProcess {
   async fetch(request: Request): Promise<Response> {
     await this.start()
     const child = this.child
-    if (child === undefined || !child.connected || this.requestPipe === undefined) {
+    if (this.snapshot.kind !== 'active' || child === undefined || !child.connected || this.requestPipe === undefined) {
       throw new Error('sage shell: host is unavailable')
     }
     if (this.nextStreamId > 0xffff_ffff) throw new Error('sage shell: host exhausted its request stream ids')
@@ -173,6 +237,7 @@ export class ShellHostProcess {
 
   /** Request graceful teardown, then wait for child exit. */
   async stop(): Promise<void> {
+    this.invalidateSnapshot('stopped')
     const child = this.child
     if (child === undefined) return
     this.blockedResponses.clear()
@@ -362,11 +427,44 @@ export class ShellHostProcess {
 
   private handleMessage(message: HostEvent): void {
     switch (message.type) {
-      case 'ready':
+      case 'ready': {
+        if (this.terminal || this.readyState !== 'pending') return
+        if (message.profileGeneration !== this.runtime.expectedProfileGeneration) {
+          this.fail(new Error(
+            `sage shell: host ready profile generation ${JSON.stringify(message.profileGeneration)} did not match ${JSON.stringify(this.runtime.expectedProfileGeneration)}`,
+          ), 'fatal')
+          this.child?.kill('SIGTERM')
+          return
+        }
+        if (message.manifestSha256 !== this.runtime.expectedManifestSha256) {
+          this.fail(new Error('sage shell: host ready manifest digest did not match the active profile'), 'fatal')
+          this.child?.kill('SIGTERM')
+          return
+        }
+        this.snapshot = Object.freeze({
+          kind: 'active',
+          bootId: this.bootId,
+          runtimeGeneration: this.runtimeGeneration,
+          activeGeneration: message.profileGeneration,
+          manifestSha256: message.manifestSha256,
+          loaderPhase: message.loaderPhase,
+          hostProtocolVersion: String(message.protocolVersion),
+          harnessVersion: message.dshVersion,
+        })
+        this.readyState = 'resolved'
         this.readyResolve(message)
         return
+      }
+      case 'runtime-invalidated':
+        if (this.readyState === 'pending') {
+          this.fail(new Error('sage shell: host runtime invalidated before ready'), 'invalidated')
+          this.child?.kill('SIGTERM')
+        } else {
+          this.invalidateSnapshot('invalidated')
+        }
+        return
       case 'fatal':
-        this.fail(new Error(message.message))
+        this.fail(new Error(message.message), 'fatal')
         // A boot() rejection sends fatal without disconnecting; the open IPC channel keeps the child alive, so never rely on self-termination.
         this.child?.kill('SIGTERM')
         return
@@ -375,8 +473,27 @@ export class ShellHostProcess {
     }
   }
 
-  private fail(error: Error): void {
+  private invalidateSnapshot(reason: ShellHostUnavailableReason): void {
+    if (this.terminal) return
+    this.terminal = true
+    this.runtimeGeneration += 1
+    this.snapshot = Object.freeze({
+      kind: 'unavailable',
+      bootId: this.bootId,
+      runtimeGeneration: this.runtimeGeneration,
+      reason,
+    })
+  }
+
+  private rejectReady(error: Error): void {
+    if (this.readyState !== 'pending') return
+    this.readyState = 'rejected'
     this.readyReject(error)
+  }
+
+  private fail(error: Error, reason: ShellHostUnavailableReason = 'fatal'): void {
+    this.invalidateSnapshot(reason)
+    this.rejectReady(error)
     for (const pending of this.pending.values()) {
       void pending.requestReader?.cancel(error).catch(() => undefined)
       if (pending.controller === undefined) pending.reject(error)

@@ -4,11 +4,13 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import {
   HostResponseDecoder,
+  SHELL_HOST_PROTOCOL_VERSION,
   SHELL_REQUEST_PIPE_FD,
   SHELL_RESPONSE_PIPE_FD,
   encodeRequestData,
   encodeRequestEnd,
   encodeRequestStart,
+  isHostEvent,
 } from '../lib/protocol.js'
 import { readActiveProfile, resolveSagePaths } from '../lib/profile/paths.js'
 import { resolveHostRuntime } from '../lib/main/runtime.js'
@@ -87,8 +89,13 @@ const failHost = (reason) => {
 }
 
 child.on('message', (message) => {
-  if (message?.type === 'ready') readyResolve(message)
-  else failHost(message?.type === 'fatal' ? 'host fatal: ' + message.message : 'unexpected IPC event ' + JSON.stringify(message))
+  if (!isHostEvent(message)) {
+    failHost('host sent an invalid IPC event')
+  } else if (message.type === 'ready') {
+    readyResolve(message)
+  } else {
+    failHost(message.type === 'fatal' ? 'host fatal: ' + message.message : 'host runtime invalidated before smoke completed')
+  }
 })
 child.on('error', failHost)
 child.on('exit', (code, signal) => {
@@ -157,7 +164,22 @@ try {
       setTimeout(() => reject(new Error('host not ready in 120s: ' + stderr.trim())), 120_000).unref()
     }),
   ])
-  check('host reports ready at protocol v3', info.protocolVersion === 3, 'dshVersion=' + info.dshVersion)
+  check(
+    'host reports the exact lifecycle ready protocol v' + String(SHELL_HOST_PROTOCOL_VERSION),
+    info.protocolVersion === SHELL_HOST_PROTOCOL_VERSION,
+    'protocolVersion=' + String(info.protocolVersion),
+  )
+  check(
+    'host ready binds the active profile generation',
+    info.profileGeneration === activeProfile.generation,
+    'ready=' + JSON.stringify(info.profileGeneration) + ' active=' + JSON.stringify(activeProfile.generation),
+  )
+  check(
+    'host ready binds the active profile manifest digest',
+    info.manifestSha256 === activeProfile.manifestSha256,
+    'ready=' + info.manifestSha256 + ' active=' + activeProfile.manifestSha256,
+  )
+  check('host ready reports the active loader phase', info.loaderPhase === 'active', 'loaderPhase=' + info.loaderPhase)
   check('host resolved an installed dsh version', /^\d+\.\d+\.\d+/u.test(info.dshVersion), info.dshVersion)
 
   phase = 'host served the Sage product surface'

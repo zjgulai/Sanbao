@@ -5,7 +5,7 @@
  * 1. seed deps 与壳 devDependencies 两侧的 @deepseek-ai/* 都非空且都是精确版本（range 会静默落到 npm 旧 latest tag）；
  * 2. 两侧同名包版本一致（编译期类型与运行时是同一套包）；
  * 3. 两个 pnpm-workspace.yaml 都带 dsh-type-meta / dsh-user-interaction 的 override；
- * 4. protocol.ts 的 7 个帧协议常量不漂移于 submodule 参照 wire.ts；
+ * 4. protocol.ts 的 Sage Host IPC lifecycle protocol 独立固定为 v4，FD3/FD4 的 6 个 framing 常量不漂移于 submodule 参照 wire.ts；
  * 5. 壳 manifest 的治理三字段取 self / lute / false；
  * 6. seed cordis.patch.yml 用户层剥注释后恰为 []；
  * 7. 9 个 profile / composition test fixture 保持被 git 跟踪；
@@ -19,8 +19,9 @@ const UNPUBLISHED_OVERRIDES = [
 
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[\w.]+)?$/u
 
-const PROTOCOL_CONSTANTS = [
-  ['SHELL_HOST_PROTOCOL_VERSION', 'DESKTOP_HOST_PROTOCOL_VERSION'],
+const SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION = '4'
+
+const FRAME_PROTOCOL_CONSTANTS = [
   ['SHELL_REQUEST_PIPE_FD', 'DESKTOP_REQUEST_PIPE_FD'],
   ['SHELL_RESPONSE_PIPE_FD', 'DESKTOP_RESPONSE_PIPE_FD'],
   ['SHELL_PIPE_CHUNK_BYTES', 'DESKTOP_PIPE_CHUNK_BYTES'],
@@ -112,21 +113,31 @@ export function checkSageShellPin(input) {
   }
 
   let referenceMissing = false
-  let unpairedConstants = 0
+  let unpairedFrameConstants = 0
   if (input.protocolText === null) {
     violations.push('apps/sage-shell/src/protocol.ts 不存在或不可读')
-  } else if (input.referenceWireText === null) {
-    referenceMissing = true
   } else {
-    for (const [ours, theirs] of PROTOCOL_CONSTANTS) {
-      const actual = constantValue(input.protocolText, ours)
-      const expected = constantValue(input.referenceWireText, theirs)
-      if (expected === undefined) {
-        unpairedConstants += 1
-        continue
-      }
-      if (actual !== expected) {
-        violations.push(`protocol.ts 的 ${ours} = ${String(actual)}，与 submodule 参照 ${theirs} = ${String(expected)} 不一致`)
+    const lifecycleVersion = constantValue(input.protocolText, 'SHELL_HOST_PROTOCOL_VERSION')
+    if (lifecycleVersion !== SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION) {
+      violations.push(
+        `protocol.ts 的 SHELL_HOST_PROTOCOL_VERSION = ${String(lifecycleVersion)}，应为 Sage lifecycle protocol v${SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION}`
+        + '——该版本由 Sage↔Host IPC lifecycle contract 独立拥有，不跟随 vendor DESKTOP_HOST_PROTOCOL_VERSION',
+      )
+    }
+
+    if (input.referenceWireText === null) {
+      referenceMissing = true
+    } else {
+      for (const [ours, theirs] of FRAME_PROTOCOL_CONSTANTS) {
+        const actual = constantValue(input.protocolText, ours)
+        const expected = constantValue(input.referenceWireText, theirs)
+        if (expected === undefined) {
+          unpairedFrameConstants += 1
+          continue
+        }
+        if (actual !== expected) {
+          violations.push(`protocol.ts 的 FD3/FD4 framing 常量 ${ours} = ${String(actual)}，与 submodule frame 参照 ${theirs} = ${String(expected)} 不一致`)
+        }
       }
     }
   }
@@ -183,8 +194,12 @@ export function checkSageShellPin(input) {
 
   // 比对被跳过不等于比对通过：把缩小的分母写进 note，让它在 gate 读数里可见。
   const degraded = []
-  if (referenceMissing) degraded.push(`submodule 参照未初始化，${PROTOCOL_CONSTANTS.length} 项协议常量比对全部未跑`)
-  if (unpairedConstants > 0) degraded.push(`${unpairedConstants}/${PROTOCOL_CONSTANTS.length} 项协议常量在参照里找不到同名常量，该几项比对未跑`)
+  if (referenceMissing) {
+    degraded.push(`submodule frame 参照未初始化，${FRAME_PROTOCOL_CONSTANTS.length} 项 FD3/FD4 framing 常量比对全部未跑（Sage lifecycle v${SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION} 仍已独立校验）`)
+  }
+  if (unpairedFrameConstants > 0) {
+    degraded.push(`${unpairedFrameConstants}/${FRAME_PROTOCOL_CONSTANTS.length} 项 FD3/FD4 framing 常量在参照里找不到同名常量，该几项比对未跑`)
+  }
   if (input.vendorDesktopManifestText === null) degraded.push('vendor/dsh-desktop/dsh-plugin-desktop/package.json 不可读，electron 版本一致性比对未跑')
 
   return {

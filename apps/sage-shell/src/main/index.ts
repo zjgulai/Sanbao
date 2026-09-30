@@ -1,11 +1,13 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
 import { homedir } from 'node:os'
-import { app, BrowserWindow, dialog, protocol } from 'electron'
+import { app, dialog, protocol } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import { ShellHostProcess } from './host-process.js'
 import { resolveHostRuntime, resolveSageElectronPaths } from './runtime.js'
 import { routeSchemeRequest } from './route.js'
+import { FramePolicy } from './frame-policy.js'
+import { createSageWindow, loadTrustedUrl } from './window.js'
 
 const SCHEME = 'dsh-app'
 
@@ -30,28 +32,6 @@ function configureElectronPaths(paths: SagePaths): void {
   app.setAppLogsPath(electron.logs)
 }
 
-function createWindow(): BrowserWindow {
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 880,
-    minHeight: 600,
-    show: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      webSecurity: true,
-    },
-  })
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  window.webContents.on('will-navigate', (event, url) => {
-    if (new URL(url).protocol !== `${SCHEME}:`) event.preventDefault()
-  })
-  window.once('ready-to-show', () => { if (!window.isDestroyed()) window.show() })
-  return window
-}
-
 async function main(paths: SagePaths): Promise<void> {
   const activeProfile = await readActiveProfile(paths)
   if (activeProfile === null) {
@@ -73,8 +53,13 @@ async function main(paths: SagePaths): Promise<void> {
     return host.fetch(request)
   })
 
-  const window = createWindow()
-  await window.loadURL(`${SCHEME}://app/index.html`)
+  const framePolicy = new FramePolicy({
+    onContamination: (reason, generation) => {
+      process.stdout.write(`sage shell: frame policy contaminated generation ${generation}: ${reason}\n`)
+    },
+  })
+  const window = createSageWindow(framePolicy)
+  await loadTrustedUrl(window, framePolicy, `${SCHEME}://app/index.html`)
   if (process.env.SAGE_DEVTOOLS === '1') window.webContents.openDevTools({ mode: 'detach' })
 
   // Without the guard, a second before-quit during teardown preventDefaults again and the app never exits.
