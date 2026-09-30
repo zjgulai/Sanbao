@@ -42,16 +42,22 @@ function installAnchor(profileDir: string): string {
 // shipped root plus $DSH_HOME/.agent-presets, so the injection is redundant here.
 /**
  * Compose one materialized profile into boot patches.
- * @param input - absolute profile directory and absolute shell overlay patch file.
- * @returns ordered patches (bundle layers, user layer, shell overlay) and bundle origins.
+ * @param input - absolute profile directory, absolute shell overlay patch file, and an
+ * optional instance-local patch file merged after the overlay (ADR-0162).
+ * @returns ordered patches (bundle layers, user layer, shell overlay, instance-local) and bundle origins.
  */
-export function composeShellPatches(input: { profileDir: string; overlayPatchPath: string }): ShellPatches {
+export function composeShellPatches(input: { profileDir: string; overlayPatchPath: string; localPatchPath?: string }): ShellPatches {
   const profile = loadProfileDirectory(SHELL_LABEL, input.profileDir, installAnchor(input.profileDir))
   const layers = [
     ...profile.layers.map(layer => layer.patches),
     profile.patches,
     loadOverlayPatches(SHELL_LABEL, input.overlayPatchPath),
   ]
+  // Instance-local layer (ADR-0162): merged last so an instance can override any repo row;
+  // a missing file is the normal state on fresh instances and adds nothing.
+  if (input.localPatchPath !== undefined && existsSync(input.localPatchPath)) {
+    layers.push(loadOverlayPatches(SHELL_LABEL, input.localPatchPath))
+  }
   // boot mutates the rows it is handed; upstream clones at the same boundary
   // (apps/desktop-host/src/index.ts:289-292).
   return {

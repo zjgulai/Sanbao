@@ -13,6 +13,7 @@ const fixtures = join(import.meta.dirname, 'fixtures')
 const fixtureProfile = join(fixtures, 'profile')
 const brokenProfile = join(fixtures, 'profile-broken-bundle')
 const overlay = join(import.meta.dirname, '..', 'config', 'shell.cordis.patch.yml')
+const localOverlay = join(fixtures, 'local-overlay.patch.yml')
 
 function ids(patches: readonly { id?: unknown }[]): string[] {
   return patches
@@ -53,6 +54,31 @@ describe('composeShellPatches', () => {
   it('does not inject an agent-presets system root', () => {
     const { patches } = composeShellPatches({ profileDir: fixtureProfile, overlayPatchPath: overlay })
     expect(ids(patches)).not.toContain('agent-presets')
+  })
+
+  it('appends the instance-local patch layer after the shell overlay when it exists', () => {
+    const { patches } = composeShellPatches({
+      profileDir: fixtureProfile,
+      overlayPatchPath: overlay,
+      localPatchPath: localOverlay,
+    })
+    // 观测仪必须用 composeEntries 后的条目：insert 里的 id 不在补丁行的顶层。
+    const entries = inspectEntries(patches)
+    const localAt = entries.findIndex(row => row.id === 'local-fixture-row')
+    const overlayLastAt = entries.findIndex(row => row.id === 'shell-ui-directory-picker')
+    expect(overlayLastAt).toBeGreaterThan(-1)
+    expect(localAt).toBeGreaterThan(-1)
+    // 实例本地层最后合并：它必须能覆盖仓库层里的任何行。
+    expect(localAt).toBeGreaterThan(overlayLastAt)
+  })
+
+  it('omits the instance-local layer when the file is absent', () => {
+    const { patches } = composeShellPatches({
+      profileDir: fixtureProfile,
+      overlayPatchPath: overlay,
+      localPatchPath: join(fixtures, 'no-such-local.patch.yml'),
+    })
+    expect(inspectEntries(patches).some(row => row.id === 'local-fixture-row')).toBe(false)
   })
 
   it('fails loud when the profile has no installed @deepseek-ai/dsh anchor', () => {
