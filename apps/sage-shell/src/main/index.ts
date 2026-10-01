@@ -73,10 +73,10 @@ async function main(paths: SagePaths): Promise<void> {
     if (route.target === 'reject') return Promise.resolve(new Response(null, { status: 404 }))
     if (shouldUseAppService(url.pathname, appServiceEnabled)) {
       const callerBinding = verifySageServiceCaller(url, request, framePolicy)
-      const runtime = toSageViewState(host.readSnapshot())
+      const viewState = toSageViewState(host.readSnapshot())
       return handleSageServiceRequest(request, {
         callerBinding,
-        providers: createUnavailableFirstService(runtime),
+        providers: createUnavailableFirstService(viewState),
       })
     }
     return host.fetch(request)

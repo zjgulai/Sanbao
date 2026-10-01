@@ -265,9 +265,17 @@ export function renderSageDocument(): string {
         });
         if (!response.ok) throw new Error('retry request failed');
         const payload = await response.json();
-        // 0.2 command-denied shape carries {code, retryable}; legacy P0-2 shape is flat {status,...}.
+        // 0.2 command-denied shape carries {code, retryable, stage, correlation}; legacy P0-2 shape is flat {status,...}.
+        // stage and correlation travel into the message so the renderer can audit service denials.
         const state = payload !== null && typeof payload === 'object' && payload.code !== undefined
-          ? { status: 'recovering', message: 'Sage 正在重新检查能力运行时服务。', retryable: payload.retryable !== false }
+          ? {
+              status: 'recovering',
+              message: 'Sage 正在重新检查能力运行时服务。'
+                + (typeof payload.stage === 'string' && typeof payload.correlation === 'string'
+                  ? '（' + payload.stage + ' · ' + payload.correlation + '）'
+                  : ''),
+              retryable: payload.retryable !== false,
+            }
           : payload;
         render(state);
       } catch {

@@ -220,7 +220,7 @@ describe('Sage renderer retry response two-shape guard', () => {
 
     expect(harness.renders).toContainEqual({
       title: '正在恢复',
-      message: 'Sage 正在重新检查能力运行时服务。',
+      message: 'Sage 正在重新检查能力运行时服务。（identity-policy · x）',
       retryHidden: false,
     })
   })
