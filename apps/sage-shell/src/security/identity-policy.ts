@@ -28,6 +28,8 @@ export type IdentityPolicyDenialCode =
 
 export interface ActionAuthorizationRequest {
   readonly sessionId: string
+  /** WT-02B.2D: lookup clue only — the caller's intended organization. Never authority; the policy provider must answer for exactly this organization. */
+  readonly requestedOrganizationRef: string
   readonly requiredRoleRef: string
   readonly operation: string
   readonly actionPolicy: ActionPolicy
@@ -41,16 +43,16 @@ export interface IdentityProviderRequest {
 
 export interface IdentityAssertion {
   readonly issuer: VersionedIdentity
-  readonly subjectId: string
+  /** WT-02B.2D: the Sage-internal opaque identity handle (raw subject never indexes the kernel face). */
+  readonly identityHandle: string
   readonly audience: string
   readonly sessionId: string
-  readonly organizationId: string
   readonly authenticatedAt: string
   readonly expiresAt: string
 }
 
 export interface OrganizationRoleAssignment {
-  readonly subjectId: string
+  readonly identityHandle: string
   readonly roleRef: string
 }
 
@@ -72,8 +74,8 @@ export interface OrganizationPolicySnapshot {
 }
 
 export interface PolicyProviderRequest {
-  readonly organizationId: string
-  readonly subjectId: string
+  readonly requestedOrganizationRef: string
+  readonly identityHandle: string
   readonly requiredRoleRef: string
   readonly operation: string
   readonly actionPolicy: ActionPolicy
@@ -82,9 +84,10 @@ export interface PolicyProviderRequest {
 
 export interface AuthoritySnapshot {
   readonly issuer: VersionedIdentity
-  readonly subjectId: string
+  readonly identityHandle: string
   readonly audience: string
   readonly sessionId: string
+  /** The policy-proven organization (honesty check binds it to the requested lookup clue). */
   readonly organizationId: string
   readonly roleRef: string
   readonly operation: string
@@ -143,7 +146,7 @@ const DENIAL_REASONS: Readonly<Record<IdentityPolicyDenialCode, string>> = {
   'policy-provider-unavailable': 'The trusted organization policy provider is unavailable.',
   'policy-snapshot-invalid': 'The trusted organization policy provider returned an invalid snapshot.',
   'policy-not-active': 'The organization policy is not active at the evaluation instant.',
-  'policy-organization-mismatch': 'The organization policy belongs to another organization.',
+  'policy-organization-mismatch': 'The organization policy does not answer for the requested organization.',
   'policy-subject-denied': 'The organization policy does not grant this subject access.',
   'policy-role-not-held': 'The organization policy does not assign the required role to this subject.',
   'policy-operation-denied': 'The organization policy does not grant the requested operation.',
@@ -317,17 +320,20 @@ function parseActionPolicy(value: unknown): ActionPolicy | undefined {
 function parseRequest(value: unknown): ActionAuthorizationRequest | undefined {
   const record = exactRecord(value, [
     'sessionId',
+    'requestedOrganizationRef',
     'requiredRoleRef',
     'operation',
     'actionPolicy',
   ])
   if (record === undefined) return undefined
   const sessionId = exactString(record.sessionId)
+  const requestedOrganizationRef = exactString(record.requestedOrganizationRef)
   const requiredRoleRef = exactString(record.requiredRoleRef)
   const operation = exactString(record.operation)
   const actionPolicy = parseActionPolicy(record.actionPolicy)
   if (
     sessionId === undefined ||
+    requestedOrganizationRef === undefined ||
     requiredRoleRef === undefined ||
     operation === undefined ||
     actionPolicy === undefined
@@ -336,6 +342,7 @@ function parseRequest(value: unknown): ActionAuthorizationRequest | undefined {
   }
   return {
     sessionId,
+    requestedOrganizationRef,
     requiredRoleRef,
     operation,
     actionPolicy,
@@ -345,27 +352,24 @@ function parseRequest(value: unknown): ActionAuthorizationRequest | undefined {
 function parseIdentityAssertion(value: unknown): IdentityAssertion | undefined {
   const record = exactRecord(value, [
     'issuer',
-    'subjectId',
+    'identityHandle',
     'audience',
     'sessionId',
-    'organizationId',
     'authenticatedAt',
     'expiresAt',
   ])
   if (record === undefined) return undefined
   const issuer = parseVersionedIdentity(record.issuer)
-  const subjectId = exactString(record.subjectId)
+  const identityHandle = exactString(record.identityHandle)
   const audience = exactString(record.audience)
   const sessionId = exactString(record.sessionId)
-  const organizationId = exactString(record.organizationId)
   const authenticatedAt = exactTimestamp(record.authenticatedAt)
   const expiresAt = exactTimestamp(record.expiresAt)
   if (
     issuer === undefined ||
-    subjectId === undefined ||
+    identityHandle === undefined ||
     audience === undefined ||
     sessionId === undefined ||
-    organizationId === undefined ||
     authenticatedAt === undefined ||
     expiresAt === undefined
   ) {
@@ -373,10 +377,9 @@ function parseIdentityAssertion(value: unknown): IdentityAssertion | undefined {
   }
   return {
     issuer,
-    subjectId,
+    identityHandle,
     audience,
     sessionId,
-    organizationId,
     authenticatedAt,
     expiresAt,
   }
@@ -385,12 +388,12 @@ function parseIdentityAssertion(value: unknown): IdentityAssertion | undefined {
 function parseRoleAssignment(
   value: unknown,
 ): OrganizationRoleAssignment | undefined {
-  const record = exactRecord(value, ['subjectId', 'roleRef'])
+  const record = exactRecord(value, ['identityHandle', 'roleRef'])
   if (record === undefined) return undefined
-  const subjectId = exactString(record.subjectId)
+  const identityHandle = exactString(record.identityHandle)
   const roleRef = exactString(record.roleRef)
-  if (subjectId === undefined || roleRef === undefined) return undefined
-  return { subjectId, roleRef }
+  if (identityHandle === undefined || roleRef === undefined) return undefined
+  return { identityHandle, roleRef }
 }
 
 function parsePolicyGrant(value: unknown): OrganizationPolicyGrant | undefined {
@@ -460,7 +463,7 @@ function parsePolicySnapshot(value: unknown): OrganizationPolicySnapshot | undef
   }
   const assignmentKeys = (roleAssignments as OrganizationRoleAssignment[])
     .map((assignment) => JSON.stringify([
-      assignment.subjectId,
+      assignment.identityHandle,
       assignment.roleRef,
     ]))
   if (new Set(assignmentKeys).size !== assignmentKeys.length) return undefined
@@ -508,7 +511,8 @@ function authorize(
   if (!isActive(identity.authenticatedAt, identity.expiresAt, evaluatedAt)) {
     return denied('identity-not-active')
   }
-  if (policy.organizationId !== identity.organizationId) {
+  // WT-02B.2D: the provider must answer for exactly the requested lookup clue; anything else fails closed.
+  if (policy.organizationId !== request.requestedOrganizationRef) {
     return denied('policy-organization-mismatch')
   }
   if (!isActive(policy.validFrom, policy.expiresAt, evaluatedAt)) {
@@ -516,7 +520,7 @@ function authorize(
   }
 
   let assignments = policy.roleAssignments.filter(
-    (assignment) => assignment.subjectId === identity.subjectId,
+    (assignment) => assignment.identityHandle === identity.identityHandle,
   )
   if (assignments.length === 0) return denied('policy-subject-denied')
   assignments = assignments.filter(
@@ -557,7 +561,7 @@ function authorize(
     },
     authoritySnapshot: {
       issuer: { ...identity.issuer },
-      subjectId: identity.subjectId,
+      identityHandle: identity.identityHandle,
       audience: identity.audience,
       sessionId: identity.sessionId,
       organizationId: policy.organizationId,
@@ -623,8 +627,8 @@ export function createIdentityPolicyResolver(
       }
 
       const policyRequest = freezeDeep({
-        organizationId: identity.organizationId,
-        subjectId: identity.subjectId,
+        requestedOrganizationRef: request.requestedOrganizationRef,
+        identityHandle: identity.identityHandle,
         requiredRoleRef: request.requiredRoleRef,
         operation: request.operation,
         actionPolicy: { ...request.actionPolicy },

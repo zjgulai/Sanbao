@@ -15,6 +15,7 @@ const NOW = '2026-09-28T12:00:00Z'
 
 const REQUEST: ActionAuthorizationRequest = {
   sessionId: 'session:sage-desktop-001',
+  requestedOrganizationRef: 'organization:sage',
   requiredRoleRef: 'role:catalog-owner',
   operation: 'business-matter.start-attempt',
   actionPolicy: {
@@ -30,10 +31,9 @@ const IDENTITY: IdentityAssertion = {
     version: '1.0.0',
     digest: 'sha256:identity-provider-sage-local-v1',
   },
-  subjectId: 'subject:operator-001',
+  identityHandle: 'handle:operator-001',
   audience: 'sage-desktop',
   sessionId: 'session:sage-desktop-001',
-  organizationId: 'organization:sage',
   authenticatedAt: '2026-09-28T11:00:00Z',
   expiresAt: '2026-09-28T13:00:00Z',
 }
@@ -49,7 +49,7 @@ const POLICY: OrganizationPolicySnapshot = {
   expiresAt: '2026-09-29T00:00:00Z',
   roleAssignments: [
     {
-      subjectId: 'subject:operator-001',
+      identityHandle: 'handle:operator-001',
       roleRef: 'role:catalog-owner',
     },
   ],
@@ -122,7 +122,7 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
       },
       authoritySnapshot: {
         issuer: IDENTITY.issuer,
-        subjectId: 'subject:operator-001',
+        identityHandle: 'handle:operator-001',
         audience: 'sage-desktop',
         sessionId: 'session:sage-desktop-001',
         organizationId: 'organization:sage',
@@ -143,8 +143,8 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
       evaluatedAt: NOW,
     }])
     expect(policyRequests).toEqual([{
-      organizationId: IDENTITY.organizationId,
-      subjectId: IDENTITY.subjectId,
+      requestedOrganizationRef: REQUEST.requestedOrganizationRef,
+      identityHandle: IDENTITY.identityHandle,
       requiredRoleRef: REQUEST.requiredRoleRef,
       operation: REQUEST.operation,
       actionPolicy: REQUEST.actionPolicy,
@@ -185,10 +185,10 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
 
     expect(resolution.authoritySnapshot).toEqual({
       issuer: IDENTITY.issuer,
-      subjectId: IDENTITY.subjectId,
+      identityHandle: IDENTITY.identityHandle,
       audience: IDENTITY.audience,
       sessionId: IDENTITY.sessionId,
-      organizationId: IDENTITY.organizationId,
+      organizationId: POLICY.organizationId,
       roleRef: REQUEST.requiredRoleRef,
       operation: REQUEST.operation,
       actionPolicy: REQUEST.actionPolicy,
@@ -238,7 +238,7 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
     }
   })
 
-  it('does not accept actor or subject identity from the caller', () => {
+  it('does not accept actor, subject or handle identity from the caller', () => {
     const { resolver, identityRequests, policyRequests } = harness()
 
     expectDenied(resolver.resolve({
@@ -247,18 +247,31 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
     }), 'invalid-request')
     expectDenied(resolver.resolve({
       ...REQUEST,
-      subjectId: IDENTITY.subjectId,
+      subjectId: 'subject:operator-001',
     }), 'invalid-request')
     expectDenied(resolver.resolve({
       ...REQUEST,
-      actorId: IDENTITY.subjectId,
+      actorId: 'subject:operator-001',
     }), 'invalid-request')
     expectDenied(resolver.resolve({
       ...REQUEST,
-      organizationId: IDENTITY.organizationId,
+      organizationId: 'organization:sage',
+    }), 'invalid-request')
+    expectDenied(resolver.resolve({
+      ...REQUEST,
+      identityHandle: IDENTITY.identityHandle,
     }), 'invalid-request')
     expect(identityRequests).toEqual([])
     expect(policyRequests).toEqual([])
+  })
+
+  it('requires an exact non-empty requested organization clue', () => {
+    const { resolver } = harness()
+    expectDenied(resolver.resolve({ ...REQUEST, requestedOrganizationRef: '' }), 'invalid-request')
+    expectDenied(resolver.resolve({ ...REQUEST, requestedOrganizationRef: ' organization:sage' }), 'invalid-request')
+    const withoutClue = { ...REQUEST } as Record<string, unknown>
+    delete withoutClue.requestedOrganizationRef
+    expectDenied(resolver.resolve(withoutClue), 'invalid-request')
   })
 
   it('rejects identity audience, session and validity mismatches before consulting policy', () => {
@@ -278,19 +291,24 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
     }).resolver.resolve(REQUEST), 'identity-not-active')
   })
 
-  it('takes organization identity only from the identity assertion and binds policy to it', () => {
-    const identity = { ...IDENTITY, organizationId: 'organization:other' }
-    const policy = { ...POLICY, organizationId: 'organization:other' }
-    const { resolver, policyRequests } = harness({ identity, policy })
+  it('takes the organization lookup clue from the caller and only the policy provider answers for it (WT-02B.2D)', () => {
+    // The clue travels into the provider request; the provider's proven organization must answer for exactly that clue.
+    const otherRequest = { ...REQUEST, requestedOrganizationRef: 'organization:other' }
+    const otherPolicy = { ...POLICY, organizationId: 'organization:other' }
+    const answered = harness({ policy: otherPolicy })
+    expect(answered.resolver.resolve(otherRequest).kind).toBe('authorized')
+    expect(answered.policyRequests[0]?.requestedOrganizationRef).toBe('organization:other')
+    expect(answered.policyRequests[0]?.identityHandle).toBe(IDENTITY.identityHandle)
 
-    expect(resolver.resolve(REQUEST).kind).toBe('authorized')
-    expect(policyRequests[0]?.organizationId).toBe('organization:other')
+    // A provider answering for another organization than requested fails closed.
+    const mismatched = harness()
+    expectDenied(mismatched.resolver.resolve(otherRequest), 'policy-organization-mismatch')
   })
 
   it('denies every policy dimension independently and exactly', () => {
     const cases: readonly [OrganizationPolicySnapshot, IdentityPolicyDenialCode][] = [
       [{ ...POLICY, organizationId: 'organization:other' }, 'policy-organization-mismatch'],
-      [{ ...POLICY, roleAssignments: [{ ...POLICY.roleAssignments[0]!, subjectId: 'subject:other' }] }, 'policy-subject-denied'],
+      [{ ...POLICY, roleAssignments: [{ ...POLICY.roleAssignments[0]!, identityHandle: 'handle:other' }] }, 'policy-subject-denied'],
       [{ ...POLICY, roleAssignments: [{ ...POLICY.roleAssignments[0]!, roleRef: 'role:viewer' }] }, 'policy-role-not-held'],
       [{ ...POLICY, grants: [{ ...POLICY.grants[0]!, operation: 'business-matter.record-receipt' }] }, 'policy-operation-denied'],
       [{ ...POLICY, grants: [{ ...POLICY.grants[0]!, actionScope: 'catalog.prepare' }] }, 'policy-action-scope-denied'],
@@ -397,7 +415,7 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
 
     let getterCalls = 0
     const accessor = { ...REQUEST }
-    Object.defineProperty(accessor, 'organizationId', {
+    Object.defineProperty(accessor, 'requestedOrganizationRef', {
       enumerable: true,
       get(): never {
         getterCalls += 1
@@ -442,7 +460,7 @@ describe('WT-02B.1 identity and policy resolver kernel', () => {
 
     let identityGetterCalls = 0
     const identityAccessor = { ...IDENTITY }
-    Object.defineProperty(identityAccessor, 'subjectId', {
+    Object.defineProperty(identityAccessor, 'identityHandle', {
       enumerable: true,
       get(): never {
         identityGetterCalls += 1
