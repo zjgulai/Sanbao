@@ -1,17 +1,21 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
+import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
-import { app, dialog, protocol } from 'electron'
+import { app, dialog, protocol, shell } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import type { SageViewState } from '../product/contracts.js'
 import { createUnavailableFirstService } from '../appservice/composition.js'
 import { handleSageServiceRequest, shouldUseAppService } from '../appservice/route-skeleton.js'
+import { serviceJson } from '../appservice/errors.js'
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { resolveHostRuntime, resolveSageElectronPaths } from './runtime.js'
 import { routeSchemeRequest } from './route.js'
 import { FramePolicy } from './frame-policy.js'
 import { verifySageServiceCaller } from './appservice-binding.js'
 import { createSageWindow, loadTrustedUrl } from './window.js'
+import { createProductionAdapter } from './oidc-runtime.js'
+import { createTokenVault } from './token-vault.js'
 
 const SCHEME = 'dsh-app'
 
@@ -67,6 +71,12 @@ async function main(paths: SagePaths): Promise<void> {
 
   const appServiceEnabled = process.env.SAGE_APP_SERVICE !== 'off'
 
+  // WT-02B.2B login wiring: in-memory vault plus a production adapter (real loopback,
+  // real fetch, node randomness; shell.openExternal stays fail-closed on failure via
+  // the runtime guard). Tokens never leave main and never persist.
+  const vault = createTokenVault()
+  const { adapter } = createProductionAdapter(vault, { openExternal: (url) => shell.openExternal(url) })
+
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url)
     const route = routeSchemeRequest(url)
@@ -76,7 +86,27 @@ async function main(paths: SagePaths): Promise<void> {
       const viewState = toSageViewState(host.readSnapshot())
       return handleSageServiceRequest(request, {
         callerBinding,
-        providers: createUnavailableFirstService(viewState),
+        providers: createUnavailableFirstService(viewState, {
+          authSnapshot: () => vault.snapshot(),
+          login: async () => {
+            const outcome = await adapter.startLogin(vault)
+            return serviceJson(
+              outcome.ok
+                ? { auth: 'signed-in', displayName: outcome.displayName }
+                : {
+                    code: outcome.code,
+                    stage: 'login',
+                    retryable: outcome.code !== 'login-in-progress',
+                    correlation: randomUUID(),
+                  },
+              outcome.ok ? 202 : 200,
+            )
+          },
+          logout: async () => {
+            vault.signOut()
+            return serviceJson({ auth: 'signed-out' }, 200)
+          },
+        }),
       })
     }
     return host.fetch(request)

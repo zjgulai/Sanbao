@@ -224,8 +224,16 @@ export function renderSageDocument(): string {
 
     function renderAuth(auth) {
       if (!auth || typeof auth !== 'object') return;
-      if (login) login.hidden = auth.status !== 'signed-out';
-      if (logoutBtn) logoutBtn.hidden = auth.status !== 'signed-in';
+      // Re-arm the buttons every refresh: click handlers disable them before the request,
+      // and a failed login must leave the button clickable again (Task 4 Important fix).
+      if (login) {
+        login.hidden = auth.status !== 'signed-out';
+        login.disabled = auth.status !== 'signed-out';
+      }
+      if (logoutBtn) {
+        logoutBtn.hidden = auth.status !== 'signed-in';
+        logoutBtn.disabled = auth.status !== 'signed-in';
+      }
       if (authName) {
         authName.textContent = auth.status === 'signed-in' && typeof auth.displayName === 'string' ? auth.displayName
           : auth.status === 'pending' ? '正在登录…' : '';

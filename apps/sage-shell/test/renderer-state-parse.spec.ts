@@ -196,6 +196,109 @@ describe('Sage renderer auth surface', () => {
 })
 
 /**
+ * Auth button disabled reset (Task 4 Important → Task 5 fix): the click handlers set
+ * `disabled = true` before the request; renderAuth must re-arm both buttons on every
+ * refresh, or a failed login leaves the button clickable-dead forever.
+ *
+ * The harness captures the real login/logout click handlers from the embedded script,
+ * drives them against a fetch stub (login/logout paths answer with the typed denial /
+ * signed-out receipt; the state path answers with the chosen snapshot), then flushes the
+ * post-click refresh chain before asserting.
+ */
+interface AuthClickHarness {
+  login: StubElement
+  logout: StubElement
+  authName: StubElement
+}
+
+async function runEmbeddedAuthClickScript(options: {
+  readonly click: 'login' | 'logout'
+  readonly statePayload: unknown
+  readonly actionResponse: unknown
+}): Promise<AuthClickHarness> {
+  const html = renderSageDocument()
+  const script = html.match(/<script>([\s\S]*)<\/script>/u)?.[1]
+  expect(script, 'embedded script must be extractable from the served document').toBeTruthy()
+  const stubs = createDocumentStub()
+  const handlers: Record<'login' | 'logout', Array<() => void | Promise<void>>> = { login: [], logout: [] }
+  const capture = (element: StubElement, bucket: 'login' | 'logout'): StubElement => ({
+    ...element,
+    addEventListener: (type: string, handler: () => void | Promise<void>) => {
+      if (type === 'click') handlers[bucket].push(handler)
+    },
+  })
+  const login = capture(stubs.login, 'login')
+  const logout = capture(stubs.logout, 'logout')
+  const document = {
+    querySelector(selector: string): StubElement {
+      if (selector === '#login') return login
+      if (selector === '#logout') return logout
+      return stubs.document.querySelector(selector)
+    },
+    querySelectorAll(selector: string): StubElement[] {
+      return stubs.document.querySelectorAll(selector)
+    },
+  }
+  const fetchStub = async (path: unknown) =>
+    path === '/.sage/login' || path === '/.sage/logout'
+      ? { ok: true, json: async () => options.actionResponse }
+      : { ok: true, json: async () => options.statePayload }
+  const run = new Function('document', 'fetch', script as string) as (d: unknown, f: unknown) => void
+  run(document, fetchStub)
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  const handler = handlers[options.click][0]
+  if (handler === undefined) throw new Error(options.click + ' click handler was not registered by the embedded script')
+  await handler()
+  // The post-click refresh rides the same microtask chain; flush so renderAuth lands.
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  return { login, logout, authName: stubs.authName }
+}
+
+describe('Sage renderer auth button disabled reset', () => {
+  it('re-enables the login button after a failed login round-trip (Task 4 Important fix)', async () => {
+    const harness = await runEmbeddedAuthClickScript({
+      click: 'login',
+      statePayload: {
+        service: {
+          status: 'unavailable',
+          reason: 'identity-unavailable',
+          correlation: 'c-6',
+          auth: { status: 'signed-out', displayName: null },
+        },
+        runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
+      },
+      actionResponse: { code: 'idp-unreachable', stage: 'login', retryable: true, correlation: 'x' },
+    })
+
+    expect(harness.login.hidden).toBe(false)
+    expect(harness.login.disabled).toBe(false)
+  })
+
+  it('re-arms the login button and clears the logout button after logout completes', async () => {
+    const harness = await runEmbeddedAuthClickScript({
+      click: 'logout',
+      statePayload: {
+        service: {
+          status: 'unavailable',
+          reason: 'identity-unavailable',
+          correlation: 'c-7',
+          auth: { status: 'signed-out', displayName: null },
+        },
+        runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
+      },
+      actionResponse: { auth: 'signed-out' },
+    })
+
+    expect(harness.login.hidden).toBe(false)
+    expect(harness.login.disabled).toBe(false)
+    expect(harness.logout.hidden).toBe(true)
+    expect(harness.logout.disabled).toBe(true)
+  })
+})
+
+/**
  * Retry POST path (WT-02D.0.2 D2): the retry response body is either the 0.2
  * CommandDenied shape `{code, retryable, ...}` or the legacy flat P0-2 shape
  * `{status, ...}`. Both must end up rendered.
