@@ -52,6 +52,12 @@ describe('verifyCompactJws', () => {
     expect(verifyCompactJws({ untrustedToken: hsTok, jwks: keys.jwks, acceptedAlgs: ['RS256'] })).toEqual({ ok: false, reason: 'unsupported-alg' })
   })
 
+  it('rejects a header carrying RFC 7715 crit/b64 extensions instead of silently ignoring them', async () => {
+    const keys = await generateOidcKeys()
+    const critTok = signJws(keys, 'test-rsa', 'RS256', { crit: ['b64'], b64: false }, { sub: 'x' })
+    expect(verifyCompactJws({ untrustedToken: critTok, jwks: keys.jwks, acceptedAlgs: ['RS256'] })).toEqual({ ok: false, reason: 'crit-present' })
+  })
+
   it('rejects missing kid and kid not present in JWKS', async () => {
     const keys = await generateOidcKeys()
     const noKid = signJws(keys, 'test-rsa', 'RS256', { kid: undefined }, { sub: 'x' })

@@ -4171,7 +4171,7 @@
       "decisions": [
         {
           "id": "D1",
-          "text": "OIDC 验证链以无 I/O 纯内核切片交付（jws/id-token/metadata/callback 四模块），互不 import、不进 composition、不接 main/renderer，不冒充产品登录：无网络、无浏览器、无 token 交换、无 session/vault；密钥 fixture 测试内本地生成。参数到位后 2B adapter 叠加其上，内核接口零返工。",
+          "text": "OIDC 验证链以无 I/O 纯内核切片交付（jws/id-token/metadata/callback 四模块），id-token 复用 jws 验签底座（import ./jws.js），metadata/callback 不依赖兄弟模块；不进 composition、不接 main/renderer，不冒充产品登录：无网络、无浏览器、无 token 交换、无 session/vault；密钥 fixture 测试内本地生成。参数到位后 2B adapter 叠加其上，内核接口零返工。",
           "constraints": [
             "不接真实 provider、不做真实业务 mutation、无外部副作用（治理红线：真实登录等待期只允许纯 kernel / fixture / inventory）",
             "密钥 fixture 不入库不落盘不打印",
@@ -4184,7 +4184,8 @@
           "constraints": [
             "roundtrip 比对是唯一静默截断拦截层（实测 Buffer.from('a!b@c','base64url') 不抛错、bXwwe 静默丢字符）",
             "精确相等无规范化被变异验证咬住（iss 尾斜差、endpoint 四字段独立 mismatch 均有负例）",
-            "非字符串字段类型按缺失处理（metadata expectField），不猜类型"
+            "非字符串字段类型按缺失处理（metadata expectField），不猜类型",
+            "内核纯函数不自守输入尺寸：2B adapter 注入层必须施加 token / JWKS bytes 与键数上限（数值由 2B 票定）"
           ]
         },
         {

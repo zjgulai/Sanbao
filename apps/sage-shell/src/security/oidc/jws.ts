@@ -3,7 +3,7 @@ import { createPublicKey, createVerify, type KeyObject } from 'node:crypto'
 
 export type JwsRejection =
   | 'not-compact-jws' | 'header-not-json' | 'unsupported-alg' | 'alg-none'
-  | 'missing-kid' | 'kid-not-found' | 'key-type-mismatch' | 'signature-invalid'
+  | 'crit-present' | 'missing-kid' | 'kid-not-found' | 'key-type-mismatch' | 'signature-invalid'
   | 'payload-not-json'
 
 const B64U_RE = /^[A-Za-z0-9_-]+$/u
@@ -54,6 +54,11 @@ export function verifyCompactJws(input: {
   if (alg === 'none') return { ok: false, reason: 'alg-none' }
   if (alg !== 'RS256' && alg !== 'ES256') return { ok: false, reason: 'unsupported-alg' }
   if (!input.acceptedAlgs.includes(alg)) return { ok: false, reason: 'unsupported-alg' }
+
+  // RFC 7715 §4 strict: an unrecognized extension (e.g. crit/b64, which alters payload encoding)
+  // must be rejected, not silently ignored. The kernel supports no crit extensions, so the mere
+  // presence of the `crit` header key is a rejection.
+  if ('crit' in headerRecord) return { ok: false, reason: 'crit-present' }
 
   if (typeof headerRecord.kid !== 'string' || headerRecord.kid.length === 0) return { ok: false, reason: 'missing-kid' }
 
