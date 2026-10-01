@@ -1,6 +1,6 @@
 # WT-02D.0.2 · Command Pipeline 内核设计（步骤 2–10 骨架）
 
-日期：2026-10-01 · 状态：设计已获用户确认（A/A/A 三裁决） · 上游：ADR-0174（command 顺序）、ADR-0179（0.1 route skeleton）、[WT-02D Application Service 边界](../../../notes/proposed/architecture/2026-09-30-application-service-boundary.md)
+日期：2026-10-01 · 状态：设计已获用户确认（A/A/A 三裁决） · 上游：ADR-0174（command 顺序）、ADR-0179（0.1 route skeleton）、[WT-02D Application Service 边界](../../notes/proposed/architecture/2026-09-30-application-service-boundary.md)
 
 ## 1. 目标与切片
 
