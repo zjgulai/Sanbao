@@ -7,11 +7,13 @@ upstream-tag: v2.0.10
 upstream-sha: 697e7d782cbfc2b9e8fa0ac862ef26bba9ac1326
 lute-branch: lute-v2.0.10
 lute-sha: 62c600f8e5c3f45c69439ed96ce3b51adc630795
-harness-submodule: fb2c4b9e698e30edb738bca4cf0618587db7d203
+harness-submodule: 639ed015397290b3745d163aafe02ffee4aa3f84
 harness-submodule-role: read-only-ref（ADR-0008：只作源码参照系，不参与构建；运行时仍取 harness-runtime-source）
+# 2026-10-02（Sage 内核升级 K1）：参照检出前进到 0.2.0-rc.2（tag dsh-v0.2.0-rc.2）；
+# Sage 产品线运行时以 apps/sage-shell/seed 的 npm 精确版本为准；legacy runtime-source 与旧发布链保持不动。
 # 运行时源（2.0.10 / 0.1.5-rc.2）：D 轨道 270/270 tgz 物化落在 vendor checkout
 # node_modules（dsh-plugin-desktop 层，dist 内嵌同源）；vendor/dsh-runtime/0.1.2-rc.1/
 # 仅作 2.0.5 回滚对照保留，不再被构建消费。物化链与验证记录见
 # docs/research/13-upgrade-2.0.10-execution-plan.md §7-§8。
 harness-runtime-source: vendor/dsh-desktop/dsh-plugin-desktop/node_modules（0.1.5-rc.2 物化）
-checked-at: 2026-09-17
+checked-at: 2026-10-02
