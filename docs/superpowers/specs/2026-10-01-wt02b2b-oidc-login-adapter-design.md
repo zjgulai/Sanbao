@@ -1,6 +1,6 @@
 # WT-02B.2B · 真实 OIDC 登录链路设计（Logto，切片一）
 
-日期：2026-10-01 · 状态：设计已获用户确认（A/A/A） · 上游：[ADR-0182](../../../adr/ADR-0182.md)（验证内核）、[WT-02B.2A 治理](../../../notes/proposed/architecture/2026-09-28-real-identity-and-authority-data-governance.md)、ADR-0163/0164
+日期：2026-10-01 · 状态：设计已获用户确认（A/A/A） · 上游：[ADR-0182](../../adr/ADR-0182.md)（验证内核）、[WT-02B.2A 治理](../../notes/proposed/architecture/2026-09-28-real-identity-and-authority-data-governance.md)、ADR-0163/0164
 
 ## 1. 目标与切片
 
