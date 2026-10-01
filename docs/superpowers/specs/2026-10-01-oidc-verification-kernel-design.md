@@ -1,6 +1,6 @@
 # WT-02B.2B-pre · OIDC 验证纯内核设计
 
-日期：2026-10-01 · 状态：设计已获用户确认（切片 A） · 上游：[WT-02B.2A 治理](../../../notes/proposed/architecture/2026-09-28-real-identity-and-authority-data-governance.md)、[ADR-0163](../../../adr/ADR-0163.md)、[ADR-0164](../../../adr/ADR-0164.md)
+日期：2026-10-01 · 状态：设计已获用户确认（切片 A） · 上游：[WT-02B.2A 治理](../../notes/proposed/architecture/2026-09-28-real-identity-and-authority-data-governance.md)、[ADR-0163](../../adr/ADR-0163.md)、[ADR-0164](../../adr/ADR-0164.md)
 
 ## 1. 目标与定位
 
