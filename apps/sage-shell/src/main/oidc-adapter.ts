@@ -22,14 +22,46 @@ export interface OidcAdapterDeps {
   readonly closeListen: () => Promise<void>
   readonly randomBytes: (n: number) => Buffer
   readonly loginTimeoutMs?: number
-  /** WT-02B.2C: resolve the Sage-internal identity handle for the verified (issuer, subject). */
-  readonly resolveIdentity: (input: { readonly issuer: string; readonly subject: string }) => { readonly identityHandle: string }
+  /** WT-02B.2C: resolve the Sage-internal identity handle for the verified (issuer, subject).
+   * WT-02B.2F: candidate org refs from the verified organization claim ride along as non-authoritative lookup hints. */
+  readonly resolveIdentity: (input: {
+    readonly issuer: string
+    readonly subject: string
+    readonly candidateOrgRefs: readonly string[]
+  }) => { readonly identityHandle: string }
 }
 
 const MAX_DISCOVERY_BYTES = 64 * 1024
 const MAX_JWKS_BYTES = 256 * 1024
 const MAX_TOKEN_RESPONSE_BYTES = 64 * 1024
 const MAX_JWKS_KEYS = 16
+const MAX_CANDIDATE_ORG_REFS = 64
+const MAX_CANDIDATE_ORG_REF_LENGTH = 128
+
+/** WT-02B.2F: candidate organization refs from the verified `organization_data` claim (Logto,
+ * requested via the `urn:logto:scope:organizations` scope). Lookup hints only — never membership
+ * authority. Strict-whole: any malformed shape drops the entire claim (hints must not be
+ * partially trusted), and nothing here ever fails a login. */
+export function extractCandidateOrgRefs(claims: Record<string, unknown>): readonly string[] {
+  const raw = claims.organization_data
+  if (raw === undefined) return []
+  if (!Array.isArray(raw) || raw.length > MAX_CANDIDATE_ORG_REFS) return []
+  const refs: string[] = []
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) return []
+    const id = (item as Record<string, unknown>).id
+    if (
+      typeof id !== 'string' ||
+      id.length === 0 ||
+      id !== id.trim() ||
+      id.length > MAX_CANDIDATE_ORG_REF_LENGTH
+    ) {
+      return []
+    }
+    if (!refs.includes(id)) refs.push(id)
+  }
+  return refs
+}
 
 async function fetchJsonWithLimit(fetchImpl: typeof fetch, url: string, limit: number): Promise<unknown | undefined> {
   const response = await fetchImpl(url)
@@ -144,7 +176,8 @@ export function createOidcAdapter(deps: OidcAdapterDeps) {
         }
         const displayName = typeof claims.name === 'string' ? claims.name
           : typeof claims.username === 'string' ? claims.username : null
-        const { identityHandle } = deps.resolveIdentity({ issuer: claims.iss, subject: claims.sub })
+        const candidateOrgRefs = extractCandidateOrgRefs(claims)
+        const { identityHandle } = deps.resolveIdentity({ issuer: claims.iss, subject: claims.sub, candidateOrgRefs })
         const applied = vault.signIn({
           accessToken: typeof record.access_token === 'string' ? record.access_token : '',
           idToken: record.id_token,

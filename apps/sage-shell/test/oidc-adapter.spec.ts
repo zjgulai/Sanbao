@@ -1,6 +1,6 @@
 import { createSign, generateKeyPairSync } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { createOidcAdapter, OIDC_CLIENT_ID, OIDC_ISSUER, OIDC_REDIRECT_URI } from '../src/main/oidc-adapter.js'
+import { createOidcAdapter, extractCandidateOrgRefs, OIDC_CLIENT_ID, OIDC_ISSUER, OIDC_REDIRECT_URI } from '../src/main/oidc-adapter.js'
 import type { OidcAdapterDeps } from '../src/main/oidc-adapter.js'
 import { createTokenVault } from '../src/main/token-vault.js'
 
@@ -130,15 +130,49 @@ describe('oidc-adapter happy path', () => {
 
   it('mints the identity handle from the verified (issuer, subject) and stores it in the vault (WT-02B.2C)', async () => {
     const idp = await fakeIdp()
-    const calls: Array<{ issuer: string; subject: string }> = []
+    const calls: Array<{ issuer: string; subject: string; candidateOrgRefs: readonly string[] }> = []
     const deps = makeDeps(idp, {
       resolveIdentity: (input) => { calls.push(input); return { identityHandle: 'h-verified' } },
     })
     deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ name: 'Alice', sub: 'user-1' }) })
     const { result, vault } = await driveLogin(deps)
     expect(result).toEqual({ ok: true, displayName: 'Alice' })
-    expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1' }])
+    expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1', candidateOrgRefs: [] }])
     expect(vault.identitySession()?.identityHandle).toBe('h-verified')
+  })
+
+  it('passes candidate org refs from the verified organization_data claim (WT-02B.2F)', async () => {
+    const idp = await fakeIdp()
+    const calls: Array<{ issuer: string; subject: string; candidateOrgRefs: readonly string[] }> = []
+    const deps = makeDeps(idp, {
+      resolveIdentity: (input) => { calls.push(input); return { identityHandle: 'h-verified' } },
+    })
+    deps.setTokenResponse({
+      access_token: 'at',
+      id_token: idp.idToken({
+        name: 'Alice',
+        sub: 'user-1',
+        organization_data: [{ id: 'org-a', name: 'Org A' }, { id: 'org-b' }],
+      }),
+    })
+    const { result } = await driveLogin(deps)
+    expect(result).toEqual({ ok: true, displayName: 'Alice' })
+    expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1', candidateOrgRefs: ['org-a', 'org-b'] }])
+  })
+
+  it('never fails login on a malformed organization claim (hints are non-blocking)', async () => {
+    const idp = await fakeIdp()
+    const calls: Array<{ candidateOrgRefs: readonly string[] }> = []
+    const deps = makeDeps(idp, {
+      resolveIdentity: (input) => { calls.push(input); return { identityHandle: 'h-verified' } },
+    })
+    deps.setTokenResponse({
+      access_token: 'at',
+      id_token: idp.idToken({ name: 'Alice', sub: 'user-1', organization_data: 'not-an-array' }),
+    })
+    const { result } = await driveLogin(deps)
+    expect(result).toEqual({ ok: true, displayName: 'Alice' })
+    expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1', candidateOrgRefs: [] }])
   })
 
   it('rejects a verified token without a subject id before any identity mapping', async () => {
@@ -152,6 +186,41 @@ describe('oidc-adapter happy path', () => {
     expect(result).toEqual({ ok: false, code: 'token-verification-failed' })
     expect(calls).toEqual([])
     expect(vault.identitySession()).toBeNull()
+  })
+})
+
+describe('organization claim extraction (WT-02B.2F)', () => {
+  it('returns no refs when the claim is absent or empty', () => {
+    expect(extractCandidateOrgRefs({})).toEqual([])
+    expect(extractCandidateOrgRefs({ organization_data: [] })).toEqual([])
+  })
+
+  it('extracts raw organization ids in order, deduplicated, ignoring other fields', () => {
+    expect(extractCandidateOrgRefs({
+      organization_data: [
+        { id: 'org-a', name: 'Org A', roles: ['admin'] },
+        { id: 'org-b' },
+        { id: 'org-a', name: 'Dup' },
+      ],
+    })).toEqual(['org-a', 'org-b'])
+  })
+
+  it('drops the entire claim on any malformed shape (strict-whole, no partial trust)', () => {
+    const bad: Array<Record<string, unknown>> = [
+      { organization_data: 'org-a' },
+      { organization_data: ['org-a'] },
+      { organization_data: [null] },
+      { organization_data: [{ name: 'no id' }] },
+      { organization_data: [{ id: '' }] },
+      { organization_data: [{ id: ' org-a ' }] },
+      { organization_data: [{ id: 42 }] },
+      { organization_data: [{ id: 'x'.repeat(129) }] },
+      { organization_data: Array.from({ length: 65 }, (_, i) => ({ id: `org-${String(i)}` })) },
+      { organization_data: [{ id: 'ok' }, { id: 'bad ' }] },
+    ]
+    for (const claims of bad) {
+      expect(extractCandidateOrgRefs(claims), JSON.stringify(claims).slice(0, 80)).toEqual([])
+    }
   })
 })
 

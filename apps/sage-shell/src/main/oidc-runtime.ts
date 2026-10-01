@@ -84,8 +84,13 @@ export function guardOpenExternalCloseListen(
 export interface ProductionAdapterOptions {
   /** Real system-browser open — the main wiring passes Electron's shell.openExternal. */
   readonly openExternal: (url: string) => Promise<void>
-  /** WT-02B.2C: identity-handle resolver (main-owned in-memory registry). */
-  readonly resolveIdentity: (input: { readonly issuer: string; readonly subject: string }) => { readonly identityHandle: string }
+  /** WT-02B.2C: identity-handle resolver (main-owned in-memory registry).
+   * WT-02B.2F: verified candidate org refs (lookup hints) ride along. */
+  readonly resolveIdentity: (input: {
+    readonly issuer: string
+    readonly subject: string
+    readonly candidateOrgRefs: readonly string[]
+  }) => { readonly identityHandle: string }
 }
 
 /** Assemble the production deps around the kernel adapter: global fetch, real loopback
