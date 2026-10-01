@@ -55,21 +55,17 @@ describe('layout', () => {
     expect(overlayPath(profileDir)).toBe(join(profileDir, HOST_DIR_NAME, 'shell.cordis.patch.yml'))
   })
 
-  it('keeps P0-2 free of composed product packages and copies only the self-owned renderer and adapter', () => {
+  it('keeps P0-2 free of composed product packages and copies only the self-owned renderer', () => {
     const plan = planMaterialize({ seedDir, shellRoot, repoRoot: shellRoot, profileDir })
     const composed = plan.entries.filter(entry => entry.kind === 'composed-package')
     expect(COMPOSED_PACKAGES).toEqual([])
     expect(composed).toEqual([])
     expect(HOST_LIB_FILES).toEqual(expect.arrayContaining([
       'product/contracts.js',
-      'product/state.js',
       'product/renderer.js',
-      'adapter/contracts.js',
-      'adapter/capability-adapter.js',
-      'adapter/handler.js',
       'profile/paths.js',
     ]))
-    expect(HOST_LIB_FILES.join('\n')).not.toMatch(/composer|streams/u)
+    expect(HOST_LIB_FILES.join('\n')).not.toMatch(/composer|streams|adapter|product\/state/u)
     expect(COMPOSED_DIR_NAME).toBe('.composed')
   })
 
@@ -98,6 +94,7 @@ function walkJs(libRoot: string): string[] {
       else if (entry.name.endsWith('.js')) out.push(relative(libRoot, full))
     }
   }
-  for (const dir of ['host', 'product', 'adapter']) visit(join(libRoot, dir))
+  // WT-02D.1: the Host no longer carries product routes (`adapter/` retired); host-scope output is host/ + product/.
+  for (const dir of ['host', 'product']) visit(join(libRoot, dir))
   return out
 }

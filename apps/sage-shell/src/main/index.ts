@@ -1,13 +1,10 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
-import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { app, dialog, protocol, shell } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import type { SageViewState } from '../product/contracts.js'
-import { createUnavailableFirstService } from '../appservice/composition.js'
-import { handleSageServiceRequest, shouldUseAppService } from '../appservice/route-skeleton.js'
-import { serviceJson } from '../appservice/errors.js'
+import { handleSageServiceRequest, isSageServicePath } from '../appservice/route-skeleton.js'
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { resolveHostRuntime, resolveSageElectronPaths } from './runtime.js'
 import { routeSchemeRequest } from './route.js'
@@ -16,6 +13,7 @@ import { verifySageServiceCaller } from './appservice-binding.js'
 import { createSageWindow, loadTrustedUrl } from './window.js'
 import { createProductionAdapter } from './oidc-runtime.js'
 import { createTokenVault } from './token-vault.js'
+import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
 
 const SCHEME = 'dsh-app'
 
@@ -69,7 +67,9 @@ async function main(paths: SagePaths): Promise<void> {
     },
   })
 
-  const appServiceEnabled = process.env.SAGE_APP_SERVICE !== 'off'
+  // WT-02D.1: the fixture switch only fills the read-only matter slot for local verification;
+  // it can never satisfy production authority and is read once at startup.
+  const fixtureProjection = resolveFixtureProjection(process.env)
 
   // WT-02B.2B login wiring: in-memory vault plus a production adapter (real loopback,
   // real fetch, node randomness; shell.openExternal stays fail-closed on failure via
@@ -81,35 +81,16 @@ async function main(paths: SagePaths): Promise<void> {
     const url = new URL(request.url)
     const route = routeSchemeRequest(url)
     if (route.target === 'reject') return Promise.resolve(new Response(null, { status: 404 }))
-    if (shouldUseAppService(url.pathname, appServiceEnabled)) {
+    if (isSageServicePath(url.pathname)) {
       const callerBinding = verifySageServiceCaller(url, request, framePolicy)
       const viewState = toSageViewState(host.readSnapshot())
-      return handleSageServiceRequest(request, {
-        callerBinding,
-        providers: createUnavailableFirstService(viewState, {
-          authSnapshot: () => vault.status() === 'pending'
-            ? { status: 'pending' as const, displayName: null }
-            : vault.snapshot(),
-          login: async () => {
-            const outcome = await adapter.startLogin(vault)
-            return serviceJson(
-              outcome.ok
-                ? { auth: 'signed-in', displayName: outcome.displayName }
-                : {
-                    code: outcome.code,
-                    stage: 'login',
-                    retryable: outcome.code !== 'login-in-progress',
-                    correlation: randomUUID(),
-                  },
-              outcome.ok ? 202 : 200,
-            )
-          },
-          logout: async () => {
-            vault.signOut()
-            return serviceJson({ auth: 'signed-out' }, 200)
-          },
-        }),
+      const providers = createSageAppServiceProviders({
+        viewState,
+        vault,
+        adapter,
+        ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
       })
+      return handleSageServiceRequest(request, { callerBinding, providers })
     }
     return host.fetch(request)
   })

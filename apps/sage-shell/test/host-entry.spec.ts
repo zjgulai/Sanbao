@@ -57,9 +57,11 @@ function hostInput(profileDir: string): Parameters<typeof runShellHost>[0] {
 }
 
 describe('routeRequest', () => {
-  it('sends only fixed Sage endpoints to the adapter and rejects retired upstream surfaces', () => {
-    expect(routeRequest('/.sage/state')).toBe('sage')
-    expect(routeRequest('/.sage/actions')).toBe('sage')
+  it('rejects the main-owned Sage surface and retired upstream surfaces; serves only assets', () => {
+    // WT-02D.1: the Host no longer owns /.sage/*; a stray request is rejected, never served.
+    expect(routeRequest('/.sage/state')).toBe('rejected')
+    expect(routeRequest('/.sage/actions')).toBe('rejected')
+    expect(routeRequest('/.sage')).toBe('rejected')
     expect(routeRequest('/.dsh/remote-stream')).toBe('rejected')
     expect(routeRequest('/api/session/list')).toBe('rejected')
     expect(routeRequest('/api')).toBe('rejected')

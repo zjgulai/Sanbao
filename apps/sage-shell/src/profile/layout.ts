@@ -21,14 +21,10 @@ export const HOST_LIB_FILES = [
   'host/assets.js',
   'host/handler.js',
   'product/contracts.js',
-  'product/state.js',
   'product/view-state.js',
   'product/action-preview.js',
   'product/component-renderer.js',
   'product/renderer.js',
-  'adapter/contracts.js',
-  'adapter/capability-adapter.js',
-  'adapter/handler.js',
 ] as const
 
 /** Overlay source relative to the shell package root. */

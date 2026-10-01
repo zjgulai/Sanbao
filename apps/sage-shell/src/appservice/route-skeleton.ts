@@ -7,9 +7,9 @@ const SAGE_ACTIONS_PATH = '/.sage/actions'
 const SAGE_LOGIN_PATH = '/.sage/login'
 const SAGE_LOGOUT_PATH = '/.sage/logout'
 
-/** D1 routing predicate: whether main handles this pathname via the app service. */
-export function shouldUseAppService(pathname: string, appServiceEnabled: boolean): boolean {
-  return appServiceEnabled && pathname.startsWith('/.sage/')
+/** WT-02D.1 routing predicate: every /.sage/* pathname is terminated by the main-owned app service (single owner). */
+export function isSageServicePath(pathname: string): boolean {
+  return pathname.startsWith('/.sage/')
 }
 
 /** Transport-layer denials stay uncacheable, matching the P0-2 adapter's json() shape. */

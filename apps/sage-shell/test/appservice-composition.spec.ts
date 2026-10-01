@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
+import { createSageFixtureViewState } from '../src/product/view-state.js'
 
 const runtime = { status: 'ready' as const, message: 'dsh 2.0.10', retryable: true }
 
@@ -65,6 +66,48 @@ describe('auth in state', () => {
     const service = createUnavailableFirstService(null, { login: async () => Response.json({ code: 'idp-unreachable', stage: 'login', retryable: true, correlation: 'x' }, { status: 200, headers: { 'cache-control': 'no-store' } }) })
     const response = await service.login()
     expect(await response.json()).toMatchObject({ code: 'idp-unreachable' })
+  })
+})
+
+describe('matter projection slot (WT-02D.1)', () => {
+  it('fills the slot with the injected fixture projection, fixture markers visible', async () => {
+    const service = createUnavailableFirstService(null, { fixtureProjection: createSageFixtureViewState })
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.matter).toEqual(createSageFixtureViewState())
+    const matter = body.matter as {
+      projectionSource: string
+      actionability: string
+      denialReason: string
+      actions: Array<{ actionability: string }>
+    }
+    expect(matter.projectionSource).toBe('fixture')
+    expect(matter.actionability).toBe('blocked')
+    expect(matter.denialReason).toBe('fixture-only')
+    expect(matter.actions.length).toBeGreaterThan(0)
+    for (const action of matter.actions) expect(action.actionability).toBe('blocked')
+  })
+
+  it('leaves the slot null without an explicit fixture mode (never a placeholder)', async () => {
+    const service = createUnavailableFirstService(null)
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.matter).toBeNull()
+    expect(body.service).toMatchObject({ status: 'unavailable', reason: 'identity-unavailable' })
+  })
+
+  it('keeps 0.2 service semantics unchanged while the fixture slot is on', async () => {
+    const service = createUnavailableFirstService(null, {
+      fixtureProjection: createSageFixtureViewState,
+      authSnapshot: () => ({ status: 'signed-in', displayName: 'Alice' }),
+    })
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.service).toMatchObject({ reason: 'authenticated', auth: { status: 'signed-in', displayName: 'Alice' } })
+    const denial = await (await service.dispatch()).json() as Record<string, unknown>
+    expect(denial).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy' })
+  })
+
+  it('exposes only the four service ports (no store/adapter surface)', () => {
+    const service = createUnavailableFirstService(null, { fixtureProjection: createSageFixtureViewState })
+    expect(Object.keys(service).sort()).toEqual(['dispatch', 'login', 'logout', 'readState'])
   })
 })
 

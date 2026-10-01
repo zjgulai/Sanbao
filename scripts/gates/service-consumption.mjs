@@ -11,7 +11,9 @@
  * ## 判据（对账契约）
  *
  * 1. 登记处（service-consumption.json）必须可读、可解析、非空——空登记处让本项
- *    恒绿（P-02），与 jev.residuals 同一条取向。
+ *    恒绿（P-02），与 jev.residuals 同一条取向。`allowEmptyRegistry`（默认 false）
+ *    是显式的按域例外：调用方声明其扫描域真实为零消费（WT-02D.1 的 Sage scope）时
+ *    可放行空登记；扫描仍会对未登记消费者判红，空登记不能掩盖漂移。
  * 2. 扫描射程：packages/ 与 apps/ 的 .ts/.js/.mjs 源码，排除 lib/、node_modules/、
  *    dist/、test 目录、test/spec 后缀文件、snapshot 快照（构建产物与测试不进消费面）。
  * 3. 逐文件对账，四个方向都判红：
@@ -31,7 +33,7 @@
  * @module
  */
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** 登记处路径（仓库根相对）。 */
@@ -69,7 +71,7 @@ export function scanServiceConsumption(text) {
  * @param {{registryText: string|null|undefined, registryRelPath?: string, files: Array<{path: string, text: string}>}} input
  * @returns {{passed: boolean, violations: string[], note: string}}
  */
-export function checkServiceConsumption({ registryText, registryRelPath = REGISTRY_REL_PATH, files }) {
+export function checkServiceConsumption({ registryText, registryRelPath = REGISTRY_REL_PATH, files, allowEmptyRegistry = false }) {
   if (typeof registryText !== 'string') {
     return {
       passed: false,
@@ -91,13 +93,16 @@ export function checkServiceConsumption({ registryText, registryRelPath = REGIST
   if (entries === null) {
     return { passed: false, violations: [`${registryRelPath}: 缺 consumptions 数组`], note: '登记处形状非法' }
   }
-  if (entries.length === 0) {
+  if (entries.length === 0 && !allowEmptyRegistry) {
     return {
       passed: false,
       violations: [`${registryRelPath}: consumptions 为空——空登记处让本项恒绿（P-02）`],
       note: '登记 0 个消费文件',
     }
   }
+  // allowEmptyRegistry=true is opt-in per scope (WT-02D.1: apps/sage-shell truthfully consumes
+  // zero Cordis services after the P0-2 adapter retired). The scan below still reds any
+  // consumer missing from the registry, so an emptied registry cannot mask drift either.
 
   const registered = new Map(entries.map((e) => [e.file, e]))
   const violations = []
@@ -155,5 +160,8 @@ export function collectConsumptionFiles(repoRoot, roots = ['packages', 'apps']) 
     .filter((f) => !/(^|\/)(lib|node_modules|dist|test|tests)\//.test(f))
     .filter((f) => !/\.(test|spec)\./.test(f))
     .filter((f) => !/\.snapshot/.test(f))
+    // A file deleted in the worktree but still in the index must not crash the scan:
+    // the stale-entry reconciliation below owns that case (missing file = stale ledger entry).
+    .filter((f) => existsSync(join(repoRoot, f)))
   return listed.map((path) => ({ path, text: readFileSync(join(repoRoot, path), 'utf8') }))
 }

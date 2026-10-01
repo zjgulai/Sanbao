@@ -620,13 +620,16 @@ const CHECKS = [
   {
     name: 'sage-service-consumption',
     remediation:
-      '只核对 apps/sage-shell 的 ctx.get() 与 scripts/gates/sage-service-consumption.json；旧 packages 的消费漂移必须转到显式 legacy scope 处理。',
+      '只核对 apps/sage-shell 的 ctx.get() 与 scripts/gates/sage-service-consumption.json；'
+      + 'WT-02D.1 起该 scope 真实为零消费，空登记已显式放行（allowEmptyRegistry），新增任何 ctx.get 消费仍须登记；'
+      + '旧 packages 的消费漂移必须转到显式 legacy scope 处理。',
     run() {
       const registryRelPath = 'scripts/gates/sage-service-consumption.json'
       return checkServiceConsumption({
         registryText: readRepoText(registryRelPath),
         registryRelPath,
         files: collectConsumptionFiles(repoRoot, ['apps/sage-shell']),
+        allowEmptyRegistry: true,
       })
     },
   },

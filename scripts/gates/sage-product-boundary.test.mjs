@@ -4,11 +4,7 @@ import { checkSageProductBoundary } from './sage-product-boundary.mjs'
 
 const files = [
   { path: 'apps/sage-shell/src/product/contracts.ts', text: 'export const state = "/.sage/state"' },
-  { path: 'apps/sage-shell/src/product/state.ts', text: 'export const state = "ready"' },
   { path: 'apps/sage-shell/src/product/renderer.ts', text: 'export const render = () => "Sage"' },
-  { path: 'apps/sage-shell/src/adapter/contracts.ts', text: 'export interface Port {}' },
-  { path: 'apps/sage-shell/src/adapter/capability-adapter.ts', text: "const connection = ctx.get('connection')" },
-  { path: 'apps/sage-shell/src/adapter/handler.ts', text: 'export const handler = true' },
   { path: 'apps/sage-shell/src/host/assets.ts', text: 'export const asset = true' },
   { path: 'apps/sage-shell/src/host/index.ts', text: 'export const host = true' },
   { path: 'apps/sage-shell/src/profile/layout.ts', text: 'export const layout = true' },
@@ -24,16 +20,23 @@ test('passes the minimal self-owned Sage source boundary', () => {
   assert.deepEqual(result.violations, [])
 })
 
-test('rejects a missing required product file and a retired source file', () => {
+test('rejects a missing required product file and retired source files', () => {
   const missing = checkSageProductBoundary({ files: files.filter((file) => !file.path.endsWith('/renderer.ts')) })
   assert.equal(missing.passed, false)
   assert.match(missing.violations[0], /renderer\.ts/u)
 
-  const retired = checkSageProductBoundary({
+  const retiredStreams = checkSageProductBoundary({
     files: [...files, { path: 'apps/sage-shell/src/host/streams.ts', text: 'export const legacy = true' }],
   })
-  assert.equal(retired.passed, false)
-  assert.ok(retired.violations.some((violation) => violation.includes('retired')))
+  assert.equal(retiredStreams.passed, false)
+  assert.ok(retiredStreams.violations.some((violation) => violation.includes('retired')))
+
+  // WT-02D.1: the retired P0-2 adapter surface must not re-enter through source drift.
+  const retiredAdapter = checkSageProductBoundary({
+    files: [...files, { path: 'apps/sage-shell/src/adapter/handler.ts', text: 'export const handler = true' }],
+  })
+  assert.equal(retiredAdapter.passed, false)
+  assert.ok(retiredAdapter.violations.some((violation) => violation.includes('adapter/handler.ts') && violation.includes('retired')))
 })
 
 test('rejects every product-side escape hatch and direct host service access', () => {
@@ -49,7 +52,7 @@ test('rejects every product-side escape hatch and direct host service access', (
     files: withFile('apps/sage-shell/src/host/index.ts', "const drift = ctx.get('connection')"),
   })
   assert.equal(directHost.passed, false)
-  assert.ok(directHost.violations.some((violation) => violation.includes('outside')))
+  assert.ok(directHost.violations.some((violation) => violation.includes('ctx.get') && violation.includes('retirement')))
 })
 
 test('rejects an upstream product token but ignores a comment that documents the guard', () => {

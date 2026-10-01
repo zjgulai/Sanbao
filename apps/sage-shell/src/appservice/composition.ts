@@ -1,6 +1,7 @@
 /** Unavailable-first composition: no provider assembled, stable denials (spec §3.2). */
 import { randomUUID } from 'node:crypto'
 import type { SageViewState } from '../product/contracts.js'
+import type { SageMatterViewState } from '../product/view-state.js'
 import type { SageServiceState, ServiceProviders } from './contracts.js'
 import { serviceJson } from './errors.js'
 import { runCommand } from './command-pipeline.js'
@@ -19,14 +20,16 @@ const PRODUCTION_FAIL_CLOSED_PORTS: CommandPipelinePorts = {
   now: () => '1970-01-01T00:00:00.000Z',
 }
 
-export interface AuthServiceOptions {
+export interface ServiceOptions {
   readonly authSnapshot?: () => { readonly status: 'signed-out' | 'signed-in' | 'pending'; readonly displayName: string | null }
   readonly login?: () => Promise<Response>
   readonly logout?: () => Promise<Response>
+  /** Explicit fixture-mode matter projection (WT-02D.1): injected by main only under its fixture switch; absent keeps the slot null. */
+  readonly fixtureProjection?: () => SageMatterViewState
 }
 
-export function createUnavailableFirstService(runtime: SageViewState | null, auth: AuthServiceOptions = {}): ServiceProviders {
-  const snapshot = auth.authSnapshot ?? (() => ({ status: 'signed-out' as const, displayName: null }))
+export function createUnavailableFirstService(runtime: SageViewState | null, options: ServiceOptions = {}): ServiceProviders {
+  const snapshot = options.authSnapshot ?? (() => ({ status: 'signed-out' as const, displayName: null }))
   return {
     async readState(): Promise<Response> {
       const snap = snapshot()
@@ -38,6 +41,7 @@ export function createUnavailableFirstService(runtime: SageViewState | null, aut
           auth: { status: snap.status, displayName: snap.displayName },
           correlation: randomUUID(),
         },
+        matter: options.fixtureProjection?.() ?? null,
         runtime,
       }
       return serviceJson(state, 200)
@@ -51,11 +55,11 @@ export function createUnavailableFirstService(runtime: SageViewState | null, aut
       return serviceJson(result, 'code' in result && result.code === 'invalid-intent' ? 400 : 200)
     },
     async login(): Promise<Response> {
-      if (auth.login !== undefined) return auth.login()
+      if (options.login !== undefined) return options.login()
       return serviceJson({ auth: 'signed-out' }, 200)
     },
     async logout(): Promise<Response> {
-      if (auth.logout !== undefined) return auth.logout()
+      if (options.logout !== undefined) return options.logout()
       return serviceJson({ auth: 'signed-out' }, 200)
     },
   }

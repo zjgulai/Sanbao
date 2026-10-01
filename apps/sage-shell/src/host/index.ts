@@ -27,9 +27,6 @@ import {
 } from '../protocol.js'
 import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
 import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
-import { createSageCapabilityAdapter } from '../adapter/capability-adapter.js'
-import { createSageCapabilityHandler } from '../adapter/handler.js'
-import { SAGE_ACTIONS_PATH, SAGE_STATE_PATH } from '../product/contracts.js'
 import { createAssetHandler } from './assets.js'
 import type { FetchHandler } from './handler.js'
 
@@ -63,11 +60,11 @@ interface NodeRequestInit extends RequestInit {
   readonly duplex?: 'half'
 }
 
-type RouteTarget = 'sage' | 'assets' | 'rejected'
+type RouteTarget = 'assets' | 'rejected'
 
-/** Which handler owns one request pathname. */
+/** Which handler owns one request pathname. The Sage product surface is main-owned (WT-02D.1): a stray /.sage request is rejected, never served. */
 export function routeRequest(pathname: string): RouteTarget {
-  if (pathname === SAGE_STATE_PATH || pathname === SAGE_ACTIONS_PATH) return 'sage'
+  if (pathname === '/.sage' || pathname.startsWith('/.sage/')) return 'rejected'
   if (pathname === '/api' || pathname.startsWith('/api/')
     || pathname === '/plugins' || pathname.startsWith('/plugins/')
     || pathname.startsWith('/.dsh/') || pathname === '/.sanbao' || pathname.startsWith('/.sanbao/')) return 'rejected'
@@ -144,9 +141,7 @@ export async function runShellHost(input: {
   })
   loaderSettled = true
   current = ctx
-  const adapter = createSageCapabilityAdapter(ctx)
   const handlers: Record<RouteTarget, FetchHandler> = {
-    sage: createSageCapabilityHandler(adapter),
     assets: createAssetHandler(),
     rejected: { requestBodyMode: () => 'buffered', fetch: async () => new Response(null, { status: 404 }) },
   }

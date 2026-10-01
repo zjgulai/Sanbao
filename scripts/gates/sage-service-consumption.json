@@ -1,7 +1,5 @@
 {
-  "$comment": "Sage BASE 独立服务消费登记。只登记 apps/sage-shell；旧 packages 与历史应用继续由 service-consumption.json 在 legacy scope 显式核对。",
+  "$comment": "Sage BASE 独立服务消费登记。只登记 apps/sage-shell；旧 packages 与历史应用继续由 service-consumption.json 在 legacy scope 显式核对。WT-02D.1 起 apps/sage-shell 真实为零消费——P0-2 唯一消费点 adapter/capability-adapter.ts 已随 route 收口退场；此 scope 显式启用 allowEmptyRegistry，任何新增 ctx.get 消费必须随提交登记（否则本项对未登记消费者判红）。",
   "schemaVersion": 1,
-  "consumptions": [
-    { "file": "apps/sage-shell/src/adapter/capability-adapter.ts", "services": ["connection"] }
-  ]
+  "consumptions": []
 }

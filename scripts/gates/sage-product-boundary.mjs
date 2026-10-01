@@ -2,23 +2,19 @@
  * Sage P0-2 product boundary gate.
  *
  * It protects the ownership split rather than trying to prove runtime health:
- * the renderer is self-owned, only the adapter reads a Cordis service, and the
- * retired upstream page/stream surfaces cannot re-enter through source drift.
+ * the renderer is self-owned, no shell source reads a Cordis service after the
+ * WT-02D.1 P0-2 adapter retirement, and the retired upstream page/stream
+ * surfaces cannot re-enter through source drift.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const SOURCE_ROOT = 'apps/sage-shell/src'
 const PRODUCT_ROOT = SOURCE_ROOT + '/product/'
-const ADAPTER_ROOT = SOURCE_ROOT + '/adapter/'
 
 const REQUIRED_FILES = [
   PRODUCT_ROOT + 'contracts.ts',
-  PRODUCT_ROOT + 'state.ts',
   PRODUCT_ROOT + 'renderer.ts',
-  ADAPTER_ROOT + 'contracts.ts',
-  ADAPTER_ROOT + 'capability-adapter.ts',
-  ADAPTER_ROOT + 'handler.ts',
   SOURCE_ROOT + '/host/assets.ts',
   SOURCE_ROOT + '/host/index.ts',
   SOURCE_ROOT + '/profile/layout.ts',
@@ -28,6 +24,11 @@ const RETIRED_FILES = [
   SOURCE_ROOT + '/host/composer-adapter.ts',
   SOURCE_ROOT + '/host/composer-view.ts',
   SOURCE_ROOT + '/host/streams.ts',
+  // WT-02D.1: the P0-2 Host-side product adapter retired with the /.sage/* route ownership move.
+  PRODUCT_ROOT + 'state.ts',
+  SOURCE_ROOT + '/adapter/contracts.ts',
+  SOURCE_ROOT + '/adapter/capability-adapter.ts',
+  SOURCE_ROOT + '/adapter/handler.ts',
 ]
 
 const UPSTREAM_TOKENS = [
@@ -114,8 +115,8 @@ export function checkSageProductBoundary({ files }) {
     for (const token of UPSTREAM_TOKENS) {
       if (hasToken(text, token)) violations.push(path + ' still contains retired upstream token ' + JSON.stringify(token))
     }
-    if (!path.startsWith(ADAPTER_ROOT) && hasToken(text, 'ctx.get(')) {
-      violations.push(path + ' calls ctx.get outside the sole Sage Capability Adapter directory')
+    if (hasToken(text, 'ctx.get(')) {
+      violations.push(path + ' calls ctx.get after the P0-2 adapter retirement — no Sage shell source consumes a Cordis service (WT-02D.1)')
     }
   }
 
@@ -126,10 +127,6 @@ export function checkSageProductBoundary({ files }) {
     }
   }
 
-  const adapter = byPath.get(ADAPTER_ROOT + 'capability-adapter.ts')
-  if (adapter !== undefined && !hasToken(adapter, "ctx.get('connection')")) {
-    violations.push(ADAPTER_ROOT + 'capability-adapter.ts must own the explicit connection availability probe')
-  }
   const layout = byPath.get(SOURCE_ROOT + '/profile/layout.ts')
   if (layout !== undefined && (hasToken(layout, 'dsh-onboarding-carousel') || hasToken(layout, 'composer') || hasToken(layout, 'streams'))) {
     violations.push(SOURCE_ROOT + '/profile/layout.ts still composes a retired product package or runtime module')

@@ -15,7 +15,7 @@ test('Sage 服务消费扫描只覆盖 apps/sage-shell', () => {
   assert.equal(files.some(({ path }) => path.startsWith('packages/')), false)
 })
 
-test('Sage 独立登记与当前 shell 消费面逐项一致', () => {
+test('Sage 独立登记与当前 shell 消费面逐项一致（WT-02D.1 起零消费）', () => {
   const registryText = readFileSync(join(repoRoot, registryRelPath), 'utf8')
   const registry = JSON.parse(registryText)
   assert.ok(registry.consumptions.every(({ file }) => file.startsWith('apps/sage-shell/')))
@@ -24,7 +24,19 @@ test('Sage 独立登记与当前 shell 消费面逐项一致', () => {
     registryText,
     registryRelPath,
     files: collectConsumptionFiles(repoRoot, ['apps/sage-shell']),
+    allowEmptyRegistry: true,
   })
   assert.equal(result.passed, true, result.violations.join('\n'))
-  assert.match(result.note, /1 个消费文件/)
+  assert.match(result.note, /0 个消费文件/)
+})
+
+test('空登记放行只属于显式开关：默认模式下空登记仍判红', () => {
+  const registryText = readFileSync(join(repoRoot, registryRelPath), 'utf8')
+  const strict = checkServiceConsumption({
+    registryText,
+    registryRelPath,
+    files: collectConsumptionFiles(repoRoot, ['apps/sage-shell']),
+  })
+  assert.equal(strict.passed, false)
+  assert.ok(strict.violations[0].includes('为空'))
 })
