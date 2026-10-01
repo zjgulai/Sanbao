@@ -78,7 +78,7 @@ async function main(paths: SagePaths): Promise<void> {
   // the runtime guard). Tokens never leave main and never persist.
   // WT-02B.2C: the identity registry mints runtime-only internal handles for verified
   // (issuer, subject); handles never persist and never reach renderer/Host/logs.
-  const vault = createTokenVault()
+  const vault = createTokenVault({ mintSessionRef: () => randomBytes(32).toString('base64url') })
   const identityRegistry = createIdentityRegistry({ randomHandle: () => randomBytes(32).toString('base64url') })
   const { adapter } = createProductionAdapter(vault, {
     openExternal: (url) => shell.openExternal(url),

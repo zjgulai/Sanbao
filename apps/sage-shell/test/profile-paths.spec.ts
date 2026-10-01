@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   ACTIVE_PROFILE_FILE,
+  ORGANIZATION_POLICY_FILE,
   PROFILE_MANIFEST_FILE,
   ensureSageDirectories,
   ensureSageDirectoriesSync,
@@ -40,6 +41,7 @@ describe('Sage profile paths', () => {
     expect(paths.generationsDir).toBe(join(paths.profilesDir, '.sage-generations'))
     expect(paths.stagingDir).toBe(join(paths.profilesDir, '.sage-staging'))
     expect(paths.activeProfileFile).toBe(join(paths.root, ACTIVE_PROFILE_FILE))
+    expect(paths.organizationPolicyFile).toBe(join(paths.root, ORGANIZATION_POLICY_FILE))
   })
 
   it('rejects relative, legacy, and overlapping root overrides before it creates anything', () => {

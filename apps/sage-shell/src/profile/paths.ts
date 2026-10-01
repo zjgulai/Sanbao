@@ -25,6 +25,9 @@ const RECEIPT_RUNTIME_ARTIFACT_ATTESTATION_FILE = 'runtime-artifact-attestation.
 /** Instance-local patch layer merged after the shell overlay (ADR-0162); absent until an instance opts in. */
 export const LOCAL_PATCH_FILE = 'cordis.local.patch.yml'
 
+/** Instance-local Organization Policy file (WT-02B.2E); absent until an operator provisions it. */
+export const ORGANIZATION_POLICY_FILE = 'organization-policy.json'
+
 const POINTER_SCHEMA_VERSION = 1
 const GENERATION_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/u
 
@@ -48,6 +51,8 @@ export interface SagePaths {
   readonly stagingDir: string
   /** Atomically replaced JSON pointer to the active generation. */
   readonly activeProfileFile: string
+  /** Instance-local Organization Policy file (WT-02B.2E); the operator provisions it manually. */
+  readonly organizationPolicyFile: string
 }
 
 /** One validated, active materialized profile. */
@@ -156,6 +161,7 @@ export function resolveSagePaths(input: { home: string; root?: string; platform?
     generationsDir: join(profilesDir, '.sage-generations'),
     stagingDir: join(profilesDir, '.sage-staging'),
     activeProfileFile: join(root, ACTIVE_PROFILE_FILE),
+    organizationPolicyFile: join(root, ORGANIZATION_POLICY_FILE),
   }
 }
 

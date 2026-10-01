@@ -138,11 +138,22 @@ export function createOidcAdapter(deps: OidcAdapterDeps) {
         const claims = verified.claims
         // WT-02B.2C: identity mapping needs the exact verified (issuer, subject); the kernel only
         // forces `iss`, so `sub` is guarded here — a token without both cannot mint a handle.
-        if (typeof claims.iss !== 'string' || typeof claims.sub !== 'string') return { ok: false, code: 'token-verification-failed' }
+        // WT-02B.2E: `exp` passed the kernel's finite-number guard; re-narrowed here for the session record.
+        if (typeof claims.iss !== 'string' || typeof claims.sub !== 'string' || typeof claims.exp !== 'number') {
+          return { ok: false, code: 'token-verification-failed' }
+        }
         const displayName = typeof claims.name === 'string' ? claims.name
           : typeof claims.username === 'string' ? claims.username : null
         const { identityHandle } = deps.resolveIdentity({ issuer: claims.iss, subject: claims.sub })
-        const applied = vault.signIn({ accessToken: typeof record.access_token === 'string' ? record.access_token : '', idToken: record.id_token, displayName, identityHandle })
+        const applied = vault.signIn({
+          accessToken: typeof record.access_token === 'string' ? record.access_token : '',
+          idToken: record.id_token,
+          displayName,
+          identityHandle,
+          issuer: claims.iss,
+          authenticatedAt: new Date(deps.now() * 1000).toISOString(),
+          expiresAt: new Date(claims.exp * 1000).toISOString(),
+        })
         if (!applied) return { ok: false, code: 'login-superseded' }
         return { ok: true, displayName }
       } catch {

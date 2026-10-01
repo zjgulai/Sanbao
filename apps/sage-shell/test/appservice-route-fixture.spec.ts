@@ -14,7 +14,7 @@ const viewState = { status: 'ready' as const, message: 'dsh probe', retryable: t
 function providers(fixture: boolean) {
   return createSageAppServiceProviders({
     viewState,
-    vault: createTokenVault(),
+    vault: createTokenVault({ mintSessionRef: () => 'session-ref-fixture' }),
     adapter: { startLogin: async () => ({ ok: false as const, code: 'idp-unreachable' as const }) },
     ...(fixture ? { fixtureProjection: createSageFixtureViewState } : {}),
   })

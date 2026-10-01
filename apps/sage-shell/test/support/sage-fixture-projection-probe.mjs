@@ -98,7 +98,7 @@ async function run() {
   await app.whenReady()
 
   const policy = new FramePolicy({})
-  const vault = createTokenVault()
+  const vault = createTokenVault({ mintSessionRef: () => 'session-ref-probe' })
   const fixtureProjection = resolveFixtureProjection(process.env)
   const stubAdapter = { startLogin: async () => ({ ok: false, code: 'idp-unreachable' }) }
 

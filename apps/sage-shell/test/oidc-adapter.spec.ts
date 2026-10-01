@@ -13,6 +13,9 @@ const NOW = 1_800_000_000
 const STATE = Buffer.alloc(32, 7).toString('base64url')
 const NONCE = Buffer.alloc(32, 8).toString('base64url')
 
+/** WT-02B.2E: the vault mints a per-session ref; tests pin it for deterministic assertions. */
+const makeVault = () => createTokenVault({ mintSessionRef: () => 'session-ref-1' })
+
 async function fakeIdp() {
   const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-384' })
   const jwk = publicKey.export({ format: 'jwk' }) as Record<string, unknown>
@@ -89,7 +92,7 @@ function makeDeps(idp: Awaited<ReturnType<typeof fakeIdp>>, overrides: Partial<O
 
 /** Wait (bounded) until the adapter has installed its callback handler, then drive it. */
 async function driveLogin(deps: DrivableDeps) {
-  const vault = createTokenVault()
+  const vault = makeVault()
   const adapter = createOidcAdapter(deps)
   const promise = adapter.startLogin(vault)
   for (let i = 0; i < 200 && deps.pendingHandler === undefined; i += 1) {
@@ -107,6 +110,14 @@ describe('oidc-adapter happy path', () => {
     const { result, vault } = await driveLogin(deps)
     expect(result).toEqual({ ok: true, displayName: 'Alice' })
     expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
+    // WT-02B.2E: the verified issuer and token lifetime land in the main-internal session context.
+    expect(vault.identitySession()).toEqual({
+      sessionRef: 'session-ref-1',
+      identityHandle: 'h-fixed',
+      issuer: OIDC_ISSUER,
+      authenticatedAt: '2027-01-15T08:00:00.000Z',
+      expiresAt: '2027-01-15T09:00:00.000Z',
+    })
   })
 
   it('falls back to username when name claim is absent', async () => {
@@ -127,7 +138,7 @@ describe('oidc-adapter happy path', () => {
     const { result, vault } = await driveLogin(deps)
     expect(result).toEqual({ ok: true, displayName: 'Alice' })
     expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1' }])
-    expect(vault.identityHandle()).toBe('h-verified')
+    expect(vault.identitySession()?.identityHandle).toBe('h-verified')
   })
 
   it('rejects a verified token without a subject id before any identity mapping', async () => {
@@ -140,7 +151,7 @@ describe('oidc-adapter happy path', () => {
     const { result, vault } = await driveLogin(deps)
     expect(result).toEqual({ ok: false, code: 'token-verification-failed' })
     expect(calls).toEqual([])
-    expect(vault.identityHandle()).toBeNull()
+    expect(vault.identitySession()).toBeNull()
   })
 })
 
@@ -203,7 +214,7 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
   it('login-in-progress when a second login starts during pending', async () => {
     const idp = await fakeIdp()
     const deps = makeDeps(idp)
-    const vault = createTokenVault()
+    const vault = makeVault()
     const adapter = createOidcAdapter(deps)
     const first = adapter.startLogin(vault)
     const second = await adapter.startLogin(vault)
@@ -222,7 +233,7 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
     const deps = makeDeps(idp)
     deps.listen = async () => undefined as unknown as void // never captures the handler → no callback fires
     deps.loginTimeoutMs = 30 // short window so the test observes the timeout promptly
-    const vault = createTokenVault()
+    const vault = makeVault()
     const adapter = createOidcAdapter(deps)
     const result = await adapter.startLogin(vault)
     expect(result).toEqual({ ok: false, code: 'login-timeout' })
@@ -233,7 +244,7 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
     const idp = await fakeIdp()
     const deps = makeDeps(idp)
     deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ name: 'Alice', sub: 'user-1' }) })
-    const vault = createTokenVault()
+    const vault = makeVault()
     const adapter = createOidcAdapter(deps)
     const login = adapter.startLogin(vault)
     for (let i = 0; i < 200 && deps.pendingHandler === undefined; i += 1) {
@@ -243,15 +254,23 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
     if (deps.pendingHandler) await deps.pendingHandler()
     expect(await login).toEqual({ ok: false, code: 'login-superseded' })
     expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
-    expect(vault.identityHandle()).toBeNull()
+    expect(vault.identitySession()).toBeNull()
   })
 
   it('login-in-progress when a login starts while a session is already signed in', async () => {
     const idp = await fakeIdp()
     const deps = makeDeps(idp)
-    const vault = createTokenVault()
+    const vault = makeVault()
     vault.beginPending()
-    vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })
+    vault.signIn({
+      accessToken: 'at',
+      idToken: 'it',
+      displayName: 'Alice',
+      identityHandle: 'h-1',
+      issuer: OIDC_ISSUER,
+      authenticatedAt: '2027-01-15T08:00:00.000Z',
+      expiresAt: '2027-01-15T09:00:00.000Z',
+    })
     const result = await createOidcAdapter(deps).startLogin(vault)
     expect(result).toEqual({ ok: false, code: 'login-in-progress' })
     expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })

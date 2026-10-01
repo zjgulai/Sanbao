@@ -88,7 +88,7 @@ describe('guardOpenExternalCloseListen (Task 3 Important-②)', () => {
 
 describe('createProductionAdapter (assembly smoke, no login round-trip)', () => {
   it('assembles an adapter and a loopback around the in-memory vault', () => {
-    const vault = createTokenVault()
+    const vault = createTokenVault({ mintSessionRef: () => 'session-ref-asm' })
     const { adapter, loopback } = createProductionAdapter(vault, {
       openExternal: async () => undefined,
       resolveIdentity: () => ({ identityHandle: 'h-asm' }),
