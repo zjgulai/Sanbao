@@ -4529,6 +4529,50 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0191",
+      "title": "ADR-0191 · WT-02C.2E.2 RuntimeInventoryProvider 组合：stable descriptor + full inventory evidence",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "组合形态与固定顺序：src/main/runtime-inventory-provider.ts（main-owned、端口全注入、零模块级 I/O、内核零改动）；顺序 = C2B read → readActiveProfile（与投影 generation/manifest 漂移即 active-profile-unavailable）→ PMAP collect（面表完备性；preset 包身份另读）→ overlay/local patch（policy-document-unavailable）→ registry 快照（缺席/非法 registry-unavailable；kernel code 入 reason）→ capability 映射（capability-invalid）→ 组装 → compute* → 绑定自验（绝不输出不一致产物）→ deep freeze；7 具名 code，任一缺项 unavailable、永不 placeholder。",
+          "constraints": [
+            "receipt/attestation sha 只能来自被投影认证过的同一 generation（漂移即 unavailable）",
+            "观测窗口与 PMAP provenance 统一取 C2B observedAt（唯一受信观测瞬间，不引入第二套时钟）",
+            "自验失败一律 assembly-invalid：digest 绑定不符、窗口非法、版本文法违反都在此收口"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "四个 policy 文档与七个 provenance 摘要本票定义：全部 sha256:+64hex、canonical JSON 显式键序；protocolContract（协议 v4 常量+帧词汇+fd 对+chunkBytes）、launchPolicy（argv/env/home/loopback；envPolicy 含 launchEnvironmentKey 单键注入）、overlayPolicy（rootConfig+overlay bytes+local patch bytes，local patch 出现或内容变化即摘要变）、harnessContract（SHELL_LABEL+launchEnvironmentKey+host-protocol-4）；receipt=封印 SHA、materializationInstance、instanceAuthority、mainObservationProvenance（projectionDigest+PMAP 逐行摘要+registrySnapshot）、health（最小 provenance）、liveness（最小 provenance）、registrySnapshot（换形）；以手写 golden 冻结（稳定对共 13 字面量，四文档 canonical 串独立复算）。",
+          "constraints": [
+            "host.version 取协议主版本正式 SemVer 形 '4.0.0'（'4' 不合 V2 文法；协议变更须同步常量与 golden）",
+            "health/liveness 仅 provenance 陈述，resolver 不据此放行 availability（C2C.4/C2C.5 到位后增强）",
+            "golden 冻结后任何字段级变更即破坏测试＝必须走语义变更流程（重发 matrix）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "六组件映射与 capabilities 派生：PMAP urn→sha256 同 hex 换形不重算；host/harness artifact=artifactSetDigest（分包树粒度登记）；model 三面 provider 委托；agent identity 按末位 @ 拆包名、behavior=preset 组件同值（roster 派生静态最小语义）；preset='preset:set' 聚合（id 排序不敏感）+ 包 version/exports 另读；capabilities 自 registry 快照派生（approved ∧ effectiveAt≤observedAt<expiresAt；V2 文法；verified/c2c5；behavior/registryDescriptor/adapterMapping 三 canonical 投影）。",
+          "constraints": [
+            "不构造空 capabilities 冒充 registry 缺项（用户裁决；缺席即 registry-unavailable）",
+            "roster 允许空集为合法；任一行非 observed 或必需面缺失即 pmap-incomplete",
+            "canonical 投影若与未来 C2D.1 digest 函数重叠则收敛复用（登记）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "接线、证据与仪器：main host ready 后构造 + 单次 read + 一行稳定 stdout（available / unavailable (code)；非敏感零副作用不阻断启动）；runtimeInventory options 透传槽（无消费者，登记）；成对反例（瞬态 5 变体仅 full digest 变、语义 4 变体两者都变）与变异 M1–M4 守约束；V2 resolver 消费（equivalent/过期/篡改）；真实 generation 集成为显式 opt-in（全树扫描 45–200s，默认 skip 可见）；smoke 的 /.sage 断言对齐现行合同（Host 拒面；main 唯一 owner per ADR-0184）并给 D.2A Note 挂更正指针。",
+          "constraints": [
+            "真实集成不静默假绿：opt-in 命令写明、skip 可见；真实读数以现场事实断言（含行级 PMAP 读数）",
+            "稳定对 13 golden 冻结现行值；字段级语义变更须同步 golden 并重发 matrix",
+            "验收仪器必须与当前活动 materialized 工件同代（generation 是拷贝不是链接）"
+          ]
+        }
+      ]
     }
   ]
 }

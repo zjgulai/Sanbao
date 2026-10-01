@@ -201,6 +201,7 @@
 | ADR-0188 | WT-02B.2E 真实 Organization Policy Provider + identity 会话端口 + Authority Runtime：本地 policy 文件（canonical digest、信号二分、instance-operator 单成员、每次重读）+ vault 会话语境五字段（identitySession 取代 identityHandle）+ 内核生产组装（sessionId 不回声线索）；不接 dispatch，失败码零新增。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2e-organization-policy-provider.md) |
 | ADR-0189 | WT-02B.2F candidate org claims 提取：Logto `urn:logto:scope:organizations` → `organization_data` 严格全弃提取（非阻断、原样 IdP org ID、上限 64×128）→ registry 候选 replace 语义；登录探针真实验收（scope 接受、空候选如实）；候选零 authority 消费。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2f-candidate-org-claims.md) |
 | ADR-0190 | WT-02D.2A 授权路径切片：动作表 v1（锚定 fixture actionPolicies，未登记动作不进求值）+ 组装内核（纯函数，线索=文件 orgId）+ retry 真实最小可用性（新 `CommandAvailable` 结果，旧 retry→invalid-intent 退场）+ step-2 真接线（步骤 3–10 保持 fail-closed）+ route 开放全形 intent；D.2 全量门未闭。 | accepted（2026-10-02） | [Note](../notes/implemented/architecture/2026-10-02-wt02d2a-authorization-path.md) |
+| ADR-0191 | WT-02C.2E.2 RuntimeInventoryProvider 组合：四 policy 文档 + 七 provenance 摘要在本票定义（13 golden 冻结）+ 六组件映射（urn 换形/委托/roster 派生）+ capabilities 自 registry 快照派生 + 固定顺序 7 具名 code + 绑定自验 deep freeze；main 单次 read 一行 stdout（本票后生产恒 unavailable）；成对反例 + M1–M4 变异守约束；smoke 仪器对齐 Host 拒面合同（ADR-0184）。 | accepted（2026-10-02） | [Note](../notes/implemented/architecture/2026-10-02-wt02c2e2-runtime-inventory-composition.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

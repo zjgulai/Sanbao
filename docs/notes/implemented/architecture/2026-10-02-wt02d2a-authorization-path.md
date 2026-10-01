@@ -51,7 +51,9 @@ WT-02D.2（首个 production command path）的任务分解原本要求「真实
 
 ## Consequences
 
-- **真实读数（2026-10-02）**：`npm run typecheck` 0 error；全量 **596 tests 全 PASS**（+3 availability、+9 集成、+2 路由、+5 组装、+4 load 直测；renderer 双形守护改写为新契约）；`npx tsc` 构建通过；`npm run smoke` PASS（窗口 probe 同装配，retry 断言形状不变）；仓根 `pnpm run gate` **25/25**。
+- **真实读数（2026-10-02）**：`npm run typecheck` 0 error；全量 **596 tests 全 PASS**（+3 availability、+9 集成、+2 路由、+5 组装、+4 load 直测；renderer 双形守护改写为新契约）；`npx tsc` 构建通过；仓根 `pnpm run gate` **25/25**。
+
+> 更正（2026-10-02，[WT-02C.2E.2 Note](2026-10-02-wt02c2e2-runtime-inventory-composition.md)）：本段原记「`npm run smoke` PASS」在 E.2 复核时无法对活动 generation（`bb862e74`）复现——smoke 的 `/.sage` 断言自 WT-02D.1（Host 拒面 + main 唯一 owner，ADR-0184）起即陈旧，只有 02D.1 之前 materialize 的旧 generation 才能通过；E.2 已把 smoke 对齐到现行合同（Host 对 `/.sage/*` 一律 404）并在其 Note 记录该仪器发现。本票其余读数不受影响。
 - **变异验证四组**（改源→红→还原后复核）：M1 组装放行未登记动作 → 集成红；M2 availability 漏会话窗口 → runtime 红；M3 删 retry 前置分支 → pipeline 2 红；M4 线索硬编码 `organization:sage` → 集成 2 红（含「无 policy 文件」用例）；四组还原后全绿。
 - **行为面**：真实登录 + 已供 policy 下，retry 如实报 available、业务 intent 产生真实求值结论（policy-denied / 步骤 2 通过后在 rehydrate 如实报 identity-unavailable @ rehydrate）；无 policy / 未登录一律 fail closed。renderer retry 点击后统一经 state 轮询收敛。
 - **Live 验收（2026-10-02，真实应用 + 真实 Logto 登录 + CDP 自 renderer 发起）**：未登录 retry → `identity-unavailable @ identity-policy`（retryable）；**已登录但未供 policy** retry 与业务 intent → 同码（policy 缺失如实）；**供 policy 后**（Note 样例，grant 与表条目四维全等）retry → **`{correlation, availability:'available'}`**（新结果分支真实生效）、业务 intent（`start-attempt`）→ **`identity-unavailable @ rehydrate`**（retryable——**步骤 2 真实求值通过**、链在 rehydrate 如实 fail-closed，本票真实前进量的现场证据）、未登记动作（`answer-clarification`）→ `policy-denied @ identity-policy`（retryable:false）、非法形状 → 400 `invalid-intent @ intent`；renderer retry 按钮点击 → 状态经轮询收敛、UI 无异常。policy 文件为本验收所供（`$SAGE_ROOT/organization-policy.json`），删除即回 fail-closed。
