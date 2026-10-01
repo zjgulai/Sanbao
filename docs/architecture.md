@@ -6,7 +6,7 @@
 
 | 层 | 位置 | 说明 |
 | --- | --- | --- |
-| 基座参照系 | `vendor/dsh-desktop/deepseek-harness/` | 上游源码参照系，pin 到 `fb2c4b9e`（`vendor/dsh-desktop.pin` 的 `harness-submodule`；运行时以 `harness-runtime-source` 为准 = 0.1.5-rc.2 物化），**只读、不参与构建**（[ADR-0008](adr/ADR-0008.md)） |
+| 基座参照系 | `vendor/dsh-desktop/deepseek-harness/` | 上游源码参照系，pin 到 `639ed01`（0.2.0-rc.2；`vendor/dsh-desktop.pin` 的 `harness-submodule`，2026-10-02 起）。**Sage 产品线运行时 = `apps/sage-shell/seed` 的 npm 精确版本（0.2.0-rc.2）**；legacy 链运行时仍以 `harness-runtime-source`（0.1.5-rc.2 物化）为参照、不参与 Sage 构建。**只读**（[ADR-0008](adr/ADR-0008.md)、[ADR-0192](adr/ADR-0192.md)） |
 | 壳层 fork | `vendor/dsh-desktop/` | 嵌套仓库，pin 见 `vendor/dsh-desktop.pin`；改 pin 与行为变更分开提交 |
 | 运行时来源 | `vendor/dsh-desktop/dsh-plugin-desktop/node_modules`（0.1.5-rc.2 物化，270/270 tgz） | 打包与 profile 实际使用的运行时产物；`vendor/dsh-runtime/0.1.2-rc.1/*.tgz` **仅作 2.0.5 回滚对照**保留，不再被构建消费（见 pin 注释与 [research/13](research/13-upgrade-2.0.10-execution-plan.md) §7-§8） |
 | 二开插件 | `packages/<能力组>/<包>/` | 28 个受管包（`package-files-coverage` 门禁读数）按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
@@ -48,7 +48,7 @@
 跳过（skip）是**第三态**：日常模式下不改变退出码，但汇总行会独立成句地点名「未核对 N 项（不是通过）」；
 **Sage 发布前那一次运行**用 `pnpm run gate:strict`（= Sage full + `--require-no-skip`），skip 计为非零退出（P-17 / ADR-0148）；历史平台对应 `pnpm run gate:legacy:strict`。
 
-## 1. DSH 基座事实（发行线 LUTE 2.5.0 = DSH 2.0.10 / runtime 0.1.5-rc.2；生产机现状**未核实**）
+## 1. DSH 基座事实（Sage 产品线 2026-10-02 起 = deepseek-harness 0.2.0-rc.2（seed/壳 devDeps 同版，[ADR-0192](adr/ADR-0192.md)）；legacy 发行线 LUTE 2.5.0 = DSH 2.0.10 / runtime 0.1.5-rc.2；生产机现状**未核实**）
 
 > 2026-09-21 历史观察（深度分析 TOP20 · DA-05；CLEAN-02A 前）：发行线已到 **LUTE 2.5.0**——
 > 当时由 `packaging/release/2.5.0/VERSION` 读得 `DSH_BASELINE=2.0.10 / DSH_RUNTIME=0.1.5-rc.2`；
@@ -65,6 +65,7 @@
 > [research/10](research/10-debt-solution.md) 段 C。
 > 旧的 2026-09-10 快照保留为历史引用：发行线 2.0.0 = DSH 2.0.5 / runtime 0.1.2-rc.1、35 补丁重锚、
 > smoke 37/37。
+> Sage 线的换装读数（隔离 materialize/smoke/overlay 探针、冻结 golden 重算）见 [ADR-0192](adr/ADR-0192.md)、[ADR-0193](adr/ADR-0193.md) 与其 Notes；协议帧常量自 2026-10-02 起冻结归 Sage（`sage-shell-pin`）。
 
 - Skill 契约：`name` 必须英文 kebab（加载与运行时双重校验）；目录一层扫描；`.system` 跳过；frontmatter 首行必须是且仅是一个 `---`（重复 `---` 会静默忽略技能，见诊断案例 12）。
 - 插件：`dsh.bundle` + profile `file:` 硬链接安装；bundles 列表注册。

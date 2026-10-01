@@ -4573,6 +4573,86 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0192",
+      "title": "ADR-0192 · deepseek-harness 0.2.0-rc.2 内核跟进：单步换装、帧常量自有权与最小 seed 演进",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "单步换装到 deepseek-harness 0.2.0-rc.2：seed 41 依赖与壳 devDeps 同版对齐；ADR-0006 立场记录为需求驱动的大版本迁移（3 天新鲜 rc、仅开发环境、pin+lock 一键回退）；rc.3/正式版发布后做一次增量核对。",
+          "constraints": [
+            "不接受单侧换装（sage-shell-pin 两侧同版断言）",
+            "不混装其他 release（上游 0.2.0 起包间为精确版本）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "FD3/FD4 六帧常量冻结归 Sage 所有：值不变（3/4/65536/0x44534833/13/1048576）；sage-shell-pin 改为冻结字面量断言（空白归一）+ 变异自测；删除 submodule wire 参照输入与 degraded note 路径。",
+          "constraints": [
+            "改值或改写表达式必须显式更新门禁表（不得静默漂移）",
+            "lifecycle protocol v4 延续 Sage 独立固定（ADR-0168）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "seed 最小演进：dsh-code-runtime → dsh-ptc-runtime；37 个 dsh-* 原位升 0.2.0-rc.2；cordis 4.0.4 / include 1.0.9 / group 1.0.4；删除退场的 dsh.profile.patchReload；bundles 与 override 不动；不主动纳入新包。",
+          "constraints": [
+            "lockfile 以隔离根 --frozen-lockfile 真装为证（598 解析/600 包）",
+            "新包仅由依赖闭包传递进入（session-format-v3-to-v4 等）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "唯一行为适配：0.2.0 的 skippedBundles 语义下在 composeShellPatches 重建 fail-loud——任一声明 bundle 未装载即中止启动并携带上游 reason；host/协议/overlay 其他面零源码改动。",
+          "constraints": [
+            "Sage profile 由 Sage 物化，跳过等于半装启动，必须响铃",
+            "composition 既有测试断言不改写（重建路径直接满足）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "验收全部在 SAGE_ROOT 隔离实例；回退 = pin/seed/devDeps/lock 回撤 + 重物化（旧 generation 留盘）；legacy 链不联动；隐私默认见 ADR-0193。",
+          "constraints": [
+            "共享数据根与 ~/.dsh 零接触",
+            "每票 gate 真读数落票末（不接管道吞码）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0193",
+      "title": "ADR-0193 · Sage 组合隐私默认：上游会话日志贡献的显式关断与遥测面登记",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage overlay 显式关闭 dsh-session-log-deepseek 的贡献（config.enabled: false）；实例本地 patch 可显式重开；不改上游包。",
+          "constraints": [
+            "组合层单一动作（config/shell.cordis.patch.yml）",
+            "重开属于显式变更，按实例用途决定"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "产品遥测/分析两行维持零动作：其 disabled 门控要求 profileContext.name === 'desktop'，Sage 自组 launcher 不得提供该值；若引入须重审本 ADR。",
+          "constraints": [
+            "证据：组合探针下两行自动关闭 + 端点 env 未设置",
+            "profileContext.name === 'desktop' 为 Sage 启动器的禁止值"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "session-telemetry-otel 维持上游 FEEDBACK_ONLY 默认；Sage 引入任何消息反馈面时必须重审本 ADR。",
+          "constraints": [
+            "无反馈入口时普通活动不可触发",
+            "不额外 disable，避免无行为差异的上游偏离"
+          ]
+        }
+      ]
     }
   ]
 }
