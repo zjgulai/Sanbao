@@ -196,6 +196,7 @@
 | ADR-0183 | WT-02B.2B 真实 OIDC 登录链路（Logto 切片一）：全注入 adapter（密码学真实网络假）+ ES384 + 纯内存 vault（token 零读取出口）+ login/logout 路由与 renderer 登录面 + 尺寸上界/timingSafeEqual 兑现；端到端验收已由用户复验通过（含验收修复 wave）。 | accepted（2026-10-01） | [Note](../notes/implemented/security/2026-10-01-wt02b2b-oidc-login-adapter.md) |
 | ADR-0184 | WT-02D.1 fixture / blocked 只读 E2E 与 route 收口：main 唯一 owner 兑现（Host 旧面与 off 回退删除）+ matter 槽冻结（production 不构造 placeholder）+ SAGE_FIXTURE_PROJECTION 显式开关 + 双层 E2E（零写入快照含负控）+ 门禁合同随票修订。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-wt02d1-fixture-projection-e2e.md) |
 | ADR-0185 | WT-02B.2C 身份注册表 / identity handle（runtime-only）：登录链产出内部身份引用（复合键复用 + 注入随机性，零持久化零日志）、vault main 内部访问器（snapshot 不破）、adapter iss/sub guard fail closed；内核迁移与 Policy-exclusive membership 留 organization mapping。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2c-identity-registry.md) |
+| ADR-0186 | WT-02B.2D organization mapping 内核契约迁移：handle 索引（subjectId 退出内核面）+ 请求方组织线索（provider 必须为其作答，答非所问 fail closed）+ Policy 独占 membership；错误码集合不变，fixture 与未来 provider 共用形态。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2d-organization-mapping.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

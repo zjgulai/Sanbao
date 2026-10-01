@@ -4349,6 +4349,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0186",
+      "title": "ADR-0186 · WT-02B.2D organization mapping 内核契约迁移：handle 索引 + 请求方组织线索 + Policy 独占证明",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "五面契约迁移（错误码集合不变）：ActionAuthorizationRequest 增 requestedOrganizationRef（非权威查找线索，exact string）；IdentityAssertion 的 subjectId/organizationId 退场改 identityHandle；OrganizationRoleAssignment 与 AuthoritySnapshot 以 identityHandle 索引；PolicyProviderRequest 改 {requestedOrganizationRef, identityHandle}；authorize() 组织检查改诚实性语义——policy.organizationId 不等于 requested 即 policy-organization-mismatch（provider 答非所问 fail closed）。",
+          "constraints": [
+            "raw subject 离开内核权威面（subjectId 从 assertion/assignment/snapshot 全面退出）",
+            "调用方自报 subjectId/organizationId/identityHandle 一律 invalid-request（exact-keys 拒绝）",
+            "错误码集合无新增/删除；policy-organization-mismatch 语义与 reason 文案同步更新",
+            "fixture 与未来真实 provider 共用同一形态，无需二次迁移"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "请求方线索语义：组织线索由调用方（未来 Application Service 从用户组织上下文）注入，非权威；provider 必须为所请求组织作答；candidateOrganizationRefs 不做解析主路径（保留给未来组织选择 UX），当前恒空。",
+          "constraints": [
+            "requestedOrganizationRef 缺省/空/未 trim → invalid-request",
+            "provider 回答的组织必须与线索精确一致（诚实性检查）",
+            "线索进入 PolicyProviderRequest 供 provider 定位；身份索引仍只来自 identityHandle",
+            "未来 ASC 注入线索时不得携带任何 authority 语义（C-016 越界再决定原则）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "切片边界：真实 Organization Policy Provider 形态与实现、candidate org claims 提取、scoped subjectRef、refresh / revocation、任何持久化、state / renderer / Host 面、命令管道端口接线（resolveIdentityPolicy 生产仍 fail closed）均不在本票。",
+          "constraints": [
+            "本票仅 identity-policy.ts 源码文件 + 其 spec",
+            "零持久化 / 零网络 / 零 renderer-Host 面变化",
+            "真实 Policy Provider（本地 policy 源产品形态）为下一依赖，另票裁决"
+          ]
+        }
+      ]
     }
   ]
 }
