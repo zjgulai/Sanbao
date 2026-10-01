@@ -4422,6 +4422,45 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0188",
+      "title": "ADR-0188 · WT-02B.2E 真实 Organization Policy Provider（本地 policy 文件）+ identity 会话端口 + Authority Runtime 组装",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "本地 policy 文件合同：$SAGE_ROOT/organization-policy.json 为实例级权威（不进 generation）；每次 resolve 重读；严格 exact-shape 校验（未知键/坏时间戳/重复项/坏枚举/超 256KiB 拒绝）；urn:sage:organization-policy:sha256:* 由排序后 canonical 语义内容计算；信号二分——读失败 throw→policy-provider-unavailable，坏内容 null→policy-snapshot-invalid。",
+          "constraints": [
+            "文件零身份材料（无 raw subject、无映射、无 handle）；instance-operator 绑定仅在运行时发生",
+            "digest 由 provider 计算、作者不可经文件伪造（文件不含 digest 字段）",
+            "provider 零 fs import（注入 readFileBytes）、零网络、只读 policyPath 一个路径",
+            "roleRefs 与 grants 的书写顺序不影响 digest（排序 canonical）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "instance-operator membership（精确如实）：文件声明本实例操作者持有的岗位，resolve 时把请求方 identityHandle 绑到声明的 roleRefs；v1 不区分多成员——任何通过已配置 IdP 验证的登录均视作操作者；逐主体区分需持久化身份映射（retention 门）与跨进程稳定引用（handle 易失），留未来形态。",
+          "constraints": [
+            "membership.mode 精确 'instance-operator'，其他值一律拒绝（不做前向兼容猜测）",
+            "组织诚实性由内核检查：policy.organizationId ≠ requestedOrganizationRef → policy-organization-mismatch",
+            "provider 不使用请求中的 requiredRoleRef/operation/actionPolicy（绑定 + 原文透传）",
+            "多成员/管理面/供给自动化均不在本票；未供给时 fail closed，无默认放行"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "会话契约与 Authority Runtime：VaultSession 增 issuer/authenticatedAt/expiresAt（非秘密；authenticatedAt=本地接受时刻；expiresAt=verified id_token exp）；createTokenVault({mintSessionRef}) 必填注入、signIn 被接受时铸一次；identitySession() 取代 identityHandle()；adapter signIn 携带三新字段；createSageAuthorityRuntime({vault,policyPath,readFileBytes,now}) 组装内核，audience 'sage-desktop'，identity 端口 sessionId 取活动会话 ref 不回声调用方线索；失败码全走既有内核集合零新增；不接 dispatch。",
+          "constraints": [
+            "identity handle / sessionRef / issuer 均为 main 内部；renderer 可见 snapshot 字段集不变（零泄漏）",
+            "旧 sessionRef 线索 → identity-session-mismatch；无会话 → identity-provider-unavailable；token 过期 → identity-not-active",
+            "intent→请求组装与 step-2 端口接线属 WT-02D.2（retry 的 availability-only 语义未定义，不猜）",
+            "内核（identity-policy.ts）/domain/store/v1 schema 零改动；token 本体零读取出口不变",
+            "授权窗 ≤ id_token 寿命；refresh rotation / revocation 为后续票"
+          ]
+        }
+      ]
     }
   ]
 }
