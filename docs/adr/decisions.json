@@ -4135,11 +4135,12 @@
       "decisions": [
         {
           "id": "D1",
-          "text": "command pipeline 内核顺序编排步骤 2–10：任一步非成功立即返回、后续 port 零调用，denial 形统一 {code, stage, retryable, correlation}；strictRehydrate not-found 映射 policy-denied 家族（stage 标真实步骤 rehydrate），resolveTarget 缺失映射 compatibility-unknown 阻断语义。",
+          "text": "command pipeline 内核顺序编排步骤 2–10：任一步非成功立即返回、后续 port 零调用，denial 形统一 {code, stage, retryable, correlation}（可选标志字段 requiresNewRevision / requiresDecision）；strictRehydrate not-found 映射 policy-denied 家族（stage 标真实步骤 rehydrate），resolveTarget 缺失映射 compatibility-unknown 阻断语义。",
           "constraints": [
             "strictRehydrate not-found 映射 policy-denied 家族——事项存在性不得通过错误类别泄漏（映射被变异验证咬住）",
             "resolveTarget 缺失映射 compatibility-unknown，不区分 target 不存在与不可用",
-            "denial 只携带 code/stage/retryable/correlation，无 stack/message/raw payload"
+            "denial 只携带 code/stage/retryable/correlation 加可选标志字段（requiresNewRevision/requiresDecision，如 stale-revision 携带 requiresNewRevision:true），无 stack/message/raw payload",
+            "0.2 既有 kernel 接入=类型合同对齐（import type）；函数级接入随 provider 落地另票"
           ]
         },
         {

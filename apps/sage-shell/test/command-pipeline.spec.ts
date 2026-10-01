@@ -48,6 +48,11 @@ describe('runCommand step mapping', () => {
     expect(runCommand({ intent, correlation: 'c2', ports })).toMatchObject({ code: 'stale-revision', stage: 'rehydrate', requiresNewRevision: true })
     expect(ports.calls).toEqual(['identity', 'rehydrate'])
   })
+  it('denies at step 3 when rehydrated revision is not current', () => {
+    const ports = recordingPorts({ strictRehydrate: () => ({ matter: {} as never, current: false }) })
+    expect(runCommand({ intent, correlation: 'c-cur', ports })).toMatchObject({ code: 'stale-revision', stage: 'rehydrate', requiresNewRevision: true })
+    expect(ports.calls).toEqual(['identity', 'rehydrate'])
+  })
   it('denies at step 3 not-found without leaking existence', () => {
     const ports = recordingPorts({ strictRehydrate: () => ({ denied: 'not-found' as const }) })
     expect(runCommand({ intent, correlation: 'c3', ports })).toMatchObject({ code: 'policy-denied', stage: 'rehydrate' })
