@@ -11,10 +11,11 @@ WT-02B.2B-pre 已交付 OIDC 验证纯内核（jws/id-token/metadata/callback，
 - **D2 登录进 state 合同**：`service` 加 `auth` 子对象；登录/登出走 `/.sage/login`、`/.sage/logout` 两条 route（复用 0.1 binding + 0.2 typed 响应骨架）。
 - **D3 纯内存 vault**：重启重登；safeStorage 落盘违反「retention/legal hold 未确认时禁止持久化」红线，本票不做。
 
-**真实部署参数（已探测核验）**：
+**真实部署参数（已探测核验；clientId 于 2026-10-01 验收期订正）**：
 ```
 issuer:            https://dk7z03.logto.app/oidc
-clientId:          lck70zxqbzr62dw39ykqh
+clientId:          cmg2ty121m1tlsd0fgiuv   # Native public client；原 lck70zxqbzr62dw39ykqh 为 Traditional Web
+                                           # （confidential）应用，实测拒绝 PKCE-only token exchange（401 invalid_client）
 redirect:          http://127.0.0.1:3000/callback
 scopes:            openid profile offline_access
 签名算法:          ES384（JWKS 唯一 key: EC P-384）— 方向 1：内核加 ES384
@@ -59,7 +60,9 @@ export interface OidcAdapterDeps {
   readonly randomBytes: (n: number) => Buffer
 }
 export interface LoginOutcome { readonly ok: true; readonly displayName: string | null } | { readonly ok: false; readonly code: LoginErrorCode }
-export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-verification-failed' | 'login-timeout' | 'login-in-progress'
+// login-superseded（2026-10-01 验收修复新增）：token 验证全过、但写回时 vault 已非 pending
+// （logout 等操作取代了进行中的流）——拒绝复活已退出的 session。
+export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-verification-failed' | 'login-timeout' | 'login-in-progress' | 'login-superseded'
 ```
 
 流程（`startLogin(deps, vault)`）：
@@ -70,7 +73,7 @@ export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-ver
 5. callback 到达 → 内核 `verifyAuthorizationCallback`（state 一次性）→ 拿 code → 关 server。
 6. `fetchImpl(tokenEndpoint, POST urlencoded: grant_type=authorization_code&code&redirect_uri&client_id&code_verifier)` —— 无 secret 字段。
 7. `fetchImpl(discovery)` bytes → 内核 `verifyProviderMetadata`（对 oidc-config 期望值）→ `fetchImpl(jwks)` bytes → 内核 `verifyIdToken`（ES384、expectedNonce）。
-8. 全链过 → vault 写入（token 本体 + 脱敏 displayName 取 `name ?? username` claim，无 sub/email）；任一步败 → vault 不写、返回 typed 错误码。
+8. 全链过 → vault 写入（token 本体 + 脱敏 displayName 取 `name ?? username` claim，无 sub/email）；任一步败 → vault 不写、返回 typed 错误码。写回仅在 vault 仍处 pending 时生效（`signIn` 返回是否应用，2026-10-01 验收修复）；不再 pending 时返回 `login-superseded`。
 
 尺寸上界（ADR-0182 seam 合同）：discovery ≤64KiB、JWKS ≤256KiB、token 响应 ≤64KiB、JWKS keys ≤16——超限按 `idp-unreachable`/`token-verification-failed` fail closed。
 
@@ -79,15 +82,15 @@ export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-ver
 ```ts
 export interface TokenVault {
   status(): 'signed-out' | 'pending' | 'signed-in'
-  beginPending(): boolean
-  signIn(session: { readonly accessToken: string; readonly idToken: string; readonly displayName: string | null }): void
+  beginPending(): boolean   // 仅自 signed-out 进入（2026-10-01 验收修复；signed-in 须先 logout）
+  signIn(session: { readonly accessToken: string; readonly idToken: string; readonly displayName: string | null }): boolean  // 仅 pending 时应用
   signOut(): void
   snapshot(): { readonly status: 'signed-out'|'signed-in'; readonly displayName: string | null }
 }
 ```
 
 - 纯内存（Map 字段私有）；`signOut` 置空引用；`snapshot` 只吐 status + displayName——**accessToken/idToken 没有任何读取出口**（本票无 API 调用方，唯一消费者是未来 refresh 票）。
-- pending 态由 adapter `beginPending` 驱动；超时/失败回 signed-out。
+- pending 态由 adapter `beginPending` 驱动；超时/失败回 signed-out。状态机全函数（2026-10-01 验收修复）：logout 永远获胜——完成中的登录流在非 pending 态写回被拒，不得复活已退出的 session。
 
 ## 6. state 合同与路由（contracts/route-skeleton/composition）
 
@@ -98,8 +101,8 @@ export interface TokenVault {
 
 ## 7. renderer
 
-- signed-out：卡片显示「登录」按钮 → `fetch('/.sage/login')` → 状态转 pending（轮询/refresh 既有机制重读 state）。
-- pending：「正在登录…」。
+- signed-out：卡片显示「登录」按钮 → `fetch('/.sage/login')` → 状态转 pending（**2s state 轮询**重读，2026-10-01 验收修复为显式机制；实测登录流约 5–10s，且 Electron 43 custom-protocol fetch 不响应 `AbortController.abort()`，收敛不得依赖 click fetch 的 5s 截止或结算）。
+- pending：「正在登录…」（vault pending 由 main 接线合成进 state，2026-10-01 验收修复）。
 - signed-in：显示 `displayName` + 「登出」按钮 → `POST /.sage/logout`。
 - state 渲染沿 0.1 两形守卫 + 0.2 retry 守卫既有模式扩展。
 

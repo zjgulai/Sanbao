@@ -4218,21 +4218,24 @@
         },
         {
           "id": "D2",
-          "text": "登录进 state 合同：ServiceStatus.auth: AuthStatus（signed-in/signed-out/pending + displayName）；GET /.sage/login 与 POST /.sage/logout 两条 route 复用 0.1 caller binding + 0.2 typed 响应骨架；login 失败返回 {code, stage, retryable, correlation}（LoginErrorCode 五值）；renderer 登录面沿既有两形守卫扩展，登录/退出按钮 disabled 每轮 renderAuth 复位。",
+          "text": "登录进 state 合同：ServiceStatus.auth: AuthStatus（signed-in/signed-out/pending + displayName；pending 由 main 从 vault.status() 合成）；service.reason 非 signed-out 时为 authenticated；GET /.sage/login 与 POST /.sage/logout 两条 route 复用 0.1 caller binding + 0.2 typed 响应骨架；login 失败返回 {code, stage, retryable, correlation}（LoginErrorCode 六值，含 login-superseded）；renderer 登录面沿既有两形守卫扩展 + 2s state 轮询收敛（Electron 43 custom-protocol fetch 不响应 abort，收敛不依赖 fetch 结算）。",
           "constraints": [
             "不另开 login route 进程或独立登录窗口（复用 /.sage/* route 家，renderer/Host 不是 command owner）",
             "denial 只携带 code/stage/retryable/correlation，无 provider 原文/token 片段/stack（0.2 脱敏合同）",
             "token 本体永不进 renderer/Host/事件/日志（红线）；snapshot 只吐 status + displayName",
-            "login-in-progress 返回 200 + retryable=false（pending 期二次登录拒绝，0.2 typed-denial 传输合同）"
+            "login-in-progress 返回 200 + retryable=false（pending 期二次登录拒绝，0.2 typed-denial 传输合同）",
+            "login-superseded 返回 200 + retryable=true（token 验证全过但 vault 已非 pending——logout 期间完成的流拒绝写回）",
+            "pending 只经 main 接线的 vault.status() 合成，vault.snapshot() 保持 signed-out/signed-in 两态 spec 合同"
           ]
         },
         {
           "id": "D3",
-          "text": "纯内存 vault：session 只驻 main 进程内存闭包，snapshot() 只吐 {status, displayName}，accessToken/idToken 无任何读取出口（类型面即合同）；signOut() 置空引用；safeStorage 落盘否决（retention/legal hold 未确认禁止持久化红线）。重启重登，token 过期后重新登录。",
+          "text": "纯内存 vault：session 只驻 main 进程内存闭包，snapshot() 只吐 {status, displayName}，accessToken/idToken 无任何读取出口（类型面即合同）；signOut() 置空引用；状态机全函数——beginPending 仅自 signed-out 进入（spec §4.1），signIn 仅在 pending 时生效并返回是否应用（logout 永远获胜，完成中的流不得复活已退出的 session）；safeStorage 落盘否决（retention/legal hold 未确认禁止持久化红线）。重启重登，token 过期后重新登录。",
           "constraints": [
             "零 token 读取出口是本切片合同而非缺口：唯一消费者是未来 refresh 票",
             "无文件/存储/序列化调用，模块零 console/log；signOut 显式置 session = null 立即丢引用",
-            "pending 态由 adapter beginPending 驱动（一次一个登录流），超时/失败经 signOut 复位 signed-out",
+            "pending 态由 adapter beginPending 驱动（仅自 signed-out 进入，一次一个登录流），超时/失败经 signOut 复位 signed-out",
+            "signIn 仅在 status === pending 时应用；logout（任意态）令完成中的流写回被拒（adapter 映射 login-superseded），已退出的 session 不被复活",
             "safeStorage 落盘违反 ADR-0164 红线；revocation 端点存在但本票不调用"
           ]
         }
