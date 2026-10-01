@@ -193,6 +193,7 @@
 | ADR-0180 | HOST_LIB_FILES 补全与注册表对拍守卫：补登三个 product 编译产物、vitest 双向对拍守卫拦清单漂移、修清单+重新物化（不手补不可变 generation）；host live 启动恢复，smoke 18/18。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-host-lib-files-completeness.md) |
 | ADR-0181 | WT-02D.0.2 command pipeline 内核：步骤 2–10 typed port 管道、production 全 port fail-closed、dispatch 步骤级脱敏错误类别、renderer retry 两形守卫；不接真实 provider。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-wt02d02-command-pipeline.md) |
 | ADR-0182 | WT-02B.2B-pre OIDC 验证纯内核：fail-closed 校验链（JWS/claims/metadata/callback）先于真实 adapter、精确相等无规范化 + strict base64url roundtrip、ES256 走 node 原生 p1363；变异验证 10 红 + 1 存活有据，不冒充登录。 | accepted（2026-10-01） | [Note](../notes/implemented/security/2026-10-01-oidc-verification-kernel.md) |
+| ADR-0183 | WT-02B.2B 真实 OIDC 登录链路（Logto 切片一）：全注入 adapter（密码学真实网络假）+ ES384 + 纯内存 vault（token 零读取出口）+ login/logout 路由与 renderer 登录面 + 尺寸上界/timingSafeEqual 兑现；端到端验收待用户配合。 | accepted（2026-10-01） | [Note](../notes/implemented/security/2026-10-01-wt02b2b-oidc-login-adapter.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

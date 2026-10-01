@@ -4198,6 +4198,45 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0183",
+      "title": "ADR-0183 · WT-02B.2B 真实 OIDC 登录链路（Logto 切片一）：全注入 adapter + 纯内存 vault + login/logout 路由",
+      "status": "accepted（2026-10-01）",
+      "date": "2026-10-01",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "完整登录链路 + 全注入 adapter：createOidcAdapter(deps) 编排 state/nonce/PKCE → loopback 监听 → openExternal → callback 一次性消费 → token exchange → 内核全链验证（ES384）→ vault 签入；OidcAdapterDeps 注入 fetchImpl/openExternal/listen/randomBytes/now，单测密码学真实（fixture P-384 真签）网络假，生产 deps（真实 node:http 一次性 loopback server + guardOpenExternalCloseListen 兜底）由 main 组装。refresh/revocation/auto-renewal/多账户留第二票。",
+          "constraints": [
+            "adapter 零 electron import，shell.openExternal/node:http 由 main 接线注入（模块可在 ELECTRON_RUN_AS_NODE 测试运行时加载）",
+            "openExternal 抛错先 closeListen 再 rethrow（防 3000 端口 EADDRINUSE 泄漏；变异验证 Mut2 红）",
+            "尺寸上界是注入层合同不是内核职责（ADR-0182）：discovery ≤64KiB / JWKS ≤256KiB / token 响应 ≤64KiB / JWKS keys ≤16，超限 fail closed 映射 idp-unreachable / token-verification-failed",
+            "PKCE-only public client：token exchange 请求无 secret 字段，client_secret 架构上不存在",
+            "state 一次性由 kernel verifyAuthorizationCallback 强制（state-replayed 负例）；adapter 层重放结构不可达（fresh random state + 一次性 callback promise，Task 3 Mut3 存活有据）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "登录进 state 合同：ServiceStatus.auth: AuthStatus（signed-in/signed-out/pending + displayName）；GET /.sage/login 与 POST /.sage/logout 两条 route 复用 0.1 caller binding + 0.2 typed 响应骨架；login 失败返回 {code, stage, retryable, correlation}（LoginErrorCode 五值）；renderer 登录面沿既有两形守卫扩展，登录/退出按钮 disabled 每轮 renderAuth 复位。",
+          "constraints": [
+            "不另开 login route 进程或独立登录窗口（复用 /.sage/* route 家，renderer/Host 不是 command owner）",
+            "denial 只携带 code/stage/retryable/correlation，无 provider 原文/token 片段/stack（0.2 脱敏合同）",
+            "token 本体永不进 renderer/Host/事件/日志（红线）；snapshot 只吐 status + displayName",
+            "login-in-progress 返回 200 + retryable=false（pending 期二次登录拒绝，0.2 typed-denial 传输合同）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "纯内存 vault：session 只驻 main 进程内存闭包，snapshot() 只吐 {status, displayName}，accessToken/idToken 无任何读取出口（类型面即合同）；signOut() 置空引用；safeStorage 落盘否决（retention/legal hold 未确认禁止持久化红线）。重启重登，token 过期后重新登录。",
+          "constraints": [
+            "零 token 读取出口是本切片合同而非缺口：唯一消费者是未来 refresh 票",
+            "无文件/存储/序列化调用，模块零 console/log；signOut 显式置 session = null 立即丢引用",
+            "pending 态由 adapter beginPending 驱动（一次一个登录流），超时/失败经 signOut 复位 signed-out",
+            "safeStorage 落盘违反 ADR-0164 红线；revocation 端点存在但本票不调用"
+          ]
+        }
+      ]
     }
   ]
 }
