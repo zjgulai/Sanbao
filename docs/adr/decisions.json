@@ -4041,6 +4041,59 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0179",
+      "title": "ADR-0179 · WT-02D.0.1 main-owned `/.sage/*` route skeleton",
+      "status": "accepted（2026-10-01）",
+      "date": "2026-10-01",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Electron main 在 protocol.handle 精确截获 /.sage/*，SAGE_APP_SERVICE=off 为显式维护回退态（默认 on），off 时 /.sage/* 原样转发 Host 旧路径。",
+          "constraints": [
+            "不删 Host 旧 handler（删除属 WT-02D.1 收口）",
+            "开关启动读一次、运行中不变",
+            "on/off 两态 contract 测试全绿（45 files / 417 tests）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "appservice 内核为纯函数 + 注入 ports（src/appservice/ 四文件），零 Electron import，main/index.ts 只做接线。",
+          "constraints": [
+            "不 import electron/renderer 实现路径/Cordis/plugin/packages/vendor/node_modules",
+            "空射程判红（分母=0 不是绿）",
+            "单测走 sage-shell 现有 runner"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "state 响应内嵌新 service 字段（unavailable + 可枚举 reason + opaque correlation），与 P0-2 runtime availability 字段并列；renderer 现有消费不破。",
+          "constraints": [
+            "不伪造 P0-2 字段（runtime 缺席时内嵌 null）",
+            "每次求值新鲜 correlation（无原地抬升）",
+            "既有 product-state/view-state/route 测试不改断言"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "caller binding 落 origin 校验 + verifyCaller 接线位（FramePolicy generation 单帧事实检查），返回 opaque CallerBinding；完整逐步重验（command 顺序 1–10）属 0.2。",
+          "constraints": [
+            "binding 失败=403，成功后继续到 unavailable 响应",
+            "CallerBinding 不含 frameId/processId 等 transport identity",
+            "不造 fixture 自证完整重验链"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "appservice import firewall 注册进 pnpm run gate 两项（阻塞 checker + selftest 负例），机器守住进程边界。",
+          "constraints": [
+            "selftest 含 electron import 判红负例与空射程判红",
+            "不进门禁的检查视为腐烂（pitfalls P-03 知道≠拦住）",
+            "gate 23→25 项"
+          ]
+        }
+      ]
     }
   ]
 }
