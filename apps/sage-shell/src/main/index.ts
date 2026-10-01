@@ -1,6 +1,7 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
 import { readFileSync } from 'node:fs'
+import { readdir, realpath, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { app, dialog, protocol, shell } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
@@ -17,6 +18,8 @@ import { createProductionAdapter } from './oidc-runtime.js'
 import { createTokenVault } from './token-vault.js'
 import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
+import { createHostLiveInventoryProjectionProvider } from './runtime-inventory.js'
+import { createRuntimeInventoryProvider } from './runtime-inventory-provider.js'
 
 const SCHEME = 'dsh-app'
 
@@ -64,6 +67,36 @@ async function main(paths: SagePaths): Promise<void> {
   const ready = await host.start()
   process.stdout.write(`sage shell: host ready, dsh ${ready.dshVersion}\n`)
 
+  // WT-02C.2E.2: one main-owned composition read of the full runtime inventory. It never
+  // blocks startup and emits exactly one stable, non-sensitive stdout line; the registry
+  // port does not exist yet, so production currently reads the stages before it.
+  const runtimeInventory = createRuntimeInventoryProvider({
+    paths,
+    hostProjection: createHostLiveInventoryProjectionProvider({
+      paths,
+      host,
+      clock: { now: () => new Date().toISOString() },
+    }),
+    pmapFs: {
+      readFileBytes: (path) => readFile(path),
+      listDirectory: async (path) => (await readdir(path, { withFileTypes: true })).map((entry) => ({
+        name: entry.name,
+        isDirectory: entry.isDirectory(),
+        isFile: entry.isFile(),
+        isSymbolicLink: entry.isSymbolicLink(),
+      })),
+      realpath: (path) => realpath(path),
+    },
+    readFileBytes: (path) => readFileSync(path),
+  })
+  void runtimeInventory.read().then((result) => {
+    process.stdout.write(result.kind === 'available'
+      ? 'sage shell: runtime inventory available\n'
+      : `sage shell: runtime inventory unavailable (${result.code})\n`)
+  }).catch(() => {
+    process.stdout.write('sage shell: runtime inventory unavailable (assembly-invalid)\n')
+  })
+
   const framePolicy = new FramePolicy({
     onContamination: (reason, generation) => {
       process.stdout.write(`sage shell: frame policy contaminated generation ${generation}: ${reason}\n`)
@@ -98,6 +131,9 @@ async function main(paths: SagePaths): Promise<void> {
         vault,
         adapter,
         ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
+        // WT-02C.2E.2: the composed inventory provider rides the same flow until the
+        // C2E.2 resolver wiring lands; nothing consumes it yet.
+        runtimeInventory,
         // WT-02D.2A: the authorization path runs over the instance-local policy file; absent
         // or unreadable keeps every command port fail closed.
         authority: {

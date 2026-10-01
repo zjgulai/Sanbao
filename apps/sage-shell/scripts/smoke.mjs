@@ -192,13 +192,13 @@ try {
     'status=' + index.status,
   )
 
+  // WT-02D.1/ADR-0184: Electron main owns the whole /.sage surface; the Host child must
+  // reject every Sage-service path instead of serving a parallel owner.
   const state = await send('/.sage/state')
-  let stateBody
-  try { stateBody = JSON.parse(state.body) } catch { stateBody = null }
   check(
-    'GET /.sage/state returns the typed availability projection',
-    state.status === 200 && ['ready', 'unavailable', 'recovering'].includes(stateBody?.status),
-    'status=' + state.status + ' body=' + state.body,
+    'the Host rejects the main-owned /.sage state surface',
+    state.status === 404,
+    'status=' + state.status,
   )
 
   const retry = await send('/.sage/actions', {
@@ -206,20 +206,11 @@ try {
     headers: [['content-type', 'application/json']],
     body: JSON.stringify({ type: 'retry' }),
   })
-  let retryBody
-  try { retryBody = JSON.parse(retry.body) } catch { retryBody = null }
   check(
-    'POST /.sage/actions accepts only the retry action',
-    retry.status === 202 && retryBody?.status === 'recovering',
-    'status=' + retry.status + ' body=' + retry.body,
+    'the Host rejects main-owned /.sage actions',
+    retry.status === 404,
+    'status=' + retry.status,
   )
-
-  const invalid = await send('/.sage/actions', {
-    method: 'POST',
-    headers: [['content-type', 'application/json']],
-    body: JSON.stringify({ type: 'anything-else' }),
-  })
-  check('unknown Sage actions are rejected', invalid.status === 400, 'status=' + invalid.status)
 
   for (const path of ['/api', '/api/session/list', '/plugins/anything', '/.dsh/remote-stream', '/.sanbao/session-directory']) {
     const response = await send(path)

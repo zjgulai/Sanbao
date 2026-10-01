@@ -14,6 +14,7 @@ import type { CommandPipelinePorts } from '../appservice/command-contracts.js'
 import type { IdentityPolicyResolution } from '../security/identity-policy.js'
 import type { OidcAdapter } from './oidc-adapter.js'
 import type { TokenVault } from './token-vault.js'
+import type { RuntimeInventoryProvider } from './runtime-inventory-provider.js'
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
@@ -37,6 +38,9 @@ export interface SageAppServiceOptions {
   readonly vault: TokenVault
   readonly adapter: OidcAdapter
   readonly fixtureProjection?: () => SageMatterViewState
+  /** WT-02C.2E.2: main-owned runtime inventory provider; the seam exists ahead of its
+   * C2E.2 resolver consumer and carries no behavior change for current routes. */
+  readonly runtimeInventory?: Pick<RuntimeInventoryProvider, 'read'>
   /** WT-02D.2A authorization wiring; absent keeps every command port fail closed. */
   readonly authority?: {
     readonly policyPath: string
