@@ -4126,6 +4126,41 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0181",
+      "title": "ADR-0181 · WT-02D.0.2 command pipeline 内核：步骤 2–10 typed port 管道",
+      "status": "accepted（2026-10-01）",
+      "date": "2026-10-01",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "command pipeline 内核顺序编排步骤 2–10：任一步非成功立即返回、后续 port 零调用，denial 形统一 {code, stage, retryable, correlation}；strictRehydrate not-found 映射 policy-denied 家族（stage 标真实步骤 rehydrate），resolveTarget 缺失映射 compatibility-unknown 阻断语义。",
+          "constraints": [
+            "strictRehydrate not-found 映射 policy-denied 家族——事项存在性不得通过错误类别泄漏（映射被变异验证咬住）",
+            "resolveTarget 缺失映射 compatibility-unknown，不区分 target 不存在与不可用",
+            "denial 只携带 code/stage/retryable/correlation，无 stack/message/raw payload"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "production 九 port 全 undefined（fail closed），dispatch 走 runCommand 且 retry intent 穿同一管道，correlation 每次新鲜 randomUUID()；transport parse 拒绝同样映射 typed denial（invalid-intent@intent/400）。",
+          "constraints": [
+            "retry guard 位于 identity 检查之后（spec §4/§5「retry 与业务 intent 同在步骤 2 终止」；production 全 port fail-closed 时 retry 恒得 identity-unavailable@identity-policy/200，非 invalid-intent/400）",
+            "顺序不可绕过被调用序列断言钉死（identity denied 后 ports.calls === ['identity']）",
+            "production dispatch 恒 200 + identity-unavailable，不得用 fixture/provider 假读数替换"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "renderer retry 响应两形守卫以「payload.code 键存在性」判别 CommandDenied 形 vs 旧扁平形：前者归一 recovering 态，后者直通 render(payload)；transport 在 P0-2 形冻结期仍只开放 retry intent。",
+          "constraints": [
+            "两形判别式 = payload.code 键存在性；legacy 扁平形若未来新增 code 字段需换判别式",
+            "CommandDenied 形归一 retryable 取 payload.retryable !== false（畸形 body 保守归一为可恢复）",
+            "transport 不开放 retry 之外的业务 intent（parse 拒绝为 invalid-intent@intent/400）"
+          ]
+        }
+      ]
     }
   ]
 }
