@@ -2,16 +2,28 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const FORBIDDEN = [
-  /from\s+'electron'/u,
-  /require\(\s*['"]electron['"]\s*\)/u,
-  /from\s+'[^']*\.\.\/renderer(?:\/[^']*)?'/u,
-  /from\s+'[^']*\.\.\/(?:component-renderer|renderer)[^']*'\.js'/u,
-  /from\s+'@deepseek-ai\//u,
-  /from\s+'packages\//u,
-  /from\s+'[^']*vendor\//u,
-  /from\s+'[^']*node_modules\//u,
+/**
+ * Specifier extraction covers every import form the kernel may legally use:
+ * `import ... from "x"` (and re-export `from`), side-effect `import "x"`,
+ * dynamic `import("x")`, and `require("x")`. Quotes are normalized (['"]) so a
+ * double-quoted specifier cannot bypass the legacy single-quoted patterns.
+ */
+const SPECIFIER_PATTERNS = [
+  /\bfrom\s*['"]([^'"]+)['"]/gu,
+  /(?:^|[;\s])import\s*['"]([^'"]+)['"]/gu,
+  /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/gu,
+  /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/gu,
 ]
+
+/** Classify one import specifier; null means allowed. Fail closed on ambiguity. */
+function classifyForbiddenSpecifier(spec) {
+  if (spec === 'electron') return 'electron'
+  if (spec.startsWith('@deepseek-ai/')) return '@deepseek-ai/*（cordis 系运行时）'
+  if (spec.includes('packages/') || spec.includes('vendor/') || spec.includes('node_modules/')) return '仓库旁路来源'
+  const rel = spec.replace(/^(?:\.\.\/)+/u, '').replace(/^\.\//u, '')
+  if (/^(?:renderer|product\/renderer|product\/component-renderer)(?:[/.][^/]*)*$/u.test(rel)) return 'renderer 实现路径'
+  return null
+}
 
 export function collectSageAppServiceFiles(repoRoot) {
   const dir = join(repoRoot, 'apps/sage-shell/src/appservice')
@@ -36,9 +48,11 @@ export function checkSageAppServiceImportFirewall({ files }) {
   }
   for (const f of files) {
     const text = readFileSync(f, 'utf8')
-    for (const re of FORBIDDEN) {
-      const m = text.match(re)
-      if (m) violations.push(`${relative(process.cwd(), f)}: 命中禁入 import「${m[0]}」`)
+    for (const re of SPECIFIER_PATTERNS) {
+      for (const m of text.matchAll(re)) {
+        const reason = classifyForbiddenSpecifier(m[1])
+        if (reason !== null) violations.push(`${relative(process.cwd(), f)}: 命中禁入 import「${m[1]}」（${reason}）`)
+      }
     }
   }
   return { ok: violations.length === 0, violations }

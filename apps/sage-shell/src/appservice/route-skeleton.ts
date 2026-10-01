@@ -10,30 +10,35 @@ export function shouldUseAppService(pathname: string, appServiceEnabled: boolean
   return appServiceEnabled && pathname.startsWith('/.sage/')
 }
 
+/** Transport-layer denials stay uncacheable, matching the P0-2 adapter's json() shape. */
+function transportDenial(status: number, headers: Record<string, string> = {}): Response {
+  return new Response(null, { status, headers: { 'cache-control': 'no-store', ...headers } })
+}
+
 export async function handleSageServiceRequest(request: Request, deps: ServiceDeps): Promise<Response> {
-  if (deps.callerBinding === null) return new Response(null, { status: 403 })
+  if (deps.callerBinding === null) return transportDenial(403)
 
   const url = new URL(request.url)
   if (url.pathname === SAGE_STATE_PATH) {
-    if (request.method !== 'GET') return new Response(null, { status: 405, headers: { allow: 'GET' } })
+    if (request.method !== 'GET') return transportDenial(405, { allow: 'GET' })
     return deps.providers.readState()
   }
 
   if (url.pathname === SAGE_ACTIONS_PATH) {
-    if (request.method !== 'POST') return new Response(null, { status: 405, headers: { allow: 'POST' } })
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
     const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
-    if (contentType !== 'application/json') return new Response(null, { status: 415 })
+    if (contentType !== 'application/json') return transportDenial(415)
     const declaredLength = request.headers.get('content-length')
     if (declaredLength !== null && (!/^\d+$/u.test(declaredLength) || Number(declaredLength) > MAX_SAGE_ACTION_BYTES)) {
-      return new Response(null, { status: 413 })
+      return transportDenial(413)
     }
     const body = await readActionBodyWithinLimit(request)
-    if (body === undefined) return new Response(null, { status: 413 })
+    if (body === undefined) return transportDenial(413)
     if (parseIntent(body) === undefined) return serviceJson({ error: 'invalid-intent', retryable: false }, 400)
     return deps.providers.dispatch()
   }
 
-  return new Response(null, { status: 404 })
+  return transportDenial(404)
 }
 
 async function readActionBodyWithinLimit(request: Request): Promise<string | undefined> {

@@ -13,16 +13,19 @@ describe('route-skeleton', () => {
   it('缺 caller binding 一律 403', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state'), { callerBinding: null, providers })
     expect(r.status).toBe(403)
+    expect(r.headers.get('cache-control')).toBe('no-store')
   })
   it('state 非 GET 405 + allow GET', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state', { method: 'POST' }), deps)
     expect(r.status).toBe(405)
     expect(r.headers.get('allow')).toBe('GET')
+    expect(r.headers.get('cache-control')).toBe('no-store')
   })
   it('actions 非 POST 405 + allow POST', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/actions'), { ...deps, providers })
     expect(r.status).toBe(405)
     expect(r.headers.get('allow')).toBe('POST')
+    expect(r.headers.get('cache-control')).toBe('no-store')
   })
   it('actions 非 JSON content-type 415', async () => {
     const r = await handleSageServiceRequest(
@@ -30,10 +33,12 @@ describe('route-skeleton', () => {
       deps,
     )
     expect(r.status).toBe(415)
+    expect(r.headers.get('cache-control')).toBe('no-store')
   })
   it('未知 /.sage/ 子路径 404', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/other'), deps)
     expect(r.status).toBe(404)
+    expect(r.headers.get('cache-control')).toBe('no-store')
   })
   it('actions body 超预算 413（流式截断）', async () => {
     const big = 'x'.repeat(5 * 1024)

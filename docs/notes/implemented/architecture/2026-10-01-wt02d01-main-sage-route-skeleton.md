@@ -47,3 +47,14 @@ spec §7 五条验收读数（2026-10-01，命令原始输出抄录）：
 - **gate 23→25 项**（+`sage-appservice-import-firewall`、`+selftest`）；decisions.json 经 `node scripts/gates/adr-agent-records.mjs --write` 再生，ADR-0179 机器可读决策块含 D1–D5。
 - **既有物化缺陷（本票发现、非本票引入，登记待后续票）**：`src/product/renderer.ts` 自 `7bf1d91` 起 import `./component-renderer.js`，但 `src/profile/layout.ts` 的 `HOST_LIB_FILES` 未登记该文件——重新 materialize 的 generation 缺 `product/component-renderer.js`，host 启动即 `ERR_MODULE_NOT_FOUND`；而盘上旧 generation（`bee8a015`）发出 protocol v3 `ready`（3 字段），当前 lib 期望 v4（6 字段）判 `invalid IPC event`。结果：当前任何 generation 都无法 live 启动（`npm run smoke` / on/off 两态 `npm run dev` 同败），off 态实弹验收因此受阻。本票验收 2 退回 fallback.spec 断言并如实登记；修复（补 `HOST_LIB_FILES` + 重新物化 + smoke 实弹收口）需另票，不混入本 docs 票。诊断期间运行过 `pnpm run materialize`，active profile 已切到新生成 `2d1b09f9`（用户数据侧变更，如实登记；旧 generation 未删）。
 - **T4 Minor 遗留**：`main/index.ts` handle 回调内局部 `const runtime = toSageViewState(...)` 遮蔽外层 `runtime`（HostRuntime），语义无害但可读性差；本票为 docs-only 未顺手改（改则须复跑全量测试且归入源码票），留后续源码票一并消解。
+
+## Fix wave（2026-10-01，终审 findings 修复，追加式）
+
+终审返回三条可动 finding，本 wave 一票修复（commit 见 git log；HIGH-2 根 AGENTS.md 更新不在本 wave，留控制器呈报）：
+
+- **HIGH-1 renderer 嵌套解析**：`src/product/renderer.ts` 嵌入 JS 原先假定扁平 P0-2 形状（`labels[state.status]`）；on 态 appservice 返回嵌套 `{service, runtime}` 导致 runtime 卡片永久 fallback。修复为解析层兼容两形：`payload.runtime !== undefined ? payload.runtime : payload`（嵌套 `runtime: null` 时交给 render 的既有 safe-check 落 fallback，不伪造状态）。测试接缝选「真实驱动嵌入渲染路径」：新 `test/renderer-state-parse.spec.ts` 从 `renderSageDocument()` 提取真实 `<script>` 源码，以 DOM/fetch stub 执行，断言嵌套/扁平/`runtime:null` 三形各自的 runtime 文案与 badge/dot 状态——被测对象即出货字符串本身，无重复解析逻辑可漂移。
+- **MEDIUM firewall 引号/形态绕过**：Task 1 Minor deferred 的「FORBIDDEN 正则仅匹配单引号 specifier」已消解——`scripts/gates/sage-appservice-import-firewall.mjs` 重写为 specifier 提取式（from / 副作用 import / 动态 import / require 四形态统一提取，引号 `['"]` 归一，再按 electron、`@deepseek-ai/*`、`packages/`、`vendor/`、`node_modules/`、renderer 实现路径分类判红）。selftest 补双引号 from、副作用 `import 'electron'`、动态 `import('electron')` 三条负例及「副作用 import 合法来源不误伤」正例（6/6）。附带修复：旧第二条 renderer 正则实际匹配不了 `'../renderer.js'` / `'../product/renderer.js'`（尾缀 `'\.js'` 错位），新分类规则一并闭合。
+- **LOW transport no-store**：`src/appservice/route-skeleton.ts` 的 403/404/405/413/415 统一走 `transportDenial()`，补 `cache-control: no-store`（与 P0-2 adapter 的 `json()` 形态对齐；400/503 经 `serviceJson` 本就带）。route-skeleton spec 相应补 header 断言。
+- **不动项**：`parseIntent` 仅 retry 与 `MAX_SAGE_ACTION_BYTES` 双家判定为终审误判/有意（P0-2 现状合同与 Host 侧对称），未改动。
+
+修复后全量读数：`npm run typecheck` 0 error；`npm run test` → `Test Files  46 passed (46)` / `Tests  420 passed (420)`（较 T5 增 1 文件 3 测试）；`node scripts/gate.mjs` → `25/25 项通过`。上节 Consequences 中「T1 Minor deferred 引号绕过」条目自本 wave 起失效。

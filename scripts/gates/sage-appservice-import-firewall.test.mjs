@@ -44,3 +44,29 @@ test('renderer 实现路径 / cordis / packages / vendor 均红', () => {
     } finally { rmSync(t, { recursive: true, force: true }) }
   }
 })
+
+test('引号绕过面闭合：双引号 from / 副作用 import / 动态 import 均判红', () => {
+  for (const spec of [
+    `import { app } from "electron"\nexport const x = app\n`,
+    `import 'electron'\nexport const y = 1\n`,
+    `const m = await import('electron')\nexport const z = m\n`,
+  ]) {
+    const t = mkdtempSync(join(tmpdir(), 'fw-'))
+    try {
+      const f = join(t, 'd.ts')
+      writeFileSync(f, spec)
+      const result = checkSageAppServiceImportFirewall({ files: [f] })
+      assert.equal(result.ok, false, spec)
+      assert.ok(result.violations.some(v => v.includes('electron')), JSON.stringify(result.violations))
+    } finally { rmSync(t, { recursive: true, force: true }) }
+  }
+})
+
+test('副作用 import 的合法来源不误伤', () => {
+  const t = mkdtempSync(join(tmpdir(), 'fw-'))
+  try {
+    const f = join(t, 'e.ts')
+    writeFileSync(f, `import 'node:fs'\nexport const ok = 1\n`)
+    assert.equal(checkSageAppServiceImportFirewall({ files: [f] }).ok, true)
+  } finally { rmSync(t, { recursive: true, force: true }) }
+})

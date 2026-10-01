@@ -231,7 +231,10 @@ export function renderSageDocument(): string {
       try {
         const response = await fetchWithinDeadline(statePath, { cache: 'no-store' });
         if (!response.ok) throw new Error('state request failed');
-        render(await response.json());
+        // Off 状态的 Host P0-2 返回扁平 SageViewState；on 状态的 appservice 返回 { service, runtime }。
+        const payload = await response.json();
+        const state = payload !== null && typeof payload === 'object' && payload.runtime !== undefined ? payload.runtime : payload;
+        render(state);
       } catch {
         render(fallback());
       }
