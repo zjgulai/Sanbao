@@ -5,6 +5,11 @@ import { MAX_SAGE_ACTION_BYTES, serviceJson } from './errors.js'
 const SAGE_STATE_PATH = '/.sage/state'
 const SAGE_ACTIONS_PATH = '/.sage/actions'
 
+/** D1 routing predicate: whether main handles this pathname via the app service. */
+export function shouldUseAppService(pathname: string, appServiceEnabled: boolean): boolean {
+  return appServiceEnabled && pathname.startsWith('/.sage/')
+}
+
 export async function handleSageServiceRequest(request: Request, deps: ServiceDeps): Promise<Response> {
   if (deps.callerBinding === null) return new Response(null, { status: 403 })
 

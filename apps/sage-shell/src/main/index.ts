@@ -3,10 +3,14 @@
 import { homedir } from 'node:os'
 import { app, dialog, protocol } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
-import { ShellHostProcess } from './host-process.js'
+import type { SageViewState } from '../product/contracts.js'
+import { createUnavailableFirstService } from '../appservice/composition.js'
+import { handleSageServiceRequest, shouldUseAppService } from '../appservice/route-skeleton.js'
+import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { resolveHostRuntime, resolveSageElectronPaths } from './runtime.js'
 import { routeSchemeRequest } from './route.js'
 import { FramePolicy } from './frame-policy.js'
+import { verifySageServiceCaller } from './appservice-binding.js'
 import { createSageWindow, loadTrustedUrl } from './window.js'
 
 const SCHEME = 'dsh-app'
@@ -32,6 +36,14 @@ function configureElectronPaths(paths: SagePaths): void {
   app.setAppLogsPath(electron.logs)
 }
 
+/** Project the main-owned host snapshot into the renderer-facing runtime state. */
+function toSageViewState(snapshot: ShellHostRuntimeSnapshot): SageViewState {
+  if (snapshot.kind === 'active') {
+    return { status: 'ready', message: `dsh ${snapshot.harnessVersion}`, retryable: true }
+  }
+  return { status: 'unavailable', message: snapshot.reason, retryable: snapshot.reason !== 'stopped' }
+}
+
 async function main(paths: SagePaths): Promise<void> {
   const activeProfile = await readActiveProfile(paths)
   if (activeProfile === null) {
@@ -47,17 +59,29 @@ async function main(paths: SagePaths): Promise<void> {
   const ready = await host.start()
   process.stdout.write(`sage shell: host ready, dsh ${ready.dshVersion}\n`)
 
-  protocol.handle(SCHEME, (request) => {
-    const route = routeSchemeRequest(new URL(request.url))
-    if (route.target === 'reject') return Promise.resolve(new Response(null, { status: 404 }))
-    return host.fetch(request)
-  })
-
   const framePolicy = new FramePolicy({
     onContamination: (reason, generation) => {
       process.stdout.write(`sage shell: frame policy contaminated generation ${generation}: ${reason}\n`)
     },
   })
+
+  const appServiceEnabled = process.env.SAGE_APP_SERVICE !== 'off'
+
+  protocol.handle(SCHEME, (request) => {
+    const url = new URL(request.url)
+    const route = routeSchemeRequest(url)
+    if (route.target === 'reject') return Promise.resolve(new Response(null, { status: 404 }))
+    if (shouldUseAppService(url.pathname, appServiceEnabled)) {
+      const callerBinding = verifySageServiceCaller(url, request, framePolicy)
+      const runtime = toSageViewState(host.readSnapshot())
+      return handleSageServiceRequest(request, {
+        callerBinding,
+        providers: createUnavailableFirstService(runtime),
+      })
+    }
+    return host.fetch(request)
+  })
+
   const window = createSageWindow(framePolicy)
   await loadTrustedUrl(window, framePolicy, `${SCHEME}://app/index.html`)
   if (process.env.SAGE_DEVTOOLS === '1') window.webContents.openDevTools({ mode: 'detach' })
