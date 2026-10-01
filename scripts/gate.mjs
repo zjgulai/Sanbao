@@ -42,6 +42,7 @@ import {
 } from './gates/checks.mjs'
 import { checkSageShellPin } from './gates/sage-shell-pin.mjs'
 import { checkSageProductBoundary, collectSageProductBoundaryFiles } from './gates/sage-product-boundary.mjs'
+import { checkSageAppServiceImportFirewall, collectSageAppServiceFiles } from './gates/sage-appservice-import-firewall.mjs'
 import { checkSageDataIsolation, collectSageDataIsolationFiles } from './gates/sage-data-isolation.mjs'
 import { checkSageBasePathHygiene, collectSageBasePathFiles } from './gates/sage-base-path-hygiene.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
@@ -635,6 +636,28 @@ const CHECKS = [
       '跑 node --test scripts/gates/sage-service-consumption.test.mjs；Sage 扫描不得进入 packages/，独立登记必须与当前壳逐项一致且射程非空。',
     run() {
       return runNodeTestFile('scripts/gates/sage-service-consumption.test.mjs', 'Sage 服务消费隔离自测失败')
+    },
+  },
+  {
+    name: 'sage-appservice-import-firewall',
+    remediation:
+      '移除 apps/sage-shell/src/appservice 内的禁入 import（electron、renderer 实现路径、@deepseek-ai/*、packages/、vendor/、node_modules/）；'
+      + '空射程说明 appservice 目录被删，恢复或移除本 gate（WT-02D.0.1 D5 / P-02）。',
+    run() {
+      const result = checkSageAppServiceImportFirewall({ files: collectSageAppServiceFiles(repoRoot) })
+      return {
+        passed: result.ok,
+        violations: result.violations,
+        note: 'scanned apps/sage-shell/src/appservice/**/*.ts for forbidden imports',
+      }
+    },
+  },
+  {
+    name: 'sage-appservice-import-firewall-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-appservice-import-firewall.test.mjs；禁入 import 命中、空射程或合法类型合同误判红都必须判红。',
+    run() {
+      return runNodeTestFile('scripts/gates/sage-appservice-import-firewall.test.mjs', 'appservice import firewall 判据的反向自测失败')
     },
   },
   {
@@ -2457,6 +2480,8 @@ const SAGE_CHECK_NAMES = Object.freeze([
   'adr-note-links',
   'sage-service-consumption',
   'sage-service-consumption-selftest',
+  'sage-appservice-import-firewall',
+  'sage-appservice-import-firewall-selftest',
   'adr-agent-records',
   'adr-agent-records-selftest',
   'docs-link-integrity',

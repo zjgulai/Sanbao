@@ -30,6 +30,8 @@ const REQUIRED_SAGE_CHECKS = [
   'adr-note-links',
   'sage-service-consumption',
   'sage-service-consumption-selftest',
+  'sage-appservice-import-firewall',
+  'sage-appservice-import-firewall-selftest',
   'adr-agent-records',
   'adr-agent-records-selftest',
   'docs-link-integrity',
