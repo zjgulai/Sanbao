@@ -19,11 +19,19 @@ const PRODUCTION_FAIL_CLOSED_PORTS: CommandPipelinePorts = {
   now: () => '1970-01-01T00:00:00.000Z',
 }
 
-export function createUnavailableFirstService(runtime: SageViewState | null): ServiceProviders {
+export interface AuthServiceOptions {
+  readonly authSnapshot?: () => { readonly status: 'signed-out' | 'signed-in'; readonly displayName: string | null }
+  readonly login?: () => Promise<Response>
+  readonly logout?: () => Promise<Response>
+}
+
+export function createUnavailableFirstService(runtime: SageViewState | null, auth: AuthServiceOptions = {}): ServiceProviders {
+  const snapshot = auth.authSnapshot ?? (() => ({ status: 'signed-out' as const, displayName: null }))
   return {
     async readState(): Promise<Response> {
+      const snap = snapshot()
       const state: SageServiceState = {
-        service: { status: 'unavailable', reason: 'identity-unavailable', correlation: randomUUID() },
+        service: { status: 'unavailable', reason: 'identity-unavailable', auth: { ...snap, status: snap.status }, correlation: randomUUID() },
         runtime,
       }
       return serviceJson(state, 200)
@@ -35,6 +43,14 @@ export function createUnavailableFirstService(runtime: SageViewState | null): Se
         ports: PRODUCTION_FAIL_CLOSED_PORTS,
       })
       return serviceJson(result, 'code' in result && result.code === 'invalid-intent' ? 400 : 200)
+    },
+    async login(): Promise<Response> {
+      if (auth.login !== undefined) return auth.login()
+      return serviceJson({ auth: 'signed-out' }, 200)
+    },
+    async logout(): Promise<Response> {
+      if (auth.logout !== undefined) return auth.logout()
+      return serviceJson({ auth: 'signed-out' }, 200)
     },
   }
 }

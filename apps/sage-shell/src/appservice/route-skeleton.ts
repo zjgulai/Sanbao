@@ -4,6 +4,8 @@ import { MAX_SAGE_ACTION_BYTES, serviceJson } from './errors.js'
 
 const SAGE_STATE_PATH = '/.sage/state'
 const SAGE_ACTIONS_PATH = '/.sage/actions'
+const SAGE_LOGIN_PATH = '/.sage/login'
+const SAGE_LOGOUT_PATH = '/.sage/logout'
 
 /** D1 routing predicate: whether main handles this pathname via the app service. */
 export function shouldUseAppService(pathname: string, appServiceEnabled: boolean): boolean {
@@ -37,6 +39,15 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parseIntent(body) === undefined) return serviceJson(
       { code: 'invalid-intent', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     return deps.providers.dispatch()
+  }
+
+  if (url.pathname === SAGE_LOGIN_PATH) {
+    if (request.method !== 'GET') return transportDenial(405, { allow: 'GET' })
+    return deps.providers.login()
+  }
+  if (url.pathname === SAGE_LOGOUT_PATH) {
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
+    return deps.providers.logout()
   }
 
   return transportDenial(404)

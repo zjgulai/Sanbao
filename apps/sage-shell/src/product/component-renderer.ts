@@ -155,6 +155,9 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
               <h2 id="state-title">正在检查</h2>
               <p id="state-message" role="status" aria-live="polite">正在读取 Sage 的受控状态。</p>
               <button class="sage-secondary-button" id="retry" type="button" hidden>重新检查</button>
+              <div class="sage-state-row"><span>当前身份</span><strong id="auth-name"></strong></div>
+              <button class="sage-secondary-button" id="login" type="button" hidden>登录</button>
+              <button class="sage-secondary-button" id="logout" type="button" hidden>退出登录</button>
               <p class="sage-card-note">这里只反映当前能力运行时状态，不等于业务授权或外部能力可用。</p>
             </section>
 

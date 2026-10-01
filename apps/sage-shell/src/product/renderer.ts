@@ -172,10 +172,15 @@ export function renderSageDocument(): string {
   <script>
     const statePath = ${statePath};
     const actionsPath = ${actionsPath};
+    const loginPath = '/.sage/login';
+    const logoutPath = '/.sage/logout';
     const requestTimeoutMs = ${SAGE_REQUEST_TIMEOUT_MS};
     const title = document.querySelector('#state-title');
     const message = document.querySelector('#state-message');
     const retry = document.querySelector('#retry');
+    const login = document.querySelector('#login');
+    const logoutBtn = document.querySelector('#logout');
+    const authName = document.querySelector('#auth-name');
     const runtimeLabels = Array.from(document.querySelectorAll('[data-runtime-label]'));
     const runtimeBadges = Array.from(document.querySelectorAll('[data-runtime-badge]'));
     const runtimeDots = Array.from(document.querySelectorAll('[data-runtime-dot]'));
@@ -217,6 +222,16 @@ export function renderSageDocument(): string {
       });
     }
 
+    function renderAuth(auth) {
+      if (!auth || typeof auth !== 'object') return;
+      if (login) login.hidden = auth.status !== 'signed-out';
+      if (logoutBtn) logoutBtn.hidden = auth.status !== 'signed-in';
+      if (authName) {
+        authName.textContent = auth.status === 'signed-in' && typeof auth.displayName === 'string' ? auth.displayName
+          : auth.status === 'pending' ? '正在登录…' : '';
+      }
+    }
+
     async function fetchWithinDeadline(path, init) {
       const controller = new AbortController();
       const timer = setTimeout(() => { controller.abort(); }, requestTimeoutMs);
@@ -234,6 +249,7 @@ export function renderSageDocument(): string {
         // Off 状态的 Host P0-2 返回扁平 SageViewState；on 状态的 appservice 返回 { service, runtime }。
         const payload = await response.json();
         const state = payload !== null && typeof payload === 'object' && payload.runtime !== undefined ? payload.runtime : payload;
+        renderAuth(payload !== null && typeof payload === 'object' && payload.service !== undefined ? payload.service.auth : undefined);
         render(state);
       } catch {
         render(fallback());
@@ -283,6 +299,23 @@ export function renderSageDocument(): string {
       }
       queueMicrotask(() => { void refresh(); });
     });
+
+    if (login) {
+      login.addEventListener('click', async () => {
+        login.disabled = true;
+        try { await fetchWithinDeadline(loginPath, { cache: 'no-store' }); } catch { /* state 轮询兜底 */ }
+        queueMicrotask(() => { void refresh(); });
+      });
+    }
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        logoutBtn.disabled = true;
+        try {
+          await fetchWithinDeadline(logoutPath, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+        } catch { /* refresh 兜底 */ }
+        queueMicrotask(() => { void refresh(); });
+      });
+    }
 
     setView('overview');
     void refresh();

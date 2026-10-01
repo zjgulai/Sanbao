@@ -4,6 +4,8 @@ import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 const providers = {
   readState: async () => Response.json({ service: { status: 'unavailable' }, runtime: null }),
   dispatch: async () => new Response(null, { status: 503 }),
+  login: async () => new Response('{}'),
+  logout: async () => new Response('{}'),
 }
 const deps = { callerBinding: { correlation: 'c-1' }, providers }
 
@@ -64,9 +66,41 @@ describe('route-skeleton', () => {
   })
 })
 
+describe('auth routes', () => {
+  const providers = {
+    readState: async () => new Response('{}'),
+    dispatch: async () => new Response('{}'),
+    login: async () => Response.json({ auth: 'pending' }, { status: 202, headers: { 'cache-control': 'no-store' } }),
+    logout: async () => Response.json({ auth: 'signed-out' }, { status: 200, headers: { 'cache-control': 'no-store' } }),
+  }
+
+  it('GET /.sage/login routes to the login provider', async () => {
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/login'), { callerBinding: { correlation: 'c' }, providers })
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ auth: 'pending' })
+  })
+
+  it('POST /.sage/logout routes to the logout provider', async () => {
+    const response = await handleSageServiceRequest(
+      new Request('dsh-app://app/.sage/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), { callerBinding: { correlation: 'c' }, providers })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ auth: 'signed-out' })
+  })
+
+  it('login with wrong method is rejected 405', async () => {
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), { callerBinding: { correlation: 'c' }, providers })
+    expect(response.status).toBe(405)
+  })
+})
+
 describe('dispatch response shape', () => {
   it('invalid-intent transport body matches CommandDenied shape', async () => {
-    const providers = { readState: async () => new Response('{}'), dispatch: async () => new Response('{}') }
+    const providers = {
+      readState: async () => new Response('{}'),
+      dispatch: async () => new Response('{}'),
+      login: async () => new Response('{}'),
+      logout: async () => new Response('{}'),
+    }
     const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/actions', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'bogus' }),
     }), { callerBinding: { correlation: 'c' }, providers })

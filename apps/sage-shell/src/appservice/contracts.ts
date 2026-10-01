@@ -7,9 +7,15 @@ export interface CallerBinding {
 
 export type ServiceUnavailableReason = 'identity-unavailable'
 
+export interface AuthStatus {
+  readonly status: 'signed-in' | 'signed-out' | 'pending'
+  readonly displayName: string | null
+}
+
 export interface ServiceStatus {
   readonly status: 'unavailable'
   readonly reason: ServiceUnavailableReason
+  readonly auth: AuthStatus
   readonly correlation: string
 }
 
@@ -21,6 +27,8 @@ export interface SageServiceState {
 export interface ServiceProviders {
   readonly readState: () => Promise<Response>
   readonly dispatch: () => Promise<Response>
+  readonly login: () => Promise<Response>
+  readonly logout: () => Promise<Response>
 }
 
 export interface ServiceDeps {

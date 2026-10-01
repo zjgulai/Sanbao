@@ -36,6 +36,26 @@ describe('unavailable-first composition', () => {
   })
 })
 
+describe('auth in state', () => {
+  it('readState carries the auth sub-object from the injected snapshot', async () => {
+    const service = createUnavailableFirstService(null, { authSnapshot: () => ({ status: 'signed-in', displayName: 'Alice' }) })
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.service).toMatchObject({ auth: { status: 'signed-in', displayName: 'Alice' } })
+  })
+
+  it('default auth snapshot is signed-out (no provider injected)', async () => {
+    const service = createUnavailableFirstService(null)
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.service).toMatchObject({ auth: { status: 'signed-out', displayName: null } })
+  })
+
+  it('login provider returns typed denial for a failing login', async () => {
+    const service = createUnavailableFirstService(null, { login: async () => Response.json({ code: 'idp-unreachable', stage: 'login', retryable: true, correlation: 'x' }, { status: 200, headers: { 'cache-control': 'no-store' } }) })
+    const response = await service.login()
+    expect(await response.json()).toMatchObject({ code: 'idp-unreachable' })
+  })
+})
+
 describe('dispatch via command pipeline', () => {
   it('always denies identity-unavailable with stage and fresh correlation', async () => {
     const service = createUnavailableFirstService(null)

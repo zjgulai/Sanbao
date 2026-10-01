@@ -49,11 +49,20 @@ function createDocumentStub() {
   const runtimeDot = stubElement()
   const navItem = stubElement({ view: 'overview' })
   const panel = stubElement({ panel: 'overview' })
+  // Auth surface (WT-02B.2B D2): buttons ship with the hidden attribute in the document.
+  const login = stubElement()
+  const logout = stubElement()
+  const authName = stubElement()
+  login.hidden = true
+  logout.hidden = true
   const document = {
     querySelector(selector: string): StubElement {
       if (selector === '#state-title') return title
       if (selector === '#state-message') return message
       if (selector === '#retry') return retry
+      if (selector === '#login') return login
+      if (selector === '#logout') return logout
+      if (selector === '#auth-name') return authName
       return stubElement()
     },
     querySelectorAll(selector: string): StubElement[] {
@@ -65,7 +74,7 @@ function createDocumentStub() {
       return []
     },
   }
-  return { document, title, message, retry, runtimeLabel, runtimeDot }
+  return { document, title, message, retry, runtimeLabel, runtimeDot, login, logout, authName }
 }
 
 async function runEmbeddedScript(statePayload: unknown) {
@@ -121,6 +130,68 @@ describe('Sage renderer embedded state parsing', () => {
     expect(stubs.message.textContent).toBe('Sage 暂时无法读取受控状态，可稍后重新检查。')
     expect(stubs.retry.hidden).toBe(false)
     expect(stubs.runtimeDot.toggles).toContainEqual(['is-unavailable', true])
+  })
+})
+
+describe('Sage renderer auth surface', () => {
+  it('shows the login button for a signed-out auth snapshot', async () => {
+    const stubs = await runEmbeddedScript({
+      service: {
+        status: 'unavailable',
+        reason: 'identity-unavailable',
+        correlation: 'c-3',
+        auth: { status: 'signed-out', displayName: null },
+      },
+      runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
+    })
+
+    expect(stubs.login.hidden).toBe(false)
+    expect(stubs.logout.hidden).toBe(true)
+    expect(stubs.authName.textContent).toBe('')
+  })
+
+  it('shows the logout button and display name for a signed-in auth snapshot', async () => {
+    const stubs = await runEmbeddedScript({
+      service: {
+        status: 'unavailable',
+        reason: 'identity-unavailable',
+        correlation: 'c-4',
+        auth: { status: 'signed-in', displayName: 'Alice' },
+      },
+      runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
+    })
+
+    expect(stubs.login.hidden).toBe(true)
+    expect(stubs.logout.hidden).toBe(false)
+    expect(stubs.authName.textContent).toBe('Alice')
+  })
+
+  it('hides both buttons and shows the pending label while auth is pending', async () => {
+    const stubs = await runEmbeddedScript({
+      service: {
+        status: 'unavailable',
+        reason: 'identity-unavailable',
+        correlation: 'c-5',
+        auth: { status: 'pending', displayName: null },
+      },
+      runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
+    })
+
+    expect(stubs.login.hidden).toBe(true)
+    expect(stubs.logout.hidden).toBe(true)
+    expect(stubs.authName.textContent).toBe('正在登录…')
+  })
+
+  it('leaves the auth surface untouched for the flat P0-2 payload (no service envelope)', async () => {
+    const stubs = await runEmbeddedScript({
+      status: 'unavailable',
+      message: 'Sage 暂时未检测到能力运行时服务，可重新检查。',
+      retryable: true,
+    })
+
+    expect(stubs.login.hidden).toBe(true)
+    expect(stubs.logout.hidden).toBe(true)
+    expect(stubs.authName.textContent).toBe('')
   })
 })
 
