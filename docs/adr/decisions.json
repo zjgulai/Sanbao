@@ -4461,6 +4461,39 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0189",
+      "title": "ADR-0189 · WT-02B.2F candidate org claims 提取：Logto organizations scope → registry candidateOrgRefs",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "scope + claim 合同：OIDC_SCOPES 增 urn:logto:scope:organizations（organization_data 默认进 ID token）；extractCandidateOrgRefs 严格全弃（坏形状整组为空不部分信任）+ 去重保序 + 只取 id（最小子集）+ 非阻断（不失败登录）+ 原样 IdP org ID（不发明前缀）；上限 64 条 / id 128 字符。",
+          "constraints": [
+            "claim 坏形状 → 空候选，登录不受影响（提示数据不升格为认证门槛）",
+            "不做 userinfo / access-token 路径（JWT 路径 ID token 默认携带；缺 claim 时才评估 resource）",
+            "候选不进 renderer / Host / logs / 事件；不读 .credentials.yaml"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "registry 候选语义：resolve({issuer, subject, candidateOrgRefs})——miss 铸 handle + 存候选；hit handle 复用、候选 replace（latest login = IdP 最新真相；数组等值保持 entry 同一性；detached 副本）。",
+          "constraints": [
+            "runtime-only 零持久化 / 零日志不变；候选仅查找提示，内核 / provider / resolver 零消费",
+            "handle 在候选刷新时绝不变化（2C 语义保持）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "验证载体与边界：新增可复用登录探针 test/support/login-probe.mjs（真 transport + 真 adapter + 真 registry；只打印非秘密读数：登录状态 / 候选计数 / handle 是否铸出）作为真实登录验收载体；org-selection UX 与 IdP↔Sage org 映射留未来票。",
+          "constraints": [
+            "探针不打印 tokens、subjects 或 org refs；为本地验收工具（macOS open）",
+            "候选→requestedOrganizationRef 线索接线属 WT-02D.2"
+          ]
+        }
+      ]
     }
   ]
 }
