@@ -30,14 +30,6 @@ const FRAME_MAGIC = 0x44534833
 const FRAME_HEADER_BYTES = 13
 const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
 `
-const referenceWire = `export const DESKTOP_HOST_PROTOCOL_VERSION = 3 as const
-export const DESKTOP_REQUEST_PIPE_FD = 3
-export const DESKTOP_RESPONSE_PIPE_FD = 4
-export const DESKTOP_PIPE_CHUNK_BYTES = 64 * 1024
-const FRAME_MAGIC = 0x44534833
-const FRAME_HEADER_BYTES = 13
-const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
-`
 
 // 与 `git ls-files apps/sage-shell/test/fixtures/` 逐字一致（9 个，仓库相对路径）。
 // 这份清单是门禁的期望值：干净克隆上 fixtures 必须全在，否则 test/ 跑不起来。
@@ -59,13 +51,12 @@ const good = {
   shellWorkspaceText: workspace,
   seedWorkspaceText: workspace,
   protocolText: protocol,
-  referenceWireText: referenceWire,
   vendorDesktopManifestText: vendorDesktopManifest,
   seedUserPatchText: '# 用户层：P1 留空。P2 起在这里声明 Sage 插件的 id / config / disabled。\n[]\n',
   trackedFixturePaths: TRACKED_FIXTURES,
 }
 
-test('allows Sage lifecycle v4 while the vendor frame reference remains DSH3 v3', () => {
+test('passes an aligned Sage pin whose frozen framing constants match', () => {
   assert.deepEqual(checkSageShellPin(good), { passed: true, violations: [] })
 })
 
@@ -153,21 +144,22 @@ test('rejects Sage lifecycle protocol v3 independently of the vendor reference',
   assert.match(result.violations[0], /SHELL_HOST_PROTOCOL_VERSION.*Sage lifecycle protocol v4/u)
 })
 
-test('ignores the vendor lifecycle version when the six framing constants remain aligned', () => {
-  const result = checkSageShellPin({
-    ...good,
-    referenceWireText: referenceWire.replace('DESKTOP_HOST_PROTOCOL_VERSION = 3', 'DESKTOP_HOST_PROTOCOL_VERSION = 99'),
-  })
-  assert.deepEqual(result, { passed: true, violations: [] })
-})
-
-test('rejects framing constants that drift from the submodule reference', () => {
+test('rejects a frozen framing constant whose value changed', () => {
   const result = checkSageShellPin({
     ...good,
     protocolText: protocol.replace('0x44534833', '0x44534834'),
   })
   assert.equal(result.passed, false)
-  assert.match(result.violations[0], /FRAME_MAGIC/u)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /冻结帧常量 FRAME_MAGIC/u)
+})
+
+test('accepts a whitespace-only reformat of a frozen expression', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol.replace('64 * 1024', '64  *  1024').replace('1024 * 1024', '1024*1024'),
+  })
+  assert.deepEqual(result, { passed: true, violations: [] })
 })
 
 test('rejects a missing Sage framing constant', () => {
@@ -180,22 +172,14 @@ test('rejects a missing Sage framing constant', () => {
   assert.match(result.violations[0], /SHELL_RESPONSE_PIPE_FD = undefined/u)
 })
 
-test('skips the reference comparison when the submodule is not initialized', () => {
-  const result = checkSageShellPin({ ...good, referenceWireText: null })
-  assert.equal(result.passed, true)
-  assert.deepEqual(result.violations, [])
-  assert.match(result.note, /6 项 FD3\/FD4 framing 常量比对全部未跑/u)
-  assert.match(result.note, /lifecycle v4 仍已独立校验/u)
-})
-
-test('notes the per-pair skip count when the reference renamed a constant', () => {
+test('rejects a frozen constant re-written as a different expression', () => {
   const result = checkSageShellPin({
     ...good,
-    referenceWireText: referenceWire.replace('DESKTOP_PIPE_CHUNK_BYTES', 'DESKTOP_CHUNK_BYTES'),
+    protocolText: protocol.replace('1024 * 1024', '1048576'),
   })
-  assert.equal(result.passed, true)
-  assert.deepEqual(result.violations, [])
-  assert.match(result.note, /1\/6 项 FD3\/FD4 framing 常量在参照里找不到同名常量/u)
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /冻结帧常量 MAX_CONTROL_PAYLOAD_BYTES/u)
 })
 
 test('fails loud when the shell package is absent', () => {

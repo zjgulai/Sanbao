@@ -5,7 +5,7 @@
  * 1. seed deps 与壳 devDependencies 两侧的 @deepseek-ai/* 都非空且都是精确版本（range 会静默落到 npm 旧 latest tag）；
  * 2. 两侧同名包版本一致（编译期类型与运行时是同一套包）；
  * 3. 两个 pnpm-workspace.yaml 都带 dsh-type-meta / dsh-user-interaction 的 override；
- * 4. protocol.ts 的 Sage Host IPC lifecycle protocol 独立固定为 v4，FD3/FD4 的 6 个 framing 常量不漂移于 submodule 参照 wire.ts；
+ * 4. protocol.ts 的 Sage Host IPC lifecycle protocol 独立固定为 v4，FD3/FD4 的 6 个 framing 常量冻结为既定值（上游 0.2.0 起已删除 wire 参照；改值/改写法须显式同步本表，ADR-0192）；
  * 5. 壳 manifest 的治理三字段取 self / lute / false；
  * 6. seed cordis.patch.yml 用户层剥注释后恰为 []；
  * 7. 9 个 profile / composition test fixture 保持被 git 跟踪；
@@ -21,13 +21,16 @@ const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[\w.]+)?$/u
 
 const SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION = '4'
 
-const FRAME_PROTOCOL_CONSTANTS = [
-  ['SHELL_REQUEST_PIPE_FD', 'DESKTOP_REQUEST_PIPE_FD'],
-  ['SHELL_RESPONSE_PIPE_FD', 'DESKTOP_RESPONSE_PIPE_FD'],
-  ['SHELL_PIPE_CHUNK_BYTES', 'DESKTOP_PIPE_CHUNK_BYTES'],
-  ['FRAME_MAGIC', 'FRAME_MAGIC'],
-  ['FRAME_HEADER_BYTES', 'FRAME_HEADER_BYTES'],
-  ['MAX_CONTROL_PAYLOAD_BYTES', 'MAX_CONTROL_PAYLOAD_BYTES'],
+// 帧常量的值冻结于 2026-10-02（Sage 内核升级：上游 0.2.0-rc.2 已删除 FD3/FD4 wire 参照，
+// 对齐对象消失，所有权归 Sage）。文本按空白归一后比较；改值或改写表达式都必须显式更新本表
+// （伴随 ADR-0192 的决策记录），不得静默漂移。
+const FROZEN_FRAMING_CONSTANTS = [
+  ['SHELL_REQUEST_PIPE_FD', '3'],
+  ['SHELL_RESPONSE_PIPE_FD', '4'],
+  ['SHELL_PIPE_CHUNK_BYTES', '64*1024'],
+  ['FRAME_MAGIC', '0x44534833'],
+  ['FRAME_HEADER_BYTES', '13'],
+  ['MAX_CONTROL_PAYLOAD_BYTES', '1024*1024'],
 ]
 
 // apps/ 对仓库 package collector 结构性不可见，故治理三字段只能由本门禁守；三字段没有别的读者，值本身就是事实。
@@ -59,8 +62,13 @@ function constantValue(text, name) {
   return match?.[1].trim()
 }
 
+function normalizedConstantValue(text, name) {
+  const value = constantValue(text, name)
+  return value === undefined ? undefined : value.replace(/\s+/gu, '')
+}
+
 /**
- * @param {object} input 九个输入（七个文件文本 + seed 用户层文本 + git 跟踪清单），缺失的为 null
+ * @param {object} input 八个输入（六个文件文本 + seed 用户层文本 + git 跟踪清单），缺失的为 null
  * @returns {{passed: boolean, violations: string[], note?: string}}
  */
 export function checkSageShellPin(input) {
@@ -112,8 +120,6 @@ export function checkSageShellPin(input) {
     }
   }
 
-  let referenceMissing = false
-  let unpairedFrameConstants = 0
   if (input.protocolText === null) {
     violations.push('apps/sage-shell/src/protocol.ts 不存在或不可读')
   } else {
@@ -125,19 +131,13 @@ export function checkSageShellPin(input) {
       )
     }
 
-    if (input.referenceWireText === null) {
-      referenceMissing = true
-    } else {
-      for (const [ours, theirs] of FRAME_PROTOCOL_CONSTANTS) {
-        const actual = constantValue(input.protocolText, ours)
-        const expected = constantValue(input.referenceWireText, theirs)
-        if (expected === undefined) {
-          unpairedFrameConstants += 1
-          continue
-        }
-        if (actual !== expected) {
-          violations.push(`protocol.ts 的 FD3/FD4 framing 常量 ${ours} = ${String(actual)}，与 submodule frame 参照 ${theirs} = ${String(expected)} 不一致`)
-        }
+    for (const [ours, frozen] of FROZEN_FRAMING_CONSTANTS) {
+      const actual = normalizedConstantValue(input.protocolText, ours)
+      if (actual !== frozen) {
+        violations.push(
+          `protocol.ts 的冻结帧常量 ${ours} = ${String(actual)}，应为 ${frozen}`
+          + '——六个 FD3/FD4 framing 常量已冻结归 Sage 所有（上游参照已删除），改值或改写法须显式更新本表（ADR-0192），不得静默漂移',
+        )
       }
     }
   }
@@ -194,12 +194,6 @@ export function checkSageShellPin(input) {
 
   // 比对被跳过不等于比对通过：把缩小的分母写进 note，让它在 gate 读数里可见。
   const degraded = []
-  if (referenceMissing) {
-    degraded.push(`submodule frame 参照未初始化，${FRAME_PROTOCOL_CONSTANTS.length} 项 FD3/FD4 framing 常量比对全部未跑（Sage lifecycle v${SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION} 仍已独立校验）`)
-  }
-  if (unpairedFrameConstants > 0) {
-    degraded.push(`${unpairedFrameConstants}/${FRAME_PROTOCOL_CONSTANTS.length} 项 FD3/FD4 framing 常量在参照里找不到同名常量，该几项比对未跑`)
-  }
   if (input.vendorDesktopManifestText === null) degraded.push('vendor/dsh-desktop/dsh-plugin-desktop/package.json 不可读，electron 版本一致性比对未跑')
 
   return {
