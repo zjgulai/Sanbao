@@ -84,6 +84,8 @@ export function guardOpenExternalCloseListen(
 export interface ProductionAdapterOptions {
   /** Real system-browser open — the main wiring passes Electron's shell.openExternal. */
   readonly openExternal: (url: string) => Promise<void>
+  /** WT-02B.2C: identity-handle resolver (main-owned in-memory registry). */
+  readonly resolveIdentity: (input: { readonly issuer: string; readonly subject: string }) => { readonly identityHandle: string }
 }
 
 /** Assemble the production deps around the kernel adapter: global fetch, real loopback
@@ -97,6 +99,7 @@ export function createProductionAdapter(vault: TokenVault, options: ProductionAd
     listen: (port: number, handler: (req: IncomingMessage) => void) => loopback.listen(port, handler),
     closeListen: () => loopback.closeListen(),
     randomBytes: (n: number) => nodeRandomBytes(n),
+    resolveIdentity: options.resolveIdentity,
   }
   return { adapter: createOidcAdapter(deps), loopback }
 }

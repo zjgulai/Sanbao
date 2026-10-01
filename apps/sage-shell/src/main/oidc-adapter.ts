@@ -22,6 +22,8 @@ export interface OidcAdapterDeps {
   readonly closeListen: () => Promise<void>
   readonly randomBytes: (n: number) => Buffer
   readonly loginTimeoutMs?: number
+  /** WT-02B.2C: resolve the Sage-internal identity handle for the verified (issuer, subject). */
+  readonly resolveIdentity: (input: { readonly issuer: string; readonly subject: string }) => { readonly identityHandle: string }
 }
 
 const MAX_DISCOVERY_BYTES = 64 * 1024
@@ -134,9 +136,13 @@ export function createOidcAdapter(deps: OidcAdapterDeps) {
         if (!verified.ok) return { ok: false, code: 'token-verification-failed' }
 
         const claims = verified.claims
+        // WT-02B.2C: identity mapping needs the exact verified (issuer, subject); the kernel only
+        // forces `iss`, so `sub` is guarded here — a token without both cannot mint a handle.
+        if (typeof claims.iss !== 'string' || typeof claims.sub !== 'string') return { ok: false, code: 'token-verification-failed' }
         const displayName = typeof claims.name === 'string' ? claims.name
           : typeof claims.username === 'string' ? claims.username : null
-        const applied = vault.signIn({ accessToken: typeof record.access_token === 'string' ? record.access_token : '', idToken: record.id_token, displayName })
+        const { identityHandle } = deps.resolveIdentity({ issuer: claims.iss, subject: claims.sub })
+        const applied = vault.signIn({ accessToken: typeof record.access_token === 'string' ? record.access_token : '', idToken: record.id_token, displayName, identityHandle })
         if (!applied) return { ok: false, code: 'login-superseded' }
         return { ok: true, displayName }
       } catch {

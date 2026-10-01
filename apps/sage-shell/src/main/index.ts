@@ -11,8 +11,10 @@ import { routeSchemeRequest } from './route.js'
 import { FramePolicy } from './frame-policy.js'
 import { verifySageServiceCaller } from './appservice-binding.js'
 import { createSageWindow, loadTrustedUrl } from './window.js'
+import { randomBytes } from 'node:crypto'
 import { createProductionAdapter } from './oidc-runtime.js'
 import { createTokenVault } from './token-vault.js'
+import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
 
 const SCHEME = 'dsh-app'
@@ -74,8 +76,14 @@ async function main(paths: SagePaths): Promise<void> {
   // WT-02B.2B login wiring: in-memory vault plus a production adapter (real loopback,
   // real fetch, node randomness; shell.openExternal stays fail-closed on failure via
   // the runtime guard). Tokens never leave main and never persist.
+  // WT-02B.2C: the identity registry mints runtime-only internal handles for verified
+  // (issuer, subject); handles never persist and never reach renderer/Host/logs.
   const vault = createTokenVault()
-  const { adapter } = createProductionAdapter(vault, { openExternal: (url) => shell.openExternal(url) })
+  const identityRegistry = createIdentityRegistry({ randomHandle: () => randomBytes(32).toString('base64url') })
+  const { adapter } = createProductionAdapter(vault, {
+    openExternal: (url) => shell.openExternal(url),
+    resolveIdentity: (input) => identityRegistry.resolve(input),
+  })
 
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url)

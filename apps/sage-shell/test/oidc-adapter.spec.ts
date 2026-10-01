@@ -58,6 +58,7 @@ function makeDeps(idp: Awaited<ReturnType<typeof fakeIdp>>, overrides: Partial<O
     now: () => NOW,
     listen: async () => undefined,
     closeListen: async () => undefined,
+    resolveIdentity: () => ({ identityHandle: 'h-fixed' }),
     randomBytes: ((n: number) => {
       // Deterministic, spec-shaped draws: state 32B→fill 7, nonce 32B→fill 8, verifier 48B→64 b64u chars
       if (n === 32) {
@@ -114,6 +115,32 @@ describe('oidc-adapter happy path', () => {
     deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ username: 'bob', sub: 'user-2' }) })
     const { result } = await driveLogin(deps)
     expect(result).toEqual({ ok: true, displayName: 'bob' })
+  })
+
+  it('mints the identity handle from the verified (issuer, subject) and stores it in the vault (WT-02B.2C)', async () => {
+    const idp = await fakeIdp()
+    const calls: Array<{ issuer: string; subject: string }> = []
+    const deps = makeDeps(idp, {
+      resolveIdentity: (input) => { calls.push(input); return { identityHandle: 'h-verified' } },
+    })
+    deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ name: 'Alice', sub: 'user-1' }) })
+    const { result, vault } = await driveLogin(deps)
+    expect(result).toEqual({ ok: true, displayName: 'Alice' })
+    expect(calls).toEqual([{ issuer: OIDC_ISSUER, subject: 'user-1' }])
+    expect(vault.identityHandle()).toBe('h-verified')
+  })
+
+  it('rejects a verified token without a subject id before any identity mapping', async () => {
+    const idp = await fakeIdp()
+    const calls: unknown[] = []
+    const deps = makeDeps(idp, {
+      resolveIdentity: (input) => { calls.push(input); return { identityHandle: 'h-never' } },
+    })
+    deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ name: 'NoSub' }) })
+    const { result, vault } = await driveLogin(deps)
+    expect(result).toEqual({ ok: false, code: 'token-verification-failed' })
+    expect(calls).toEqual([])
+    expect(vault.identityHandle()).toBeNull()
   })
 })
 
@@ -216,6 +243,7 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
     if (deps.pendingHandler) await deps.pendingHandler()
     expect(await login).toEqual({ ok: false, code: 'login-superseded' })
     expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
+    expect(vault.identityHandle()).toBeNull()
   })
 
   it('login-in-progress when a login starts while a session is already signed in', async () => {

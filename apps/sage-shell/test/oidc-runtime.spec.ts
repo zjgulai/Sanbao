@@ -89,7 +89,10 @@ describe('guardOpenExternalCloseListen (Task 3 Important-②)', () => {
 describe('createProductionAdapter (assembly smoke, no login round-trip)', () => {
   it('assembles an adapter and a loopback around the in-memory vault', () => {
     const vault = createTokenVault()
-    const { adapter, loopback } = createProductionAdapter(vault, { openExternal: async () => undefined })
+    const { adapter, loopback } = createProductionAdapter(vault, {
+      openExternal: async () => undefined,
+      resolveIdentity: () => ({ identityHandle: 'h-asm' }),
+    })
     expect(typeof adapter.startLogin).toBe('function')
     expect(typeof loopback.listen).toBe('function')
     expect(typeof loopback.closeListen).toBe('function')

@@ -12,7 +12,7 @@ describe('TokenVault', () => {
     const vault = createTokenVault()
     expect(vault.beginPending()).toBe(true)
     expect(vault.status()).toBe('pending')
-    vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })
+    vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice', identityHandle: 'h-1' })
     expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
     vault.signOut()
     expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
@@ -36,7 +36,7 @@ describe('TokenVault', () => {
   it('rejects beginPending when already signed-in (spec §4.1: logout required first)', () => {
     const vault = createTokenVault()
     vault.beginPending()
-    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(true)
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice', identityHandle: 'h-1' })).toBe(true)
     expect(vault.beginPending()).toBe(false)
     expect(vault.status()).toBe('signed-in')
   })
@@ -45,15 +45,28 @@ describe('TokenVault', () => {
     const vault = createTokenVault()
     vault.beginPending()
     vault.signOut() // the user logs out while the browser flow is still in flight
-    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(false)
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice', identityHandle: 'h-1' })).toBe(false)
     expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
   })
 
   it('refuses a second signIn once signed-in (only one session write per pending)', () => {
     const vault = createTokenVault()
     vault.beginPending()
-    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(true)
-    expect(vault.signIn({ accessToken: 'at2', idToken: 'it2', displayName: 'Mallory' })).toBe(false)
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice', identityHandle: 'h-1' })).toBe(true)
+    expect(vault.signIn({ accessToken: 'at2', idToken: 'it2', displayName: 'Mallory', identityHandle: 'h-2' })).toBe(false)
     expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
+  })
+
+  it('exposes the identity handle only via the main-internal accessor (WT-02B.2C)', () => {
+    const vault = createTokenVault()
+    expect(vault.identityHandle()).toBeNull()
+    vault.beginPending()
+    vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice', identityHandle: 'h-1' })
+    expect(vault.identityHandle()).toBe('h-1')
+    // The renderer-facing snapshot must never carry the handle.
+    expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
+    expect(Object.keys(vault.snapshot()).sort()).toEqual(['displayName', 'status'])
+    vault.signOut()
+    expect(vault.identityHandle()).toBeNull()
   })
 })

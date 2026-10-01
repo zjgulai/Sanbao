@@ -3,6 +3,8 @@ export interface VaultSession {
   readonly accessToken: string
   readonly idToken: string
   readonly displayName: string | null
+  /** WT-02B.2C: opaque Sage-internal identity handle for this session (main-internal ref, never a token). */
+  readonly identityHandle: string
 }
 
 export interface TokenVaultSnapshot {
@@ -17,6 +19,8 @@ export interface TokenVault {
   signIn(session: VaultSession): boolean
   signOut(): void
   snapshot(): TokenVaultSnapshot
+  /** Main-internal accessor for the current session's identity handle; null when signed out. Never part of the renderer-facing snapshot. */
+  identityHandle(): string | null
 }
 
 export function createTokenVault(): TokenVault {
@@ -45,5 +49,6 @@ export function createTokenVault(): TokenVault {
     snapshot: () => session === null
       ? { status: 'signed-out' as const, displayName: null }
       : { status: 'signed-in' as const, displayName: session.displayName },
+    identityHandle: () => session === null ? null : session.identityHandle,
   }
 }
