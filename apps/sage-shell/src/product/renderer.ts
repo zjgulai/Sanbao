@@ -264,7 +264,12 @@ export function renderSageDocument(): string {
           body: JSON.stringify({ type: 'retry' }),
         });
         if (!response.ok) throw new Error('retry request failed');
-        render(await response.json());
+        const payload = await response.json();
+        // 0.2 command-denied shape carries {code, retryable}; legacy P0-2 shape is flat {status,...}.
+        const state = payload !== null && typeof payload === 'object' && payload.code !== undefined
+          ? { status: 'recovering', message: 'Sage 正在重新检查能力运行时服务。', retryable: payload.retryable !== false }
+          : payload;
+        render(state);
       } catch {
         render(fallback());
       }

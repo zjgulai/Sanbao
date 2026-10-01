@@ -34,7 +34,8 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     }
     const body = await readActionBodyWithinLimit(request)
     if (body === undefined) return transportDenial(413)
-    if (parseIntent(body) === undefined) return serviceJson({ error: 'invalid-intent', retryable: false }, 400)
+    if (parseIntent(body) === undefined) return serviceJson(
+      { code: 'invalid-intent', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     return deps.providers.dispatch()
   }
 

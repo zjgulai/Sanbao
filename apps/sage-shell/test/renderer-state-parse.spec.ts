@@ -20,7 +20,7 @@ interface StubElement {
   tabIndex: number
   dataset: Record<string, string>
   toggles: Array<[string, boolean]>
-  addEventListener: () => void
+  addEventListener: (type: string, handler: () => void) => void
   setAttribute: () => void
   classList: { toggle: (cls: string, on: boolean) => void }
 }
@@ -121,5 +121,121 @@ describe('Sage renderer embedded state parsing', () => {
     expect(stubs.message.textContent).toBe('Sage 暂时无法读取受控状态，可稍后重新检查。')
     expect(stubs.retry.hidden).toBe(false)
     expect(stubs.runtimeDot.toggles).toContainEqual(['is-unavailable', true])
+  })
+})
+
+/**
+ * Retry POST path (WT-02D.0.2 D2): the retry response body is either the 0.2
+ * CommandDenied shape `{code, retryable, ...}` or the legacy flat P0-2 shape
+ * `{status, ...}`. Both must end up rendered.
+ *
+ * The harness captures the retry button's real click handler, drives it against a
+ * fetch stub that answers POST with the action payload, and records one snapshot
+ * per render() call (taken when `retry.hidden` is written — the last of the three
+ * fields render touches). The GET state payload renders a distinct `ready` state
+ * so a matching snapshot can only come from the retry response itself.
+ */
+interface RenderSnapshot {
+  title: string
+  message: string
+  retryHidden: boolean
+}
+
+function createRetryDocumentStub() {
+  const title = stubElement()
+  const message = stubElement()
+  const retryHandlers: Array<() => void | Promise<void>> = []
+  const retryBase = stubElement()
+  const renders: RenderSnapshot[] = []
+  const retry: StubElement = {
+    ...retryBase,
+    addEventListener: (_type: string, handler: () => void) => { retryHandlers.push(handler) },
+  }
+  Object.defineProperty(retry, 'hidden', {
+    enumerable: true,
+    configurable: true,
+    get: () => retryBase.hidden,
+    set: (value: boolean) => {
+      retryBase.hidden = value
+      renders.push({ title: title.textContent, message: message.textContent, retryHidden: value })
+    },
+  })
+  const runtimeLabel = stubElement()
+  const runtimeBadge = stubElement()
+  const runtimeDot = stubElement()
+  const navItem = stubElement({ view: 'overview' })
+  const panel = stubElement({ panel: 'overview' })
+  const document = {
+    querySelector(selector: string): StubElement {
+      if (selector === '#state-title') return title
+      if (selector === '#state-message') return message
+      if (selector === '#retry') return retry
+      return stubElement()
+    },
+    querySelectorAll(selector: string): StubElement[] {
+      if (selector === '[data-runtime-label]') return [runtimeLabel]
+      if (selector === '[data-runtime-badge]') return [runtimeBadge]
+      if (selector === '[data-runtime-dot]') return [runtimeDot]
+      if (selector === '[data-view]') return [navItem]
+      if (selector === '[data-panel]') return [panel]
+      return []
+    },
+  }
+  return { document, renders, retryHandlers }
+}
+
+async function runEmbeddedRetryScript(actionPayload: unknown) {
+  const html = renderSageDocument()
+  const script = html.match(/<script>([\s\S]*)<\/script>/u)?.[1]
+  expect(script, 'embedded script must be extractable from the served document').toBeTruthy()
+  const harness = createRetryDocumentStub()
+  const statePayload = { status: 'ready', message: '运行时已就绪。', retryable: false }
+  const fetchStub = async (_path: unknown, init?: { readonly method?: string }) =>
+    init?.method === 'POST'
+      ? { ok: true, json: async () => actionPayload }
+      : { ok: true, json: async () => statePayload }
+  const run = new Function('document', 'fetch', script as string) as (d: unknown, f: unknown) => void
+  run(harness.document, fetchStub)
+  // The script schedules refresh() as a microtask chain behind awaited fetch/json; flush both.
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  const handler = harness.retryHandlers[0]
+  if (handler === undefined) throw new Error('retry click handler was not registered by the embedded script')
+  await handler()
+  // The post-retry refresh rides the same microtask chain; flush again so its render
+  // lands in the history before the caller asserts (order-independent assertions).
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  await new Promise((resolve) => { setTimeout(resolve, 0) })
+  return harness
+}
+
+describe('Sage renderer retry response two-shape guard', () => {
+  it('normalizes the CommandDenied shape into a renderable recovering state', async () => {
+    const harness = await runEmbeddedRetryScript({
+      code: 'identity-unavailable',
+      stage: 'identity-policy',
+      retryable: true,
+      correlation: 'x',
+    })
+
+    expect(harness.renders).toContainEqual({
+      title: '正在恢复',
+      message: 'Sage 正在重新检查能力运行时服务。',
+      retryHidden: false,
+    })
+  })
+
+  it('keeps rendering the legacy flat P0-2 shape unchanged (off-state regression)', async () => {
+    const harness = await runEmbeddedRetryScript({
+      status: 'recovering',
+      message: '正在恢复连接，请稍候。',
+      retryable: false,
+    })
+
+    expect(harness.renders).toContainEqual({
+      title: '正在恢复',
+      message: '正在恢复连接，请稍候。',
+      retryHidden: true,
+    })
   })
 })

@@ -55,11 +55,24 @@ describe('route-skeleton', () => {
     )
     expect(r.status).toBe(400)
     const body = await r.json() as Record<string, unknown>
-    expect(body.error).toBe('invalid-intent')
+    expect(body.code).toBe('invalid-intent')
   })
   it('GET state 直通 providers.readState', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state'), deps)
     expect(r.status).toBe(200)
     expect(await r.json()).toEqual({ service: { status: 'unavailable' }, runtime: null })
+  })
+})
+
+describe('dispatch response shape', () => {
+  it('invalid-intent transport body matches CommandDenied shape', async () => {
+    const providers = { readState: async () => new Response('{}'), dispatch: async () => new Response('{}') }
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/actions', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'bogus' }),
+    }), { callerBinding: { correlation: 'c' }, providers })
+    expect(response.status).toBe(400)
+    const body = await response.json() as Record<string, unknown>
+    expect(body).toMatchObject({ code: 'invalid-intent', stage: 'intent', retryable: false })
+    expect(body.correlation).toBe('c')
   })
 })
