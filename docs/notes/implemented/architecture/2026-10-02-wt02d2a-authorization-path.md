@@ -54,8 +54,9 @@ WT-02D.2（首个 production command path）的任务分解原本要求「真实
 - **真实读数（2026-10-02）**：`npm run typecheck` 0 error；全量 **596 tests 全 PASS**（+3 availability、+9 集成、+2 路由、+5 组装、+4 load 直测；renderer 双形守护改写为新契约）；`npx tsc` 构建通过；`npm run smoke` PASS（窗口 probe 同装配，retry 断言形状不变）；仓根 `pnpm run gate` **25/25**。
 - **变异验证四组**（改源→红→还原后复核）：M1 组装放行未登记动作 → 集成红；M2 availability 漏会话窗口 → runtime 红；M3 删 retry 前置分支 → pipeline 2 红；M4 线索硬编码 `organization:sage` → 集成 2 红（含「无 policy 文件」用例）；四组还原后全绿。
 - **行为面**：真实登录 + 已供 policy 下，retry 如实报 available、业务 intent 产生真实求值结论（policy-denied / 步骤 2 通过后在 rehydrate 如实报 identity-unavailable @ rehydrate）；无 policy / 未登录一律 fail closed。renderer retry 点击后统一经 state 轮询收敛。
+- **Live 验收（2026-10-02，真实应用 + 真实 Logto 登录 + CDP 自 renderer 发起）**：未登录 retry → `identity-unavailable @ identity-policy`（retryable）；**已登录但未供 policy** retry 与业务 intent → 同码（policy 缺失如实）；**供 policy 后**（Note 样例，grant 与表条目四维全等）retry → **`{correlation, availability:'available'}`**（新结果分支真实生效）、业务 intent（`start-attempt`）→ **`identity-unavailable @ rehydrate`**（retryable——**步骤 2 真实求值通过**、链在 rehydrate 如实 fail-closed，本票真实前进量的现场证据）、未登记动作（`answer-clarification`）→ `policy-denied @ identity-policy`（retryable:false）、非法形状 → 400 `invalid-intent @ intent`；renderer retry 按钮点击 → 状态经轮询收敛、UI 无异常。policy 文件为本验收所供（`$SAGE_ROOT/organization-policy.json`），删除即回 fail-closed。
 - **边界**：步骤 3–10 真 port、B.3、C2D.2、C2E.1/.2、C3 其余、数据治理、idempotency/cancel/reconciliation、多 capability/业务域、UI 提交函数、projection read policy、`answer-clarification` 入表——一律不做；内核（`identity-policy.ts`）零改动；零持久化 / 零日志 / 零网络新增。
-- **遗留登记**：① 组装 `invalid` → 产品面 `policy-denied`（若要区分须独立裁决）；② intent 的 `actionScope`（matter\|revision）未参与组装；③ 动作表升级形态（配置文件 / Registry 融合）；④ 时效窗口同规则拷贝两处（kernel / runtime），未来收敛；⑤ `policy-organization-mismatch` 经生产组装不可达（线索与 policy 同源；多组织语境重新启用）；⑥ **可选 live 验收（步骤 6）本次未运行**——应用登录后经 CDP 发 intent/retry 观察真实结论，需要真实登录交互。
+- **遗留登记**：① 组装 `invalid` → 产品面 `policy-denied`（若要区分须独立裁决）；② intent 的 `actionScope`（matter\|revision）未参与组装；③ 动作表升级形态（配置文件 / Registry 融合）；④ 时效窗口同规则拷贝两处（kernel / runtime），未来收敛；⑤ `policy-organization-mismatch` 经生产组装不可达（线索与 policy 同源；多组织语境重新启用）。
 
 ## Verification
 
