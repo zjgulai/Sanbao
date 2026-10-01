@@ -200,6 +200,7 @@
 | ADR-0187 | WT-02C.2E-PMAP/E.0 静态层 runtime inventory producers：PMAP 五面观测矩阵合同（dsh 包源码锚点）+ 合法空集/缺输入二分（absent/broken 稳定原因码）+ candidate evidence（`sage.pmap-component-evidence.v1`，非 descriptor）；运行态 effective 与 C2E.2 汇合留后续票。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02c2e-pmap-runtime-inventory.md) |
 | ADR-0188 | WT-02B.2E 真实 Organization Policy Provider + identity 会话端口 + Authority Runtime：本地 policy 文件（canonical digest、信号二分、instance-operator 单成员、每次重读）+ vault 会话语境五字段（identitySession 取代 identityHandle）+ 内核生产组装（sessionId 不回声线索）；不接 dispatch，失败码零新增。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2e-organization-policy-provider.md) |
 | ADR-0189 | WT-02B.2F candidate org claims 提取：Logto `urn:logto:scope:organizations` → `organization_data` 严格全弃提取（非阻断、原样 IdP org ID、上限 64×128）→ registry 候选 replace 语义；登录探针真实验收（scope 接受、空候选如实）；候选零 authority 消费。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2f-candidate-org-claims.md) |
+| ADR-0190 | WT-02D.2A 授权路径切片：动作表 v1（锚定 fixture actionPolicies，未登记动作不进求值）+ 组装内核（纯函数，线索=文件 orgId）+ retry 真实最小可用性（新 `CommandAvailable` 结果，旧 retry→invalid-intent 退场）+ step-2 真接线（步骤 3–10 保持 fail-closed）+ route 开放全形 intent；D.2 全量门未闭。 | accepted（2026-10-02） | [Note](../notes/implemented/architecture/2026-10-02-wt02d2a-authorization-path.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

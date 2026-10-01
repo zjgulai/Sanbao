@@ -4494,6 +4494,41 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0190",
+      "title": "ADR-0190 · WT-02D.2A 授权路径切片：intent→请求组装 + step-2 真接线 + retry 可用性语义 + route 开放",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "动作表与组装内核：ACTION_AUTHORITY_TABLE 冻结代码常量（v1 单条 'start-attempt' → role:owner/start-attempt/shopify.orders.read/external-read/requiresDecision:true，锚定 fixture 域内 actionPolicies 与 2E 角色）；assembleAuthorizationRequest 纯函数——未登记动作 invalid（不得进入求值）、无 session 或无线索 unavailable、命中产 kernel 2D 请求五键；组织线索 = policy 文件 organizationId（与 policy 同源，policy-organization-mismatch 经生产组装不可达，登记）。",
+          "constraints": [
+            "未登记动作一律 policy-denied 呈现（不泄漏动作存在性），绝不进入求值",
+            "组装内核零 I/O / 零时钟 / 不改输入；request 恰为 kernel 五键（零增删）",
+            "answer-clarification 等其余 fixture 动作不进表（策略语义未定）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "retry 可用性语义与结果契约：checkAuthorizationAvailability（active session ∧ 会话窗口有效 ∧ policy loaded ∧ 策略窗口有效，时效规则与 kernel isActive 同等）；pipeline retry 前置分支——健康返回 CommandAvailable {correlation, availability:'available'}、否则 identity-unavailable @ identity-policy retryable；旧「retry 过 identity 后被 invalid-intent 拒绝」路径退场（序列断言：retry 只调 availability 端口）；ServiceProviders.dispatch(intent) 承接 retry | SageActionIntentV2 全形。",
+          "constraints": [
+            "retry 永不进入 resolveIdentityPolicy（序列断言守）",
+            "available 形状含 correlation；fail-closed 默认端口下 retry 行为与旧契约同形（identity-unavailable @ identity-policy retryable）",
+            "renderer retry 点击后统一经 state 轮询收敛，不再消费响应体"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "接线与边界：createSageAppServiceProviders 增 options.authority {policyPath, readFileBytes, now}，真 step-2 端口（组装 + runtime.resolve，invalid 自构 frozen denial）与 availability 端口合并到 fail-closed 默认之上；main/index 与窗口 probe 同装配（单一装配点）；route 接受全形业务 intent 并传递；步骤 3–10 保持 fail-closed；B.3/C2D.2/C2E.1·2/C3/数据治理/idempotency/多 capability/UI 提交面/answer-clarification 入表一律不做。",
+          "constraints": [
+            "步骤 2 通过后链在 rehydrate 如实 fail-closed（identity-unavailable @ rehydrate retryable）——不得宣称步骤 3+ 已真实",
+            "内核（security/identity-policy.ts）零改动；零持久化/零日志/零网络新增",
+            "组装 invalid 的 denial 为模块自构 frozen 对象（code 取 kernel union，自有 reason 文案）"
+          ]
+        }
+      ]
     }
   ]
 }
