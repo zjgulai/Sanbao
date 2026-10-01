@@ -33,6 +33,7 @@ describe('composeShellPatches', () => {
       'web-startup', 'fixture-bundle-row', 'fixture-row',
       'web-startup', 'webserver', 'web-runtime', 'client-hmr',
       'open-in-app', 'ui-open-in-app', 'directory-picker', 'connection',
+      'session-log-deepseek',
     ])
   })
 
