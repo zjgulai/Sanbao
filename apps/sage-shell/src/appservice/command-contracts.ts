@@ -67,7 +67,9 @@ export function parseSageActionIntentV2(input: unknown): SageActionIntentV2 | un
 
 /** Nine step ports plus a trusted clock. `undefined` means that step's provider is unavailable (fail closed). */
 export interface CommandPipelinePorts {
-  readonly resolveIdentityPolicy: (req: { readonly intent: SageActionIntentV2; readonly correlation: string }) => IdentityPolicyResolution | undefined
+  // The identity step rides every intent through the same pipe (spec §4 retry note), so its
+  // request may carry the transport's retry shape as well as a full business intent.
+  readonly resolveIdentityPolicy: (req: { readonly intent: SageActionIntentV2 | { readonly type: 'retry' }; readonly correlation: string }) => IdentityPolicyResolution | undefined
   readonly strictRehydrate: (req: { readonly matterId: string; readonly revisionId: string }) =>
     | { readonly matter: BusinessMatter; readonly current: boolean }
     | { readonly denied: 'not-found' | 'stale-revision' }

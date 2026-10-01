@@ -19,12 +19,12 @@ describe('unavailable-first composition', () => {
     const body = await (await createUnavailableFirstService(null).readState()).json() as Record<string, unknown>
     expect(body.runtime).toBeNull()
   })
-  it('dispatch 503 + 脱敏错误体（无 stack/message 键）', async () => {
+  it('dispatch 200 + typed denial（identity-unavailable，无 stack/message 键）', async () => {
     const r = await createUnavailableFirstService(runtime).dispatch()
-    expect(r.status).toBe(503)
+    expect(r.status).toBe(200)
     const body = await r.json() as Record<string, unknown>
-    expect(body.error).toBe('identity-unavailable')
-    expect(body.retryable).toBe(false)
+    expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
+    expect(typeof body.correlation).toBe('string')
     expect('stack' in body).toBe(false)
     expect('message' in body).toBe(false)
   })
@@ -33,5 +33,19 @@ describe('unavailable-first composition', () => {
     const a = await (await s.readState()).json() as { service: { correlation: string } }
     const b = await (await s.readState()).json() as { service: { correlation: string } }
     expect(a.service.correlation).not.toBe(b.service.correlation)
+  })
+})
+
+describe('dispatch via command pipeline', () => {
+  it('always denies identity-unavailable with stage and fresh correlation', async () => {
+    const service = createUnavailableFirstService(null)
+    const response = await service.dispatch()
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    const body = await response.json() as Record<string, unknown>
+    expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
+    expect(typeof body.correlation).toBe('string')
+    const secondBody = await (await createUnavailableFirstService(null).dispatch()).json() as Record<string, unknown>
+    expect(secondBody.correlation).not.toBe(body.correlation)
   })
 })

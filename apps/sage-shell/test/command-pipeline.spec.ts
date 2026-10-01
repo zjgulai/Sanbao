@@ -97,11 +97,17 @@ describe('runCommand ordering is not bypassable', () => {
     runCommand({ intent, correlation: 'c13', ports })
     expect(ports.calls).toEqual(['identity', 'rehydrate', 'target', 'compat'])
   })
-  it('retry intent without matterId is invalid-intent before any port call', () => {
+  it('retry intent without matterId is invalid-intent after the identity step', () => {
     const ports = recordingPorts()
     const result = runCommand({ intent: { type: 'retry' }, correlation: 'c14', ports })
     expect(result).toMatchObject({ code: 'invalid-intent', stage: 'intent' })
-    expect(ports.calls).toEqual([])
+    expect(ports.calls).toEqual(['identity'])
+  })
+  it('retry intent with fail-closed identity terminates at step 2 like a business intent', () => {
+    const ports = recordingPorts({ resolveIdentityPolicy: undefined as never })
+    const result = runCommand({ intent: { type: 'retry' }, correlation: 'c15', ports })
+    expect(result).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
+    expect(ports.calls).toEqual(['identity'])
   })
 })
 
