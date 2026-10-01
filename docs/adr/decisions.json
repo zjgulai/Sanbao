@@ -4094,6 +4094,38 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0180",
+      "title": "ADR-0180 · HOST_LIB_FILES 补全与注册表对拍守卫",
+      "status": "accepted（2026-10-01）",
+      "date": "2026-10-01",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "HOST_LIB_FILES 补登 product/view-state.js、product/action-preview.js、product/component-renderer.js（按依赖序）。",
+          "constraints": [
+            "registry 与 lib/{host,product,adapter} 编译产物逐名双向一致",
+            "profile/paths.js 与 protocol.js 为显式白名单"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "注册表对拍守卫以 vitest 用例落地（layout.spec.ts），随全量测试批执行，漏登与多登均判红。",
+          "constraints": [
+            "守卫用例必须先 RED（对拍出三个漏登）后 GREEN（补登后转绿）",
+            "守卫依赖先 npm run build（与 smoke/dev 同前置）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "修复走修清单 + build + 重新 materialize 新 generation 的标准路径，指针原子切换；不手补不可变 generation，不顺带清理旧 generation。",
+          "constraints": [
+            "不破坏 runtime-artifact-attestation 的 manifest/digest 绑定",
+            "旧 generation 处置归 attestation 保留策略"
+          ]
+        }
+      ]
     }
   ]
 }

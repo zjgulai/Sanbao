@@ -190,6 +190,7 @@
 | ADR-0177 | Electron 43.3 single-frame caller-binding 预检：帧禁用候选不变量（出现 child 即污染 document generation，直到 clean top cross-document reload；移除与 same-document 不洗白）取得完整正读数，revision 40 为 PASS（预检局部）；production 采纳与 route 迁移仍须另票。 | accepted（2026-09-30） | [Note](../notes/proposed/architecture/2026-09-30-electron-single-frame-caller-binding.md) |
 | ADR-0178 | Sage privileged renderer 帧禁用不变量 production 采纳：唯一窗口工厂 + main-owned generation 污染状态机 + strict CSP 并积层；嵌内容出路定为独立非特权 WebContentsView；本票不引入 preload/IPC bridge，WT-02D.0.1 route 迁移仍 blocked。 | accepted（2026-09-30） | [Note](../notes/implemented/security/2026-09-30-sage-frame-policy.md) |
 | ADR-0179 | WT-02D.0.1 main-owned `/.sage/*` route skeleton：main 精确截获 + `SAGE_APP_SERVICE=off` 回退、纯函数内核零 Electron import、state 内嵌 `service` 字段、caller binding 接线位、import firewall 进门禁；unavailable-first 无 fixture fallback。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-wt02d01-main-sage-route-skeleton.md) |
+| ADR-0180 | HOST_LIB_FILES 补全与注册表对拍守卫：补登三个 product 编译产物、vitest 双向对拍守卫拦清单漂移、修清单+重新物化（不手补不可变 generation）；host live 启动恢复，smoke 18/18。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-host-lib-files-completeness.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 

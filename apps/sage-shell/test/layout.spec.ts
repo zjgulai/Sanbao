@@ -1,4 +1,6 @@
-import { join } from 'node:path'
+import { readdirSync } from 'node:fs'
+import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   COMPOSED_DIR_NAME,
@@ -70,4 +72,32 @@ describe('layout', () => {
     expect(HOST_LIB_FILES.join('\n')).not.toMatch(/composer|streams/u)
     expect(COMPOSED_DIR_NAME).toBe('.composed')
   })
+
+  it('registers every built host-scope file from lib output, so materialization cannot drop one', () => {
+    const libRoot = join(realShellRoot(), 'lib')
+    const builtHostScope = new Set<string>()
+    for (const entry of walkJs(libRoot)) builtHostScope.add(entry)
+    builtHostScope.add('profile/paths.js')
+    builtHostScope.add('protocol.js')
+    const registered = new Set(HOST_LIB_FILES)
+    expect([...builtHostScope].filter((name) => !registered.has(name))).toEqual([])
+    expect([...registered].filter((name) => !builtHostScope.has(name))).toEqual([])
+  })
 })
+
+function realShellRoot(): string {
+  return join(fileURLToPath(new URL('.', import.meta.url)), '..')
+}
+
+function walkJs(libRoot: string): string[] {
+  const out: string[] = []
+  const visit = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) visit(full)
+      else if (entry.name.endsWith('.js')) out.push(relative(libRoot, full))
+    }
+  }
+  for (const dir of ['host', 'product', 'adapter']) visit(join(libRoot, dir))
+  return out
+}
