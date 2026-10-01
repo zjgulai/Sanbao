@@ -32,7 +32,16 @@ export interface CommandAccepted {
   readonly receiptRef: string
 }
 
-export type CommandResult = CommandDenied | CommandAccepted
+/** WT-02D.2A: retry's minimal availability result — checked, available, nothing to receipt. */
+export interface CommandAvailable {
+  readonly correlation: string
+  readonly availability: 'available'
+}
+
+export type CommandResult = CommandDenied | CommandAccepted | CommandAvailable
+
+/** What the route accepts: the transport retry probe or a full business intent. */
+export type SageDispatchIntent = SageActionIntentV2 | { readonly type: 'retry' }
 
 const INTENT_KEYS = ['matterId', 'revisionId', 'actionType', 'actionScope', 'payload', 'origin'] as const
 const ACTION_SCOPES = ['matter', 'revision'] as const
@@ -67,9 +76,10 @@ export function parseSageActionIntentV2(input: unknown): SageActionIntentV2 | un
 
 /** Nine step ports plus a trusted clock. `undefined` means that step's provider is unavailable (fail closed). */
 export interface CommandPipelinePorts {
-  // The identity step rides every intent through the same pipe (spec §4 retry note), so its
-  // request may carry the transport's retry shape as well as a full business intent.
-  readonly resolveIdentityPolicy: (req: { readonly intent: SageActionIntentV2 | { readonly type: 'retry' }; readonly correlation: string }) => IdentityPolicyResolution | undefined
+  /** WT-02D.2A: retry's minimal availability check (active session + healthy policy). The retry
+   * branch never reaches resolveIdentityPolicy; `undefined` = unavailable (fail closed). */
+  readonly checkAuthorizationAvailability: () => { readonly ok: true } | undefined
+  readonly resolveIdentityPolicy: (req: { readonly intent: SageDispatchIntent; readonly correlation: string }) => IdentityPolicyResolution | undefined
   readonly strictRehydrate: (req: { readonly matterId: string; readonly revisionId: string }) =>
     | { readonly matter: BusinessMatter; readonly current: boolean }
     | { readonly denied: 'not-found' | 'stale-revision' }

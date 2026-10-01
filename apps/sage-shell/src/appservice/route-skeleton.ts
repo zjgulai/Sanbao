@@ -1,5 +1,7 @@
 /** Pure route skeleton for the main-owned /.sage/* surface (spec §3.1). */
 import type { ServiceDeps } from './contracts.js'
+import { parseSageActionIntentV2 } from './command-contracts.js'
+import type { SageDispatchIntent } from './command-contracts.js'
 import { MAX_SAGE_ACTION_BYTES, serviceJson } from './errors.js'
 
 const SAGE_STATE_PATH = '/.sage/state'
@@ -36,9 +38,10 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     }
     const body = await readActionBodyWithinLimit(request)
     if (body === undefined) return transportDenial(413)
-    if (parseIntent(body) === undefined) return serviceJson(
+    const intent = parseIntent(body)
+    if (intent === undefined) return serviceJson(
       { code: 'invalid-intent', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
-    return deps.providers.dispatch()
+    return deps.providers.dispatch(intent)
   }
 
   if (url.pathname === SAGE_LOGIN_PATH) {
@@ -72,11 +75,12 @@ async function readActionBodyWithinLimit(request: Request): Promise<string | und
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), bytes).toString('utf8')
 }
 
-function parseIntent(body: string): { type: 'retry' } | undefined {
+/** WT-02D.2A: the transport retry probe or a full exact-shape business intent (0.2 parser). */
+function parseIntent(body: string): SageDispatchIntent | undefined {
   let value: unknown
   try { value = JSON.parse(body) } catch { return undefined }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
-  if (Object.keys(record).length !== 1 || record.type !== 'retry') return undefined
-  return { type: 'retry' }
+  if (Object.keys(record).length === 1 && record.type === 'retry') return { type: 'retry' }
+  return parseSageActionIntentV2(value)
 }

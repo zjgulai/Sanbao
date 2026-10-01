@@ -299,15 +299,14 @@ describe('Sage renderer auth button disabled reset', () => {
 })
 
 /**
- * Retry POST path (WT-02D.0.2 D2): the retry response body is either the 0.2
- * CommandDenied shape `{code, retryable, ...}` or the legacy flat P0-2 shape
- * `{status, ...}`. Both must end up rendered.
+ * Retry click path (WT-02D.2A): the retry response body is no longer consumed — the handler
+ * fires the POST and then re-reads /state, so the rendered surface always comes from the
+ * convergence refresh. Both historic action payload shapes must be ignored identically.
  *
- * The harness captures the retry button's real click handler, drives it against a
- * fetch stub that answers POST with the action payload, and records one snapshot
- * per render() call (taken when `retry.hidden` is written — the last of the three
- * fields render touches). The GET state payload renders a distinct `ready` state
- * so a matching snapshot can only come from the retry response itself.
+ * The harness captures the retry button's real click handler, drives it against a fetch stub
+ * that answers POST with the action payload while GET answers a distinct `ready` state, and
+ * records one snapshot per render() call. If any snapshot were derived from the action
+ * payload, its title/message would differ from the state payload's.
  */
 interface RenderSnapshot {
   title: string
@@ -377,7 +376,7 @@ async function runEmbeddedRetryScript(actionPayload: unknown) {
   if (handler === undefined) throw new Error('retry click handler was not registered by the embedded script')
   await handler()
   // The post-retry refresh rides the same microtask chain; flush again so its render
-  // lands in the history before the caller asserts (order-independent assertions).
+  // lands in the history before the caller asserts.
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   return harness
@@ -425,8 +424,8 @@ describe('Sage renderer state convergence poll', () => {
   })
 })
 
-describe('Sage renderer retry response two-shape guard', () => {
-  it('normalizes the CommandDenied shape into a renderable recovering state', async () => {
+describe('Sage renderer retry click path (WT-02D.2A: response body no longer consumed)', () => {
+  it('ignores the CommandDenied-shaped retry response and re-renders the re-read state', async () => {
     const harness = await runEmbeddedRetryScript({
       code: 'identity-unavailable',
       stage: 'identity-policy',
@@ -434,24 +433,22 @@ describe('Sage renderer retry response two-shape guard', () => {
       correlation: 'x',
     })
 
-    expect(harness.renders).toContainEqual({
-      title: '正在恢复',
-      message: 'Sage 正在重新检查能力运行时服务。（identity-policy · x）',
-      retryHidden: false,
-    })
+    expect(harness.renders.length).toBeGreaterThanOrEqual(2)
+    for (const snapshot of harness.renders) {
+      expect(snapshot).toEqual({ title: '已就绪', message: '运行时已就绪。', retryHidden: true })
+    }
   })
 
-  it('keeps rendering the legacy flat P0-2 shape unchanged (off-state regression)', async () => {
+  it('ignores the legacy flat P0-2 action payload the same way', async () => {
     const harness = await runEmbeddedRetryScript({
       status: 'recovering',
       message: '正在恢复连接，请稍候。',
       retryable: false,
     })
 
-    expect(harness.renders).toContainEqual({
-      title: '正在恢复',
-      message: '正在恢复连接，请稍候。',
-      retryHidden: true,
-    })
+    expect(harness.renders.length).toBeGreaterThanOrEqual(2)
+    for (const snapshot of harness.renders) {
+      expect(snapshot).toEqual({ title: '已就绪', message: '运行时已就绪。', retryHidden: true })
+    }
   })
 })

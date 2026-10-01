@@ -1,11 +1,11 @@
 /** WT-02B.2E Authority Runtime: assembles the production Identity / Policy resolver in main.
  * Identity sessions come from the in-memory vault (verified issuer, timing, session ref);
- * organization policy comes from the instance-local policy file. Not wired into the command
- * pipeline yet — the intent→request assembly belongs to WT-02D.2. */
+ * organization policy comes from the instance-local policy file. WT-02D.2A adds the minimal
+ * availability check behind the retry path and wires the ports into the command pipeline. */
 import { createHash } from 'node:crypto'
 import { createIdentityPolicyResolver } from '../security/identity-policy.js'
 import type { IdentityPolicyResolution } from '../security/identity-policy.js'
-import { createLocalOrganizationPolicyProvider } from './organization-policy.js'
+import { createLocalOrganizationPolicyProvider, loadOrganizationPolicy } from './organization-policy.js'
 import type { TokenVault } from './token-vault.js'
 
 export const SAGE_DESKTOP_AUDIENCE = 'sage-desktop' as const
@@ -13,6 +13,9 @@ export const SAGE_DESKTOP_AUDIENCE = 'sage-desktop' as const
 export interface SageAuthorityRuntime {
   /** Kernel accessor: untrusted request in, frozen resolution out. */
   readonly resolve: (request: unknown) => IdentityPolicyResolution
+  /** WT-02D.2A retry probe: active session ∧ valid session window ∧ loaded ∧ active policy window.
+   * Same window rule as the kernel's isActive (second same-rule copy, registered). */
+  readonly checkAuthorizationAvailability: () => { readonly ok: true } | { readonly ok: false }
 }
 
 export interface SageAuthorityRuntimeInput {
@@ -23,11 +26,14 @@ export interface SageAuthorityRuntimeInput {
   readonly now: () => string
 }
 
+function isWindowActive(validFrom: string, expiresAt: string, evaluatedAt: string): boolean {
+  const evaluated = Date.parse(evaluatedAt)
+  return Date.parse(validFrom) <= evaluated && evaluated < Date.parse(expiresAt)
+}
+
 export function createSageAuthorityRuntime(input: SageAuthorityRuntimeInput): SageAuthorityRuntime {
-  const policy = createLocalOrganizationPolicyProvider({
-    policyPath: input.policyPath,
-    readFileBytes: input.readFileBytes,
-  })
+  const policyInput = { policyPath: input.policyPath, readFileBytes: input.readFileBytes }
+  const policy = createLocalOrganizationPolicyProvider(policyInput)
   const resolver = createIdentityPolicyResolver({
     audience: SAGE_DESKTOP_AUDIENCE,
     resolveIdentity: () => {
@@ -57,5 +63,15 @@ export function createSageAuthorityRuntime(input: SageAuthorityRuntimeInput): Sa
   })
   return Object.freeze({
     resolve: (request: unknown) => resolver.resolve(request),
+    checkAuthorizationAvailability: () => {
+      const session = input.vault.identitySession()
+      if (session === null) return { ok: false as const }
+      const evaluatedAt = input.now()
+      if (!isWindowActive(session.authenticatedAt, session.expiresAt, evaluatedAt)) return { ok: false as const }
+      const load = loadOrganizationPolicy(policyInput)
+      if (load.kind !== 'loaded') return { ok: false as const }
+      if (!isWindowActive(load.policy.validFrom, load.policy.expiresAt, evaluatedAt)) return { ok: false as const }
+      return { ok: true as const }
+    },
   })
 }

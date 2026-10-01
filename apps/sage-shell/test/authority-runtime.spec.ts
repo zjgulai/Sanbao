@@ -208,4 +208,40 @@ describe('Sage Authority Runtime (WT-02B.2E integration)', () => {
     expect(seenPaths).toEqual([paths.organizationPolicyFile])
     expect(Object.keys(vault.snapshot()).sort()).toEqual(['displayName', 'status'])
   })
+
+  describe('checkAuthorizationAvailability (WT-02D.2A)', () => {
+    it('is false without an active session and true only for a healthy session+policy pair', async () => {
+      const { paths, vault, runtime } = harness()
+      await provision(paths)
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+      signIn(vault)
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: true })
+    })
+
+    it('is false when the session window has expired', async () => {
+      const { paths, vault, runtime } = harness({ now: '2026-10-02T13:00:00.000Z' })
+      await provision(paths)
+      signIn(vault)
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+    })
+
+    it('is false when the policy is absent, invalid, expired or not yet valid', async () => {
+      const { paths, vault, runtime } = harness()
+      signIn(vault)
+
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+
+      await provision(paths, { broken: true })
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+
+      await provision(paths, { ...SAMPLE, expiresAt: '2026-10-02T00:00:00Z' })
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+
+      await provision(paths, { ...SAMPLE, validFrom: '2026-10-03T00:00:00Z' })
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: false })
+
+      await provision(paths)
+      expect(runtime.checkAuthorizationAvailability()).toEqual({ ok: true })
+    })
+  })
 })

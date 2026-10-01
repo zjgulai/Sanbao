@@ -1,6 +1,7 @@
 /** WT-02D.0.1 contracts: the main-owned /.sage/* service surface. */
 import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
+import type { SageDispatchIntent } from './command-contracts.js'
 
 export interface CallerBinding {
   readonly correlation: string
@@ -29,7 +30,7 @@ export interface SageServiceState {
 
 export interface ServiceProviders {
   readonly readState: () => Promise<Response>
-  readonly dispatch: () => Promise<Response>
+  readonly dispatch: (intent: SageDispatchIntent) => Promise<Response>
   readonly login: () => Promise<Response>
   readonly logout: () => Promise<Response>
 }

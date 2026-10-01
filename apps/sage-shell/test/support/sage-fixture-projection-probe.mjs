@@ -4,7 +4,7 @@
  *
  * Env: SAGE_ELECTRON_FIXTURE_PROBE_ROOT (required), SAGE_FIXTURE_PROJECTION (fixture switch),
  * SAGE_FIXTURE_PROBE_MUTATE=1 (negative control: writes a canary into the asserted root). */
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { app, protocol } from 'electron'
 import { SAGE_APP_ORIGIN } from '../../lib/product/contracts.js'
@@ -111,6 +111,13 @@ async function run() {
         vault,
         adapter: stubAdapter,
         ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
+        // WT-02D.2A: same production assembly as main; the probe root has no policy file, so
+        // retry stays identity-unavailable (shape assertion below is unchanged).
+        authority: {
+          policyPath: join(sageRoot, 'organization-policy.json'),
+          readFileBytes: (path) => readFileSync(path),
+          now: () => new Date().toISOString(),
+        },
       })
       return handleSageServiceRequest(request, { callerBinding, providers })
     }

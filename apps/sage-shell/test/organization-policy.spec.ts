@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createLocalOrganizationPolicyProvider } from '../src/main/organization-policy.js'
+import { createLocalOrganizationPolicyProvider, loadOrganizationPolicy } from '../src/main/organization-policy.js'
 import type { OrganizationPolicySnapshot, PolicyProviderRequest } from '../src/security/identity-policy.js'
 
 const SAMPLE = {
@@ -174,5 +174,54 @@ describe('local organization policy provider (WT-02B.2E)', () => {
     const seen: string[] = []
     provider((path) => seen.push(path)).resolve(REQUEST)
     expect(seen).toEqual([policyPath()])
+  })
+
+  describe('loadOrganizationPolicy (WT-02D.2A)', () => {
+    const load = () => loadOrganizationPolicy({ policyPath: policyPath(), readFileBytes: (path) => readFileSync(path) })
+
+    it('loads the parsed policy with canonical lists and the computed digest', async () => {
+      await writePolicy(SAMPLE)
+      expect(load()).toEqual({
+        kind: 'loaded',
+        policy: {
+          organizationId: 'organization:sage',
+          policy: { identity: 'policy:local', version: '1', digest: GOLDEN_DIGEST },
+          validFrom: '2026-10-01T00:00:00Z',
+          expiresAt: '2027-10-01T00:00:00Z',
+          roleRefs: ['role:owner'],
+          grants: [SAMPLE.grants[0]],
+        },
+      })
+    })
+
+    it('returns canonical (sorted) lists from an order-reversed file', async () => {
+      await writePolicy({
+        ...SAMPLE,
+        membership: { mode: 'instance-operator', roleRefs: ['role:owner', 'role:auditor'] },
+        grants: [
+          { roleRef: 'role:owner', operation: 'business-matter.start-attempt', actionScope: 'catalog.prepare-draft', effectClass: 'local-write', requiresDecision: false },
+          { roleRef: 'role:auditor', operation: 'business-matter.record-receipt', actionScope: 'catalog.record', effectClass: 'local-read', requiresDecision: false },
+        ],
+      })
+      const loaded = load()
+      if (loaded.kind !== 'loaded') throw new Error('Expected a loaded policy.')
+      expect(loaded.policy.roleRefs).toEqual(['role:auditor', 'role:owner'])
+      expect(loaded.policy.grants.map((grant) => grant.roleRef)).toEqual(['role:auditor', 'role:owner'])
+    })
+
+    it('reports unavailable for a missing or unreadable file', () => {
+      expect(load()).toEqual({ kind: 'unavailable' })
+      expect(loadOrganizationPolicy({
+        policyPath: policyPath(),
+        readFileBytes: () => { throw new Error('EACCES') },
+      })).toEqual({ kind: 'unavailable' })
+    })
+
+    it('reports invalid for malformed or oversized content', async () => {
+      await writePolicy('{not-json\n')
+      expect(load()).toEqual({ kind: 'invalid' })
+      await writePolicy(`{"padding":"${'x'.repeat(257 * 1024)}"}`)
+      expect(load()).toEqual({ kind: 'invalid' })
+    })
   })
 })

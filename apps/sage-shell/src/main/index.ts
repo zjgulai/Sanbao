@@ -1,5 +1,6 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
+import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { app, dialog, protocol, shell } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
@@ -97,6 +98,13 @@ async function main(paths: SagePaths): Promise<void> {
         vault,
         adapter,
         ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
+        // WT-02D.2A: the authorization path runs over the instance-local policy file; absent
+        // or unreadable keeps every command port fail closed.
+        authority: {
+          policyPath: paths.organizationPolicyFile,
+          readFileBytes: (path) => readFileSync(path),
+          now: () => new Date().toISOString(),
+        },
       })
       return handleSageServiceRequest(request, { callerBinding, providers })
     }

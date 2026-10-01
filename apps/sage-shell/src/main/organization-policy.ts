@@ -40,6 +40,22 @@ export interface LocalOrganizationPolicyProviderInput {
   readonly readFileBytes: (absolutePath: string) => Buffer
 }
 
+/** WT-02D.2A: single-parse-path load result — the provider, the availability check and the
+ * organization clue all consume this. */
+export interface LoadedOrganizationPolicy {
+  readonly organizationId: string
+  readonly policy: { readonly identity: string; readonly version: string; readonly digest: string }
+  readonly validFrom: string
+  readonly expiresAt: string
+  readonly roleRefs: readonly string[]
+  readonly grants: readonly OrganizationPolicyGrant[]
+}
+
+export type OrganizationPolicyLoad =
+  | { readonly kind: 'loaded'; readonly policy: LoadedOrganizationPolicy }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'invalid' }
+
 interface ParsedPolicy {
   readonly schemaVersion: typeof ORGANIZATION_POLICY_SCHEMA
   readonly organizationId: string
@@ -193,40 +209,64 @@ function canonicalDigest(parsed: ParsedPolicy): string {
   return DIGEST_NAMESPACE + createHash('sha256').update(Buffer.from(canonical, 'utf8')).digest('hex')
 }
 
+/** WT-02D.2A: the single synchronous parse path over the policy file. `unavailable` covers every
+ * read failure (ENOENT included); `invalid` covers oversized / unparseable / out-of-shape
+ * content. Consumers: the provider (below), the runtime's availability check and the
+ * organization-clue lookup. */
+export function loadOrganizationPolicy(input: LocalOrganizationPolicyProviderInput): OrganizationPolicyLoad {
+  let bytes: Buffer
+  try {
+    bytes = input.readFileBytes(input.policyPath)
+  } catch {
+    return { kind: 'unavailable' }
+  }
+  if (bytes.byteLength > MAX_POLICY_BYTES) return { kind: 'invalid' }
+  let parsedJson: unknown
+  try {
+    parsedJson = JSON.parse(bytes.toString('utf8'))
+  } catch {
+    return { kind: 'invalid' }
+  }
+  const parsed = parsePolicy(parsedJson)
+  if (parsed === undefined) return { kind: 'invalid' }
+  return {
+    kind: 'loaded',
+    policy: {
+      organizationId: parsed.organizationId,
+      policy: {
+        identity: parsed.policy.identity,
+        version: parsed.policy.version,
+        digest: canonicalDigest(parsed),
+      },
+      validFrom: parsed.validFrom,
+      expiresAt: parsed.expiresAt,
+      roleRefs: sortedRoleRefs(parsed),
+      grants: canonicalGrants(parsed),
+    },
+  }
+}
+
 export function createLocalOrganizationPolicyProvider(
   input: LocalOrganizationPolicyProviderInput,
 ): LocalOrganizationPolicyProvider {
   return Object.freeze({
     resolve(request: PolicyProviderRequest): unknown {
-      let bytes: Buffer
-      try {
-        bytes = input.readFileBytes(input.policyPath)
-      } catch {
+      const load = loadOrganizationPolicy(input)
+      if (load.kind === 'unavailable') {
         // Stable message; the kernel discards it and maps the throw to policy-provider-unavailable.
         throw new Error('sage-organization-policy: policy file is unavailable')
       }
-      if (bytes.byteLength > MAX_POLICY_BYTES) return null
-      let parsedJson: unknown
-      try {
-        parsedJson = JSON.parse(bytes.toString('utf8'))
-      } catch {
-        return null
-      }
-      const parsed = parsePolicy(parsedJson)
-      if (parsed === undefined) return null
+      if (load.kind === 'invalid') return null
+      const { policy } = load
       const snapshot: OrganizationPolicySnapshot = {
-        policy: {
-          identity: parsed.policy.identity,
-          version: parsed.policy.version,
-          digest: canonicalDigest(parsed),
-        },
-        organizationId: parsed.organizationId,
-        validFrom: parsed.validFrom,
-        expiresAt: parsed.expiresAt,
+        policy: policy.policy,
+        organizationId: policy.organizationId,
+        validFrom: policy.validFrom,
+        expiresAt: policy.expiresAt,
         // instance-operator membership: the requesting (verified) identity holds the declared
         // roles. The file carries no identity material; the binding exists only at runtime.
-        roleAssignments: sortedRoleRefs(parsed).map((roleRef) => ({ identityHandle: request.identityHandle, roleRef })),
-        grants: canonicalGrants(parsed),
+        roleAssignments: policy.roleRefs.map((roleRef) => ({ identityHandle: request.identityHandle, roleRef })),
+        grants: policy.grants,
       }
       return snapshot
     },

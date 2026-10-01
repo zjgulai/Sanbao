@@ -21,7 +21,7 @@ describe('unavailable-first composition', () => {
     expect(body.runtime).toBeNull()
   })
   it('dispatch 200 + typed denial（identity-unavailable，无 stack/message 键）', async () => {
-    const r = await createUnavailableFirstService(runtime).dispatch()
+    const r = await createUnavailableFirstService(runtime).dispatch({ type: 'retry' })
     expect(r.status).toBe(200)
     const body = await r.json() as Record<string, unknown>
     expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
@@ -101,7 +101,7 @@ describe('matter projection slot (WT-02D.1)', () => {
     })
     const body = await (await service.readState()).json() as Record<string, unknown>
     expect(body.service).toMatchObject({ reason: 'authenticated', auth: { status: 'signed-in', displayName: 'Alice' } })
-    const denial = await (await service.dispatch()).json() as Record<string, unknown>
+    const denial = await (await service.dispatch({ type: 'retry' })).json() as Record<string, unknown>
     expect(denial).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy' })
   })
 
@@ -114,13 +114,13 @@ describe('matter projection slot (WT-02D.1)', () => {
 describe('dispatch via command pipeline', () => {
   it('always denies identity-unavailable with stage and fresh correlation', async () => {
     const service = createUnavailableFirstService(null)
-    const response = await service.dispatch()
+    const response = await service.dispatch({ type: 'retry' })
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toBe('no-store')
     const body = await response.json() as Record<string, unknown>
     expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
     expect(typeof body.correlation).toBe('string')
-    const secondBody = await (await createUnavailableFirstService(null).dispatch()).json() as Record<string, unknown>
+    const secondBody = await (await createUnavailableFirstService(null).dispatch({ type: 'retry' })).json() as Record<string, unknown>
     expect(secondBody.correlation).not.toBe(body.correlation)
   })
 })

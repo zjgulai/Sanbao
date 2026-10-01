@@ -17,15 +17,21 @@ export function runCommand(input: {
   const { correlation, ports } = input
   const intent = input.intent
 
-  // Step 2: action-scoped Identity / Policy. A retry rides the same step (spec §4 retry note:
-  // with production ports fail-closed, retry terminates at step 2 identically to a business intent).
+  // Retry (WT-02D.2A): a minimal availability probe (active session + healthy policy), never
+  // the action-scoped identity step. Unavailable fails closed with the same stable denial the
+  // fail-closed pipeline always produced.
+  if ('type' in intent) {
+    const availability = ports.checkAuthorizationAvailability()
+    if (availability === undefined) {
+      return denied(correlation, 'identity-policy', 'identity-unavailable', { retryable: true })
+    }
+    return { correlation, availability: 'available' }
+  }
+
+  // Step 2: action-scoped Identity / Policy.
   const identity = ports.resolveIdentityPolicy({ intent, correlation })
   if (identity === undefined) return denied(correlation, 'identity-policy', 'identity-unavailable', { retryable: true })
   if (identity.kind === 'denied') return denied(correlation, 'identity-policy', 'policy-denied')
-
-  // A retry carries no matterId to rehydrate; once identity is resolved it is rejected before
-  // step 3 so the pipeline contract stays single-shaped.
-  if (!('matterId' in intent)) return denied(correlation, 'intent', 'invalid-intent')
 
   // Step 3: strict rehydrate of the current BusinessMatter.
   const rehydrated = ports.strictRehydrate({ matterId: intent.matterId, revisionId: intent.revisionId })

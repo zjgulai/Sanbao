@@ -57,4 +57,38 @@ describe('app service route with the production assembly (WT-02D.1)', () => {
     const body = await response.json() as Record<string, unknown>
     expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy' })
   })
+
+  it('accepts a full business intent shape and fails closed at the identity step (WT-02D.2A)', async () => {
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/actions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        matterId: 'matter:demo',
+        revisionId: 'revision:demo.1',
+        actionType: 'start-attempt',
+        actionScope: 'revision',
+        payload: {},
+        origin: 'renderer-action',
+      }),
+    }), {
+      callerBinding: { correlation: 'c-business' },
+      providers: providers(true),
+    })
+    expect(response.status).toBe(200)
+    const body = await response.json() as Record<string, unknown>
+    expect(body).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy', retryable: true })
+  })
+
+  it('rejects a malformed business intent with the unchanged 400 shape', async () => {
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/actions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matterId: 'matter:demo', actionType: 'start-attempt' }),
+    }), {
+      callerBinding: { correlation: 'c-bad-intent' },
+      providers: providers(true),
+    })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'invalid-intent', stage: 'intent' })
+  })
 })

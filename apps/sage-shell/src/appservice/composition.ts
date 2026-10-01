@@ -5,10 +5,12 @@ import type { SageMatterViewState } from '../product/view-state.js'
 import type { SageServiceState, ServiceProviders } from './contracts.js'
 import { serviceJson } from './errors.js'
 import { runCommand } from './command-pipeline.js'
-import type { CommandPipelinePorts } from './command-contracts.js'
+import type { CommandPipelinePorts, SageDispatchIntent } from './command-contracts.js'
 
-/** Production has no provider for any step: every port fails closed (spec §5). */
-const PRODUCTION_FAIL_CLOSED_PORTS: CommandPipelinePorts = {
+/** Production has no provider for any step: every port fails closed (spec §5).
+ * Exported for the main-side authorization assembly (WT-02D.2A) to merge real step-2 ports over. */
+export const PRODUCTION_FAIL_CLOSED_PORTS: CommandPipelinePorts = {
+  checkAuthorizationAvailability: () => undefined,
   resolveIdentityPolicy: () => undefined,
   strictRehydrate: () => undefined,
   resolveTarget: () => undefined,
@@ -26,6 +28,8 @@ export interface ServiceOptions {
   readonly logout?: () => Promise<Response>
   /** Explicit fixture-mode matter projection (WT-02D.1): injected by main only under its fixture switch; absent keeps the slot null. */
   readonly fixtureProjection?: () => SageMatterViewState
+  /** WT-02D.2A: composed command ports (real step-2 over fail-closed defaults); absent keeps every port fail-closed. */
+  readonly commandPorts?: CommandPipelinePorts
 }
 
 export function createUnavailableFirstService(runtime: SageViewState | null, options: ServiceOptions = {}): ServiceProviders {
@@ -46,11 +50,11 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       }
       return serviceJson(state, 200)
     },
-    async dispatch(): Promise<Response> {
+    async dispatch(intent: SageDispatchIntent): Promise<Response> {
       const result = runCommand({
-        intent: { type: 'retry' },
+        intent,
         correlation: randomUUID(),
-        ports: PRODUCTION_FAIL_CLOSED_PORTS,
+        ports: options.commandPorts ?? PRODUCTION_FAIL_CLOSED_PORTS,
       })
       return serviceJson(result, 'code' in result && result.code === 'invalid-intent' ? 400 : 200)
     },
