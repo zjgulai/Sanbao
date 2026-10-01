@@ -1,5 +1,11 @@
 /** WT-02B.2B-pre authorization callback kernel: one-shot state + PKCE S256, fail closed. */
-import { createHash } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
+
+/** Constant-time string equality: length check first (timingSafeEqual throws on mismatched lengths). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a); const bb = Buffer.from(b)
+  return ab.length === bb.length && timingSafeEqual(ab, bb)
+}
 
 export type CallbackRejection =
   | 'missing-code' | 'error-response' | 'state-mismatch' | 'state-replayed'
@@ -27,7 +33,7 @@ export function verifyAuthorizationCallback(input: {
   if (error !== undefined && error !== null && error !== '') return { ok: false, reason: 'error-response' }
 
   const state = queryValue(input.untrustedQuery, 'state')
-  if (typeof state !== 'string' || state !== input.expectedState) return { ok: false, reason: 'state-mismatch' }
+  if (typeof state !== 'string' || !safeEqual(state, input.expectedState)) return { ok: false, reason: 'state-mismatch' }
   if (!input.consumeState(state)) return { ok: false, reason: 'state-replayed' }
 
   const code = queryValue(input.untrustedQuery, 'code')
@@ -43,5 +49,5 @@ export function verifyAuthorizationCallback(input: {
 export function verifyPkceS256(input: { readonly codeVerifier: string; readonly challenge: string }): boolean {
   if (typeof input.codeVerifier !== 'string' || typeof input.challenge !== 'string') return false
   const computed = createHash('sha256').update(input.codeVerifier).digest('base64url')
-  return computed === input.challenge
+  return safeEqual(computed, input.challenge)
 }

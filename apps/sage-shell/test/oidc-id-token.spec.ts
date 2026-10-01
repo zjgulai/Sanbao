@@ -69,6 +69,11 @@ describe('verifyIdToken', () => {
     expect(verify(noExp.token, noExp.keys.jwks)).toEqual({ ok: false, reason: 'missing-claim' })
   })
 
+  it('rejects a mixed-type aud array as aud-missing', async () => {
+    const { keys, token } = await tokenWith({ aud: ['sage-desktop', 42] })
+    expect(verify(token, keys.jwks)).toEqual({ ok: false, reason: 'aud-missing' })
+  })
+
   it('propagates a JWS-layer rejection', async () => {
     const keys = await generateOidcKeys()
     // brief 原文 sig 段是 'aa'（非 roundtrip 规范形，会被 strict decode 先拒成 not-compact-jws）；

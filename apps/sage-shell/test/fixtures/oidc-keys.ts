@@ -9,34 +9,41 @@ export interface OidcKeySet {
 export async function generateOidcKeys(): Promise<OidcKeySet> {
   const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 })
   const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+  const es384 = generateKeyPairSync('ec', { namedCurve: 'P-384' })
   const rsaJwk = rsa.publicKey.export({ format: 'jwk' }) as Record<string, unknown>
   const ecJwk = ec.publicKey.export({ format: 'jwk' }) as Record<string, unknown>
+  const es384Jwk = es384.publicKey.export({ format: 'jwk' }) as Record<string, unknown>
   return {
-    jwks: { keys: [{ ...rsaJwk, kid: 'test-rsa', use: 'sig' }, { ...ecJwk, kid: 'test-ec', use: 'sig' }] },
-    privateKey: { 'test-rsa': rsa.privateKey, 'test-ec': ec.privateKey },
+    jwks: { keys: [
+      { ...rsaJwk, kid: 'test-rsa', use: 'sig' },
+      { ...ecJwk, kid: 'test-ec', use: 'sig' },
+      { ...es384Jwk, kid: 'test-es384', use: 'sig' },
+    ] },
+    privateKey: { 'test-rsa': rsa.privateKey, 'test-ec': ec.privateKey, 'test-es384': es384.privateKey },
   }
 }
 
 function b64u(value: Buffer): string { return value.toString('base64url') }
 
-export function signJws(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256', headerExtra: Record<string, unknown>, payload: unknown): string {
+export function signJws(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256' | 'ES384', headerExtra: Record<string, unknown>, payload: unknown): string {
   const header = Object.fromEntries(Object.entries({ alg, kid, ...headerExtra }).filter(([, v]) => v !== undefined))
   return signRawHeader(keys, kid, alg, JSON.stringify(header), payload)
 }
 
-function signRawHeader(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256', rawHeader: string, payload: unknown): string {
+function signRawHeader(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256' | 'ES384', rawHeader: string, payload: unknown): string {
   const headerB = b64u(Buffer.from(rawHeader))
   const payloadB = b64u(Buffer.from(typeof payload === 'string' ? payload : JSON.stringify(payload)))
   const signingInput = `${headerB}.${payloadB}`
-  const key = alg === 'ES256'
+  const key = alg === 'ES256' || alg === 'ES384'
     ? { key: keys.privateKey[kid]!, dsaEncoding: 'ieee-p1363' as const }
     : keys.privateKey[kid]!
-  const sig = createSign(alg === 'RS256' ? 'RSA-SHA256' : 'SHA256').update(Buffer.from(signingInput)).sign(key)
+  const sig = createSign(alg === 'RS256' ? 'RSA-SHA256' : alg === 'ES384' ? 'SHA384' : 'SHA256')
+    .update(Buffer.from(signingInput)).sign(key)
   return `${signingInput}.${b64u(sig)}`
 }
 
 /** Sign with an arbitrary (possibly invalid) header/payload string, for negative cases. */
-export function signRawSegments(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256', rawHeader: string, payload: unknown): string {
+export function signRawSegments(keys: OidcKeySet, kid: string, alg: 'RS256' | 'ES256' | 'ES384', rawHeader: string, payload: unknown): string {
   return signRawHeader(keys, kid, alg, rawHeader, payload)
 }
 
@@ -62,5 +69,21 @@ export function signEs256RawWithLength(keys: OidcKeySet, length: number): string
   const header = b64u(Buffer.from(JSON.stringify({ alg: 'ES256', kid: 'test-ec' })))
   const payload = b64u(Buffer.from(JSON.stringify({ sub: 'x' })))
   const sig = createSign('SHA256').update(Buffer.from(`${header}.${payload}`)).sign({ key: keys.privateKey['test-ec']!, dsaEncoding: 'ieee-p1363' })
+  return `${header}.${payload}.${b64u(sig.subarray(0, length))}`
+}
+
+/** ES384 token carrying the DER-encoded signature instead of raw r||s. */
+export function signEs384Der(keys: OidcKeySet): string {
+  const header = b64u(Buffer.from(JSON.stringify({ alg: 'ES384', kid: 'test-es384' })))
+  const payload = b64u(Buffer.from(JSON.stringify({ sub: 'x' })))
+  const sig = createSign('SHA384').update(Buffer.from(`${header}.${payload}`)).sign(keys.privateKey['test-es384']!) // default DER
+  return `${header}.${payload}.${b64u(sig)}`
+}
+
+/** ES384 token whose raw signature is truncated to a wrong length. */
+export function signEs384RawWithLength(keys: OidcKeySet, length: number): string {
+  const header = b64u(Buffer.from(JSON.stringify({ alg: 'ES384', kid: 'test-es384' })))
+  const payload = b64u(Buffer.from(JSON.stringify({ sub: 'x' })))
+  const sig = createSign('SHA384').update(Buffer.from(`${header}.${payload}`)).sign({ key: keys.privateKey['test-es384']!, dsaEncoding: 'ieee-p1363' })
   return `${header}.${payload}.${b64u(sig.subarray(0, length))}`
 }

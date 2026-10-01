@@ -1,6 +1,8 @@
 /** WT-02B.2B-pre JWS verification kernel: strict parse, exact kid match, real signature checks. */
 import { createPublicKey, createVerify, type KeyObject } from 'node:crypto'
 
+export type JwsAlg = 'RS256' | 'ES256' | 'ES384'
+
 export type JwsRejection =
   | 'not-compact-jws' | 'header-not-json' | 'unsupported-alg' | 'alg-none'
   | 'crit-present' | 'missing-kid' | 'kid-not-found' | 'key-type-mismatch' | 'signature-invalid'
@@ -15,23 +17,26 @@ function strictB64uDecode(segment: string): Buffer | undefined {
   return bytes.toString('base64url') === segment ? bytes : undefined
 }
 
-function algMatchesKeyType(alg: 'RS256' | 'ES256', jwk: Record<string, unknown>): boolean {
+function algMatchesKeyType(alg: JwsAlg, jwk: Record<string, unknown>): boolean {
   if (alg === 'RS256') return jwk.kty === 'RSA'
-  return jwk.kty === 'EC' && jwk.crv === 'P-256'
+  if (alg === 'ES256') return jwk.kty === 'EC' && jwk.crv === 'P-256'
+  return jwk.kty === 'EC' && jwk.crv === 'P-384'
 }
 
-function verifySignature(alg: 'RS256' | 'ES256', key: KeyObject, signingInput: Buffer, signature: Buffer): boolean {
+function verifySignature(alg: JwsAlg, key: KeyObject, signingInput: Buffer, signature: Buffer): boolean {
   if (alg === 'RS256') {
     try { return createVerify('RSA-SHA256').update(signingInput).verify(key, signature) } catch { return false }
   }
-  if (signature.length !== 64) return false // raw r||s, exactly 32+32
-  try { return createVerify('SHA256').update(signingInput).verify({ key, dsaEncoding: 'ieee-p1363' }, signature) } catch { return false }
+  const expectedLen = alg === 'ES256' ? 64 : 96 // raw r||s, exactly 32+32 / 48+48
+  if (signature.length !== expectedLen) return false
+  const hash = alg === 'ES256' ? 'SHA256' : 'SHA384'
+  try { return createVerify(hash).update(signingInput).verify({ key, dsaEncoding: 'ieee-p1363' }, signature) } catch { return false }
 }
 
 export function verifyCompactJws(input: {
   readonly untrustedToken: string
   readonly jwks: unknown
-  readonly acceptedAlgs: readonly ('RS256' | 'ES256')[]
+  readonly acceptedAlgs: readonly JwsAlg[]
 }): { readonly ok: true; readonly protectedHeader: Record<string, unknown>; readonly payload: unknown } | { readonly ok: false; readonly reason: JwsRejection } {
   if (typeof input.untrustedToken !== 'string') return { ok: false, reason: 'not-compact-jws' }
   const parts = input.untrustedToken.split('.')
@@ -52,7 +57,7 @@ export function verifyCompactJws(input: {
 
   const alg = headerRecord.alg
   if (alg === 'none') return { ok: false, reason: 'alg-none' }
-  if (alg !== 'RS256' && alg !== 'ES256') return { ok: false, reason: 'unsupported-alg' }
+  if (alg !== 'RS256' && alg !== 'ES256' && alg !== 'ES384') return { ok: false, reason: 'unsupported-alg' }
   if (!input.acceptedAlgs.includes(alg)) return { ok: false, reason: 'unsupported-alg' }
 
   // RFC 7715 §4 strict: an unrecognized extension (e.g. crit/b64, which alters payload encoding)

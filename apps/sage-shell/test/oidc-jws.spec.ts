@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateOidcKeys, signEs256Der, signEs256RawWithLength, signJws, signRawSegments, signWithUnknownKey } from './fixtures/oidc-keys.js'
+import { generateOidcKeys, signEs256Der, signEs256RawWithLength, signEs384Der, signEs384RawWithLength, signJws, signRawSegments, signWithUnknownKey } from './fixtures/oidc-keys.js'
 import { verifyCompactJws } from '../src/security/oidc/jws.js'
 
 describe('verifyCompactJws', () => {
@@ -87,5 +87,41 @@ describe('verifyCompactJws', () => {
     const keys = await generateOidcKeys()
     expect(verifyCompactJws({ untrustedToken: signEs256Der(keys), jwks: keys.jwks, acceptedAlgs: ['ES256'] })).toEqual({ ok: false, reason: 'signature-invalid' })
     expect(verifyCompactJws({ untrustedToken: signEs256RawWithLength(keys, 63), jwks: keys.jwks, acceptedAlgs: ['ES256'] })).toEqual({ ok: false, reason: 'signature-invalid' })
+  })
+})
+
+describe('ES384 support', () => {
+  it('accepts a correctly signed ES384 token (raw P-1363, 96 bytes)', async () => {
+    const keys = await generateOidcKeys()
+    const token = signJws(keys, 'test-es384', 'ES384', {}, { sub: 'user-1' })
+    expect(verifyCompactJws({ untrustedToken: token, jwks: keys.jwks, acceptedAlgs: ['ES384'] }))
+      .toEqual({ ok: true, protectedHeader: expect.objectContaining({ alg: 'ES384', kid: 'test-es384' }), payload: { sub: 'user-1' } })
+  })
+
+  it('rejects an ES384 signature in DER form and a wrong-length raw signature', async () => {
+    const keys = await generateOidcKeys()
+    expect(verifyCompactJws({ untrustedToken: signEs384Der(keys), jwks: keys.jwks, acceptedAlgs: ['ES384'] })).toEqual({ ok: false, reason: 'signature-invalid' })
+    expect(verifyCompactJws({ untrustedToken: signEs384RawWithLength(keys, 95), jwks: keys.jwks, acceptedAlgs: ['ES384'] })).toEqual({ ok: false, reason: 'signature-invalid' })
+  })
+
+  it('rejects ES384 alg matched with a P-256 key (crv confusion)', async () => {
+    const keys = await generateOidcKeys()
+    const token = signJws(keys, 'test-ec', 'ES256', { alg: 'ES384' }, { sub: 'x' })
+    expect(verifyCompactJws({ untrustedToken: token, jwks: keys.jwks, acceptedAlgs: ['ES384'] })).toEqual({ ok: false, reason: 'key-type-mismatch' })
+  })
+})
+
+describe('seam negative cases promoted (ADR-0182)', () => {
+  it('rejects JWKS with duplicate kid entries', async () => {
+    const keys = await generateOidcKeys()
+    const dupJwks = { keys: [...keys.jwks.keys, { ...keys.jwks.keys[0] }] }
+    const token = signJws(keys, 'test-rsa', 'RS256', {}, { sub: 'x' })
+    expect(verifyCompactJws({ untrustedToken: token, jwks: dupJwks, acceptedAlgs: ['RS256'] })).toEqual({ ok: false, reason: 'kid-not-found' })
+  })
+
+  it('rejects a non-string kid in the header', async () => {
+    const keys = await generateOidcKeys()
+    const token = signRawSegments(keys, 'test-rsa', 'RS256', JSON.stringify({ alg: 'RS256', kid: 42 }), { sub: 'x' })
+    expect(verifyCompactJws({ untrustedToken: token, jwks: keys.jwks, acceptedAlgs: ['RS256'] })).toEqual({ ok: false, reason: 'missing-kid' })
   })
 })
