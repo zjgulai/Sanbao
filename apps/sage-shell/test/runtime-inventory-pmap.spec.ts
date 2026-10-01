@@ -54,8 +54,8 @@ async function writePackage(profileDir: string, name: string, manifest: Record<s
   await writeFile(join(dir, 'package.json'), JSON.stringify(manifest))
 }
 
-const AGENT_MANIFEST = { name: '@deepseek-ai/dsh-agent', version: '0.1.5-rc.2', exports: { '.': './lib/index.js' } }
-const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek', version: '0.1.5-rc.2', exports: { '.': './lib/index.js' } }
+const AGENT_MANIFEST = { name: '@deepseek-ai/dsh-agent', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
+const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
 
 function byComponent(evidence: readonly PmapComponentEvidence[], component: string): PmapComponentEvidence[] {
   return evidence.filter((row) => row.component === component)
@@ -97,7 +97,7 @@ describe('PMAP static-layer producers (WT-02C.2E-PMAP)', () => {
       state: 'observed',
       observationScope: 'materialized-static',
       identity: 'provider:deepseek',
-      version: '0.1.5-rc.2',
+      version: '0.2.0-rc.2',
       provenance: { source: 'harness:settings.json', observedAt: NOW },
     })
     expect(provider.artifactDigest).toMatch(/^urn:sage:pmap-package-artifact:sha256:[0-9a-f]{64}$/u)
@@ -115,7 +115,7 @@ describe('PMAP static-layer producers (WT-02C.2E-PMAP)', () => {
     )
 
     const agent = byComponent(evidence, 'agent')[0]!
-    expect(agent).toMatchObject({ state: 'observed', identity: 'agent:@deepseek-ai/dsh-agent@0.1.5-rc.2', version: '0.1.5-rc.2' })
+    expect(agent).toMatchObject({ state: 'observed', identity: 'agent:@deepseek-ai/dsh-agent@0.2.0-rc.2', version: '0.2.0-rc.2' })
     expect(agent.behaviorConfigurationDigest).toBeUndefined()
 
     const cordis = findRow(evidence, 'preset:cordis@system')!

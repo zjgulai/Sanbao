@@ -41,7 +41,7 @@ function emptyProfile(): { profileDir: string; overlayPatchPath: string } {
   }))
   writeFileSync(join(profileDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), JSON.stringify({
     name: '@deepseek-ai/dsh',
-    version: '0.1.5-rc.2',
+    version: '0.2.0-rc.2',
     type: 'module',
   }))
   writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')

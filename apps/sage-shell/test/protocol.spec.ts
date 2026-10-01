@@ -150,7 +150,7 @@ describe('ipc guards', () => {
   const ready = {
     type: 'ready',
     protocolVersion: 4,
-    dshVersion: '0.1.5-rc.2',
+    dshVersion: '0.2.0-rc.2',
     profileGeneration: 'sage-dev',
     manifestSha256: 'a'.repeat(64),
     loaderPhase: 'active',

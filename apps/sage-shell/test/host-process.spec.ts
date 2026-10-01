@@ -39,7 +39,7 @@ const runtime: HostRuntime = {
 const ready = {
   type: 'ready' as const,
   protocolVersion: SHELL_HOST_PROTOCOL_VERSION,
-  dshVersion: '0.1.5-rc.2',
+  dshVersion: '0.2.0-rc.2',
   profileGeneration: runtime.expectedProfileGeneration,
   manifestSha256: runtime.expectedManifestSha256,
   loaderPhase: 'active' as const,
@@ -89,7 +89,7 @@ describe('ShellHostProcess live snapshot', () => {
       manifestSha256: 'a'.repeat(64),
       loaderPhase: 'active',
       hostProtocolVersion: '4',
-      harnessVersion: '0.1.5-rc.2',
+      harnessVersion: '0.2.0-rc.2',
     })
     expect(Object.isFrozen(active)).toBe(true)
     expect(Object.keys(active)).toEqual([

@@ -335,7 +335,7 @@ describe('materializeProfile', () => {
   it('does not add a composed package to the profile manifest in P0-3', () => {
     const seed = {
       name: 'sage-shell-profile',
-      dependencies: { '@deepseek-ai/dsh': '0.1.5-rc.2' },
+      dependencies: { '@deepseek-ai/dsh': '0.2.0-rc.2' },
       dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
     }
 

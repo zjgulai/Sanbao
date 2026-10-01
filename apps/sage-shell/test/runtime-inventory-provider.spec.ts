@@ -154,7 +154,7 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     ]))
     expect(descriptor.provider).toEqual({
       identity: 'provider:deepseek',
-      version: '0.1.5-rc.2',
+      version: '0.2.0-rc.2',
       artifactDigest: `sha256:${providerArtifactHex}`,
       contractDigest: contentDigest(JSON.stringify(PROVIDER_MANIFEST.exports)),
       behaviorConfigurationDigest: contentDigest(JSON.stringify({
@@ -164,7 +164,7 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     })
     expect(descriptor.model).toEqual({
       identity: 'model:deepseek/deepseek-chat',
-      version: '0.1.5-rc.2',
+      version: '0.2.0-rc.2',
       artifactDigest: `sha256:${providerArtifactHex}`,
       contractDigest: contentDigest(JSON.stringify(PROVIDER_MANIFEST.exports)),
       behaviorConfigurationDigest: contentDigest(JSON.stringify({
@@ -200,14 +200,14 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     const rosterBehaviorDigest = contentDigest(JSON.stringify(rosterContractMembers))
     expect(descriptor.agent).toEqual({
       identity: 'agent:@deepseek-ai/dsh-agent',
-      version: '0.1.5-rc.2',
+      version: '0.2.0-rc.2',
       artifactDigest: `sha256:${agentArtifactHex}`,
       contractDigest: contentDigest(JSON.stringify(AGENT_MANIFEST.exports)),
       behaviorConfigurationDigest: rosterBehaviorDigest,
     })
     expect(descriptor.preset).toEqual({
       identity: 'preset:set',
-      version: '0.1.5-rc.2',
+      version: '0.2.0-rc.2',
       artifactDigest: contentDigest(JSON.stringify(rosterArtifactMembers)),
       contractDigest: contentDigest(JSON.stringify(PRESETS_MANIFEST.exports)),
       behaviorConfigurationDigest: rosterBehaviorDigest,
@@ -342,15 +342,15 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // Seven provenance digests of the full evidence.
     expect(result.evidence.receiptDigest)
-      .toBe('sha256:f571933cbb5611ccdf3536b97d6f168fa2a7a0d3c2193823e35d2f33102e61b2')
+      .toBe('sha256:74c5c9e613dd0ff71ba4ab35833b3adde883a5ef02dc1d5a668bed0180652cf2')
     expect(result.evidence.materializationInstanceDigest)
-      .toBe('sha256:bcfc465bf69d993239a2f8fbe8848c32abbbef39b162a9e5ce13e9639ccdf5ad')
+      .toBe('sha256:55cb1f6c9fce14751c5faf153cbe6364860b2b58d4c8eb20532627f141140196')
     expect(result.evidence.instanceAuthorityDigest)
-      .toBe('sha256:230376e4f71111984c09b6b185bc2682985dc500831fcc848d0e8d7a270910bf')
+      .toBe('sha256:0992074fbf457da4e514b4ca4e80167e9b7daf57287141c4c3a85cea0cdc74cd')
     expect(result.evidence.mainObservationProvenanceDigest)
-      .toBe('sha256:00c12a0aa7986601a5351932a119add5ab11b047cc9b291539332f5f1df16b91')
+      .toBe('sha256:1cafc10e45eb69b0e10f957c855fee76c05efc4efb9a95a631afb986048ee7c9')
     expect(result.evidence.healthObservationDigest)
-      .toBe('sha256:be35d89b7b1dd2b7dc14754663672dc0d6420636da70aeb5d38a7851c2f942fa')
+      .toBe('sha256:f684a9a264342df20ed803846acfb8071e81690592942c740dc02659b43149f9')
     expect(result.evidence.livenessObservationDigest)
       .toBe('sha256:4dc75ed73e8cd2a1d17ecf68852a244cd889b5435ffcaf8286fb16ba2c6d82ec')
     expect(result.evidence.registrySnapshotDigest)
@@ -358,9 +358,9 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // The stable pair itself is frozen: any silent field change breaks these literals.
     expect(result.descriptor.runtimeDescriptorDigest)
-      .toBe('urn:sage:runtime-descriptor:sha256:9e4494b70a39602ea06962808ceb0bdcef2c50039ed5ac698bd19df91143bc4c')
+      .toBe('urn:sage:runtime-descriptor:sha256:03de50bd9a878261c89927fefd0626efecc141b840085395de3498735ac9e4d7')
     expect(result.evidence.inventoryEvidenceDigest)
-      .toBe('urn:sage:inventory-evidence:sha256:e308263ef33b1289be6ce3d77ef1fa1ca05ae2d08cc3aaccbdf0ab8c24a04cc9')
+      .toBe('urn:sage:inventory-evidence:sha256:cf47d47eed500cb44403d91c3b37d57280454d8c5849bba86eb804b9f041f116')
   })
 })
 

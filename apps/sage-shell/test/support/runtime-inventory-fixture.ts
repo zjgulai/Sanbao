@@ -37,12 +37,12 @@ export const EXPIRES_AT = '2026-10-02T12:00:30.000Z'
 export const ACTIVATED_AT = '2026-10-02T11:59:00.000Z'
 export const BOOT_ID = 'sage-host:33333333-3333-4333-8333-333333333333'
 export const RUNTIME_GENERATION = 7
-export const HARNESS_VERSION = '0.1.5-rc.2'
+export const HARNESS_VERSION = '0.2.0-rc.2'
 export const OWNED_PROFILE_DIGEST = `sha256:${'a'.repeat(64)}`
 
-export const AGENT_MANIFEST = { name: '@deepseek-ai/dsh-agent', version: '0.1.5-rc.2', exports: { '.': './lib/index.js' } }
-export const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek', version: '0.1.5-rc.2', exports: { '.': './lib/index.js' } }
-export const PRESETS_MANIFEST = { name: '@deepseek-ai/dsh-agent-presets', version: '0.1.5-rc.2', exports: { './presets/*': './presets/*' } }
+export const AGENT_MANIFEST = { name: '@deepseek-ai/dsh-agent', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
+export const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
+export const PRESETS_MANIFEST = { name: '@deepseek-ai/dsh-agent-presets', version: '0.2.0-rc.2', exports: { './presets/*': './presets/*' } }
 export const OVERLAY_CONTENT = '# compose overlay\n'
 export const SYSTEM_PRESET_CONTENT = '# zeta preset\n'
 export const USER_PRESET_CONTENT = '# alpha preset\n'
