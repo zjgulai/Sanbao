@@ -197,6 +197,7 @@
 | ADR-0184 | WT-02D.1 fixture / blocked 只读 E2E 与 route 收口：main 唯一 owner 兑现（Host 旧面与 off 回退删除）+ matter 槽冻结（production 不构造 placeholder）+ SAGE_FIXTURE_PROJECTION 显式开关 + 双层 E2E（零写入快照含负控）+ 门禁合同随票修订。 | accepted（2026-10-01） | [Note](../notes/implemented/architecture/2026-10-01-wt02d1-fixture-projection-e2e.md) |
 | ADR-0185 | WT-02B.2C 身份注册表 / identity handle（runtime-only）：登录链产出内部身份引用（复合键复用 + 注入随机性，零持久化零日志）、vault main 内部访问器（snapshot 不破）、adapter iss/sub guard fail closed；内核迁移与 Policy-exclusive membership 留 organization mapping。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2c-identity-registry.md) |
 | ADR-0186 | WT-02B.2D organization mapping 内核契约迁移：handle 索引（subjectId 退出内核面）+ 请求方组织线索（provider 必须为其作答，答非所问 fail closed）+ Policy 独占 membership；错误码集合不变，fixture 与未来 provider 共用形态。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02b2d-organization-mapping.md) |
+| ADR-0187 | WT-02C.2E-PMAP/E.0 静态层 runtime inventory producers：PMAP 五面观测矩阵合同（dsh 包源码锚点）+ 合法空集/缺输入二分（absent/broken 稳定原因码）+ candidate evidence（`sage.pmap-component-evidence.v1`，非 descriptor）；运行态 effective 与 C2E.2 汇合留后续票。 | accepted（2026-10-02） | [Note](../notes/implemented/security/2026-10-02-wt02c2e-pmap-runtime-inventory.md) |
 
 > ADR-0144 的配色源、亮色立面与仅主题包范围已由 [ADR-0145](ADR-0145.md) 更新；其原记录保留为历史。
 
