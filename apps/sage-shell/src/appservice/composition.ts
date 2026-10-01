@@ -20,7 +20,7 @@ const PRODUCTION_FAIL_CLOSED_PORTS: CommandPipelinePorts = {
 }
 
 export interface AuthServiceOptions {
-  readonly authSnapshot?: () => { readonly status: 'signed-out' | 'signed-in'; readonly displayName: string | null }
+  readonly authSnapshot?: () => { readonly status: 'signed-out' | 'signed-in' | 'pending'; readonly displayName: string | null }
   readonly login?: () => Promise<Response>
   readonly logout?: () => Promise<Response>
 }
@@ -31,7 +31,13 @@ export function createUnavailableFirstService(runtime: SageViewState | null, aut
     async readState(): Promise<Response> {
       const snap = snapshot()
       const state: SageServiceState = {
-        service: { status: 'unavailable', reason: 'identity-unavailable', auth: { ...snap, status: snap.status }, correlation: randomUUID() },
+        service: {
+          status: 'unavailable',
+          // Spec §6: identity established once a session exists (signed-in) or is being established (pending).
+          reason: snap.status === 'signed-out' ? 'identity-unavailable' : 'authenticated',
+          auth: { status: snap.status, displayName: snap.displayName },
+          correlation: randomUUID(),
+        },
         runtime,
       }
       return serviceJson(state, 200)

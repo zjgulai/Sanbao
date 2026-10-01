@@ -11,7 +11,7 @@ import type { TokenVault } from './token-vault.js'
 /** Deployment inputs re-exported for Task 5 consumers (canonical home: oidc-config.ts). */
 export { OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPES } from './oidc-config.js'
 
-export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-verification-failed' | 'login-timeout' | 'login-in-progress'
+export type LoginErrorCode = 'idp-unreachable' | 'callback-invalid' | 'token-verification-failed' | 'login-timeout' | 'login-in-progress' | 'login-superseded'
 export type LoginOutcome = { readonly ok: true; readonly displayName: string | null } | { readonly ok: false; readonly code: LoginErrorCode }
 
 export interface OidcAdapterDeps {
@@ -136,7 +136,8 @@ export function createOidcAdapter(deps: OidcAdapterDeps) {
         const claims = verified.claims
         const displayName = typeof claims.name === 'string' ? claims.name
           : typeof claims.username === 'string' ? claims.username : null
-        vault.signIn({ accessToken: typeof record.access_token === 'string' ? record.access_token : '', idToken: record.id_token, displayName })
+        const applied = vault.signIn({ accessToken: typeof record.access_token === 'string' ? record.access_token : '', idToken: record.id_token, displayName })
+        if (!applied) return { ok: false, code: 'login-superseded' }
         return { ok: true, displayName }
       } catch {
         return { ok: false, code: 'idp-unreachable' }

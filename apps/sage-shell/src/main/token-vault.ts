@@ -13,7 +13,8 @@ export interface TokenVaultSnapshot {
 export interface TokenVault {
   status(): 'signed-out' | 'pending' | 'signed-in'
   beginPending(): boolean
-  signIn(session: VaultSession): void
+  /** Applies only from `pending`; returns false when a logout (or any other transition) superseded the flow. */
+  signIn(session: VaultSession): boolean
   signOut(): void
   snapshot(): TokenVaultSnapshot
 }
@@ -24,13 +25,17 @@ export function createTokenVault(): TokenVault {
   return {
     status: () => status,
     beginPending(): boolean {
-      if (status === 'pending') return false
+      // Spec §4.1: a login may only start from signed-out — signed-in requires an explicit logout first.
+      if (status !== 'signed-out') return false
       status = 'pending'
       return true
     },
-    signIn(next: VaultSession): void {
+    signIn(next: VaultSession): boolean {
+      // A completed flow must not resurrect a session the user signed out of mid-flow.
+      if (status !== 'pending') return false
       session = next
       status = 'signed-in'
+      return true
     },
     signOut(): void {
       // Drop references immediately; nothing persisted anywhere else by contract.

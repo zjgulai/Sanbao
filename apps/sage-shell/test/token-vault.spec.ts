@@ -32,4 +32,28 @@ describe('TokenVault', () => {
     expect(vault.status()).toBe('signed-out')
     expect(vault.beginPending()).toBe(true)
   })
+
+  it('rejects beginPending when already signed-in (spec §4.1: logout required first)', () => {
+    const vault = createTokenVault()
+    vault.beginPending()
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(true)
+    expect(vault.beginPending()).toBe(false)
+    expect(vault.status()).toBe('signed-in')
+  })
+
+  it('refuses signIn after a sign-out during a pending flow (logout wins, no resurrection)', () => {
+    const vault = createTokenVault()
+    vault.beginPending()
+    vault.signOut() // the user logs out while the browser flow is still in flight
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(false)
+    expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
+  })
+
+  it('refuses a second signIn once signed-in (only one session write per pending)', () => {
+    const vault = createTokenVault()
+    vault.beginPending()
+    expect(vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })).toBe(true)
+    expect(vault.signIn({ accessToken: 'at2', idToken: 'it2', displayName: 'Mallory' })).toBe(false)
+    expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
+  })
 })

@@ -201,4 +201,31 @@ describe('oidc-adapter error matrix (one negative per LoginErrorCode)', () => {
     expect(result).toEqual({ ok: false, code: 'login-timeout' })
     expect(vault.status()).toBe('signed-out')
   })
+
+  it('login-superseded when a logout lands while the flow is still pending', async () => {
+    const idp = await fakeIdp()
+    const deps = makeDeps(idp)
+    deps.setTokenResponse({ access_token: 'at', id_token: idp.idToken({ name: 'Alice', sub: 'user-1' }) })
+    const vault = createTokenVault()
+    const adapter = createOidcAdapter(deps)
+    const login = adapter.startLogin(vault)
+    for (let i = 0; i < 200 && deps.pendingHandler === undefined; i += 1) {
+      await new Promise((r) => { setTimeout(r, 1) })
+    }
+    vault.signOut() // the user logs out while the browser flow is still in flight
+    if (deps.pendingHandler) await deps.pendingHandler()
+    expect(await login).toEqual({ ok: false, code: 'login-superseded' })
+    expect(vault.snapshot()).toEqual({ status: 'signed-out', displayName: null })
+  })
+
+  it('login-in-progress when a login starts while a session is already signed in', async () => {
+    const idp = await fakeIdp()
+    const deps = makeDeps(idp)
+    const vault = createTokenVault()
+    vault.beginPending()
+    vault.signIn({ accessToken: 'at', idToken: 'it', displayName: 'Alice' })
+    const result = await createOidcAdapter(deps).startLogin(vault)
+    expect(result).toEqual({ ok: false, code: 'login-in-progress' })
+    expect(vault.snapshot()).toEqual({ status: 'signed-in', displayName: 'Alice' })
+  })
 })

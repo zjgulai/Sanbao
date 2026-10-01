@@ -83,8 +83,8 @@ async function runEmbeddedScript(statePayload: unknown) {
   expect(script, 'embedded script must be extractable from the served document').toBeTruthy()
   const stubs = createDocumentStub()
   const fetchStub = async () => ({ ok: true, json: async () => statePayload })
-  const run = new Function('document', 'fetch', script as string) as (d: unknown, f: unknown) => void
-  run(stubs.document, fetchStub)
+  const run = new Function('document', 'fetch', 'setInterval', script as string) as (d: unknown, f: unknown, i: unknown) => void
+  run(stubs.document, fetchStub, () => 0)
   // The script schedules refresh() as a microtask chain behind awaited fetch/json; flush both.
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   await new Promise((resolve) => { setTimeout(resolve, 0) })
@@ -243,8 +243,8 @@ async function runEmbeddedAuthClickScript(options: {
     path === '/.sage/login' || path === '/.sage/logout'
       ? { ok: true, json: async () => options.actionResponse }
       : { ok: true, json: async () => options.statePayload }
-  const run = new Function('document', 'fetch', script as string) as (d: unknown, f: unknown) => void
-  run(document, fetchStub)
+  const run = new Function('document', 'fetch', 'setInterval', script as string) as (d: unknown, f: unknown, i: unknown) => void
+  run(document, fetchStub, () => 0)
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   const handler = handlers[options.click][0]
@@ -368,8 +368,8 @@ async function runEmbeddedRetryScript(actionPayload: unknown) {
     init?.method === 'POST'
       ? { ok: true, json: async () => actionPayload }
       : { ok: true, json: async () => statePayload }
-  const run = new Function('document', 'fetch', script as string) as (d: unknown, f: unknown) => void
-  run(harness.document, fetchStub)
+  const run = new Function('document', 'fetch', 'setInterval', script as string) as (d: unknown, f: unknown, i: unknown) => void
+  run(harness.document, fetchStub, () => 0)
   // The script schedules refresh() as a microtask chain behind awaited fetch/json; flush both.
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   await new Promise((resolve) => { setTimeout(resolve, 0) })
@@ -382,6 +382,48 @@ async function runEmbeddedRetryScript(actionPayload: unknown) {
   await new Promise((resolve) => { setTimeout(resolve, 0) })
   return harness
 }
+
+describe('Sage renderer state convergence poll', () => {
+  it('re-reads and re-renders state on the interval tick without any click', async () => {
+    const html = renderSageDocument()
+    const script = html.match(/<script>([\s\S]*)<\/script>/u)?.[1]
+    expect(script, 'embedded script must be extractable from the served document').toBeTruthy()
+    const stubs = createDocumentStub()
+    let fetchCount = 0
+    const fetchStub = async () => {
+      fetchCount += 1
+      return {
+        ok: true,
+        json: async () => ({
+          service: {
+            status: 'unavailable',
+            reason: 'authenticated',
+            correlation: 'c-poll',
+            auth: { status: 'signed-in', displayName: 'Alice' },
+          },
+          runtime: { status: 'ready', message: 'ok', retryable: false },
+        }),
+      }
+    }
+    const intervals: Array<() => void> = []
+    const run = new Function('document', 'fetch', 'setInterval', script as string) as (d: unknown, f: unknown, i: (fn: () => void) => unknown) => void
+    run(stubs.document, fetchStub, (fn) => { intervals.push(fn); return 0 })
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    expect(fetchCount).toBe(1)
+    expect(intervals).toHaveLength(1)
+
+    // Simulate the stale surface the poll must heal: reset the auth UI, then tick without any click.
+    stubs.logout.hidden = true
+    stubs.authName.textContent = ''
+    intervals[0]()
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    await new Promise((resolve) => { setTimeout(resolve, 0) })
+    expect(fetchCount).toBe(2)
+    expect(stubs.logout.hidden).toBe(false)
+    expect(stubs.authName.textContent).toBe('Alice')
+  })
+})
 
 describe('Sage renderer retry response two-shape guard', () => {
   it('normalizes the CommandDenied shape into a renderable recovering state', async () => {

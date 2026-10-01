@@ -327,6 +327,9 @@ export function renderSageDocument(): string {
 
     setView('overview');
     void refresh();
+    // Convergence poll: a login flow outlives the 5s request deadline, so vault transitions
+    // (pending → signed-in, logout, supersession) must land without relying on a click's fetch settling.
+    setInterval(() => { void refresh(); }, 2000);
   </script>
 </body>
 </html>`

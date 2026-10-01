@@ -49,6 +49,18 @@ describe('auth in state', () => {
     expect(body.service).toMatchObject({ auth: { status: 'signed-out', displayName: null } })
   })
 
+  it('signed-in upgrades the service reason to authenticated (spec §6)', async () => {
+    const service = createUnavailableFirstService(null, { authSnapshot: () => ({ status: 'signed-in', displayName: 'Alice' }) })
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.service).toMatchObject({ reason: 'authenticated', auth: { status: 'signed-in', displayName: 'Alice' } })
+  })
+
+  it('pending auth passes through with the authenticated reason (login in flight)', async () => {
+    const service = createUnavailableFirstService(null, { authSnapshot: () => ({ status: 'pending', displayName: null }) })
+    const body = await (await service.readState()).json() as Record<string, unknown>
+    expect(body.service).toMatchObject({ reason: 'authenticated', auth: { status: 'pending', displayName: null } })
+  })
+
   it('login provider returns typed denial for a failing login', async () => {
     const service = createUnavailableFirstService(null, { login: async () => Response.json({ code: 'idp-unreachable', stage: 'login', retryable: true, correlation: 'x' }, { status: 200, headers: { 'cache-control': 'no-store' } }) })
     const response = await service.login()

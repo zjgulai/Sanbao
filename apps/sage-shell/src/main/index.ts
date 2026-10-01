@@ -87,7 +87,9 @@ async function main(paths: SagePaths): Promise<void> {
       return handleSageServiceRequest(request, {
         callerBinding,
         providers: createUnavailableFirstService(viewState, {
-          authSnapshot: () => vault.snapshot(),
+          authSnapshot: () => vault.status() === 'pending'
+            ? { status: 'pending' as const, displayName: null }
+            : vault.snapshot(),
           login: async () => {
             const outcome = await adapter.startLogin(vault)
             return serviceJson(

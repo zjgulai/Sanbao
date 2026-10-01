@@ -5,7 +5,7 @@ export interface CallerBinding {
   readonly correlation: string
 }
 
-export type ServiceUnavailableReason = 'identity-unavailable'
+export type ServiceUnavailableReason = 'identity-unavailable' | 'authenticated'
 
 export interface AuthStatus {
   readonly status: 'signed-in' | 'signed-out' | 'pending'
