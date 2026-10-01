@@ -48,6 +48,15 @@ function installAnchor(profileDir: string): string {
  */
 export function composeShellPatches(input: { profileDir: string; overlayPatchPath: string; localPatchPath?: string }): ShellPatches {
   const profile = loadProfileDirectory(SHELL_LABEL, input.profileDir, installAnchor(input.profileDir))
+  // 上游 0.2.0 起把不可装载的 bundle 改为「跳过并记 skippedBundles、不抛错」；Sage 的 profile 由
+  // Sage 物化、声明的 bundle 就是壳的组合合同——跳过等于半装启动，必须响铃（保留 0.1.5 时代的
+  // fail-loud 语义；reason 原样携带上游给出的具体原因）。
+  if (profile.skippedBundles.length > 0) {
+    const details = profile.skippedBundles
+      .map(({ packageName, reason }) => `${JSON.stringify(packageName)}: ${reason}`)
+      .join('; ')
+    throw new Error(`${SHELL_LABEL}: profile ${input.profileDir} declares bundle(s) that did not load: ${details}`)
+  }
   const layers = [
     ...profile.layers.map(layer => layer.patches),
     profile.patches,
