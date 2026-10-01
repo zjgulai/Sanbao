@@ -26,6 +26,13 @@
     - credentials
   config: {}
 
+# Sage 隐私默认（ADR-0193）：官方 DeepSeek API 的会话日志贡献在 0.2.0 起默认开启
+# （`dsh-session-log-deepseek` 配置 `enabled` 默认 true），Sage 组合显式关闭；
+# 需要时由实例在本地 patch 层按用途重新开启。
+- id: session-log-deepseek
+  config:
+    enabled: false
+
 - insert:
     - id: shell-directory-picker
       name: '@deepseek-ai/dsh-host-directory-picker-browse'
