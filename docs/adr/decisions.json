@@ -4739,6 +4739,61 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0196",
+      "title": "ADR-0196 · WT-02C.2E.3：Host protocol v5 运行态有效观测（ready 携带）+ E.2 默认标记并入",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Host protocol v5：host 在 ready 前观测 live registry 一次并以 ready 事件 runtimeEffective 字段携带；host/main 共用 protocol.ts 类型与深校验；绑定 boot、沿用现行 invalidation、零 renderer 可达面；旧 v4 generation fail-loud 拒配须重物化。",
+          "constraints": [
+            "SHELL_HOST_PROTOCOL_VERSION=5；sage-shell-pin 同步 '5'",
+            "ready 校验失败=事件非法（fail loud）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "观测面 = {kind:'observed', defaultPresetId, presets:[{id,isDefault,broken?}]} 或 {kind:'unavailable', reason∈3}；恰一条 isDefault 且等于 defaultPresetId，悬空/空/重复/越界/非 plain-data 一律 fail closed。",
+          "constraints": [
+            "registry 服务缺席→registry-service-absent；读取抛错→observation-failed；自验不过→invalid-roster",
+            "broken 仅观测，不并入 descriptor"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "E.2 并入默认标记：preset/agent behavior 文档改为 {defaultPresetId, members:[{id,trust,contractHex}]}；新增第 8 code runtime-effective-unavailable；defaultPresetId 必须 ∈ 静态 roster。",
+          "constraints": [
+            "stable 对变更属预期语义事件（重发 matrix 登记）",
+            "goldens 探针实算后固化"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "观测器禁止引入 @deepseek-ai/dsh-agent-preset-registry 为壳依赖（结构类型读取）；跨边界方法必须带接收者调用（.call(service)），假 service 测试须使用 this。",
+          "constraints": [
+            "真机 smoke 是咬住接收者缺陷的仪器",
+            "回归测试用方法式假 service"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "matrix 重发只登记不物理执行（无按稳定对键控制品）；留给真实 Matrix Authority 发布票。",
+          "constraints": [
+            "不得声称矩阵已重发"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "登记后续票：4 条 host 面行因缺 peer（@deepseek-ai/dsh-llm-deepseek 等，npm 存在未入 profile）导入失败，K 世代同病；修复=seed peer 闭包 + 运行时模型 route 功能探针。",
+          "constraints": [
+            "不得表述为已修复",
+            "影响面（官方 route 是否不可用）须以真实模型调用证实或证伪"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -739,3 +739,7 @@ D 链下一项 = WT-02D.2（blocked：真实 Identity / Policy、WT-02B.3 最小
 ### Revision 43：C2E 线收口（PMAP.1 换装适配 + E.2 遗留合并）
 
 C2E 线经两票落地（本计划不再重复其细节，以 git 与各 ADR / Note 为唯一事实源）：① [ADR-0192](../adr/ADR-0192.md) 内核 0.2.0-rc.2 换装后登记的全部 PMAP 源面失效，由 **WT-02C.2E-PMAP.1**（[ADR-0194](../adr/ADR-0194.md)）收口——preset=声明行模型、provider/model=`agent-default-model` 层叠行配置、`preset:set` 源包迁 `dsh-agent-preset-registry`、overlay 为组成必需层；真实 generation 双跑 7 行全 observed、零写入。② **WT-02C.2E.2 遗留合并清点**（[ADR-0195](../adr/ADR-0195.md)）：帧名称表单源化并纳入 sage-shell-pin 冻结（③，机制守替代评审守）；能力 canonical 与 C2D.1 内核核查无重叠（⑤ 关闭）；④ 被 ADR-0194 覆盖；①（default preset 运行时判定）阻塞于 Host protocol 扩展票；②（host/harness 分包 artifact 粒度）待语义裁决后重发 matrix；⑥（health/liveness 增强）阻塞于 C2C.4/.5 真实 provider；⑦（`runtimeInventory` 消费者）移交 D.2 接线；⑧（registrySnapshot 变更检测）阻塞于 C2D.2A。C 链前沿更新为：C2C.2 bridge seam（外部阻塞）/ C2D.2A registry provider / 上述 ①②⑥⑧ 的独立票。
+
+### Revision 44：C2E.3 运行态有效观测（协议 v5）
+
+**WT-02C.2E.3**（[ADR-0196](../adr/ADR-0196.md)）收口遗留①：Host protocol v5——host 在 ready 前观测 live registry（`ctx.get('agentPresets')`，结构类型）并以 `ready.runtimeEffective` 携带 `{defaultPresetId, presets:[{id,isDefault,broken?}]}`；E.2 第 8 个 code `runtime-effective-unavailable`；preset/agent behavior 文档并入运行态 `defaultPresetId`（stable 对变更＝预期矩阵键事件，重发登记）。真机验收：全新隔离根 smoke **19/19**（`default=standard presets=[standard,ptc,minimal,cordis]`）；套件 621+1skip；三层 gate 25/25；观测器首版「方法脱挂（this 丢失）」被真机 smoke 判红后修复（假 fixture 补方法式回归）。**同批发现（登记待处置）**：host 面 4 行缺 peer 包（`@deepseek-ai/dsh-llm-deepseek` 等）运行时导入失败（K 世代同病，npm 有包未入 profile）——官方 route 运行时可用性待功能探针，修复票独立；C 链前沿增列该项。
