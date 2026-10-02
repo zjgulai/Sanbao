@@ -2,7 +2,8 @@ packages:
   - .
 
 nodeLinker: hoisted
-autoInstallPeers: false
+autoInstallPeers: true
+strictPeerDependencies: true
 allowBuilds:
   "@deepseek-ai/dsh-subprocess-local": true
   koffi: false

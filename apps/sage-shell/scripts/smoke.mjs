@@ -261,6 +261,16 @@ check(
   exitedBeforeShutdown ? 'host exited (code=' + String(exitCode) + ') before shutdown IPC' : 'code=' + String(exitCode),
 )
 
+// A bundled entry that fails to import or waits forever only logs a loader
+// warning, so ready + healthy responses alone cannot see it. Every entry in
+// the shipped profile must win activation or the smoke must not pass.
+const activationWarning = stderr.split('\n').find((line) => line.includes('did not activate'))
+check(
+  'host boot activates every bundled entry',
+  activationWarning === undefined,
+  activationWarning === undefined ? undefined : activationWarning.trim(),
+)
+
 if (failures.length > 0) {
   process.stderr.write('sage shell smoke: ' + failures.length + ' failure(s): ' + failures.join(', ') + '\n' + stderr + '\n')
   process.exit(1)
