@@ -182,6 +182,27 @@ try {
   check('host ready reports the active loader phase', info.loaderPhase === 'active', 'loaderPhase=' + info.loaderPhase)
   check('host resolved an installed dsh version', /^\d+\.\d+\.\d+/u.test(info.dshVersion), info.dshVersion)
 
+  const observation = info.runtimeEffective
+  check(
+    'host ready carries an observed runtime-effective roster',
+    typeof observation === 'object' && observation !== null && observation.kind === 'observed',
+    'runtimeEffective.kind=' + String(observation?.kind) + ' reason=' + String(observation?.reason),
+  )
+  if (typeof observation === 'object' && observation !== null && observation.kind === 'observed') {
+    check(
+      'runtime-effective roster marks exactly one default matching its default id',
+      Array.isArray(observation.presets)
+        && observation.presets.filter((row) => row.isDefault === true).length === 1
+        && observation.presets.some((row) => row.id === observation.defaultPresetId && row.isDefault === true),
+      'default=' + observation.defaultPresetId + ' presets=' + JSON.stringify(observation.presets.map((row) => row.id)),
+    )
+    check(
+      'runtime-effective roster carries the four shipped presets',
+      ['standard', 'ptc', 'minimal', 'cordis'].every((id) => observation.presets.some((row) => row.id === id)),
+      'presets=' + JSON.stringify(observation.presets.map((row) => row.id)),
+    )
+  }
+
   phase = 'host served the Sage product surface'
   const index = await send('/index.html')
   check(

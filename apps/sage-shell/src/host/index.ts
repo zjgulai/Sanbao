@@ -28,7 +28,9 @@ import {
 import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
 import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
 import { createAssetHandler } from './assets.js'
+import { observeRuntimeEffective } from './runtime-effective.js'
 import type { FetchHandler } from './handler.js'
+import type { RuntimeEffectiveObservation } from '../protocol.js'
 
 /** One request forwarded from the shell's `dsh-app://` handler. */
 export interface HostFetchCommand {
@@ -46,6 +48,8 @@ export interface HostController {
   readonly dshVersion: string
   /** Loader state audited by dsh-app-boot before this controller is returned. */
   readonly loaderPhase: 'active'
+  /** Runtime-effective registry facts observed once from the live runtime (WT-02C.2E.3). */
+  readonly runtimeEffective: RuntimeEffectiveObservation
   /** Begin treating subsequent Cordis lifecycle changes as runtime invalidation. */
   armRuntimeInvalidation(): void
   /** Dispatch one custom-protocol request and stream its response to the response pipe. */
@@ -161,6 +165,7 @@ export async function runShellHost(input: {
   return {
     dshVersion: readDshVersion(profileDir),
     loaderPhase: 'active',
+    runtimeEffective: await observeRuntimeEffective(ctx),
     armRuntimeInvalidation() {
       runtimeInvalidationArmed = true
       if (runtimeInvalidationPending) notifyRuntimeInvalidated()
@@ -267,6 +272,7 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
     profileGeneration: activeProfile.generation,
     manifestSha256: activeProfile.manifestSha256,
     loaderPhase: controller.loaderPhase,
+    runtimeEffective: controller.runtimeEffective,
   })
   controller.armRuntimeInvalidation()
   const decoder = new HostRequestDecoder()

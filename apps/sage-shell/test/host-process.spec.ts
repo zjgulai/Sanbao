@@ -43,6 +43,14 @@ const ready = {
   profileGeneration: runtime.expectedProfileGeneration,
   manifestSha256: runtime.expectedManifestSha256,
   loaderPhase: 'active' as const,
+  runtimeEffective: {
+    kind: 'observed' as const,
+    defaultPresetId: 'standard',
+    presets: [
+      { id: 'standard', isDefault: true },
+      { id: 'cordis', isDefault: false },
+    ],
+  },
 }
 
 function createHost(): { child: FakeChild; host: ShellHostProcess } {
@@ -88,7 +96,7 @@ describe('ShellHostProcess live snapshot', () => {
       activeGeneration: 'sage-dev',
       manifestSha256: 'a'.repeat(64),
       loaderPhase: 'active',
-      hostProtocolVersion: '4',
+      hostProtocolVersion: '5',
       harnessVersion: '0.2.0-rc.2',
     })
     expect(Object.isFrozen(active)).toBe(true)
@@ -102,6 +110,31 @@ describe('ShellHostProcess live snapshot', () => {
       'hostProtocolVersion',
       'harnessVersion',
     ])
+  })
+
+  it('stores the frozen runtime-effective observation for the live epoch and drops it on invalidation', async () => {
+    const { child, host } = await startReady()
+    const observation = host.readRuntimeEffective()
+    expect(observation).toEqual({
+      kind: 'observed',
+      defaultPresetId: 'standard',
+      presets: [
+        { id: 'standard', isDefault: true },
+        { id: 'cordis', isDefault: false },
+      ],
+    })
+    expect(Object.isFrozen(observation)).toBe(true)
+    const rows = (observation as { presets: readonly unknown[] }).presets
+    expect(Object.isFrozen(rows)).toBe(true)
+    expect(Object.isFrozen(rows[0])).toBe(true)
+
+    child.emit('message', { type: 'runtime-invalidated' })
+    expect(host.readRuntimeEffective()).toBeUndefined()
+  })
+
+  it('has no runtime-effective observation before ready', () => {
+    const { host } = createHost()
+    expect(host.readRuntimeEffective()).toBeUndefined()
   })
 
   it('binds ready to the expected profile facts and never reuses an invalidated epoch', async () => {

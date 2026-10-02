@@ -34,8 +34,8 @@ import {
 const OWNED_PROFILE_DIGEST = `sha256:${'a'.repeat(64)}`
 const OBSERVED_AT = '2026-09-28T10:00:00.000Z'
 const BOOT_ID = 'sage-host:11111111-1111-4111-8111-111111111111'
-const GOLDEN_PROJECTION_CANONICAL = '{"schemaVersion":"sage.host-live-inventory-projection.v1","canonicalizationVersion":"sage.host-live-inventory-projection-canonical-json.v1","bootId":"sage-host:11111111-1111-4111-8111-111111111111","runtimeGeneration":7,"activeGeneration":"available-generation","manifestSha256":"4ae54e6de609b169b6606d66e450c0eedfec533e04955b77bf5f005c4f120d8c","loaderPhase":"active","hostProtocolVersion":"4","harnessVersion":"0.2.0-rc.2","ownedProfileDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","artifactSetDigest":"sha256:651b1d68a8100af294b8c4ba87fb1fb0e23052c6807e94521a13abb0618a1830","installerMetadataDigest":"sha256:30c8d2783ad5dc230db30d328df67a36d2dcde7accc94b389acf2c3eea20e9f3","artifactAttestationDigest":"sha256:f7f25298e1b1d67470669a9272ccb1e840799efeecdcf36e8a044ac07cc511a9","observedAt":"2026-09-28T10:00:00.000Z","expiresAt":"2026-09-28T10:00:30.000Z"}'
-const GOLDEN_PROJECTION_DIGEST = 'sha256:772d40a6107b047dcd6a6cfcbe1e9ba059f8d83ef4d77de6f5fefd764c0721bb'
+const GOLDEN_PROJECTION_CANONICAL = '{"schemaVersion":"sage.host-live-inventory-projection.v1","canonicalizationVersion":"sage.host-live-inventory-projection-canonical-json.v1","bootId":"sage-host:11111111-1111-4111-8111-111111111111","runtimeGeneration":7,"activeGeneration":"available-generation","manifestSha256":"4ae54e6de609b169b6606d66e450c0eedfec533e04955b77bf5f005c4f120d8c","loaderPhase":"active","hostProtocolVersion":"5","harnessVersion":"0.2.0-rc.2","ownedProfileDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","artifactSetDigest":"sha256:651b1d68a8100af294b8c4ba87fb1fb0e23052c6807e94521a13abb0618a1830","installerMetadataDigest":"sha256:30c8d2783ad5dc230db30d328df67a36d2dcde7accc94b389acf2c3eea20e9f3","artifactAttestationDigest":"sha256:f7f25298e1b1d67470669a9272ccb1e840799efeecdcf36e8a044ac07cc511a9","observedAt":"2026-09-28T10:00:00.000Z","expiresAt":"2026-09-28T10:00:30.000Z"}'
+const GOLDEN_PROJECTION_DIGEST = 'sha256:98b254b7d40edffe596d989c4f78396a37b8c43b13c260c9bce48fdc9649f6d3'
 const created: string[] = []
 
 function temporary(label: string): string {
@@ -108,7 +108,7 @@ function activeSnapshot(fixture: ActiveFixture): HostLiveInventorySnapshot {
     activeGeneration: fixture.generation,
     manifestSha256: fixture.manifestSha256,
     loaderPhase: 'active',
-    hostProtocolVersion: '4',
+    hostProtocolVersion: '5',
     harnessVersion: '0.2.0-rc.2',
   })
 }
@@ -143,7 +143,7 @@ describe('WT-02C.2B Host live inventory projection', () => {
         activeGeneration: fixture.generation,
         manifestSha256: fixture.manifestSha256,
         loaderPhase: 'active',
-        hostProtocolVersion: '4',
+        hostProtocolVersion: '5',
         harnessVersion: '0.2.0-rc.2',
         ownedProfileDigest: fixture.attestation?.ownedProfileDigest,
         artifactSetDigest: fixture.attestation?.artifactSetDigest,
@@ -164,7 +164,7 @@ describe('WT-02C.2B Host live inventory projection', () => {
       activeGeneration: fixture.generation,
       manifestSha256: fixture.manifestSha256,
       loaderPhase: 'active',
-      hostProtocolVersion: '4',
+      hostProtocolVersion: '5',
       harnessVersion: '0.2.0-rc.2',
       ownedProfileDigest: fixture.attestation?.ownedProfileDigest,
       artifactSetDigest: fixture.attestation?.artifactSetDigest,
@@ -211,7 +211,7 @@ describe('WT-02C.2B Host live inventory projection', () => {
       host: { readSnapshot: () => Object.freeze({
         kind: 'active', bootId: 'sage-host:22222222-2222-4222-8222-222222222222', runtimeGeneration: 1,
         activeGeneration: 'missing-generation', manifestSha256: '1'.repeat(64), loaderPhase: 'active',
-        hostProtocolVersion: '4', harnessVersion: '1.0.0',
+        hostProtocolVersion: '5', harnessVersion: '1.0.0',
       }) },
       clock,
     })

@@ -20,6 +20,7 @@ export const HOST_LIB_FILES = [
   'host/composition.js',
   'host/assets.js',
   'host/handler.js',
+  'host/runtime-effective.js',
   'product/contracts.js',
   'product/view-state.js',
   'product/action-preview.js',

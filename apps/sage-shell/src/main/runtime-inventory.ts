@@ -71,7 +71,7 @@ export interface HostLiveInventoryActiveSnapshot {
   readonly activeGeneration: string
   readonly manifestSha256: string
   readonly loaderPhase: 'active'
-  readonly hostProtocolVersion: '4'
+  readonly hostProtocolVersion: '5'
   readonly harnessVersion: string
 }
 
@@ -113,7 +113,7 @@ export interface HostLiveInventoryProjectionBodyV1 {
   /** Raw lowercase SHA-256 from profile-current.json. */
   readonly manifestSha256: string
   readonly loaderPhase: 'active'
-  readonly hostProtocolVersion: '4'
+  readonly hostProtocolVersion: '5'
   readonly harnessVersion: string
   readonly ownedProfileDigest: string
   readonly artifactSetDigest: string
@@ -215,7 +215,7 @@ function parseHostSnapshot(value: unknown): HostLiveInventorySnapshot | undefine
     && typeof active.activeGeneration === 'string' && GENERATION.test(active.activeGeneration)
     && typeof active.manifestSha256 === 'string' && RAW_SHA256.test(active.manifestSha256)
     && active.loaderPhase === 'active'
-    && active.hostProtocolVersion === '4'
+    && active.hostProtocolVersion === '5'
     && isNonemptyLiteral(active.harnessVersion)) {
     return Object.freeze({
       kind: 'active',
@@ -286,7 +286,7 @@ function parseProjectionBody(value: unknown): HostLiveInventoryProjectionBodyV1 
     || typeof record.activeGeneration !== 'string' || !GENERATION.test(record.activeGeneration)
     || typeof record.manifestSha256 !== 'string' || !RAW_SHA256.test(record.manifestSha256)
     || record.loaderPhase !== 'active'
-    || record.hostProtocolVersion !== '4'
+    || record.hostProtocolVersion !== '5'
     || !isNonemptyLiteral(record.harnessVersion)
     || typeof record.ownedProfileDigest !== 'string' || !SHA256_DIGEST.test(record.ownedProfileDigest)
     || typeof record.artifactSetDigest !== 'string' || !SHA256_DIGEST.test(record.artifactSetDigest)

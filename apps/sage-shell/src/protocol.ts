@@ -3,7 +3,7 @@
 import { types as utilTypes } from 'node:util'
 
 /** Protocol version shared with the Electron shell. */
-export const SHELL_HOST_PROTOCOL_VERSION = 4 as const
+export const SHELL_HOST_PROTOCOL_VERSION = 5 as const
 
 /** Child descriptor that receives Electron request frames. */
 export const SHELL_REQUEST_PIPE_FD = 3
@@ -90,6 +90,92 @@ export type HostCommand = {
   readonly type: 'shutdown'
 }
 
+/** Why the live registry observation is unavailable (WT-02C.2E.3). */
+export type RuntimeEffectiveUnavailableReason =
+  | 'registry-service-absent'
+  | 'invalid-roster'
+  | 'observation-failed'
+
+/** One live roster row as main may store it; display metadata is deliberately dropped. */
+export interface RuntimeEffectivePresetRow {
+  readonly id: string
+  readonly isDefault: boolean
+  readonly broken?: string
+}
+
+/** Runtime-effective facts of the live dsh registry, carried by the protocol v5 ready event. */
+export type RuntimeEffectiveObservation =
+  | {
+    readonly kind: 'observed'
+    readonly defaultPresetId: string
+    readonly presets: readonly RuntimeEffectivePresetRow[]
+  }
+  | { readonly kind: 'unavailable'; readonly reason: RuntimeEffectiveUnavailableReason }
+
+const RUNTIME_EFFECTIVE_ID_MAX_LENGTH = 64
+const RUNTIME_EFFECTIVE_BROKEN_MAX_LENGTH = 512
+const RUNTIME_EFFECTIVE_ROSTER_MAX_LENGTH = 64
+const RUNTIME_EFFECTIVE_OBSERVED_KEYS = ['kind', 'defaultPresetId', 'presets'] as const
+const RUNTIME_EFFECTIVE_UNAVAILABLE_KEYS = ['kind', 'reason'] as const
+const RUNTIME_EFFECTIVE_REASONS = ['registry-service-absent', 'invalid-roster', 'observation-failed'] as const
+
+function isBoundedLiteral(value: unknown, maxLength: number): value is string {
+  return typeof value === 'string' && value !== '' && value === value.trim()
+    && !value.includes('\u0000') && value.length <= maxLength
+}
+
+function snapshotPresetRows(value: unknown): RuntimeEffectivePresetRow[] | undefined {
+  if (utilTypes.isProxy(value) || !Array.isArray(value)
+    || value.length === 0 || value.length > RUNTIME_EFFECTIVE_ROSTER_MAX_LENGTH) return undefined
+  const rows: RuntimeEffectivePresetRow[] = []
+  for (const item of value) {
+    const record = snapshotPlainDataRecord(item)
+    if (record === undefined) return undefined
+    const hasBroken = Object.hasOwn(record, 'broken')
+    if (!hasExactKeys(record, hasBroken ? ['id', 'isDefault', 'broken'] : ['id', 'isDefault'])) return undefined
+    if (!isBoundedLiteral(record.id, RUNTIME_EFFECTIVE_ID_MAX_LENGTH)
+      || typeof record.isDefault !== 'boolean'
+      || (hasBroken && !isBoundedLiteral(record.broken, RUNTIME_EFFECTIVE_BROKEN_MAX_LENGTH))) {
+      return undefined
+    }
+    rows.push(Object.freeze({
+      id: record.id,
+      isDefault: record.isDefault,
+      ...(hasBroken ? { broken: record.broken as string } : {}),
+    }))
+  }
+  return rows
+}
+
+/**
+ * Validate one runtime-effective observation exactly: unique bounded ids, and exactly
+ * one row flagged default that is the reported `defaultPresetId` (a dangling default is
+ * indistinguishable from a garbled payload, so both fail closed).
+ */
+export function isRuntimeEffectiveObservation(value: unknown): value is RuntimeEffectiveObservation {
+  const candidate = snapshotPlainDataRecord(value)
+  if (candidate === undefined) return false
+  if (candidate.kind === 'unavailable') {
+    return hasExactKeys(candidate, [...RUNTIME_EFFECTIVE_UNAVAILABLE_KEYS])
+      && RUNTIME_EFFECTIVE_REASONS.includes(candidate.reason as RuntimeEffectiveUnavailableReason)
+  }
+  if (candidate.kind !== 'observed' || !hasExactKeys(candidate, [...RUNTIME_EFFECTIVE_OBSERVED_KEYS])) return false
+  if (!isBoundedLiteral(candidate.defaultPresetId, RUNTIME_EFFECTIVE_ID_MAX_LENGTH)) return false
+  const rows = snapshotPresetRows(candidate.presets)
+  if (rows === undefined) return false
+  const ids = new Set<string>()
+  let flagged: string | undefined
+  for (const row of rows) {
+    if (ids.has(row.id)) return false
+    ids.add(row.id)
+    if (row.isDefault) {
+      if (flagged !== undefined) return false
+      flagged = row.id
+    }
+  }
+  return flagged === candidate.defaultPresetId
+}
+
 /** Lifecycle events retained on Node IPC. */
 export type HostEvent = {
   readonly type: 'ready'
@@ -98,6 +184,8 @@ export type HostEvent = {
   readonly profileGeneration: string
   readonly manifestSha256: string
   readonly loaderPhase: 'active'
+  /** Runtime-effective registry facts observed from the live dsh runtime (v5; WT-02C.2E.3). */
+  readonly runtimeEffective: RuntimeEffectiveObservation
 } | {
   readonly type: 'runtime-invalidated'
 } | {
@@ -386,6 +474,7 @@ export function isHostEvent(message: unknown): message is HostEvent {
         'profileGeneration',
         'manifestSha256',
         'loaderPhase',
+        'runtimeEffective',
       ])
         && candidate.protocolVersion === SHELL_HOST_PROTOCOL_VERSION
         && typeof candidate.dshVersion === 'string'
@@ -394,6 +483,7 @@ export function isHostEvent(message: unknown): message is HostEvent {
         && typeof candidate.manifestSha256 === 'string'
         && RAW_SHA256.test(candidate.manifestSha256)
         && candidate.loaderPhase === 'active'
+        && isRuntimeEffectiveObservation(candidate.runtimeEffective)
     case 'runtime-invalidated':
       return hasExactKeys(candidate, ['type'])
     case 'fatal':

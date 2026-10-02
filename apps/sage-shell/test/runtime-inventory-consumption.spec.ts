@@ -258,12 +258,12 @@ describe('WT-02C.2E.2 runtime inventory consumption', () => {
       ? Object.freeze({
           kind: 'active' as const, bootId: 'sage-host:99999999-9999-4999-8999-999999999999',
           runtimeGeneration: 1, activeGeneration: 'missing-generation', manifestSha256: '1'.repeat(64),
-          loaderPhase: 'active' as const, hostProtocolVersion: '4' as const, harnessVersion: '0.2.0-rc.2',
+          loaderPhase: 'active' as const, hostProtocolVersion: '5' as const, harnessVersion: '0.2.0-rc.2',
         })
       : Object.freeze({
           kind: 'active' as const, bootId: 'sage-host:99999999-9999-4999-8999-999999999999',
           runtimeGeneration: 1, activeGeneration: realProfile.generation, manifestSha256: realProfile.manifestSha256,
-          loaderPhase: 'active' as const, hostProtocolVersion: '4' as const, harnessVersion: '0.2.0-rc.2',
+          loaderPhase: 'active' as const, hostProtocolVersion: '5' as const, harnessVersion: '0.2.0-rc.2',
         })
 
     const provider = createRuntimeInventoryProvider({
@@ -276,7 +276,10 @@ describe('WT-02C.2E.2 runtime inventory consumption', () => {
       pmapFs: realPorts(),
       readFileBytes: (path) => readFileSync(path),
       // No registry port: the C2D.2A provider does not exist yet, so this ticket can
-      // only ever read the stages before it.
+      // only ever read the stages before it. The live runtime-effective observation
+      // sits behind the (absent) registry stage; this probe has no live host, so the
+      // read fails closed if the frontier ever advances.
+      runtimeEffective: { read: () => undefined },
     })
     const result = await provider.read()
 

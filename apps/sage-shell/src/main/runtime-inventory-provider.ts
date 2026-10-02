@@ -21,6 +21,8 @@ import {
   SHELL_REQUEST_PIPE_FD,
   SHELL_RESPONSE_FRAME_KINDS,
   SHELL_RESPONSE_PIPE_FD,
+  isRuntimeEffectiveObservation,
+  type RuntimeEffectiveObservation,
 } from '../protocol.js'
 import {
   collectPmapEvidence,
@@ -54,6 +56,7 @@ export type RuntimeInventoryUnavailableCode =
   | 'policy-document-unavailable'
   | 'registry-unavailable'
   | 'capability-invalid'
+  | 'runtime-effective-unavailable'
   | 'assembly-invalid'
 
 export interface RuntimeInventoryAvailable {
@@ -79,6 +82,11 @@ export interface RegistrySnapshotPort {
   read(): unknown
 }
 
+/** Raw runtime-effective observation reader (protocol v5 ready payload; WT-02C.2E.3). */
+export interface RuntimeEffectiveObservationPort {
+  read(): unknown
+}
+
 export interface RuntimeInventoryProviderInput {
   /** Active profile reading surface (receipt/attestation sha) inside the Sage root. */
   readonly paths: SagePaths
@@ -90,6 +98,8 @@ export interface RuntimeInventoryProviderInput {
   readonly readFileBytes: (absolutePath: string) => Buffer
   /** Absent until the C2D.2A registry provider lands; absence is unavailable, never empty capabilities. */
   readonly registry?: RegistrySnapshotPort
+  /** Live runtime-effective registry observation (protocol v5 ready payload). */
+  readonly runtimeEffective: RuntimeEffectiveObservationPort
 }
 
 const HOST_IDENTITY = 'host:sage-shell-host'
@@ -114,6 +124,7 @@ const UNAVAILABLE_REASONS: Readonly<Record<RuntimeInventoryUnavailableCode, stri
   'policy-document-unavailable': 'A shell policy document could not be read.',
   'registry-unavailable': 'The capability registry snapshot is unavailable.',
   'capability-invalid': 'An approved capability entry violated the runtime descriptor contract.',
+  'runtime-effective-unavailable': 'The live runtime-effective registry observation is unavailable.',
   'assembly-invalid': 'The runtime inventory assembly failed self-verification.',
 })
 
@@ -407,6 +418,7 @@ function assembleInventory(input: {
   readonly localPatchBytes: Buffer | undefined
   readonly snapshot: CapabilityRegistrySnapshotV1
   readonly capabilities: readonly RuntimeCapabilityDescriptorV2[]
+  readonly defaultPresetId: string
 }): AssembledInventory {
   const { profile, projection, rows, presetsManifest, snapshot, capabilities } = input
 
@@ -431,9 +443,10 @@ function assembleInventory(input: {
     throw new TypeError('Agent row identity does not match its version face.')
   }
   const members = presetMembers(rows)
-  const presetBehaviorConfigurationDigest = sha256ContentDigest(JSON.stringify(
-    members.map((member) => ({ id: member.id, trust: member.trust, contractHex: member.contractHex })),
-  ))
+  const presetBehaviorConfigurationDigest = sha256ContentDigest(JSON.stringify({
+    defaultPresetId: input.defaultPresetId,
+    members: members.map((member) => ({ id: member.id, trust: member.trust, contractHex: member.contractHex })),
+  }))
 
   const descriptorBody: RuntimeDescriptorBodyV2 = {
     schemaVersion: 'sage.runtime-descriptor.v2',
@@ -645,7 +658,26 @@ export function createRuntimeInventoryProvider(input: RuntimeInventoryProviderIn
       return unavailable('capability-invalid')
     }
 
-    // 7. Assemble, derive both digests, self-verify, and freeze; never emit an
+    // 7. Live runtime-effective registry observation (protocol v5 ready payload); the
+    //    default preset must be one of the static roster's rows or nothing is emitted.
+    let rawObservation: unknown
+    try {
+      rawObservation = input.runtimeEffective.read()
+    } catch {
+      return unavailable('runtime-effective-unavailable', `${UNAVAILABLE_REASONS['runtime-effective-unavailable']} (observation-invalid)`)
+    }
+    if (!isRuntimeEffectiveObservation(rawObservation)) {
+      return unavailable('runtime-effective-unavailable', `${UNAVAILABLE_REASONS['runtime-effective-unavailable']} (observation-invalid)`)
+    }
+    if (rawObservation.kind !== 'observed') {
+      return unavailable('runtime-effective-unavailable', `${UNAVAILABLE_REASONS['runtime-effective-unavailable']} (${rawObservation.reason})`)
+    }
+    const observation: RuntimeEffectiveObservation = rawObservation
+    if (!presetMembers(rows).some((member) => member.id === observation.defaultPresetId)) {
+      return unavailable('runtime-effective-unavailable', `${UNAVAILABLE_REASONS['runtime-effective-unavailable']} (default-not-in-roster)`)
+    }
+
+    // 8. Assemble, derive both digests, self-verify, and freeze; never emit an
     //    inconsistent artifact.
     let assembled: AssembledInventory
     try {
@@ -658,6 +690,7 @@ export function createRuntimeInventoryProvider(input: RuntimeInventoryProviderIn
         localPatchBytes,
         snapshot: parsedSnapshot.value,
         capabilities,
+        defaultPresetId: observation.defaultPresetId,
       })
     } catch {
       return unavailable('assembly-invalid')

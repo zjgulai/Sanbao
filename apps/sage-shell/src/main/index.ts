@@ -88,6 +88,7 @@ async function main(paths: SagePaths): Promise<void> {
       realpath: (path) => realpath(path),
     },
     readFileBytes: (path) => readFileSync(path),
+    runtimeEffective: { read: () => host.readRuntimeEffective() },
   })
   void runtimeInventory.read().then((result) => {
     process.stdout.write(result.kind === 'available'

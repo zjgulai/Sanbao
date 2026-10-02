@@ -5,7 +5,7 @@
  * 1. seed deps 与壳 devDependencies 两侧的 @deepseek-ai/* 都非空且都是精确版本（range 会静默落到 npm 旧 latest tag）；
  * 2. 两侧同名包版本一致（编译期类型与运行时是同一套包）；
  * 3. 两个 pnpm-workspace.yaml 都带 dsh-type-meta / dsh-user-interaction 的 override；
- * 4. protocol.ts 的 Sage Host IPC lifecycle protocol 独立固定为 v4，FD3/FD4 的 6 个 framing 常量冻结为既定值（上游 0.2.0 起已删除 wire 参照；改值/改写法须显式同步本表，ADR-0192）；
+ * 4. protocol.ts 的 Sage Host IPC lifecycle protocol 独立固定为 v5（v4→v5 由 WT-02C.2E.3 观测扩展引入），FD3/FD4 的 framing 常量与帧名称表冻结为既定值（上游 0.2.0 起已删除 wire 参照；改值/改名/改写法须显式同步本表，ADR-0192/ADR-0195）；
  * 5. 壳 manifest 的治理三字段取 self / lute / false；
  * 6. seed cordis.patch.yml 用户层剥注释后恰为 []；
  * 7. 9 个 profile / composition test fixture 保持被 git 跟踪；
@@ -19,7 +19,7 @@ const UNPUBLISHED_OVERRIDES = [
 
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[\w.]+)?$/u
 
-const SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION = '4'
+const SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION = '5'
 
 // 帧面（数值 + 名称表）冻结于 2026-10-02（Sage 内核升级：上游 0.2.0-rc.2 已删除 FD3/FD4 wire
 // 参照，对齐对象消失，所有权归 Sage；名称表扩展见 ADR-0195——E.2 policy 文档把它发布进

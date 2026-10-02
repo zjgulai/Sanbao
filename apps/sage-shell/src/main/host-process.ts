@@ -18,6 +18,7 @@ import {
   type HostCommand,
   type HostEvent,
   type HostResponseFrame,
+  type RuntimeEffectiveObservation,
 } from '../protocol.js'
 import type { HostRuntime } from './runtime.js'
 
@@ -33,6 +34,15 @@ interface PendingResponse {
 
 function errorOf(reason: unknown, fallback: string): Error {
   return reason instanceof Error ? reason : new Error(fallback)
+}
+
+/** Freeze the validated observation so no consumer can mutate the stored snapshot. */
+function freezeObservation(value: RuntimeEffectiveObservation): RuntimeEffectiveObservation {
+  if (value.kind === 'observed') {
+    for (const row of value.presets) Object.freeze(row)
+    Object.freeze(value.presets)
+  }
+  return Object.freeze(value)
 }
 
 async function exitsWithin(exit: Promise<void>, milliseconds: number): Promise<boolean> {
@@ -105,6 +115,7 @@ export class ShellHostProcess {
   private readonly bootId = `sage-host:${randomUUID()}`
   private runtimeGeneration = 1
   private snapshot: ShellHostRuntimeSnapshot
+  private runtimeEffective: RuntimeEffectiveObservation | undefined
   private started = false
   private terminal = false
   private readyState: 'pending' | 'resolved' | 'rejected' = 'pending'
@@ -124,6 +135,11 @@ export class ShellHostProcess {
   /** Read the immutable current Host lifecycle snapshot. */
   readSnapshot(): ShellHostRuntimeSnapshot {
     return this.snapshot
+  }
+
+  /** Read the runtime-effective observation of the live Host epoch; undefined once the epoch is gone. */
+  readRuntimeEffective(): unknown {
+    return this.runtimeEffective
   }
 
   /** Start the child once and resolve only after its complete composition is active. */
@@ -451,6 +467,7 @@ export class ShellHostProcess {
           hostProtocolVersion: String(message.protocolVersion),
           harnessVersion: message.dshVersion,
         })
+        this.runtimeEffective = freezeObservation(message.runtimeEffective)
         this.readyState = 'resolved'
         this.readyResolve(message)
         return
@@ -477,6 +494,7 @@ export class ShellHostProcess {
     if (this.terminal) return
     this.terminal = true
     this.runtimeGeneration += 1
+    this.runtimeEffective = undefined
     this.snapshot = Object.freeze({
       kind: 'unavailable',
       bootId: this.bootId,

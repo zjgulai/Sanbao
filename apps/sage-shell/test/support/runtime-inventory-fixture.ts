@@ -80,6 +80,16 @@ export const SYSTEM_PRESET_BLOCK = presetBlock('zeta')
 export const USER_PRESET_BLOCK = presetBlock('alpha')
 export const PROFILE_PATCH_CONTENT = presetInsertFile('alpha')
 
+/** Live runtime-effective observation fixture (protocol v5 ready payload). */
+export const RUNTIME_EFFECTIVE_OBSERVED = Object.freeze({
+  kind: 'observed' as const,
+  defaultPresetId: 'zeta',
+  presets: Object.freeze([
+    Object.freeze({ id: 'alpha', isDefault: false }),
+    Object.freeze({ id: 'zeta', isDefault: true }),
+  ]),
+})
+
 const created: string[] = []
 
 export function temporary(label: string): string {
@@ -232,7 +242,7 @@ export async function composeFixture(label: string, options: ComposeFixtureOptio
       activeGeneration: primary.generation,
       manifestSha256: primary.manifestSha256,
       loaderPhase: 'active' as const,
-      hostProtocolVersion: '4' as const,
+      hostProtocolVersion: '5' as const,
       harnessVersion: HARNESS_VERSION,
     }),
   }
@@ -301,6 +311,7 @@ export function composeWithPorts(
     /** null omits the registry port entirely; undefined uses the sealed empty registry. */
     readonly registry?: { read: () => unknown } | null
     readonly snapshot?: HostLiveInventorySnapshot
+    readonly runtimeEffective?: { read: () => unknown }
   } = {},
 ) {
   const registry = ports.registry === undefined ? { read: () => sealedEmptyRegistry() } : ports.registry
@@ -313,6 +324,7 @@ export function composeWithPorts(
     }),
     pmapFs: realPorts(),
     readFileBytes: ports.readFileBytes ?? ((path: string) => readFileSync(path)),
+    runtimeEffective: ports.runtimeEffective ?? { read: () => RUNTIME_EFFECTIVE_OBSERVED },
     ...(registry === null ? {} : { registry }),
   })
 }

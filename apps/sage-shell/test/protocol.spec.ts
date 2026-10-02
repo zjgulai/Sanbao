@@ -149,15 +149,23 @@ describe('ipc guards', () => {
 
   const ready = {
     type: 'ready',
-    protocolVersion: 4,
+    protocolVersion: 5,
     dshVersion: '0.2.0-rc.2',
     profileGeneration: 'sage-dev',
     manifestSha256: 'a'.repeat(64),
     loaderPhase: 'active',
+    runtimeEffective: {
+      kind: 'observed',
+      defaultPresetId: 'standard',
+      presets: [
+        { id: 'standard', isDefault: true },
+        { id: 'cordis', isDefault: false },
+      ],
+    },
   }
 
-  it('accepts only the exact v4 ready, runtime-invalidated, and fatal events', () => {
-    expect(SHELL_HOST_PROTOCOL_VERSION).toBe(4)
+  it('accepts only the exact v5 ready, runtime-invalidated, and fatal events', () => {
+    expect(SHELL_HOST_PROTOCOL_VERSION).toBe(5)
     expect(isHostEvent(ready)).toBe(true)
     expect(isHostEvent({ ...ready, protocolVersion: 3 })).toBe(false)
     expect(isHostEvent({ ...ready, profileGeneration: 'Sage/Dev' })).toBe(false)
@@ -170,6 +178,39 @@ describe('ipc guards', () => {
     expect(isHostEvent({ type: 'fatal', message: 'x' })).toBe(true)
     expect(isHostEvent({ type: 'fatal' })).toBe(false)
     expect(isHostEvent({ type: 'fatal', message: 'x', code: 'E_X' })).toBe(false)
+  })
+
+  it('accepts only well-formed runtime-effective observations inside ready', () => {
+    const { runtimeEffective, ...withoutObservation } = ready
+    expect(runtimeEffective).toBeDefined()
+    expect(isHostEvent(withoutObservation)).toBe(false)
+
+    expect(isHostEvent({ ...ready, runtimeEffective: { kind: 'unavailable', reason: 'registry-service-absent' } })).toBe(true)
+    expect(isHostEvent({ ...ready, runtimeEffective: { kind: 'unavailable', reason: 'mystery' } })).toBe(false)
+    expect(isHostEvent({ ...ready, runtimeEffective: { kind: 'unavailable', reason: 'invalid-roster', detail: 'x' } })).toBe(false)
+
+    const rows = (presets: unknown, defaultPresetId = 'standard') => ({
+      kind: 'observed', defaultPresetId, presets,
+    })
+    const malformed: ReadonlyArray<readonly [string, unknown]> = [
+      ['wrong kind', { kind: 'guessed', defaultPresetId: 'standard', presets: [{ id: 'standard', isDefault: true }] }],
+      ['empty roster', rows([])],
+      ['duplicate ids', rows([{ id: 'standard', isDefault: true }, { id: 'standard', isDefault: false }])],
+      ['two defaults', rows([{ id: 'standard', isDefault: true }, { id: 'cordis', isDefault: true }])],
+      ['no flagged default', rows([{ id: 'cordis', isDefault: false }])],
+      ['default disagrees', rows([{ id: 'cordis', isDefault: true }])],
+      ['oversized default id', rows([{ id: 'x'.repeat(65), isDefault: true }], 'x'.repeat(65))],
+      ['padded id', rows([{ id: ' standard', isDefault: true }], ' standard')],
+      ['non-boolean flag', rows([{ id: 'standard', isDefault: 'yes' }])],
+      ['oversized broken', rows([{ id: 'standard', isDefault: true, broken: 'x'.repeat(513) }])],
+      ['row extra key', rows([{ id: 'standard', isDefault: true, name: 'Std' }])],
+      ['row proxy', rows([new Proxy({ id: 'standard', isDefault: true }, {})])],
+      ['presets not array', { kind: 'observed', defaultPresetId: 'standard', presets: 'standard' }],
+      ['observation extra key', { kind: 'observed', defaultPresetId: 'standard', presets: [{ id: 'standard', isDefault: true }], extra: 1 }],
+    ]
+    for (const [label, observation] of malformed) {
+      expect(isHostEvent({ ...ready, runtimeEffective: observation }), label).toBe(false)
+    }
   })
 
   it('rejects hostile or non-plain event values without invoking accessors or leaking traps', () => {

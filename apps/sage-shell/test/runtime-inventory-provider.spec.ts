@@ -36,6 +36,7 @@ import {
   OWNED_PROFILE_DIGEST,
   PRESETS_MANIFEST,
   PROVIDER_MANIFEST,
+  RUNTIME_EFFECTIVE_OBSERVED,
   RUNTIME_GENERATION,
   SYSTEM_PRESET_BLOCK,
   USER_PRESET_BLOCK,
@@ -107,11 +108,11 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     // Six components, field by field.
     expect(descriptor.host).toEqual({
       identity: 'host:sage-shell-host',
-      version: '4.0.0',
+      version: '5.0.0',
       artifactDigest: fixture.attestation.artifactSetDigest,
       contractDigest: contentDigest(JSON.stringify({
         kind: 'sage.host-protocol-contract.v1',
-        protocolVersion: 4,
+        protocolVersion: 5,
         fdPairing: [3, 4],
         frameKinds: {
           request: ['start', 'data', 'end', 'cancel'],
@@ -142,7 +143,7 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
         label: 'sage shell',
         launchEnvironmentKey: 'launchEnvironment',
         cmdline: 'provided',
-        connection: 'host-protocol-4',
+        connection: 'host-protocol-5',
       })),
       behaviorConfigurationDigest: contentDigest(JSON.stringify({
         kind: 'sage.shell-overlay-policy.v1',
@@ -200,7 +201,10 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
       { id: 'alpha', trust: 'user', contractHex: sha256Hex(Buffer.from(USER_PRESET_BLOCK).toString('base64')) },
       { id: 'zeta', trust: 'system', contractHex: sha256Hex(Buffer.from(SYSTEM_PRESET_BLOCK).toString('base64')) },
     ]
-    const rosterBehaviorDigest = contentDigest(JSON.stringify(rosterContractMembers))
+    const rosterBehaviorDigest = contentDigest(JSON.stringify({
+      defaultPresetId: 'zeta',
+      members: rosterContractMembers,
+    }))
     expect(descriptor.agent).toEqual({
       identity: 'agent:@deepseek-ai/dsh-agent',
       version: '0.2.0-rc.2',
@@ -334,16 +338,16 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // Four top-level policy documents (canonical forms verified independently of the module).
     expect(result.descriptor.protocolContractDigest)
-      .toBe('sha256:f6f6dbcf3a40f4f4d32d36fa8ed50e8fae2ca36e9a3a4737a603aa187bdd6c1d')
+      .toBe('sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929')
     expect(result.descriptor.launchPolicyDigest)
       .toBe('sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460')
     expect(result.descriptor.overlayPolicyDigest)
       .toBe('sha256:8f51e026ecb035edd8632fca694fd041b1115695c181afc254f65a842be59f70')
     expect(result.descriptor.harness.contractDigest)
-      .toBe('sha256:1fce4c637ec37454da760122f9f97b54979d5930d49787a7e50b7e776772c269')
+      .toBe('sha256:bb9a215829ec1c2ffb4a6b7ade0d9a874d41310d24f048c4bae054f9f1e40d29')
 
     // Seven provenance digests of the full evidence (re-anchored from the real producer,
-    // 2026-10-02, WT-02C.2E-PMAP.1 row/layer model + preset-registry rename).
+    // 2026-10-02, WT-02C.2E.3 protocol v5 + default-preset marking).
     expect(result.evidence.receiptDigest)
       .toBe('sha256:651d9fc4f60b74295e662dad18486bd94a256f167c1f958460a1194f08c2c1c9')
     expect(result.evidence.materializationInstanceDigest)
@@ -351,7 +355,7 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     expect(result.evidence.instanceAuthorityDigest)
       .toBe('sha256:f89a0aa2f9c988c289db5da1d187845f2b47d774a9364bf2e6e2f275fe297dc1')
     expect(result.evidence.mainObservationProvenanceDigest)
-      .toBe('sha256:95fe94ac248ccdd2714f0d946a1832c9c00a7e1d56fa6515b8da9e3eaf2f9f1b')
+      .toBe('sha256:eb16c88352dac1cd0455b09118e5b5945e73bcd43122f81a4552410c999d514d')
     expect(result.evidence.healthObservationDigest)
       .toBe('sha256:b8e770a07c0c6b8289c571c040ac4f1f792f144530c59a47b0ca6e5903a2caba')
     expect(result.evidence.livenessObservationDigest)
@@ -361,9 +365,9 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // The stable pair itself is frozen: any silent field change breaks these literals.
     expect(result.descriptor.runtimeDescriptorDigest)
-      .toBe('urn:sage:runtime-descriptor:sha256:80f051cff4f236535b910657e025cc604e61987bf6c4e18f06eee306764511be')
+      .toBe('urn:sage:runtime-descriptor:sha256:58c7d9997ac65ef90bc1cff5814b83e3e34562a0b53d6d94f560c91e53b83910')
     expect(result.evidence.inventoryEvidenceDigest)
-      .toBe('urn:sage:inventory-evidence:sha256:126e98533ffd76191370d3afc51423ae92046413eed87eb426750af281343296')
+      .toBe('urn:sage:inventory-evidence:sha256:6ec53b31e8d211c22c3759b46563aa2234237854ad0f406fa2624b7a42bab1a9')
   })
 })
 
@@ -385,7 +389,7 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
         label: 'profile mismatch',
         snapshot: Object.freeze({
           kind: 'active', bootId: BOOT_ID, runtimeGeneration: 1, activeGeneration: 'other-generation',
-          manifestSha256: '1'.repeat(64), loaderPhase: 'active', hostProtocolVersion: '4', harnessVersion: '1.0.0',
+          manifestSha256: '1'.repeat(64), loaderPhase: 'active', hostProtocolVersion: '5', harnessVersion: '1.0.0',
         }),
         c2bCode: 'host-profile-mismatch',
       },
@@ -410,7 +414,7 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
         host: {
           readSnapshot: () => Object.freeze({
             kind: 'active' as const, bootId: BOOT_ID, runtimeGeneration: 1, activeGeneration: 'missing-generation',
-            manifestSha256: '1'.repeat(64), loaderPhase: 'active' as const, hostProtocolVersion: '4' as const,
+            manifestSha256: '1'.repeat(64), loaderPhase: 'active' as const, hostProtocolVersion: '5' as const,
             harnessVersion: '1.0.0',
           }),
         },
@@ -419,6 +423,7 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
       pmapFs: realPorts(),
       readFileBytes: (path) => readFileSync(path),
       registry: { read: () => sealedEmptyRegistry() },
+      runtimeEffective: { read: () => RUNTIME_EFFECTIVE_OBSERVED },
     })
     const missingResult = await missing.read()
     expect(missingResult).toMatchObject({ kind: 'unavailable', code: 'host-projection-unavailable' })
@@ -437,6 +442,7 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
       pmapFs: realPorts(),
       readFileBytes: (path) => readFileSync(path),
       registry: { read: () => sealedEmptyRegistry() },
+      runtimeEffective: { read: () => RUNTIME_EFFECTIVE_OBSERVED },
     })
     const clockResult = await clockProvider.read()
     expect(clockResult).toMatchObject({ kind: 'unavailable', code: 'host-projection-unavailable' })
@@ -479,6 +485,22 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
       const fixture = await composeFixture(`pmap-${label.replaceAll(' ', '-')}`, options)
       const result = await composeProvider(fixture, () => sealedEmptyRegistry()).read()
       expect(result, label).toMatchObject({ kind: 'unavailable', code: 'pmap-incomplete' })
+    }
+  })
+
+  it('fails closed when the runtime-effective observation is missing, unavailable or dangling', async () => {
+    const fixture = await composeFixture('runtime-effective')
+    const variants: ReadonlyArray<readonly [string, { read: () => unknown }, string]> = [
+      ['port throws', { read: () => { throw new Error('no host') } }, 'observation-invalid'],
+      ['payload missing', { read: () => undefined }, 'observation-invalid'],
+      ['payload garbled', { read: () => ({ kind: 'guessed' }) }, 'observation-invalid'],
+      ['observation unavailable', { read: () => ({ kind: 'unavailable', reason: 'registry-service-absent' }) }, 'registry-service-absent'],
+      ['default not in roster', { read: () => ({ kind: 'observed', defaultPresetId: 'missing', presets: [{ id: 'missing', isDefault: true }] }) }, 'default-not-in-roster'],
+    ]
+    for (const [label, runtimeEffective, suffix] of variants) {
+      const result = await composeWithPorts(fixture, { runtimeEffective }).read()
+      expect(result, label).toMatchObject({ kind: 'unavailable', code: 'runtime-effective-unavailable' })
+      if (result.kind === 'unavailable') expect(result.reason, label).toContain(`(${suffix})`)
     }
   })
 
@@ -589,6 +611,7 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
       pmapFs: realPorts(),
       readFileBytes: (path) => readFileSync(path),
       registry: { read: () => sealedEmptyRegistry() },
+      runtimeEffective: { read: () => RUNTIME_EFFECTIVE_OBSERVED },
     })
 
     const baseline = await provider.read()

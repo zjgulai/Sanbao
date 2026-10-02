@@ -21,7 +21,7 @@ const seedManifest = JSON.stringify({
 })
 const vendorDesktopManifest = JSON.stringify({ devDependencies: { electron: '43.3.0' } })
 const workspace = 'overrides:\n  "@deepseek-ai/dsh-type-meta": "npm:empty-npm-package@1.0.0"\n  "@deepseek-ai/dsh-user-interaction": "npm:empty-npm-package@1.0.0"\n'
-const protocol = `export const SHELL_HOST_PROTOCOL_VERSION = 4 as const
+const protocol = `export const SHELL_HOST_PROTOCOL_VERSION = 5 as const
 export const SHELL_REQUEST_PIPE_FD = 3
 export const SHELL_RESPONSE_PIPE_FD = 4
 export const SHELL_CONTROL_IPC_FD = 5
@@ -139,11 +139,11 @@ test('rejects a missing override for the two unpublished internal packages', () 
 test('rejects Sage lifecycle protocol v3 independently of the vendor reference', () => {
   const result = checkSageShellPin({
     ...good,
-    protocolText: protocol.replace('SHELL_HOST_PROTOCOL_VERSION = 4', 'SHELL_HOST_PROTOCOL_VERSION = 3'),
+    protocolText: protocol.replace('SHELL_HOST_PROTOCOL_VERSION = 5', 'SHELL_HOST_PROTOCOL_VERSION = 3'),
   })
   assert.equal(result.passed, false)
   assert.equal(result.violations.length, 1)
-  assert.match(result.violations[0], /SHELL_HOST_PROTOCOL_VERSION.*Sage lifecycle protocol v4/u)
+  assert.match(result.violations[0], /SHELL_HOST_PROTOCOL_VERSION.*Sage lifecycle protocol v5/u)
 })
 
 test('rejects a frozen framing constant whose value changed', () => {
