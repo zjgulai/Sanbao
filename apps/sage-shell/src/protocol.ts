@@ -21,6 +21,12 @@ export const FRAME_MAGIC = 0x44534833
 export const FRAME_HEADER_BYTES = 13
 export const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
 
+// Single source of the frame kind vocabulary: the E.2 policy document publishes these into
+// the stable protocol contract digest, and sage-shell-pin freezes the literals (ADR-0195).
+// The frame unions below must stay in sync; encoders/decoders reference them by name.
+export const SHELL_REQUEST_FRAME_KINDS = ['start', 'data', 'end', 'cancel'] as const
+export const SHELL_RESPONSE_FRAME_KINDS = ['start', 'data', 'end', 'error'] as const
+
 const PROFILE_GENERATION = /^[a-z0-9][a-z0-9-]{0,63}$/u
 const RAW_SHA256 = /^[0-9a-f]{64}$/u
 

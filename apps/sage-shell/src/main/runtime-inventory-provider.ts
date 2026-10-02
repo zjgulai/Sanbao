@@ -17,7 +17,9 @@ import { ROOT_CONFIG_CONTENT, SHELL_LABEL } from '../host/composition.js'
 import {
   SHELL_HOST_PROTOCOL_VERSION,
   SHELL_PIPE_CHUNK_BYTES,
+  SHELL_REQUEST_FRAME_KINDS,
   SHELL_REQUEST_PIPE_FD,
+  SHELL_RESPONSE_FRAME_KINDS,
   SHELL_RESPONSE_PIPE_FD,
 } from '../protocol.js'
 import {
@@ -91,18 +93,18 @@ export interface RuntimeInventoryProviderInput {
 }
 
 const HOST_IDENTITY = 'host:sage-shell-host'
-/** Formal SemVer form of shell host protocol v4; a protocol change must move this with it. */
-const HOST_VERSION = '4.0.0'
+/** Formal SemVer form of the shell host protocol version — derived so a protocol bump moves it (ADR-0195). */
+const HOST_VERSION = `${String(SHELL_HOST_PROTOCOL_VERSION)}.0.0`
 const HARNESS_IDENTITY = 'harness:@deepseek-ai/dsh'
 const PRESET_SET_IDENTITY = 'preset:set'
 // `dsh-agent-presets` was deleted in 0.2.0-rc.2; the registry package is its successor
 // (WT-02C.2E-PMAP.1, ADR-0194).
 const PRESETS_MANIFEST_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent-preset-registry/package.json'
 
-/** Explicit protocol v4 frame vocabulary; guarded by the policy-document goldens. */
+/** Explicit protocol frame vocabulary, single-sourced from protocol.ts (frozen by sage-shell-pin). */
 const FRAME_KINDS = Object.freeze({
-  request: Object.freeze(['start', 'data', 'end', 'cancel']),
-  response: Object.freeze(['start', 'data', 'end', 'error']),
+  request: SHELL_REQUEST_FRAME_KINDS,
+  response: SHELL_RESPONSE_FRAME_KINDS,
 })
 
 const UNAVAILABLE_REASONS: Readonly<Record<RuntimeInventoryUnavailableCode, string>> = Object.freeze({

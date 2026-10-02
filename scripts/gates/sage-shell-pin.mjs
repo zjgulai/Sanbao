@@ -21,9 +21,10 @@ const EXACT_VERSION = /^\d+\.\d+\.\d+(?:-[\w.]+)?$/u
 
 const SAGE_HOST_LIFECYCLE_PROTOCOL_VERSION = '4'
 
-// 帧常量的值冻结于 2026-10-02（Sage 内核升级：上游 0.2.0-rc.2 已删除 FD3/FD4 wire 参照，
-// 对齐对象消失，所有权归 Sage）。文本按空白归一后比较；改值或改写表达式都必须显式更新本表
-// （伴随 ADR-0192 的决策记录），不得静默漂移。
+// 帧面（数值 + 名称表）冻结于 2026-10-02（Sage 内核升级：上游 0.2.0-rc.2 已删除 FD3/FD4 wire
+// 参照，对齐对象消失，所有权归 Sage；名称表扩展见 ADR-0195——E.2 policy 文档把它发布进
+// stable 协议摘要，评审守不够，必须机制守）。文本按空白归一后比较；改值/改名/改写表达式都
+// 必须显式更新本表（伴随 ADR-0192/ADR-0195 的决策记录），不得静默漂移。
 const FROZEN_FRAMING_CONSTANTS = [
   ['SHELL_REQUEST_PIPE_FD', '3'],
   ['SHELL_RESPONSE_PIPE_FD', '4'],
@@ -31,6 +32,8 @@ const FROZEN_FRAMING_CONSTANTS = [
   ['FRAME_MAGIC', '0x44534833'],
   ['FRAME_HEADER_BYTES', '13'],
   ['MAX_CONTROL_PAYLOAD_BYTES', '1024*1024'],
+  ['SHELL_REQUEST_FRAME_KINDS', "['start','data','end','cancel']"],
+  ['SHELL_RESPONSE_FRAME_KINDS', "['start','data','end','error']"],
 ]
 
 // apps/ 对仓库 package collector 结构性不可见，故治理三字段只能由本门禁守；三字段没有别的读者，值本身就是事实。
@@ -136,7 +139,7 @@ export function checkSageShellPin(input) {
       if (actual !== frozen) {
         violations.push(
           `protocol.ts 的冻结帧常量 ${ours} = ${String(actual)}，应为 ${frozen}`
-          + '——六个 FD3/FD4 framing 常量已冻结归 Sage 所有（上游参照已删除），改值或改写法须显式更新本表（ADR-0192），不得静默漂移',
+          + '——FD3/FD4 framing 数值与帧名称表已冻结归 Sage 所有（上游参照已删除），改值/改名/改写法须显式更新本表（ADR-0192/ADR-0195），不得静默漂移',
         )
       }
     }

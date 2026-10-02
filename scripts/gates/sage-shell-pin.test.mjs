@@ -29,6 +29,8 @@ export const SHELL_PIPE_CHUNK_BYTES = 64 * 1024
 const FRAME_MAGIC = 0x44534833
 const FRAME_HEADER_BYTES = 13
 const MAX_CONTROL_PAYLOAD_BYTES = 1024 * 1024
+export const SHELL_REQUEST_FRAME_KINDS = ['start', 'data', 'end', 'cancel'] as const
+export const SHELL_RESPONSE_FRAME_KINDS = ['start', 'data', 'end', 'error'] as const
 `
 
 // 与 `git ls-files apps/sage-shell/test/fixtures/` 逐字一致（9 个，仓库相对路径）。
@@ -180,6 +182,36 @@ test('rejects a frozen constant re-written as a different expression', () => {
   assert.equal(result.passed, false)
   assert.equal(result.violations.length, 1)
   assert.match(result.violations[0], /冻结帧常量 MAX_CONTROL_PAYLOAD_BYTES/u)
+})
+
+test('rejects a renamed frame kind in the frozen name table', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol.replace("'cancel'", "'abort'"),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /冻结帧常量 SHELL_REQUEST_FRAME_KINDS/u)
+})
+
+test('rejects a missing frame kind table export', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol.replace("export const SHELL_RESPONSE_FRAME_KINDS = ['start', 'data', 'end', 'error'] as const\n", ''),
+  })
+  assert.equal(result.passed, false)
+  assert.equal(result.violations.length, 1)
+  assert.match(result.violations[0], /SHELL_RESPONSE_FRAME_KINDS = undefined/u)
+})
+
+test('accepts a whitespace-only reformat of the frame kind tables', () => {
+  const result = checkSageShellPin({
+    ...good,
+    protocolText: protocol
+      .replace("['start', 'data', 'end', 'cancel']", "[ 'start' , 'data' , 'end' , 'cancel' ]")
+      .replace("['start', 'data', 'end', 'error']", "[ 'start' , 'data' , 'end' , 'error' ]"),
+  })
+  assert.deepEqual(result, { passed: true, violations: [] })
 })
 
 test('fails loud when the shell package is absent', () => {
