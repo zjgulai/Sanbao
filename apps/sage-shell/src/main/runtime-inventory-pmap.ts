@@ -1,8 +1,16 @@
 /** WT-02C.2E-PMAP: main-owned static-layer producers for Provider / Model / Agent / Preset
  * runtime-inventory evidence. Read-only by contract; observation scope is materialized-static —
  * runtime-effective configuration (env layering, live mount enablement, default-preset
- * selection) belongs to the Host-protocol ticket and is never guessed here. */
+ * selection) belongs to the Host-protocol ticket and is never guessed here.
+ *
+ * 0.2.0-rc.2 row/layer model (WT-02C.2E-PMAP.1, ADR-0194): presets are declarative rows
+ * (`name: '@deepseek-ai/dsh-agent-preset'`) inside the composed patch layers, and the model
+ * selection is the layered `config` of the `agent-default-model` row. Layers are resolved in
+ * composition order — each bundle's `dsh.bundle.patch` files, the profile `cordis.patch.yml`,
+ * then the shell overlay — and sliced as text blocks: no YAML engine, no `!!js` evaluation. */
 import { createHash } from 'node:crypto'
+import { join, relative } from 'node:path'
+import { overlayPath } from '../profile/layout.js'
 
 export const PMAP_EVIDENCE_SCHEMA = 'sage.pmap-component-evidence.v1' as const
 export const PMAP_OBSERVATION_SCOPE = 'materialized-static' as const
@@ -40,30 +48,35 @@ export interface PmapFsPorts {
 }
 
 export interface PmapObservationOptions {
-  /** Sage harness home (the dsh home of this isolated root). */
-  readonly harnessHome: string
-  /** Active materialized profile (generation) directory. */
+  /** Active materialized profile (generation) directory; its manifest, bundles and layers are the observed surface. */
   readonly profileDir: string
   readonly fs: PmapFsPorts
   readonly now: () => string
 }
 
-const SHIPPED_PRESETS_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent-presets/presets'
+const PROFILE_PATCH_FILE = 'cordis.patch.yml'
 const AGENT_PACKAGE_JSON_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent/package.json'
-const COMPOSITION_FILE = 'agent.cordis.yml'
-const PRESET_METADATA_FILE = 'preset.yml'
-const SETTINGS_FILENAMES = ['settings.yaml', 'settings.yml', 'settings.json'] as const
-const DEFAULT_MODEL_NAMESPACE = 'agent-default-model'
+const AGENT_PACKAGE_DIR_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent'
+const AGENT_PRESET_PACKAGE = '@deepseek-ai/dsh-agent-preset'
+const DEFAULT_MODEL_ROW_ID = 'agent-default-model'
+const SELECTION_FIELDS = ['provider', 'model', 'reasoningEffort'] as const
+
+// Provider routes are constants inside the llm packages (llm-deepseek-api-key PROVIDER =
+// 'deepseek-official'); the static layer cannot import them, so this table is re-verified
+// against the kernel at every upgrade (ADR-0194).
+const PROVIDER_PACKAGE_BY_ROUTE: Readonly<Record<string, string>> = Object.freeze({
+  'deepseek-official': '@deepseek-ai/dsh-llm-deepseek-api-key',
+  'deepseek-account': '@deepseek-ai/dsh-llm-deepseek-account',
+})
 
 const REASON = {
-  shippedRootMissing: 'shipped-preset-root-missing',
-  compositionUnreadable: 'preset-composition-unreadable',
-  settingsAbsent: 'settings-document-absent',
-  settingsUnreadable: 'settings-document-unreadable',
-  settingsNotParsed: 'settings-not-statically-parsed',
-  namespaceAbsent: 'settings-namespace-absent',
-  fieldAbsent: 'settings-field-absent',
+  patchLayerUnresolved: 'patch-layer-unresolved',
+  presetRowUnparsable: 'preset-row-unparsable',
+  presetIdCollision: 'preset-id-collision',
   providerPackageUnresolved: 'provider-package-unresolved',
+  modelSelectionUnparsable: 'model-selection-unparsable',
+  modelSelectionIncomplete: 'model-selection-incomplete',
+  modelSelectionRowMissing: 'model-selection-row-missing',
   packageUnreadable: 'package-manifest-unreadable',
   packageEscapesProfile: 'package-tree-escapes-profile',
 } as const
@@ -120,6 +133,414 @@ async function readBytesOrUndefined(fs: PmapFsPorts, absolutePath: string): Prom
   }
 }
 
+async function realpathOrUndefined(fs: PmapFsPorts, absolutePath: string): Promise<string | undefined> {
+  try {
+    return await fs.realpath(absolutePath)
+  } catch {
+    return undefined
+  }
+}
+
+function isInside(root: string, target: string): boolean {
+  return target === root || target.startsWith(`${root}/`)
+}
+
+async function readJsonObject(fs: PmapFsPorts, absolutePath: string): Promise<Record<string, unknown> | undefined> {
+  const bytes = await readBytesOrUndefined(fs, absolutePath)
+  if (bytes === undefined) return undefined
+  try {
+    const parsed = JSON.parse(bytes.toString('utf8')) as unknown
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function readLayerBytes(
+  fs: PmapFsPorts,
+  absolutePath: string,
+): Promise<{ readonly kind: 'bytes'; readonly bytes: Buffer } | { readonly kind: 'absent' } | { readonly kind: 'error' }> {
+  try {
+    return { kind: 'bytes', bytes: await fs.readFileBytes(absolutePath) }
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? { kind: 'absent' } : { kind: 'error' }
+  }
+}
+
+interface PmapLayer {
+  readonly label: string
+  readonly trust: 'system' | 'user'
+  readonly bytes: Buffer
+}
+
+type LayerResolution =
+  | { readonly kind: 'resolved'; readonly layers: readonly PmapLayer[] }
+  | { readonly kind: 'unresolved'; readonly source: string }
+
+function profileBundleNames(manifest: Record<string, unknown>): readonly string[] | undefined {
+  const dsh = manifest.dsh
+  if (typeof dsh !== 'object' || dsh === null || Array.isArray(dsh)) return []
+  const profile = (dsh as Record<string, unknown>).profile
+  if (typeof profile !== 'object' || profile === null || Array.isArray(profile)) return []
+  const bundles = (profile as Record<string, unknown>).bundles
+  if (bundles === undefined) return []
+  if (!Array.isArray(bundles) || !bundles.every(name => typeof name === 'string' && name !== '')) return undefined
+  return bundles
+}
+
+function bundlePatchFiles(manifest: Record<string, unknown>): readonly string[] | undefined {
+  const dsh = manifest.dsh
+  if (typeof dsh !== 'object' || dsh === null || Array.isArray(dsh)) return undefined
+  const bundle = (dsh as Record<string, unknown>).bundle
+  if (typeof bundle !== 'object' || bundle === null || Array.isArray(bundle)) return undefined
+  const patch = (bundle as Record<string, unknown>).patch
+  const declared = typeof patch === 'string' ? [patch] : patch
+  if (!Array.isArray(declared) || !declared.every(file => typeof file === 'string' && file !== '')) return undefined
+  return declared
+}
+
+function normalizedRelative(declared: string): string {
+  return declared.startsWith('./') ? declared.slice(2) : declared
+}
+
+/** Resolve the composed layer list in boot order: bundle patches (system), profile patch
+ * (user, absent file = upstream-legal empty layer), then the required shell overlay (user). */
+async function resolveLayers(options: PmapObservationOptions, profileRealRoot: string): Promise<LayerResolution> {
+  const { fs, profileDir } = options
+  const manifest = await readJsonObject(fs, join(profileDir, 'package.json'))
+  if (manifest === undefined) return { kind: 'unresolved', source: 'profile:package.json' }
+  const bundles = profileBundleNames(manifest)
+  if (bundles === undefined) return { kind: 'unresolved', source: 'profile:package.json' }
+
+  const layers: PmapLayer[] = []
+  for (const packageName of bundles) {
+    const candidates = [
+      join(profileDir, 'node_modules', packageName),
+      join(profileDir, 'node_modules', '@deepseek-ai', 'dsh', 'node_modules', packageName),
+    ]
+    let bundleDir: string | undefined
+    let bundleManifest: Record<string, unknown> | undefined
+    for (const candidate of candidates) {
+      const candidateManifest = await readJsonObject(fs, join(candidate, 'package.json'))
+      if (candidateManifest !== undefined) {
+        bundleDir = candidate
+        bundleManifest = candidateManifest
+        break
+      }
+    }
+    if (bundleDir === undefined || bundleManifest === undefined) {
+      return { kind: 'unresolved', source: `bundle:${packageName}/package.json` }
+    }
+    const realBundleDir = await realpathOrUndefined(fs, bundleDir)
+    if (realBundleDir === undefined || !isInside(profileRealRoot, realBundleDir)) {
+      return { kind: 'unresolved', source: `bundle:${packageName}` }
+    }
+    const patchFiles = bundlePatchFiles(bundleManifest)
+    if (patchFiles === undefined) return { kind: 'unresolved', source: `bundle:${packageName}/package.json` }
+    for (const declared of patchFiles) {
+      const target = normalizedRelative(declared)
+      const label = `bundle:${packageName}/${target}`
+      const read = await readLayerBytes(fs, join(bundleDir, target))
+      if (read.kind !== 'bytes') return { kind: 'unresolved', source: label }
+      layers.push({ label, trust: 'system', bytes: read.bytes })
+    }
+  }
+
+  const profilePatch = await readLayerBytes(fs, join(profileDir, PROFILE_PATCH_FILE))
+  if (profilePatch.kind === 'error') return { kind: 'unresolved', source: `profile:${PROFILE_PATCH_FILE}` }
+  if (profilePatch.kind === 'bytes') {
+    layers.push({ label: `profile:${PROFILE_PATCH_FILE}`, trust: 'user', bytes: profilePatch.bytes })
+  }
+
+  const overlayFile = overlayPath(profileDir)
+  const overlayLabel = `profile:${relative(profileDir, overlayFile)}`
+  const overlay = await readLayerBytes(fs, overlayFile)
+  if (overlay.kind !== 'bytes') return { kind: 'unresolved', source: overlayLabel }
+  layers.push({ label: overlayLabel, trust: 'user', bytes: overlay.bytes })
+
+  return { kind: 'resolved', layers }
+}
+
+type Scalar =
+  | { readonly kind: 'scalar'; readonly value: string }
+  | { readonly kind: 'empty' }
+  | { readonly kind: 'unparsable' }
+
+function parseScalar(raw: string): Scalar {
+  const trimmed = raw.trim()
+  if (trimmed === '') return { kind: 'empty' }
+  if (trimmed.startsWith('|') || trimmed.startsWith('>') || trimmed.startsWith('!')) return { kind: 'unparsable' }
+  const quote = trimmed[0]
+  if (quote === "'" || quote === '"') {
+    const end = trimmed.indexOf(quote, 1)
+    if (end === -1) return { kind: 'unparsable' }
+    return { kind: 'scalar', value: trimmed.slice(1, end) }
+  }
+  const commentAt = trimmed.indexOf(' #')
+  const value = (commentAt === -1 ? trimmed : trimmed.slice(0, commentAt)).trim()
+  return value === '' ? { kind: 'empty' } : { kind: 'scalar', value }
+}
+
+function leadingSpaces(line: string): number {
+  let count = 0
+  while (line[count] === ' ') count += 1
+  return count
+}
+
+interface RowBlock {
+  readonly rowId: string | undefined
+  readonly blockLines: readonly string[]
+  readonly propertyIndent: number
+}
+
+const ROW_HEADER = /^([ ]*)-([ ]+)id:(.*)$/u
+const PROPERTY_LINE = /^([A-Za-z_][A-Za-z0-9_.-]*):(.*)$/u
+
+/** Slice one patch file into `- id:` row blocks by indentation. Text-level only: a block is
+ * every line up to the next non-blank line at or left of the header's indent. */
+function sliceRowBlocks(text: string): readonly RowBlock[] {
+  const lines = text.split('\n')
+  const blocks: RowBlock[] = []
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = ROW_HEADER.exec(lines[index] as string)
+    if (header === null) continue
+    const indent = (header[1] as string).length
+    const propertyIndent = indent + 1 + (header[2] as string).length
+    let lastContent = index
+    let cursor = index + 1
+    for (; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor] as string
+      if (line.trim() === '') continue
+      if (leadingSpaces(line) <= indent) break
+      lastContent = cursor
+    }
+    const rowId = parseScalar(header[3] as string)
+    blocks.push({
+      rowId: rowId.kind === 'scalar' && rowId.value !== '' ? rowId.value : undefined,
+      blockLines: lines.slice(index, lastContent + 1),
+      propertyIndent,
+    })
+  }
+  return blocks
+}
+
+interface RowProperty {
+  readonly raw: string
+  readonly lineIndex: number
+}
+
+function rowProperties(block: RowBlock): ReadonlyMap<string, RowProperty> {
+  const properties = new Map<string, RowProperty>()
+  for (let index = 1; index < block.blockLines.length; index += 1) {
+    const line = block.blockLines[index] as string
+    if (leadingSpaces(line) !== block.propertyIndent) continue
+    const match = PROPERTY_LINE.exec(line.slice(block.propertyIndent))
+    if (match === null || properties.has(match[1] as string)) continue
+    properties.set(match[1] as string, { raw: match[2] as string, lineIndex: index })
+  }
+  return properties
+}
+
+/** The row's `config` fields at the config block's own property level. `{}`/`[]`/null are the
+ * empty config; any other inline value (flow map, tag, block scalar) is unreadable text. */
+function configFields(block: RowBlock, config: RowProperty): ReadonlyMap<string, string> | undefined {
+  const trimmed = config.raw.trim()
+  if (trimmed === '{}' || trimmed === '[]' || trimmed === 'null' || trimmed === '~') return new Map()
+  if (trimmed !== '') return undefined
+
+  const fields = new Map<string, string>()
+  let configIndent = -1
+  for (let index = config.lineIndex + 1; index < block.blockLines.length; index += 1) {
+    const line = block.blockLines[index] as string
+    const content = line.trim()
+    if (content === '' || content.startsWith('#')) continue
+    const indent = leadingSpaces(line)
+    if (indent <= block.propertyIndent) break
+    if (configIndent === -1) configIndent = indent
+    if (indent !== configIndent) continue
+    const match = PROPERTY_LINE.exec(line.slice(indent))
+    if (match === null || fields.has(match[1] as string)) continue
+    fields.set(match[1] as string, match[2] as string)
+  }
+  return fields
+}
+
+function blockBytes(block: RowBlock): Buffer {
+  return Buffer.from(block.blockLines.join('\n'), 'utf8')
+}
+
+function collectPresetEvidenceFromLayers(layers: readonly PmapLayer[], observedAt: string): PmapComponentEvidence[] {
+  const out: PmapComponentEvidence[] = []
+  const seen = new Set<string>()
+  for (const layer of layers) {
+    for (const block of sliceRowBlocks(layer.bytes.toString('utf8'))) {
+      const properties = rowProperties(block)
+      const nameProperty = properties.get('name')
+      const name = nameProperty === undefined ? undefined : parseScalar(nameProperty.raw)
+      if (name?.kind !== 'scalar' || name.value !== AGENT_PRESET_PACKAGE) continue
+
+      let presetId: string | undefined
+      const configProperty = properties.get('config')
+      if (configProperty !== undefined) {
+        const idRaw = configFields(block, configProperty)?.get('id')
+        if (idRaw !== undefined) {
+          const id = parseScalar(idRaw)
+          if (id.kind === 'scalar' && id.value !== '') presetId = id.value
+        }
+      }
+      if (block.rowId === undefined || presetId === undefined) {
+        out.push(buildEvidence({
+          component: 'preset', state: 'broken', source: layer.label, observedAt,
+          reason: REASON.presetRowUnparsable,
+        }))
+        continue
+      }
+      const identity = `preset:${presetId}@${layer.trust}`
+      if (seen.has(presetId)) {
+        out.push(buildEvidence({
+          component: 'preset', state: 'broken', identity, source: layer.label, observedAt,
+          reason: REASON.presetIdCollision,
+        }))
+        continue
+      }
+      seen.add(presetId)
+      const bytes = blockBytes(block)
+      const contractDigest = urn('pmap-preset-contract', bytes.toString('base64'))
+      out.push(buildEvidence({
+        component: 'preset', state: 'observed', identity, source: layer.label, observedAt,
+        artifactDigest: urn('pmap-preset-artifact', JSON.stringify([
+          { path: `${layer.label}#${block.rowId}`, sha256: sha256Hex(bytes) },
+        ])),
+        contractDigest,
+        behaviorConfigurationDigest: contractDigest,
+      }))
+    }
+  }
+  return out
+}
+
+type ModelSelectionMerge =
+  | { readonly kind: 'broken'; readonly reason: string; readonly source: string }
+  | {
+    readonly kind: 'merged'
+    readonly provider?: string
+    readonly providerSource?: string
+    readonly model?: string
+    readonly modelSource?: string
+    readonly reasoningEffort?: string
+    readonly lastSource: string
+  }
+
+function mergeModelSelection(layers: readonly PmapLayer[]): ModelSelectionMerge {
+  let provider: { readonly value: string; readonly source: string } | undefined
+  let model: { readonly value: string; readonly source: string } | undefined
+  let reasoningEffort: string | undefined
+  let sawRow = false
+  let lastSource = 'profile:package.json'
+  for (const layer of layers) {
+    for (const block of sliceRowBlocks(layer.bytes.toString('utf8'))) {
+      if (block.rowId !== DEFAULT_MODEL_ROW_ID) continue
+      sawRow = true
+      lastSource = layer.label
+      const configProperty = rowProperties(block).get('config')
+      if (configProperty === undefined) continue
+      const fields = configFields(block, configProperty)
+      if (fields === undefined) {
+        return { kind: 'broken', reason: REASON.modelSelectionUnparsable, source: layer.label }
+      }
+      for (const field of SELECTION_FIELDS) {
+        const raw = fields.get(field)
+        if (raw === undefined) continue
+        const scalar = parseScalar(raw)
+        if (scalar.kind === 'unparsable') {
+          return { kind: 'broken', reason: REASON.modelSelectionUnparsable, source: layer.label }
+        }
+        if (scalar.kind !== 'scalar' || scalar.value === '') continue
+        if (field === 'provider') provider = { value: scalar.value, source: layer.label }
+        else if (field === 'model') model = { value: scalar.value, source: layer.label }
+        else reasoningEffort = scalar.value
+      }
+    }
+  }
+  if (!sawRow) return { kind: 'broken', reason: REASON.modelSelectionRowMissing, source: 'profile:package.json' }
+  return {
+    kind: 'merged',
+    ...(provider === undefined ? {} : { provider: provider.value, providerSource: provider.source }),
+    ...(model === undefined ? {} : { model: model.value, modelSource: model.source }),
+    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+    lastSource,
+  }
+}
+
+async function collectSelectionEvidence(
+  options: PmapObservationOptions,
+  layers: readonly PmapLayer[],
+  observedAt: string,
+  profileRealRoot: string,
+): Promise<PmapComponentEvidence[]> {
+  const merged = mergeModelSelection(layers)
+  if (merged.kind === 'broken') {
+    return [
+      buildEvidence({ component: 'provider', state: 'broken', source: merged.source, observedAt, reason: merged.reason }),
+      buildEvidence({ component: 'model', state: 'broken', source: merged.source, observedAt, reason: merged.reason }),
+    ]
+  }
+
+  const out: PmapComponentEvidence[] = []
+  if (merged.provider === undefined) {
+    out.push(buildEvidence({
+      component: 'provider', state: 'broken', source: merged.lastSource, observedAt,
+      reason: REASON.modelSelectionIncomplete,
+    }))
+  } else {
+    const identity = `provider:${merged.provider}`
+    const source = merged.providerSource ?? merged.lastSource
+    const packageName = PROVIDER_PACKAGE_BY_ROUTE[merged.provider]
+    if (packageName === undefined) {
+      out.push(buildEvidence({ component: 'provider', state: 'broken', identity, source, observedAt, reason: REASON.providerPackageUnresolved }))
+    } else {
+      const packageDir = join(options.profileDir, 'node_modules', packageName)
+      const manifest = await readPackageManifest(options.fs, join(packageDir, 'package.json'))
+      if (manifest === undefined) {
+        out.push(buildEvidence({ component: 'provider', state: 'broken', identity, source, observedAt, reason: REASON.providerPackageUnresolved }))
+      } else {
+        const artifactDigest = await digestPackageTree(options.fs, profileRealRoot, packageDir)
+        if (artifactDigest === undefined) {
+          out.push(buildEvidence({ component: 'provider', state: 'broken', identity, source, observedAt, reason: REASON.packageEscapesProfile }))
+        } else {
+          out.push(buildEvidence({
+            component: 'provider', state: 'observed', identity, source, observedAt,
+            version: manifest.version,
+            artifactDigest,
+            contractDigest: urn('pmap-package-contract', manifest.exportsCanonical),
+            behaviorConfigurationDigest: urn('pmap-provider-selection', JSON.stringify({ provider: merged.provider, source })),
+          }))
+        }
+      }
+    }
+  }
+
+  if (merged.model === undefined || merged.provider === undefined) {
+    out.push(buildEvidence({
+      component: 'model', state: 'broken', source: merged.lastSource, observedAt,
+      reason: REASON.modelSelectionIncomplete,
+    }))
+  } else {
+    const source = merged.modelSource ?? merged.lastSource
+    out.push(buildEvidence({
+      component: 'model', state: 'observed', identity: `model:${merged.provider}/${merged.model}`, source, observedAt,
+      behaviorConfigurationDigest: urn('pmap-model-selection', JSON.stringify({
+        model: merged.model,
+        ...(merged.reasoningEffort === undefined ? {} : { reasoningEffort: merged.reasoningEffort }),
+        source,
+      })),
+    }))
+  }
+  return out
+}
+
 async function listOrUndefined(fs: PmapFsPorts, absolutePath: string): Promise<readonly PmapDirEntry[] | undefined> {
   try {
     return await fs.listDirectory(absolutePath)
@@ -140,13 +561,13 @@ async function digestPackageTree(fs: PmapFsPorts, profileRealRoot: string, packa
     const entries = await listOrUndefined(fs, dir)
     if (entries === undefined) return false
     for (const entry of [...entries].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
-      const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`
+      const relativePath = prefix === '' ? entry.name : `${prefix}/${entry.name}`
       if (entry.isDirectory) {
-        if (!(await visit(`${dir}/${entry.name}`, relative))) return false
+        if (!(await visit(`${dir}/${entry.name}`, relativePath))) return false
       } else if (entry.isFile) {
         const bytes = await readBytesOrUndefined(fs, `${dir}/${entry.name}`)
         if (bytes === undefined) return false
-        files.push([relative, sha256Hex(bytes)])
+        files.push([relativePath, sha256Hex(bytes)])
       }
     }
     return true
@@ -171,173 +592,42 @@ async function readPackageManifest(fs: PmapFsPorts, packageJsonPath: string): Pr
   }
 }
 
-async function collectPresetEvidence(options: PmapObservationOptions, observedAt: string): Promise<PmapComponentEvidence[]> {
-  const { fs, profileDir, harnessHome } = options
-  const out: PmapComponentEvidence[] = []
-  const roots = [
-    { trust: 'system' as const, dir: `${profileDir}/${SHIPPED_PRESETS_RELATIVE}`, sourcePrefix: `profile:${SHIPPED_PRESETS_RELATIVE}` },
-    { trust: 'user' as const, dir: `${harnessHome}/.agent-presets`, sourcePrefix: 'harness:.agent-presets' },
-  ]
-  const seen = new Set<string>()
-  for (const root of roots) {
-    const entries = await listOrUndefined(fs, root.dir)
-    if (entries === undefined) {
-      if (root.trust === 'system') {
-        out.push(buildEvidence({
-          component: 'preset', state: 'broken', source: root.sourcePrefix, observedAt,
-          reason: REASON.shippedRootMissing,
-        }))
-      }
-      continue
-    }
-    for (const entry of [...entries].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
-      if (!entry.isDirectory || entry.name.startsWith('.')) continue
-      if (seen.has(entry.name)) continue // first-root-wins per id (dsh discovery semantics)
-      seen.add(entry.name)
-      const source = `${root.sourcePrefix}/${entry.name}`
-      const identity = `preset:${entry.name}@${root.trust}`
-      const compositionBytes = await readBytesOrUndefined(fs, `${root.dir}/${entry.name}/${COMPOSITION_FILE}`)
-      if (compositionBytes === undefined) {
-        out.push(buildEvidence({
-          component: 'preset', state: 'broken', identity, source, observedAt,
-          reason: REASON.compositionUnreadable,
-        }))
-        continue
-      }
-      const metadataBytes = await readBytesOrUndefined(fs, `${root.dir}/${entry.name}/${PRESET_METADATA_FILE}`)
-      const artifactEntries = [
-        { path: COMPOSITION_FILE, sha256: sha256Hex(compositionBytes) },
-        ...(metadataBytes === undefined ? [] : [{ path: PRESET_METADATA_FILE, sha256: sha256Hex(metadataBytes) }]),
-      ]
-      const contractDigest = urn('pmap-preset-contract', compositionBytes.toString('base64'))
-      out.push(buildEvidence({
-        component: 'preset', state: 'observed', identity, source, observedAt,
-        artifactDigest: urn('pmap-preset-artifact', JSON.stringify(artifactEntries)),
-        contractDigest,
-        behaviorConfigurationDigest: contractDigest,
-      }))
-    }
-  }
-  return out
-}
-
-async function readSettingsSelection(options: PmapObservationOptions): Promise<
-  | { readonly kind: 'absent'; readonly reason: string; readonly source: string }
-  | { readonly kind: 'unparsed'; readonly source: string }
-  | { readonly kind: 'broken'; readonly reason: string; readonly source: string }
-  | { readonly kind: 'selection'; readonly source: string; readonly provider?: string; readonly model?: string; readonly reasoningEffort?: string; readonly namespaceAbsent: boolean }
-> {
-  const { fs, harnessHome } = options
-  const entries = await listOrUndefined(fs, harnessHome)
-  const present = SETTINGS_FILENAMES.find((name) => entries?.some((entry) => entry.name === name && entry.isFile) === true)
-  if (present === undefined) {
-    return { kind: 'absent', reason: REASON.settingsAbsent, source: 'harness:settings' }
-  }
-  const source = `harness:${present}`
-  if (!present.endsWith('.json')) {
-    // Zero-dependency discipline: YAML is not parsed here; the field-level channel is a later ticket's call.
-    return { kind: 'unparsed', source }
-  }
-  const bytes = await readBytesOrUndefined(fs, `${harnessHome}/${present}`)
-  if (bytes === undefined) return { kind: 'broken', reason: REASON.settingsUnreadable, source }
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(bytes.toString('utf8'))
-  } catch {
-    return { kind: 'broken', reason: REASON.settingsUnreadable, source }
-  }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return { kind: 'broken', reason: REASON.settingsUnreadable, source }
-  }
-  const namespace = (parsed as Record<string, unknown>)[DEFAULT_MODEL_NAMESPACE]
-  if (typeof namespace !== 'object' || namespace === null || Array.isArray(namespace)) {
-    return { kind: 'selection', source, namespaceAbsent: true }
-  }
-  const record = namespace as Record<string, unknown>
-  const provider = typeof record.provider === 'string' && record.provider.length > 0 && record.provider === record.provider.trim() ? record.provider : undefined
-  const model = typeof record.model === 'string' && record.model.length > 0 && record.model === record.model.trim() ? record.model : undefined
-  const reasoningEffort = typeof record.reasoningEffort === 'string' && record.reasoningEffort.length > 0 && record.reasoningEffort === record.reasoningEffort.trim() ? record.reasoningEffort : undefined
-  return {
-    kind: 'selection', source, namespaceAbsent: false,
-    ...(provider === undefined ? {} : { provider }),
-    ...(model === undefined ? {} : { model }),
-    ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
-  }
-}
-
 export async function collectPmapEvidence(options: PmapObservationOptions): Promise<readonly PmapComponentEvidence[]> {
   const observedAt = options.now()
-  const out: PmapComponentEvidence[] = []
   const profileRealRoot = await options.fs.realpath(options.profileDir)
+  const resolution = await resolveLayers(options, profileRealRoot)
 
-  const settings = await readSettingsSelection(options)
-  if (settings.kind === 'absent' || settings.kind === 'broken') {
-    for (const component of ['provider', 'model'] as const) {
-      out.push(buildEvidence({ component, state: settings.kind === 'broken' ? 'broken' : 'absent', source: settings.source, observedAt, reason: settings.reason }))
-    }
-  } else if (settings.kind === 'unparsed') {
-    for (const component of ['provider', 'model'] as const) {
-      out.push(buildEvidence({ component, state: 'absent', source: settings.source, observedAt, reason: REASON.settingsNotParsed }))
-    }
+  let selectionRows: PmapComponentEvidence[]
+  let presetRows: PmapComponentEvidence[]
+  if (resolution.kind === 'unresolved') {
+    selectionRows = [
+      buildEvidence({ component: 'provider', state: 'broken', source: resolution.source, observedAt, reason: REASON.patchLayerUnresolved }),
+      buildEvidence({ component: 'model', state: 'broken', source: resolution.source, observedAt, reason: REASON.patchLayerUnresolved }),
+    ]
+    presetRows = [
+      buildEvidence({ component: 'preset', state: 'broken', source: resolution.source, observedAt, reason: REASON.patchLayerUnresolved }),
+    ]
   } else {
-    // selection
-    if (settings.provider === undefined) {
-      out.push(buildEvidence({ component: 'provider', state: 'absent', source: settings.source, observedAt, reason: settings.namespaceAbsent ? REASON.namespaceAbsent : REASON.fieldAbsent }))
-    } else {
-      const packageName = `@deepseek-ai/dsh-llm-${settings.provider}`
-      const packageManifestPath = `${options.profileDir}/node_modules/${packageName}/package.json`
-      const manifest = await readPackageManifest(options.fs, packageManifestPath)
-      if (manifest === undefined) {
-        out.push(buildEvidence({
-          component: 'provider', state: 'broken', identity: `provider:${settings.provider}`, source: settings.source, observedAt,
-          reason: REASON.providerPackageUnresolved,
-        }))
-      } else {
-        const artifactDigest = await digestPackageTree(options.fs, profileRealRoot, `${options.profileDir}/node_modules/${packageName}`)
-        if (artifactDigest === undefined) {
-          out.push(buildEvidence({
-            component: 'provider', state: 'broken', identity: `provider:${settings.provider}`, source: settings.source, observedAt,
-            reason: REASON.packageEscapesProfile,
-          }))
-        } else {
-          out.push(buildEvidence({
-            component: 'provider', state: 'observed', identity: `provider:${settings.provider}`, source: settings.source, observedAt,
-            version: manifest.version,
-            artifactDigest,
-            contractDigest: urn('pmap-package-contract', manifest.exportsCanonical),
-            behaviorConfigurationDigest: urn('pmap-provider-selection', JSON.stringify({ provider: settings.provider, source: settings.source })),
-          }))
-        }
-      }
-    }
-    if (settings.model === undefined) {
-      out.push(buildEvidence({ component: 'model', state: 'absent', source: settings.source, observedAt, reason: settings.namespaceAbsent ? REASON.namespaceAbsent : REASON.fieldAbsent }))
-    } else {
-      const providerForIdentity = settings.provider ?? '<unset>'
-      out.push(buildEvidence({
-        component: 'model', state: 'observed', identity: `model:${providerForIdentity}/${settings.model}`, source: settings.source, observedAt,
-        behaviorConfigurationDigest: urn('pmap-model-selection', JSON.stringify({
-          model: settings.model,
-          ...(settings.reasoningEffort === undefined ? {} : { reasoningEffort: settings.reasoningEffort }),
-          source: settings.source,
-        })),
-      }))
-    }
+    selectionRows = await collectSelectionEvidence(options, resolution.layers, observedAt, profileRealRoot)
+    presetRows = collectPresetEvidenceFromLayers(resolution.layers, observedAt)
   }
 
-  // agent: package identity of the agent runtime.
+  const agentRows: PmapComponentEvidence[] = []
   const agentSource = `profile:${AGENT_PACKAGE_JSON_RELATIVE}`
-  const agentManifest = await readPackageManifest(options.fs, `${options.profileDir}/${AGENT_PACKAGE_JSON_RELATIVE}`)
+  const agentManifest = await readPackageManifest(options.fs, join(options.profileDir, AGENT_PACKAGE_JSON_RELATIVE))
   if (agentManifest === undefined) {
-    out.push(buildEvidence({ component: 'agent', state: 'broken', source: agentSource, observedAt, reason: REASON.packageUnreadable }))
+    agentRows.push(buildEvidence({ component: 'agent', state: 'broken', source: agentSource, observedAt, reason: REASON.packageUnreadable }))
   } else {
-    const agentDir = `${options.profileDir}/node_modules/@deepseek-ai/dsh-agent`
-    const artifactDigest = await digestPackageTree(options.fs, profileRealRoot, agentDir)
+    const artifactDigest = await digestPackageTree(options.fs, profileRealRoot, join(options.profileDir, AGENT_PACKAGE_DIR_RELATIVE))
     if (artifactDigest === undefined) {
-      out.push(buildEvidence({ component: 'agent', state: 'broken', identity: `agent:${agentManifest.name}@${agentManifest.version}`, source: agentSource, observedAt, reason: REASON.packageEscapesProfile }))
+      agentRows.push(buildEvidence({
+        component: 'agent', state: 'broken', identity: `agent:${agentManifest.name}@${agentManifest.version}`,
+        source: agentSource, observedAt, reason: REASON.packageEscapesProfile,
+      }))
     } else {
-      out.push(buildEvidence({
-        component: 'agent', state: 'observed', identity: `agent:${agentManifest.name}@${agentManifest.version}`, source: agentSource, observedAt,
+      agentRows.push(buildEvidence({
+        component: 'agent', state: 'observed', identity: `agent:${agentManifest.name}@${agentManifest.version}`,
+        source: agentSource, observedAt,
         version: agentManifest.version,
         artifactDigest,
         contractDigest: urn('pmap-package-contract', agentManifest.exportsCanonical),
@@ -345,6 +635,5 @@ export async function collectPmapEvidence(options: PmapObservationOptions): Prom
     }
   }
 
-  out.push(...await collectPresetEvidence(options, observedAt))
-  return Object.freeze(out)
+  return Object.freeze([...selectionRows, ...agentRows, ...presetRows])
 }

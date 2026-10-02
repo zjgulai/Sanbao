@@ -38,8 +38,8 @@ function installAnchor(profileDir: string): string {
 }
 
 // Upstream also injects an agent-presets system root from <dsh>/config/agent-presets; the
-// published dsh tarball ships no config/, and dsh-agent-presets already supplies its own
-// shipped root plus $DSH_HOME/.agent-presets, so the injection is redundant here.
+// published dsh tarball ships no config/, and 0.2.0 ships presets as bundle-declared rows
+// (dsh-web-app presets/*.patch.yml), so the injection is redundant here.
 /**
  * Compose one materialized profile into boot patches.
  * @param input - absolute profile directory, absolute shell overlay patch file, and an

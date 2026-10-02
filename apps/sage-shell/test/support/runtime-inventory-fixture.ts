@@ -1,13 +1,14 @@
 /** Shared tmp-filesystem fixture for the WT-02C.2E.2 provider and consumption specs:
- * one materialized Sage generation (attestation-sealed), the PMAP static-layer files on
- * both roots, the trusted clock constants, and sealed C2D registry snapshots. Every byte
- * is deterministic so hand-written digest goldens stay stable across machines. */
+ * one materialized Sage generation (attestation-sealed), the composed boot layers
+ * (bundle patches + profile patch + shell overlay; WT-02C.2E-PMAP.1 row/layer model),
+ * the trusted clock constants, and sealed C2D registry snapshots. Every byte is
+ * deterministic so hand-written digest goldens stay stable across machines. */
 
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile, readdir, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import {
   PROFILE_MANIFEST_FILE,
   ensureSageDirectories,
@@ -40,15 +41,44 @@ export const RUNTIME_GENERATION = 7
 export const HARNESS_VERSION = '0.2.0-rc.2'
 export const OWNED_PROFILE_DIGEST = `sha256:${'a'.repeat(64)}`
 
+export const BASE_BUNDLE = '@deepseek-ai/dsh-base'
+export const WEB_APP_BUNDLE = '@deepseek-ai/dsh-web-app'
+export const BASE_PATCH_LABEL = `bundle:${BASE_BUNDLE}/cordis.patch.yml`
+export const ZETA_PATCH_LABEL = `bundle:${WEB_APP_BUNDLE}/presets/zeta.patch.yml`
+export const PROFILE_PATCH_LABEL = 'profile:cordis.patch.yml'
+
 export const AGENT_MANIFEST = { name: '@deepseek-ai/dsh-agent', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
-export const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
-export const PRESETS_MANIFEST = { name: '@deepseek-ai/dsh-agent-presets', version: '0.2.0-rc.2', exports: { './presets/*': './presets/*' } }
+export const PROVIDER_MANIFEST = { name: '@deepseek-ai/dsh-llm-deepseek-api-key', version: '0.2.0-rc.2', exports: { '.': './lib/index.js' } }
+export const PRESETS_MANIFEST = { name: '@deepseek-ai/dsh-agent-preset-registry', version: '0.2.0-rc.2', exports: { '.': './lib/index.js', './invariant': './lib/invariant.js' } }
 export const OVERLAY_CONTENT = '# compose overlay\n'
-export const SYSTEM_PRESET_CONTENT = '# zeta preset\n'
-export const USER_PRESET_CONTENT = '# alpha preset\n'
-export const SETTINGS_NAMESPACE = {
-  'agent-default-model': { provider: 'deepseek', model: 'deepseek-chat', reasoningEffort: 'high' },
+
+export const MODEL_ROW_BLOCK = [
+  '    - id: agent-default-model',
+  "      name: '@deepseek-ai/dsh-agent-default-model'",
+  '      config:',
+  '        provider: deepseek-official',
+  '        model: deepseek-chat',
+  '        reasoningEffort: high',
+].join('\n')
+
+function presetBlock(id: string): string {
+  return [
+    `    - id: preset-${id}`,
+    "      name: '@deepseek-ai/dsh-agent-preset'",
+    '      config:',
+    `        id: ${id}`,
+    '        plugins: []',
+  ].join('\n')
 }
+
+/** One `- insert:` patch file declaring one preset row; the block is what PMAP digests. */
+export function presetInsertFile(id: string): string {
+  return `- insert:\n${presetBlock(id)}\n`
+}
+
+export const SYSTEM_PRESET_BLOCK = presetBlock('zeta')
+export const USER_PRESET_BLOCK = presetBlock('alpha')
+export const PROFILE_PATCH_CONTENT = presetInsertFile('alpha')
 
 const created: string[] = []
 
@@ -89,23 +119,42 @@ function writePackage(profileDir: string, name: string, manifest: Record<string,
   writeFileSync(join(dir, 'package.json'), JSON.stringify(manifest))
 }
 
-function writePreset(profileDir: string, id: string, composition: string): void {
-  const dir = join(profileDir, 'node_modules', '@deepseek-ai', 'dsh-agent-presets', 'presets', id)
+function writeBundle(profileDir: string, name: string, patchFiles: Record<string, string>): void {
+  const dir = join(profileDir, 'node_modules', ...name.split('/'))
   mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, 'agent.cordis.yml'), composition)
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({
+    name,
+    version: '0.2.0-rc.2',
+    dsh: { bundle: { patch: Object.keys(patchFiles) } },
+  }))
+  for (const [relative, content] of Object.entries(patchFiles)) {
+    mkdirSync(dirname(join(dir, relative)), { recursive: true })
+    writeFileSync(join(dir, relative), content)
+  }
 }
 
-export function writeUserPreset(harnessHome: string, id: string, composition: string): void {
-  const dir = join(harnessHome, '.agent-presets', id)
-  mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, 'agent.cordis.yml'), composition)
+/** Append one patch block to the generation's profile layer (the user trust layer). */
+export function appendProfilePatch(profileDir: string, content: string): void {
+  appendFileSync(join(profileDir, 'cordis.patch.yml'), content)
 }
 
 export interface ComposeFixtureOptions {
-  readonly settingsMode?: 'json' | 'absent' | 'broken' | 'provider-only'
-  readonly includePresetsRoot?: boolean
+  /** Model-row state on the base bundle: full selection, no row, tagged config, or provider only. */
+  readonly modelRowMode?: 'full' | 'absent' | 'unparsable' | 'provider-only'
+  readonly includeWebAppBundle?: boolean
   readonly includePresetsManifest?: boolean
   readonly includeOverlay?: boolean
+}
+
+function basePatchContent(mode: NonNullable<ComposeFixtureOptions['modelRowMode']>): string {
+  if (mode === 'absent') return '[]\n'
+  if (mode === 'unparsable') {
+    return `- insert:\n    - id: agent-default-model\n      name: '@deepseek-ai/dsh-agent-default-model'\n      config: !!js ({ provider: 'deepseek-official', model: 'deepseek-chat' })\n`
+  }
+  if (mode === 'provider-only') {
+    return `- insert:\n    - id: agent-default-model\n      name: '@deepseek-ai/dsh-agent-default-model'\n      config:\n        provider: deepseek-official\n`
+  }
+  return `- insert:\n${MODEL_ROW_BLOCK}\n`
 }
 
 export interface MaterializedGeneration {
@@ -123,13 +172,21 @@ export async function materializeGeneration(
 ): Promise<MaterializedGeneration> {
   const profileDir = generationProfileDir(paths, generation)
   mkdirSync(join(profileDir, 'node_modules', 'fixture'), { recursive: true })
-  writeFileSync(join(profileDir, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n')
+  writeFileSync(join(profileDir, 'package.json'), `${JSON.stringify({
+    name: 'fixture',
+    version: '1.0.0',
+    dsh: { profile: { bundles: [BASE_BUNDLE, WEB_APP_BUNDLE] } },
+  })}\n`)
   writeFileSync(join(profileDir, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
+  writeFileSync(join(profileDir, 'cordis.patch.yml'), PROFILE_PATCH_CONTENT)
   writeFileSync(join(profileDir, 'node_modules', 'fixture', 'index.js'), 'export const fixture = true\n')
   writePackage(profileDir, '@deepseek-ai/dsh-agent', AGENT_MANIFEST)
-  writePackage(profileDir, '@deepseek-ai/dsh-llm-deepseek', PROVIDER_MANIFEST)
-  if (options.includePresetsManifest !== false) writePackage(profileDir, '@deepseek-ai/dsh-agent-presets', PRESETS_MANIFEST)
-  if (options.includePresetsRoot !== false) writePreset(profileDir, 'zeta', SYSTEM_PRESET_CONTENT)
+  writePackage(profileDir, '@deepseek-ai/dsh-llm-deepseek-api-key', PROVIDER_MANIFEST)
+  if (options.includePresetsManifest !== false) writePackage(profileDir, '@deepseek-ai/dsh-agent-preset-registry', PRESETS_MANIFEST)
+  writeBundle(profileDir, BASE_BUNDLE, { 'cordis.patch.yml': basePatchContent(options.modelRowMode ?? 'full') })
+  if (options.includeWebAppBundle !== false) {
+    writeBundle(profileDir, WEB_APP_BUNDLE, { 'presets/zeta.patch.yml': presetInsertFile('zeta') })
+  }
   if (options.includeOverlay !== false) {
     mkdirSync(join(profileDir, 'sage-host'), { recursive: true })
     writeFileSync(overlayPath(profileDir), OVERLAY_CONTENT)
@@ -164,16 +221,6 @@ export async function composeFixture(label: string, options: ComposeFixtureOptio
   const paths = resolveSagePaths({ home: temporary(`${label}-home`), root: temporary(`${label}-root`) })
   await ensureSageDirectories(paths)
   const primary = await materializeGeneration(paths, `${label}-generation`, options)
-  const settingsMode = options.settingsMode ?? 'json'
-  if (settingsMode !== 'absent') {
-    const content = settingsMode === 'broken'
-      ? '{ not json'
-      : JSON.stringify(settingsMode === 'provider-only'
-        ? { 'agent-default-model': { provider: 'deepseek' } }
-        : SETTINGS_NAMESPACE)
-    writeFileSync(join(paths.harnessHome, 'settings.json'), content)
-  }
-  writeUserPreset(paths.harnessHome, 'alpha', USER_PRESET_CONTENT)
   writePointer(paths, primary.generation, primary.manifestSha256, ACTIVATED_AT)
   return {
     ...primary,

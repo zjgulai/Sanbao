@@ -300,7 +300,6 @@ describe('WT-02C.2E.2 runtime inventory consumption', () => {
     // Any other code proves the projection succeeded on the real generation (the fixed
     // order has no later-stage bypass), so the terminal stage must match the real facts.
     const rows = await collectPmapEvidence({
-      harnessHome: paths.harnessHome,
       profileDir: realProfile.profileDir,
       fs: realPorts(),
       now: () => OBSERVED_AT,
@@ -308,7 +307,7 @@ describe('WT-02C.2E.2 runtime inventory consumption', () => {
     const rowsObserved = rows.every((row) => row.state === 'observed')
     const presetsManifestReadable = (() => {
       try {
-        JSON.parse(readFileSync(join(realProfile.profileDir, 'node_modules/@deepseek-ai/dsh-agent-presets/package.json'), 'utf8'))
+        JSON.parse(readFileSync(join(realProfile.profileDir, 'node_modules/@deepseek-ai/dsh-agent-preset-registry/package.json'), 'utf8'))
         return true
       } catch {
         return false

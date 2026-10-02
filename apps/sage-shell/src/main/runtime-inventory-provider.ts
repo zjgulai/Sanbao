@@ -95,7 +95,9 @@ const HOST_IDENTITY = 'host:sage-shell-host'
 const HOST_VERSION = '4.0.0'
 const HARNESS_IDENTITY = 'harness:@deepseek-ai/dsh'
 const PRESET_SET_IDENTITY = 'preset:set'
-const PRESETS_MANIFEST_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent-presets/package.json'
+// `dsh-agent-presets` was deleted in 0.2.0-rc.2; the registry package is its successor
+// (WT-02C.2E-PMAP.1, ADR-0194).
+const PRESETS_MANIFEST_RELATIVE = 'node_modules/@deepseek-ai/dsh-agent-preset-registry/package.json'
 
 /** Explicit protocol v4 frame vocabulary; guarded by the policy-document goldens. */
 const FRAME_KINDS = Object.freeze({
@@ -595,7 +597,6 @@ export function createRuntimeInventoryProvider(input: RuntimeInventoryProviderIn
     let rows: readonly PmapComponentEvidence[]
     try {
       rows = await collectPmapEvidence({
-        harnessHome: input.paths.harnessHome,
         profileDir: profile.profileDir,
         fs: input.pmapFs,
         now: () => projection.observedAt,

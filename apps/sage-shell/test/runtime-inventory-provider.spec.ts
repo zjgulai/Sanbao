@@ -27,6 +27,7 @@ import {
 import {
   ACTIVATED_AT,
   AGENT_MANIFEST,
+  BASE_PATCH_LABEL,
   BOOT_ID,
   EXPIRES_AT,
   HARNESS_VERSION,
@@ -36,8 +37,10 @@ import {
   PRESETS_MANIFEST,
   PROVIDER_MANIFEST,
   RUNTIME_GENERATION,
-  SYSTEM_PRESET_CONTENT,
-  USER_PRESET_CONTENT,
+  SYSTEM_PRESET_BLOCK,
+  USER_PRESET_BLOCK,
+  ZETA_PATCH_LABEL,
+  appendProfilePatch,
   approvedEntry,
   cleanupTemporaryRoots,
   composeFixture,
@@ -45,13 +48,13 @@ import {
   composeWithPorts,
   contentDigest,
   materializeGeneration,
+  presetInsertFile,
   realPorts,
   sealRegistry,
   sealedEmptyRegistry,
   sha256Hex,
   temporary,
   writePointer,
-  writeUserPreset,
   type ComposeFixtureOptions,
 } from './support/runtime-inventory-fixture.js'
 
@@ -153,24 +156,24 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
       { path: 'package.json', sha256: sha256Hex(JSON.stringify(PROVIDER_MANIFEST)) },
     ]))
     expect(descriptor.provider).toEqual({
-      identity: 'provider:deepseek',
+      identity: 'provider:deepseek-official',
       version: '0.2.0-rc.2',
       artifactDigest: `sha256:${providerArtifactHex}`,
       contractDigest: contentDigest(JSON.stringify(PROVIDER_MANIFEST.exports)),
       behaviorConfigurationDigest: contentDigest(JSON.stringify({
-        provider: 'deepseek',
-        source: 'harness:settings.json',
+        provider: 'deepseek-official',
+        source: BASE_PATCH_LABEL,
       })),
     })
     expect(descriptor.model).toEqual({
-      identity: 'model:deepseek/deepseek-chat',
+      identity: 'model:deepseek-official/deepseek-chat',
       version: '0.2.0-rc.2',
       artifactDigest: `sha256:${providerArtifactHex}`,
       contractDigest: contentDigest(JSON.stringify(PROVIDER_MANIFEST.exports)),
       behaviorConfigurationDigest: contentDigest(JSON.stringify({
         model: 'deepseek-chat',
         reasoningEffort: 'high',
-        source: 'harness:settings.json',
+        source: BASE_PATCH_LABEL,
       })),
     })
 
@@ -182,20 +185,20 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
         id: 'alpha',
         trust: 'user',
         artifactHex: sha256Hex(JSON.stringify([
-          { path: 'agent.cordis.yml', sha256: sha256Hex(USER_PRESET_CONTENT) },
+          { path: `profile:cordis.patch.yml#preset-alpha`, sha256: sha256Hex(USER_PRESET_BLOCK) },
         ])),
       },
       {
         id: 'zeta',
         trust: 'system',
         artifactHex: sha256Hex(JSON.stringify([
-          { path: 'agent.cordis.yml', sha256: sha256Hex(SYSTEM_PRESET_CONTENT) },
+          { path: `${ZETA_PATCH_LABEL}#preset-zeta`, sha256: sha256Hex(SYSTEM_PRESET_BLOCK) },
         ])),
       },
     ]
     const rosterContractMembers = [
-      { id: 'alpha', trust: 'user', contractHex: sha256Hex(Buffer.from(USER_PRESET_CONTENT).toString('base64')) },
-      { id: 'zeta', trust: 'system', contractHex: sha256Hex(Buffer.from(SYSTEM_PRESET_CONTENT).toString('base64')) },
+      { id: 'alpha', trust: 'user', contractHex: sha256Hex(Buffer.from(USER_PRESET_BLOCK).toString('base64')) },
+      { id: 'zeta', trust: 'system', contractHex: sha256Hex(Buffer.from(SYSTEM_PRESET_BLOCK).toString('base64')) },
     ]
     const rosterBehaviorDigest = contentDigest(JSON.stringify(rosterContractMembers))
     expect(descriptor.agent).toEqual({
@@ -261,7 +264,6 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
       expiresAt: EXPIRES_AT,
     })))
     const rows = await collectPmapEvidence({
-      harnessHome: fixture.paths.harnessHome,
       profileDir: fixture.profileDir,
       fs: realPorts(),
       now: () => OBSERVED_AT,
@@ -340,17 +342,18 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
     expect(result.descriptor.harness.contractDigest)
       .toBe('sha256:1fce4c637ec37454da760122f9f97b54979d5930d49787a7e50b7e776772c269')
 
-    // Seven provenance digests of the full evidence.
+    // Seven provenance digests of the full evidence (re-anchored from the real producer,
+    // 2026-10-02, WT-02C.2E-PMAP.1 row/layer model + preset-registry rename).
     expect(result.evidence.receiptDigest)
-      .toBe('sha256:74c5c9e613dd0ff71ba4ab35833b3adde883a5ef02dc1d5a668bed0180652cf2')
+      .toBe('sha256:651d9fc4f60b74295e662dad18486bd94a256f167c1f958460a1194f08c2c1c9')
     expect(result.evidence.materializationInstanceDigest)
-      .toBe('sha256:55cb1f6c9fce14751c5faf153cbe6364860b2b58d4c8eb20532627f141140196')
+      .toBe('sha256:a764add1b99bc14f3af94847b540dd14c2e1b0517e17dcb79bd03fd58b5cddb9')
     expect(result.evidence.instanceAuthorityDigest)
-      .toBe('sha256:0992074fbf457da4e514b4ca4e80167e9b7daf57287141c4c3a85cea0cdc74cd')
+      .toBe('sha256:f89a0aa2f9c988c289db5da1d187845f2b47d774a9364bf2e6e2f275fe297dc1')
     expect(result.evidence.mainObservationProvenanceDigest)
-      .toBe('sha256:1cafc10e45eb69b0e10f957c855fee76c05efc4efb9a95a631afb986048ee7c9')
+      .toBe('sha256:95fe94ac248ccdd2714f0d946a1832c9c00a7e1d56fa6515b8da9e3eaf2f9f1b')
     expect(result.evidence.healthObservationDigest)
-      .toBe('sha256:f684a9a264342df20ed803846acfb8071e81690592942c740dc02659b43149f9')
+      .toBe('sha256:b8e770a07c0c6b8289c571c040ac4f1f792f144530c59a47b0ca6e5903a2caba')
     expect(result.evidence.livenessObservationDigest)
       .toBe('sha256:4dc75ed73e8cd2a1d17ecf68852a244cd889b5435ffcaf8286fb16ba2c6d82ec')
     expect(result.evidence.registrySnapshotDigest)
@@ -358,9 +361,9 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // The stable pair itself is frozen: any silent field change breaks these literals.
     expect(result.descriptor.runtimeDescriptorDigest)
-      .toBe('urn:sage:runtime-descriptor:sha256:03de50bd9a878261c89927fefd0626efecc141b840085395de3498735ac9e4d7')
+      .toBe('urn:sage:runtime-descriptor:sha256:80f051cff4f236535b910657e025cc604e61987bf6c4e18f06eee306764511be')
     expect(result.evidence.inventoryEvidenceDigest)
-      .toBe('urn:sage:inventory-evidence:sha256:cf47d47eed500cb44403d91c3b37d57280454d8c5849bba86eb804b9f041f116')
+      .toBe('urn:sage:inventory-evidence:sha256:126e98533ffd76191370d3afc51423ae92046413eed87eb426750af281343296')
   })
 })
 
@@ -466,11 +469,11 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
 
   it('requires complete observed PMAP rows and a readable presets manifest', async () => {
     const variants: ReadonlyArray<readonly [string, ComposeFixtureOptions]> = [
-      ['presets root missing', { includePresetsRoot: false }],
+      ['web-app bundle missing', { includeWebAppBundle: false }],
       ['presets manifest missing', { includePresetsManifest: false }],
-      ['settings absent', { settingsMode: 'absent' }],
-      ['settings broken', { settingsMode: 'broken' }],
-      ['model field absent', { settingsMode: 'provider-only' }],
+      ['model row absent', { modelRowMode: 'absent' }],
+      ['model row unparsable', { modelRowMode: 'unparsable' }],
+      ['model incomplete', { modelRowMode: 'provider-only' }],
     ]
     for (const [label, options] of variants) {
       const fixture = await composeFixture(`pmap-${label.replaceAll(' ', '-')}`, options)
@@ -479,10 +482,12 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
     }
   })
 
-  it('treats missing or unreadable policy documents as policy-document-unavailable', async () => {
+  it('treats a missing or unreadable overlay as unavailable at the earliest failing stage', async () => {
+    // The overlay is a required composition layer (PMAP) and a policy document; a missing
+    // file stops the composition at the PMAP stage, which fails closed first.
     const missingOverlay = await composeFixture('overlay-missing', { includeOverlay: false })
     await expect(composeProvider(missingOverlay, () => sealedEmptyRegistry()).read())
-      .resolves.toMatchObject({ kind: 'unavailable', code: 'policy-document-unavailable' })
+      .resolves.toMatchObject({ kind: 'unavailable', code: 'pmap-incomplete' })
 
     const fixture = await composeFixture('overlay-denied')
     const deniedOverlay = composeWithPorts(fixture, {
@@ -619,10 +624,10 @@ describe('WT-02C.2E.2 failure and adversarial layer', () => {
     // Semantic: PMAP selection, overlay bytes, a new local patch, and the preset roster.
     // Both the stable descriptor digest and the full evidence digest move.
     const semantic: ReadonlyArray<readonly [string, () => void]> = [
-      ['settings selection', () => { writeFileSync(join(fixture.paths.harnessHome, 'settings.json'), JSON.stringify({ 'agent-default-model': { provider: 'deepseek', model: 'deepseek-reasoner', reasoningEffort: 'high' } })) }],
+      ['model override', () => { appendProfilePatch(activeProfileDir, '- id: agent-default-model\n  config:\n    model: deepseek-reasoner\n') }],
       ['overlay bytes', () => { writeFileSync(overlayPath(activeProfileDir), '# changed overlay\n') }],
       ['local patch appears', () => { writeFileSync(join(fixture.paths.root, LOCAL_PATCH_FILE), 'patch: []\n') }],
-      ['preset roster', () => { writeUserPreset(fixture.paths.harnessHome, 'beta', '# beta preset\n') }],
+      ['preset roster', () => { appendProfilePatch(activeProfileDir, presetInsertFile('beta')) }],
     ]
     let previous = regenerated
     for (const [label, mutate] of semantic) {
