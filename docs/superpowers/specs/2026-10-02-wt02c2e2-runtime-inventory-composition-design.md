@@ -1,6 +1,6 @@
 # WT-02C.2E.2 · RuntimeInventoryProvider 组合：stable descriptor + full inventory evidence（设计）
 
-日期：2026-10-02 · 状态：设计已由用户逐题/逐节确认（2026-10-02），spec 待评审 · 上游：[ADR-0165](../../adr/ADR-0165.md)、[ADR-0166](../../adr/ADR-0166.md)、[ADR-0167](../../adr/ADR-0167.md)、[ADR-0168](../../adr/ADR-0168.md)、[C2B 记录](../../notes/proposed/architecture/2026-09-28-host-live-inventory.md)、[C2A 记录](../../notes/proposed/architecture/2026-09-28-runtime-artifact-attestation.md)、[ADR-0187](../../adr/ADR-0187.md)（E.0）
+日期：2026-10-02 · 状态：设计已由用户逐题/逐节确认（2026-10-02），spec 待评审 · **2026-10-02 修订（WT-02C.2E-PMAP.1，ADR-0194）：preset 面的 `preset:set` 源包随内核 0.2.0-rc.2 换名为 `dsh-agent-preset-registry`（`dsh-agent-presets` 已删）；model behavior 的来源改为 `agent-default-model` 层叠行（settings.yaml 不再是源）——§3 两张表格按修订后为准** · 上游：[ADR-0165](../../adr/ADR-0165.md)、[ADR-0166](../../adr/ADR-0166.md)、[ADR-0167](../../adr/ADR-0167.md)、[ADR-0168](../../adr/ADR-0168.md)、[C2B 记录](../../notes/proposed/architecture/2026-09-28-host-live-inventory.md)、[C2A 记录](../../notes/proposed/architecture/2026-09-28-runtime-artifact-attestation.md)、[ADR-0187](../../adr/ADR-0187.md)（E.0）
 
 ## 1. 目标与切片
 
@@ -60,11 +60,11 @@ export function createRuntimeInventoryProvider(input: {
 | host | `host:sage-shell-host` | `4.0.0`（协议主版本 4 的**正式 SemVer 形**——'4' 不合 V2 version 文法（精确 SemVer 或 `YYYY-MM-DD`）；本票定义，协议变更即升级） | C2B `artifactSetDigest`（换形） | **protocolContractDigest**（§4.1） | **launchPolicyDigest**（§4.2） |
 | harness | `harness:@deepseek-ai/dsh` | C2B `harnessVersion`（SemVer ✓） | C2B `artifactSetDigest`（委派：安装集内容摘要；host/harness 分包树粒度为登记遗留） | harnessContractDigest（§4.4） | **overlayPolicyDigest**（§4.3） |
 | provider | PMAP `provider:<route>` | PMAP version | PMAP artifact（换形） | PMAP contract（换形） | PMAP behavior（换形） |
-| model | PMAP `model:<p>/<m>` | **provider 委托**（权威记录口径：模型实现随 provider 包分发；委托关系即稳定语义） | provider 委托 | provider 委托 | PMAP behavior（settings 选择，换形） |
+| model | PMAP `model:<p>/<m>` | **provider 委托**（权威记录口径：模型实现随 provider 包分发；委托关系即稳定语义） | provider 委托 | provider 委托 | PMAP behavior（`agent-default-model` 层叠行选择，换形；settings 不再是源，见 WT-02C.2E-PMAP.1） |
 | agent | PMAP agent 行：`agent:<包名>@<版本>` 按 `<版本>`后缀确定性拆为 `agent:<包名>` | PMAP version | PMAP artifact（换形） | PMAP contract（换形） | **roster 派生**（= preset 组件 behavior 同值；E.0「agent behavior 属运行态缺失」的静态最小语义——agent 行为由可用预设组合定义，默认选择不可观测，登记 Host protocol 票） |
-| preset | `preset:set`（canonical roster 聚合） | `dsh-agent-presets` 包版本（新读其 package.json；SemVer ✓） | `sha256(canonical[ {id,trust,artifactHex} 排序 ])` | presets 包 exports canonical 摘要（与 agent 行同构，`pmap-package-contract` 同款公式） | `sha256(canonical[ {id,trust,contractHex} 排序 ])`（行为配置=可用预设组合） |
+| preset | `preset:set`（canonical roster 聚合） | `dsh-agent-preset-registry` 包版本（`dsh-agent-presets` 于 0.2.0 删除，读其后继 registry 包 package.json；SemVer ✓） | `sha256(canonical[ {id,trust,artifactHex} 排序 ])` | registry 包 exports canonical 摘要（与 agent 行同构，`pmap-package-contract` 同款公式） | `sha256(canonical[ {id,trust,contractHex} 排序 ])`（行为配置=可用预设组合） |
 
-**默认 preset 的运行时判定不在本票**（settings 为 YAML + 运行时可 mutate，E.0 判「不静态解析」仍成立）：descriptor 以 roster 覆盖；未来 Host protocol 票并入默认标记时 stable digest 改变属正常语义变更（重发 matrix）。`preset:set` 为 v1 复合语义（登记）。
+**默认 preset 的运行时判定不在本票**（默认标记属运行态 registry 语义，E.0 判「不静态解析」仍成立）：descriptor 以 roster 覆盖；未来 Host protocol 票并入默认标记时 stable digest 改变属正常语义变更（重发 matrix）。`preset:set` 为 v1 复合语义（登记）。
 
 ## 4. 顶层 policy 文档与七个 provenance 字段（全部本票定义；canonical JSON 文档 + 手写 golden）
 

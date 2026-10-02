@@ -4653,6 +4653,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0194",
+      "title": "ADR-0194 · WT-02C.2E-PMAP.1：preset/provider/model 源面随 0.2.0-rc.2 换代（声明行 + 层叠行模型；preset:set 源包迁移）",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "preset 面 = 层内声明行模型：层序为 bundle dsh.bundle.patch 文件（system）→ profile cordis.patch.yml（user、缺文件=合法空层）→ shell overlay（user、必需）；行提取为缩进文本切块，不引 YAML 引擎、不执行 !!js；同 config.id 冲突首条 observed、后续 broken（preset-id-collision，镜像 registry 拒绝语义）；零声明=合法空 roster。",
+          "constraints": [
+            "不扫描目录、不接受 preset 路径（0.2.0 registry 语义）",
+            "运行态默认标记（config.default/selectedDefault）不在静态面"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "provider/model 面 = agent-default-model 行 config 沿层序浅合并（后者覆盖，base 缺省 deepseek-official/deepseek-flash）；路由→包名走静态校准表（deepseek-official→dsh-llm-deepseek-api-key、deepseek-account→dsh-llm-deepseek-account）；settings.yaml 不再是选择源。",
+          "constraints": [
+            "只携带白名单字段 {provider, model, reasoningEffort?} 与来源层；key 引用绝不整档透传",
+            "新路由须随内核升级同步静态表"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "preset:set 源包从 dsh-agent-presets 迁移到后继 dsh-agent-preset-registry（读其 package.json 供 version/exports；E.2 设计 §3 同步修订）。",
+          "constraints": [
+            "包不可读维持 E.2 的 pmap-incomplete fail-closed 语义"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "overlay 为组成必需层：缺文件 → PMAP 三面 broken(patch-layer-unresolved)，E.2 呈现 pmap-incomplete；读取被拒（EACCES）仍是 policy-document-unavailable。",
+          "constraints": [
+            "镜像上游 loadOverlayPatches 的 required 语义",
+            "两态按阶段区分，不合并"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "证据纪律保持：层标签 path-free；非白名单字段不进 evidence；hostile !!js 不执行；digest 公式逐面冻结并以全字面量 goldens 守。",
+          "constraints": [
+            "golden 只以真实生产者实算后固化",
+            "探针一次性、不落仓"
+          ]
+        }
+      ]
     }
   ]
 }
