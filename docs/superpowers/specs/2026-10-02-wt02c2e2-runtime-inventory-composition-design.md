@@ -70,7 +70,7 @@ export function createRuntimeInventoryProvider(input: {
 
 所有摘要统一 `sha256:` + 64 位小写 hex；digest 覆盖 canonical JSON.stringify（键序显式、无空格，沿用 PMAP canonical 纪律）。
 
-1. **protocolContractDigest** = sha256(canonical `{kind:'sage.host-protocol-contract.v1', protocolVersion: SHELL_HOST_PROTOCOL_VERSION, fdPairing:[SHELL_REQUEST_PIPE_FD, SHELL_RESPONSE_PIPE_FD], frameKinds: protocol.ts 全部请求/响应帧 kind 常量集合（显式列举，golden 守）, chunkBytes: SHELL_PIPE_CHUNK_BYTES}`)（自 protocol.ts 常量取值）。
+1. **protocolContractDigest** = sha256(canonical `{kind:'sage.host-protocol-contract.v1', protocolVersion: SHELL_HOST_PROTOCOL_VERSION, fdPairing:[SHELL_REQUEST_PIPE_FD, SHELL_RESPONSE_PIPE_FD], frameKinds: protocol.ts 导出的帧名称表（`SHELL_REQUEST_FRAME_KINDS`/`SHELL_RESPONSE_FRAME_KINDS`，单一事实源；sage-shell-pin 冻结 + golden 守，ADR-0195）, chunkBytes: SHELL_PIPE_CHUNK_BYTES}`)（自 protocol.ts 常量取值）。
 2. **launchPolicyDigest** = sha256(canonical `{kind:'sage.host-launch-policy.v1', argvPolicy:'[]', envPolicy:[DSH_LAUNCH_ENVIRONMENT_KEY 单键注入], homeBinding:'profile', loopback:'oidc-callback-only'}`)（描述 `resolveHostRuntime` 启动策略；字段语义实现时对照 runtime.ts，本票定义 canonical 文档）。
 3. **overlayPolicyDigest** = sha256(canonical `{kind:'sage.shell-overlay-policy.v1', rootConfig: ROOT_CONFIG_CONTENT, overlayPatch: sha256(overlay patch 文件 bytes), localPatch: null | sha256(bytes)}`)（overlay = `<profile>/sage-host/shell.cordis.patch.yml`；**local patch 存在性与内容改变行为即必须改变本摘要**——否则同 digest 掩盖行为差异；文件缺失=null）。
 4. **harnessContractDigest** = sha256(canonical `{kind:'sage.harness-boot-contract.v1', label: SHELL_LABEL, launchEnvironmentKey: DSH_LAUNCH_ENVIRONMENT_KEY, cmdline:'provided', connection:'host-protocol-4'}`)（自常量取值）。

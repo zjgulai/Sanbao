@@ -4700,6 +4700,45 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0195",
+      "title": "ADR-0195 · 帧名称表单源化与冻结面扩展 + WT-02C.2E.2 遗留合并清点",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "帧名称表（SHELL_REQUEST_FRAME_KINDS/SHELL_RESPONSE_FRAME_KINDS）由 protocol.ts 单一导出，E.2 provider 导入构造 protocolContractDigest 的 frameKinds；不得再出现手工副本。",
+          "constraints": [
+            "既有 golden 字面量不变证明逐字节等价",
+            "帧 union 与编码器仍以名称为契约"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "sage-shell-pin 的 FROZEN_FRAMING_CONSTANTS 扩展至 8 行：两枚帧名称表纳入冻结；改值/改名/删除导出判红，空白重排不误报。",
+          "constraints": [
+            "文本按空白归一比较",
+            "violation 文案指向 ADR-0192/ADR-0195"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "HOST_VERSION 由 SHELL_HOST_PROTOCOL_VERSION 派生（`${协议版本}.0.0`），协议升级不再依赖人工同步常量。",
+          "constraints": [
+            "值保持 '4.0.0' 不变（golden 证）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "7365c577 遗留 ①–⑧ 合并清点：③ 本批执行、⑤ 核查无重叠关闭、④ 被 ADR-0194 覆盖；① 阻塞于 Host protocol 扩展票、② 待语义裁决、⑥ 阻塞于 C2C.4/.5 真实 provider、⑦ 移交 D.2 接线、⑧ 阻塞于 C2D.2A。",
+          "constraints": [
+            "不得把任一阻塞项表述为已放行",
+            "① 的新票须含默认 preset 标记与 enablement 求值语义与 matrix 重发口径"
+          ]
+        }
+      ]
     }
   ]
 }
