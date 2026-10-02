@@ -39,4 +39,13 @@ WT-02C.2E.3 验收（ADR-0196 D6）发现 host 面 4 行 `failed to import`：`l
 - **安装证据**：新 generation 安装 601 包（新增恰 2、reused 598）；对安装树复审计 = **0 未满足 / 0 版本错配**（1073 条非可选 peer 全解）；无凭据激活（隔离根无凭据库、零 `did not activate`）。
 - **回归证据**：typecheck exit 0；套件 **63 文件 / 621 passed + 1 skipped**；三层 gate **25/25**（quick / full / strict=no-skip）。
 - **配方可复现**：从最终仓库状态复跑增量再生 `Already up to date`、锁字节不变；frozen 安装 exit 0。
-- **遗留**：官方 DeepSeek route 端到端可用性待真实模型调用功能探针（本票只证明 entry 激活）；行级 enablement 全矩阵与 matrix 物理重发按 ADR-0196 D3/D5 登记不变。
+- **遗留**：官方 DeepSeek route 端到端可用性已由同日补证探针证实（见文末「Route 探针」节）；行级 enablement 全矩阵与 matrix 物理重发按 ADR-0196 D3/D5 登记不变。
+
+## Route 探针（同日补证，WT-02C.2E.4 收尾）
+
+目的：兑现 ADR-0196 D6 登记的「官方 route 是否不可用须以真实模型调用证实或证伪」。载体：内核自带 `headless` 模板（`dsh --profile headless "…"`，全新持久化会话、打印最终答案），在独立临时 `DSH_HOME` 中用该代（`210d6ea0`）的 `dsh` CLI 运行；凭据经**启动环境层**注入（`dsh-credentials-local` 解析优先级最高且按次覆盖；从用户凭据存储读入进程环境，全程不回显、不落盘）。
+
+- **Arm 1（无凭据基线）**：exit 1，`MISSING_CREDENTIAL: llm-deepseek: no API key for provider route "deepseek-official"` —— 组合启动、route 解析、K9 修复的 provider 包全部就位，只差凭据。
+- **Arm 2（带凭据真实调用）**：exit 0，模型应答 `OK`，零 `did not activate` —— 官方 route 内核链路**端到端证实可用**（凭据解析 → 请求发出 → 流式应答返回 → 会话落盘）。
+
+边界（不扩大表述）：探针经 headless 模板（同一内核包集）而非 Sage 组合内的单链调用；Sage 侧的分立证据为 smoke 零告警 + PMAP route 行 observed。同日另用 `preview.mjs` 在隔离根启动真实 Electron：Sage 工作台正常渲染（`运行时已就绪 dsh 0.2.0-rc.2`）、渲染器 console 零条目——但 Sage 现行产品面（`src/product/component-renderer.ts`）是四个面板的静态工作台，**无对话输入面**，故「UI 会话环路」今日不在产品内，不属于本探针缺口。
