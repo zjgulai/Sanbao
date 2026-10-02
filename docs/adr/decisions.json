@@ -4794,6 +4794,52 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0197",
+      "title": "ADR-0197 · WT-02C.2E.4：seed peer 闭包修复（K3 补完）——`autoInstallPeers` 翻转 + 锁最小增量重生成 + strict 再生门 + smoke 激活守护",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "修法=seed 翻转 autoInstallPeers: true + 现有锁增量重生成（恰 +2 闭包包 @deepseek-ai/dsh-llm-deepseek / dsh-deepseek-account，零版本漂移）；frozen 安装与全树复审计（含版本满足）双证 0 未满足。",
+          "constraints": [
+            "只动 seed/pnpm-workspace.yaml 与 seed/pnpm-lock.yaml；nodeLinker/allowBuilds/overrides 原样",
+            "不换 pnpm、不换 registry"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "拒绝全量新鲜解析：同日新鲜解析将拉高 ~68 个 ranged 三方包，属票外版本漂移；锁变更必须最小化以保既有验收读数有效。",
+          "constraints": [
+            "锁 diff 的非闭包变更仅允许 peer-suffix 重哈希"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "strictPeerDependencies: true 入 seed workspace，作为再生门：冻结安装不受其约束（实测旧锁仍通过），重生成在未满足 peer 时 exit 1（实测 baseline exit 0 对照）；闭包后正控 exit 0。",
+          "constraints": [
+            "不得声称 strict 保护 materialize 冻结路径",
+            "未来换装 recipe 若再生失败即按红拒绝落盘"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "smoke 永久断言：stderr 含 'did not activate' 即失败（覆盖 failed/pending/required 全族）。红证=旧 generation 4b8e7dfb 19PASS+1FAIL 点名 4 行；绿证=新 generation 20/20。",
+          "constraints": [
+            "断言必须匹配上游 loader 文案 'did not activate'，不得用窄化 pattern 替换",
+            "smoke 为本类静默降级缺陷的机制守卫"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "autoInstallPeers: false 的 0.1.x 纪律（ADR-0005/docs/research）对 Sage seed 由本 ADR 取代；legacy 文档保持历史原样不追改。",
+          "constraints": [
+            "本取代仅限 seed workspace；legacy profile 纪律不在射程"
+          ]
+        }
+      ]
     }
   ]
 }
