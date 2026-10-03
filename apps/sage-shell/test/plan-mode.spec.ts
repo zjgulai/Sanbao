@@ -153,7 +153,7 @@ describe('the plan-mode store (ticket 039)', () => {
 })
 
 describe('the plan-mode route (ticket 039)', () => {
-  it('parses exactly, forwards, and keeps an unwired provider honest', async () => {
+  it('parses exactly and enters admission without calling the raw switch provider', async () => {
     const seen: Array<{ readonly active: boolean }> = []
     const providers = createUnavailableFirstService(null, {
       sessionPlanModeSwitch: async (request) => {
@@ -168,9 +168,9 @@ describe('the plan-mode route (ticket 039)', () => {
       new Request('dsh-app://app/.sage/session/plan-mode', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-039' }, providers: service } as never,
     )
-    expect(await (await post({ active: true })).json()).toMatchObject({ state: 'settled', outcome: 'committed', view: { active: true } })
-    expect(await (await post({ active: false })).json()).toMatchObject({ state: 'settled', view: { active: false } })
-    expect(seen).toEqual([{ active: true }, { active: false }])
+    expect(await (await post({ active: true })).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(await (await post({ active: false })).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(seen).toEqual([])
 
     // Exactly the one declared member; nothing else may ride along.
     expect((await post({ active: 'on' })).status).toBe(400)
@@ -179,6 +179,6 @@ describe('the plan-mode route (ticket 039)', () => {
     expect((await post({ active: true, matterRef: 'matter:9' })).status).toBe(400)
 
     const unwired = createUnavailableFirstService(null, {})
-    expect(await (await post({ active: true }, unwired)).json()).toEqual({ state: 'refused', code: 'plan-mode-unavailable' })
+    expect(await (await post({ active: true }, unwired)).json()).toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 })

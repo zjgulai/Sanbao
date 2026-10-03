@@ -34,14 +34,19 @@ describe('app service route with the production assembly (WT-02D.1)', () => {
     expect(body.runtime).toEqual(viewState)
   })
 
-  it('keeps the matter slot null in production mode (no provider, no placeholder)', async () => {
+  it('blocks the production state route before building any aggregate projection', async () => {
     const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state'), {
       callerBinding: { correlation: 'c-production' },
       providers: providers(false),
     })
     const body = await response.json() as Record<string, unknown>
-    expect(body.matter).toBeNull()
-    expect(body.service).toMatchObject({ status: 'unavailable', reason: 'identity-unavailable' })
+    expect(body).toMatchObject({
+      code: 'projection-read-unavailable',
+      stage: 'read-policy',
+      retryable: true,
+    })
+    expect(body).not.toHaveProperty('matter')
+    expect(body).not.toHaveProperty('service')
   })
 
   it('keeps the blocked write path typed under the fixture switch (read-only surface)', async () => {

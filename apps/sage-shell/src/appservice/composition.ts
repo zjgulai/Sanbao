@@ -4,11 +4,23 @@ import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
 import type { QueueItemOutcome, SessionHistoryStatus, SessionRunDetailOutcome, SessionRunListOutcome, SageServiceState, ServiceCommandOutcome, ServiceCommandStatus, ServiceProviders, CapabilityStatus, ModelConfigStatus, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftConvertOutcome, DraftReconcileOutcome, DraftStatus, DraftView, MatterLinkState, PreferencesSaveOutcome, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, ClarificationAnswerOutcome, ClarificationStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionAnchorsStatus, SessionEditRecordView, SessionEditResendOutcome, SessionEditSaveOutcome, SessionEditsStatus, SessionEditVerifyOutcome, InputPluginView, InputSelectionOutcome, InputSelectionsStatus, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SettingsLeaf, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ExternalLinkOutcome, ToolResultsStatus, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ActionConfirmationPrepareOutcome, DraftConfirmationOutcome, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, ArtifactWindowOutcome } from './contracts.js'
 import { DEFAULT_DISPLAY_PREFERENCE_VALUES } from './contracts.js'
+import type {
+  ActiveMatterContextStatus,
+  ActiveMatterSelectionOutcome,
+  ActiveMatterSelectionRequest,
+  ProjectionReadRouteRunner,
+} from './contracts.js'
 import type { RuntimeEffectiveObservation } from '../protocol.js'
 import { serviceJson } from './errors.js'
 import { runCommand } from './command-pipeline.js'
 import type { CommandDenied, CommandPipelinePorts, CommandResult, SageActionIntentV2, SageDispatchIntent } from './command-contracts.js'
 import type { ActionConfirmationsWiring } from './action-confirmations.js'
+import { admitProtectedEffect } from './protected-effect-admission.js'
+import type {
+  ProtectedEffectAdmissionPorts,
+  ProtectedEffectAdmissionResult,
+  SessionCoreProtectedEffectCandidate,
+} from './protected-effect-admission.js'
 
 /** Production has no provider for any step: every port fails closed (spec §5).
  * Exported for the main-side authorization assembly (WT-02D.2A) to merge real step-2 ports over. */
@@ -29,10 +41,21 @@ export interface ServiceOptions {
   readonly authSnapshot?: () => { readonly status: 'signed-out' | 'signed-in' | 'pending'; readonly displayName: string | null }
   readonly login?: () => Promise<Response>
   readonly logout?: () => Promise<Response>
+  /** CTX-01B: read-only public projection of the main-owned selection kernel. */
+  readonly activeMatterContext?: () => ActiveMatterContextStatus
+  /** CTX-01B: explicit selection only. The route candidate is never itself authority. */
+  readonly selectActiveMatter?: (request: ActiveMatterSelectionRequest) => Promise<ActiveMatterSelectionOutcome>
+  /** READ-01A: route-level projection reads use one request-scoped main runner. */
+  readonly runProjectionRead?: ProjectionReadRouteRunner
   /** Explicit fixture-mode matter projection (WT-02D.1): injected by main only under its fixture switch; absent keeps the slot null. */
   readonly fixtureProjection?: () => SageMatterViewState
   /** WT-02D.2A: composed command ports (real step-2 over fail-closed defaults); absent keeps every port fail-closed. */
   readonly commandPorts?: CommandPipelinePorts
+  /** AUTH-02A: request-scoped session-effect checks. Dispatch is deliberately absent until the
+   * remaining identity/policy, compatibility, Registry, preflight and persistence ports exist. */
+  readonly protectedEffectPorts?: Omit<ProtectedEffectAdmissionPorts, 'dispatch'>
+  /** The verified request binding owns this correlation when assembled by Electron main. */
+  readonly protectedEffectCorrelation?: () => string
   /** Ticket 030: main-owned read of the live runtime roster; absent keeps the surface at 未核验. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
   /** Ticket 017: main-owned classified settings read; absent keeps the model view unread. */
@@ -247,6 +270,51 @@ function commandStatus(result: CommandResult): ServiceCommandStatus {
   return { correlation: result.correlation, outcome, code: result.code, retryable: result.retryable }
 }
 
+/** Route one session-core mutation through the asynchronous authority entry. This slice has no
+ * dispatch port by construction, so even a complete pre-dispatch test harness cannot reach a raw
+ * session provider through the product service. */
+type SessionCoreProtectedEffectOperation =
+  | 'session.send'
+  | 'session.stop'
+  | 'session.resume'
+  | 'session.pending.edit'
+  | 'session.pending.remove'
+  | 'session.queue.edit'
+  | 'session.queue.remove'
+  | 'session.clarification.answer'
+  | 'session.edits.save'
+  | 'session.edits.resend'
+  | 'session.edits.verify'
+  | 'session.plan-mode.switch'
+  | 'session.approval.answer'
+  | 'session.approval.withdraw'
+  | 'session.correction.submit'
+  | 'session.attachment.upload'
+
+async function admitSessionCoreProtectedEffect(
+  options: ServiceOptions,
+  operation: SessionCoreProtectedEffectOperation,
+  candidate: SessionCoreProtectedEffectCandidate,
+  payload: Readonly<Record<string, unknown>>,
+): Promise<ProtectedEffectAdmissionResult> {
+  const correlation = options.protectedEffectCorrelation?.() ?? randomUUID()
+  return admitProtectedEffect({
+    intent: {
+      family: 'session-core',
+      requestId: correlation,
+      operation,
+      candidate,
+      payload,
+    },
+    correlation,
+    ports: options.protectedEffectPorts ?? {},
+  })
+}
+
+function protectedEffectFailureCode(result: ProtectedEffectAdmissionResult): string {
+  return result.state === 'dispatched' ? 'protected-effect-outcome-unknown' : result.code
+}
+
 /** Ticket 030: classify the main-observed roster once. A failed row keeps its own state and loses
  *  the base's free text — the surface receives a code it owns wording for (no paths or secrets). */
 function capabilityStatus(observation: RuntimeEffectiveObservation | undefined): CapabilityStatus {
@@ -283,6 +351,15 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
     diagnostics: { harnessVersion: null, protocolVersion: null, profileGeneration: null, manifestSha256Short: null, manifestVerified: false, dataRoot: '', lastError: null },
   }
   return {
+    ...(options.runProjectionRead === undefined ? {} : { runProjectionRead: options.runProjectionRead }),
+    async readBlockedState(): Promise<Response> {
+      return serviceJson({
+        code: 'projection-read-unavailable',
+        stage: 'read-policy',
+        retryable: true,
+        correlation: randomUUID(),
+      }, 200)
+    },
     async readState(): Promise<Response> {
       const snap = snapshot()
       const modelConfigRead = options.modelConfig?.()
@@ -298,6 +375,8 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
           correlation: randomUUID(),
           command: lastCommand,
         },
+        activeContext: options.activeMatterContext?.()
+          ?? { state: 'unavailable' as const, contextGeneration: null },
         matter: options.fixtureProjection?.() ?? null,
         capability: capabilityStatus(options.runtimeEffective?.()),
         modelConfig,
@@ -348,6 +427,17 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         runtime,
       }
       return serviceJson(state, 200)
+    },
+    async selectActiveMatter(request: ActiveMatterSelectionRequest): Promise<Response> {
+      const select = options.selectActiveMatter
+      const outcome: ActiveMatterSelectionOutcome = select === undefined
+        ? { state: 'refused', code: 'active-context-unavailable', retryable: true }
+        : await select(request).catch((): ActiveMatterSelectionOutcome => ({
+            state: 'refused',
+            code: 'active-context-unavailable',
+            retryable: true,
+          }))
+      return serviceJson(outcome, 200)
     },
     async adoptWorkspace(): Promise<Response> {
       const adopt = options.adoptWorkspace
@@ -538,11 +628,17 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       const card = confirmations.store.prepare(intent, confirmations.facts(intent))
       return serviceJson({ state: 'prepared', card } satisfies ActionConfirmationPrepareOutcome, 200)
     },
-    async sendSessionPrompt(request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string }): Promise<Response> {
-      const send = options.sessionSend
-      const outcome: SessionSendOutcome = send === undefined
-        ? { state: 'refused', code: 'session-channel-unavailable' }
-        : await send(request).catch((): SessionSendOutcome => ({ state: 'refused', code: 'session-send-failed' }))
+    async sendSessionPrompt(request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' }): Promise<Response> {
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.send',
+        { kind: 'matter', matterRef: request.matterRef },
+        { text: request.text, ...(request.mode === undefined ? {} : { mode: request.mode }) },
+      )
+      const outcome: SessionSendOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async savePreferences(request): Promise<Response> {
@@ -554,22 +650,49 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson({ state: 'saved', preferences: saved } satisfies PreferencesSaveOutcome, 200)
     },
     async stopSession(request: { readonly matterRef: string }): Promise<Response> {
-      const stop = options.sessionStop
-      const outcome = stop === undefined
-        ? { state: 'refused' as const, code: 'session-channel-unavailable', paused: false, drained: [], consumed: [], dispatched: [] }
-        : await stop(request).catch((): SessionControlOutcome => ({ state: 'refused', code: 'session-stop-failed', paused: false, drained: [], consumed: [], dispatched: [] }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.stop',
+        { kind: 'matter', matterRef: request.matterRef },
+        {},
+      )
+      const outcome: SessionControlOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+        paused: false,
+        drained: [],
+        consumed: [],
+        dispatched: [],
+      }
       return serviceJson(outcome, 200)
     },
     async resumeSession(request: { readonly matterRef: string, readonly workspaceRoot: string }): Promise<Response> {
-      const resume = options.sessionResume
-      const outcome = resume === undefined
-        ? { state: 'refused' as const, code: 'session-channel-unavailable', paused: false, drained: [], consumed: [], dispatched: [] }
-        : await resume(request).catch((): SessionControlOutcome => ({ state: 'refused', code: 'session-resume-failed', paused: false, drained: [], consumed: [], dispatched: [] }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.resume',
+        { kind: 'matter', matterRef: request.matterRef },
+        {},
+      )
+      const outcome: SessionControlOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+        paused: false,
+        drained: [],
+        consumed: [],
+        dispatched: [],
+      }
       return serviceJson(outcome, 200)
     },
     async updatePendingInput(request): Promise<Response> {
-      const update = options.pendingUpdate
-      const outcome = update === undefined ? { ok: false, code: 'pending-store-unavailable' } : update(request, '')
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        request.action === 'edit' ? 'session.pending.edit' : 'session.pending.remove',
+        { kind: 'active-session' },
+        request.action === 'edit'
+          ? { itemId: request.itemId, text: request.text }
+          : { itemId: request.itemId },
+      )
+      const outcome = { ok: false, code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async sessionHistoryList(request: { readonly beforeSeq?: number }): Promise<Response> {
@@ -587,10 +710,16 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async sessionClarificationAnswer(request: { readonly matterRef: string, readonly requestId: string, readonly answers: readonly unknown[] }): Promise<Response> {
-      const answer = options.sessionClarificationAnswer
-      const outcome: ClarificationAnswerOutcome = answer === undefined
-        ? { state: 'refused', code: 'session-clarifications-unavailable' }
-        : await answer(request).catch((): ClarificationAnswerOutcome => ({ state: 'refused', code: 'session-clarifications-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.clarification.answer',
+        { kind: 'matter', matterRef: request.matterRef },
+        { requestId: request.requestId, answers: request.answers },
+      )
+      const outcome: ClarificationAnswerOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async inputSelectionsSelect(request: { readonly action: 'select', readonly kind: 'skill' | 'plugin', readonly ref: string }): Promise<Response> {
@@ -629,45 +758,81 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async sessionApprovalAnswer(request: { readonly matterRef: string, readonly requestId: string, readonly outcome: 'allowed-once' | 'rejected' }): Promise<Response> {
-      const answer = options.sessionApprovalAnswer
-      const outcome: ApprovalAnswerOutcome = answer === undefined
-        ? { state: 'refused', code: 'approval-relay-unavailable' }
-        : await answer(request).catch((): ApprovalAnswerOutcome => ({ state: 'refused', code: 'approval-answer-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.approval.answer',
+        { kind: 'matter', matterRef: request.matterRef },
+        { requestId: request.requestId, outcome: request.outcome },
+      )
+      const outcome: ApprovalAnswerOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionApprovalWithdraw(request: { readonly matterRef: string, readonly requestId: string }): Promise<Response> {
-      const withdraw = options.sessionApprovalWithdraw
-      const outcome: ApprovalWithdrawOutcome = withdraw === undefined
-        ? { state: 'refused', code: 'approval-relay-unavailable' }
-        : await withdraw(request).catch((): ApprovalWithdrawOutcome => ({ state: 'refused', code: 'approval-withdraw-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.approval.withdraw',
+        { kind: 'matter', matterRef: request.matterRef },
+        { requestId: request.requestId },
+      )
+      const outcome: ApprovalWithdrawOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionPlanModeSwitch(request: { readonly active: boolean }): Promise<Response> {
-      const switchMode = options.sessionPlanModeSwitch
-      const outcome: PlanModeSwitchReceipt = switchMode === undefined
-        ? { state: 'refused', code: 'plan-mode-unavailable' }
-        : await switchMode(request).catch((): PlanModeSwitchReceipt => ({ state: 'refused', code: 'plan-mode-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.plan-mode.switch',
+        { kind: 'active-session' },
+        { active: request.active },
+      )
+      const outcome: PlanModeSwitchReceipt = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionEditsSave(request: { readonly action: 'save', readonly messageRef: string, readonly text: string }): Promise<Response> {
-      const save = options.sessionEditsSave
-      const outcome: SessionEditSaveOutcome = save === undefined
-        ? { state: 'refused', code: 'session-edits-unavailable' }
-        : save(request)
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.edits.save',
+        { kind: 'active-session' },
+        { messageRef: request.messageRef, text: request.text },
+      )
+      const outcome: SessionEditSaveOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionEditsResend(request: { readonly action: 'resend', readonly editId: string, readonly workspaceRoot?: string }): Promise<Response> {
-      const resend = options.sessionEditsResend
-      const outcome: SessionEditResendOutcome = resend === undefined
-        ? { state: 'refused', code: 'session-edits-unavailable' }
-        : await resend(request).catch((): SessionEditResendOutcome => ({ state: 'refused', code: 'session-edits-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.edits.resend',
+        { kind: 'active-session' },
+        { editId: request.editId },
+      )
+      const outcome: SessionEditResendOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionEditsVerify(request: { readonly action: 'verify', readonly editId: string }): Promise<Response> {
-      const verify = options.sessionEditsVerify
-      const outcome: SessionEditVerifyOutcome = verify === undefined
-        ? { state: 'refused', code: 'session-edits-unavailable' }
-        : await verify(request).catch((): SessionEditVerifyOutcome => ({ state: 'refused', code: 'session-edits-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.edits.verify',
+        { kind: 'active-session' },
+        { editId: request.editId },
+      )
+      const outcome: SessionEditVerifyOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async sessionAnchorsRead(request: { readonly action: 'read' }): Promise<Response> {
@@ -685,10 +850,18 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async updateQueueItem(request): Promise<Response> {
-      const run = options.queueItemUpdate
-      const outcome: QueueItemOutcome = run === undefined
-        ? { state: 'refused', code: 'queue-store-unavailable' }
-        : await Promise.resolve(run(request)).catch((): QueueItemOutcome => ({ state: 'refused', code: 'queue-update-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        request.action === 'edit' ? 'session.queue.edit' : 'session.queue.remove',
+        { kind: 'active-session' },
+        request.action === 'edit'
+          ? { itemId: request.itemId, text: request.text }
+          : { itemId: request.itemId },
+      )
+      const outcome: QueueItemOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async pickAttachments(): Promise<Response> {
@@ -699,10 +872,16 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async uploadAttachment(request: { readonly itemId: string, readonly matterRef: string, readonly workspaceRoot: string }): Promise<Response> {
-      const upload = options.attachmentsUpload
-      const outcome: AttachmentUploadOutcome = upload === undefined
-        ? { state: 'refused', code: 'attachment-store-unavailable' }
-        : await upload(request).catch((): AttachmentUploadOutcome => ({ state: 'refused', code: 'attachment-upload-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.attachment.upload',
+        { kind: 'matter', matterRef: request.matterRef },
+        { itemId: request.itemId },
+      )
+      const outcome: AttachmentUploadOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async cancelAttachment(request: { readonly itemId: string }): Promise<Response> {
@@ -867,10 +1046,20 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async submitCorrection(request: { readonly matterRef: string, readonly workspaceRoot: string, readonly originalText: string, readonly originalAt?: string, readonly text: string }): Promise<Response> {
-      const run = options.correctionCreate
-      const outcome: CorrectionOutcome = run === undefined
-        ? { state: 'refused', code: 'action-items-unavailable' }
-        : await run(request).catch((): CorrectionOutcome => ({ state: 'refused', code: 'correction-send-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.correction.submit',
+        { kind: 'matter', matterRef: request.matterRef },
+        {
+          originalText: request.originalText,
+          ...(request.originalAt === undefined ? {} : { originalAt: request.originalAt }),
+          text: request.text,
+        },
+      )
+      const outcome: CorrectionOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async createProject(request: { readonly name: string }): Promise<Response> {

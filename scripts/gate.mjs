@@ -43,6 +43,7 @@ import {
 import { checkSageShellPin } from './gates/sage-shell-pin.mjs'
 import { checkSageProductBoundary, collectSageProductBoundaryFiles } from './gates/sage-product-boundary.mjs'
 import { checkSageAppServiceImportFirewall, collectSageAppServiceFiles } from './gates/sage-appservice-import-firewall.mjs'
+import { checkSageRouteAuthority } from './gates/sage-route-authority.mjs'
 import { checkSageDataIsolation, collectSageDataIsolationFiles } from './gates/sage-data-isolation.mjs'
 import { checkSageBasePathHygiene, collectSageBasePathFiles } from './gates/sage-base-path-hygiene.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
@@ -661,6 +662,34 @@ const CHECKS = [
       '跑 node --test scripts/gates/sage-appservice-import-firewall.test.mjs；禁入 import 命中、空射程或合法类型合同误判红都必须判红。',
     run() {
       return runNodeTestFile('scripts/gates/sage-appservice-import-firewall.test.mjs', 'appservice import firewall 判据的反向自测失败')
+    },
+  },
+  {
+    name: 'sage-route-authority',
+    remediation:
+      '修正 route-authority-matrix.json 与 route-skeleton.ts、composition.ts、appservice-binding.ts、main/app-service.ts、main/index.ts 的事实漂移；'
+      + '已登记的 authority violation 是事实状态，不得通过删除或改绿逃避。',
+    run() {
+      return checkSageRouteAuthority({
+        matrixText: readRepoText('apps/sage-shell/src/appservice/route-authority-matrix.json'),
+        routeSkeletonText: readRepoText('apps/sage-shell/src/appservice/route-skeleton.ts'),
+        compositionText: readRepoText('apps/sage-shell/src/appservice/composition.ts'),
+        callerBindingText: readRepoText('apps/sage-shell/src/main/appservice-binding.ts'),
+        mainAppServiceText: readRepoText('apps/sage-shell/src/main/app-service.ts'),
+        mainIndexText: readRepoText('apps/sage-shell/src/main/index.ts'),
+      })
+    },
+  },
+  {
+    name: 'sage-route-authority-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-route-authority.test.mjs；路由增删、method/provider/classification 漂移、'
+      + 'projection-read wrapper/assembly/owner 漂移、runCommand 绕过、CB1 假升级与 mixed unsupported 漂移都必须判红。',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/sage-route-authority.test.mjs',
+        'Sage route authority truth matrix 判据的反向自测失败',
+      )
     },
   },
   {
@@ -2485,6 +2514,8 @@ const SAGE_CHECK_NAMES = Object.freeze([
   'sage-service-consumption-selftest',
   'sage-appservice-import-firewall',
   'sage-appservice-import-firewall-selftest',
+  'sage-route-authority',
+  'sage-route-authority-selftest',
   'adr-agent-records',
   'adr-agent-records-selftest',
   'docs-link-integrity',

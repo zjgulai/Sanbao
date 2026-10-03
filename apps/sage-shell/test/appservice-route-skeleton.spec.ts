@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
+import { allowProjectionReadForTest } from './support/projection-read-test-runner.js'
 
 const providers = {
+  runProjectionRead: allowProjectionReadForTest,
   readState: async () => Response.json({ service: { status: 'unavailable' }, runtime: null }),
   dispatch: async () => new Response(null, { status: 503 }),
   login: async () => new Response('{}'),
@@ -59,7 +61,7 @@ describe('route-skeleton', () => {
     const body = await r.json() as Record<string, unknown>
     expect(body.code).toBe('invalid-intent')
   })
-  it('GET state 直通 providers.readState', async () => {
+  it('GET state 只在显式允许的 read runner 内调用 providers.readState', async () => {
     const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state'), deps)
     expect(r.status).toBe(200)
     expect(await r.json()).toEqual({ service: { status: 'unavailable' }, runtime: null })

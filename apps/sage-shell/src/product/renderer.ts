@@ -38,7 +38,7 @@ export function renderSageDocument(): string {
     html { min-width: 320px; background: var(--sage-surface); }
     body { min-height: 100vh; margin: 0; background: radial-gradient(circle at 72% 4%, #29483b 0, transparent 34rem), var(--sage-surface); }
     button { font: inherit; }
-    button:focus-visible { outline: 2px solid var(--sage-accent); outline-offset: 3px; }
+    :where(button, select, input, textarea):focus-visible { outline: 2px solid var(--sage-accent); outline-offset: 3px; }
     [hidden] { display: none !important; }
     .sage-app { min-height: 100vh; display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
     .sage-sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 1.5rem 1rem; border-right: 1px solid var(--sage-line); background: rgb(8 15 13 / 78%); }
@@ -219,6 +219,22 @@ export function renderSageDocument(): string {
     const loginPath = '/.sage/login';
     const logoutPath = '/.sage/logout';
     const requestTimeoutMs = ${SAGE_REQUEST_TIMEOUT_MS};
+    const sageWorkspace = document.querySelector('#sage-workspace');
+    const matterProjectionPill = document.querySelector('#matter-projection-pill');
+    const matterOverviewStage = document.querySelector('#matter-overview-stage');
+    const matterCardTitle = document.querySelector('#matter-card-title');
+    const matterOverviewSourceNote = document.querySelector('#matter-overview-source-note');
+    const matterOverviewSource = document.querySelector('#matter-overview-source');
+    const matterOverviewRevision = document.querySelector('#matter-overview-revision');
+    const matterPanelSource = document.querySelector('#matter-panel-source');
+    const matterDetailId = document.querySelector('#matter-detail-id');
+    const matterDetailRevision = document.querySelector('#matter-detail-revision');
+    const matterDetailGoal = document.querySelector('#matter-detail-goal');
+    const matterDetailStage = document.querySelector('#matter-detail-stage');
+    const matterDetailActionability = document.querySelector('#matter-detail-actionability');
+    const matterDetailDenial = document.querySelector('#matter-detail-denial');
+    const matterActionSource = document.querySelector('#matter-action-source');
+    const matterActionPreviews = document.querySelector('#matter-action-previews');
     const title = document.querySelector('#state-title');
     const message = document.querySelector('#state-message');
     const retry = document.querySelector('#retry');
@@ -567,6 +583,281 @@ export function renderSageDocument(): string {
 
     function fallback() {
       return { status: 'unavailable', message: 'Sage 暂时无法读取受控状态，可稍后重新检查。', retryable: true };
+    }
+
+    const matterStageLabels = {
+      created: '已创建',
+      evidence: '整理证据',
+      running: '执行中',
+      clarification: '等待澄清',
+      'artifact-receipt': '等待回执',
+      'failed-retry': '失败待复核',
+    };
+    const matterActionabilityLabels = {
+      allowed: '可提交',
+      blocked: '已阻断',
+      'requires-confirmation': '需要确认',
+    };
+    const matterActionLabels = {
+      'create-matter': '创建经营事项',
+      'enter-evidence': '录入证据',
+      'answer-clarification': '回答澄清',
+      approve: '批准',
+      reject: '拒绝',
+      revoke: '撤销',
+      'start-attempt': '开始执行',
+      'stop-attempt': '停止执行',
+      'retry-attempt': '重试执行',
+      'open-artifact': '打开产物',
+      'accept-receipt': '接受回执',
+      'reject-receipt': '拒绝回执',
+      'retry-capability': '重试能力检查',
+    };
+    const matterCompatibilityOutcomes = new Set(['equivalent', 'requires-new-revision', 'unknown']);
+    const matterAuthorizationStates = new Set(['authorized', 'denied', 'requires-confirmation', 'unknown']);
+    const matterAvailabilityStates = new Set(['available', 'unavailable', 'recovering', 'unknown']);
+    const matterActionabilities = new Set(Object.keys(matterActionabilityLabels));
+    const matterDenialReasons = new Set([
+      'fixture-only',
+      'runtime-unavailable',
+      'compatibility-unknown',
+      'authorization-required',
+      'decision-required',
+      'stale-revision',
+      'external-capability-unavailable',
+    ]);
+
+    function isRecord(value) {
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function hasOwn(record, key) {
+      return Object.prototype.hasOwnProperty.call(record, key);
+    }
+
+    function isNonEmptyString(value) {
+      return typeof value === 'string' && value.trim() !== '';
+    }
+
+    function isOptionalString(value) {
+      return value === undefined || isNonEmptyString(value);
+    }
+
+    function isCount(value) {
+      return Number.isSafeInteger(value) && value >= 0;
+    }
+
+    function isPendingClarification(value) {
+      return value === undefined || (isRecord(value)
+        && isNonEmptyString(value.eventId)
+        && isNonEmptyString(value.revisionId)
+        && isOptionalString(value.actionScope)
+        && isNonEmptyString(value.reason)
+        && isNonEmptyString(value.requestedAt));
+    }
+
+    function isMatterAction(value) {
+      return isRecord(value)
+        && hasOwn(matterActionLabels, value.type)
+        && isOptionalString(value.revisionId)
+        && isOptionalString(value.actionScope)
+        && matterActionabilities.has(value.actionability)
+        && (value.denialReason === undefined || matterDenialReasons.has(value.denialReason))
+        && (value.actionability !== 'blocked' || value.denialReason !== undefined);
+    }
+
+    function isMatterDecision(value) {
+      return isRecord(value)
+        && isNonEmptyString(value.decisionId)
+        && isNonEmptyString(value.revisionId)
+        && isNonEmptyString(value.actionScope)
+        && ['approved', 'rejected', 'revoked'].includes(value.status)
+        && isOptionalString(value.expiresAt);
+    }
+
+    function isMatterAttempt(value) {
+      return isRecord(value)
+        && isNonEmptyString(value.attemptId)
+        && isNonEmptyString(value.revisionId)
+        && ['running', 'blocked', 'failed', 'succeeded'].includes(value.status)
+        && isNonEmptyString(value.startedAt)
+        && isOptionalString(value.endedAt);
+    }
+
+    function isMatterArtifact(value) {
+      return isRecord(value)
+        && isNonEmptyString(value.artifactId)
+        && isNonEmptyString(value.revisionId)
+        && isNonEmptyString(value.attemptId)
+        && isNonEmptyString(value.kind)
+        && isNonEmptyString(value.recordedAt);
+    }
+
+    function isMatterReceipt(value) {
+      return isRecord(value)
+        && isNonEmptyString(value.receiptId)
+        && isNonEmptyString(value.revisionId)
+        && isNonEmptyString(value.artifactId)
+        && ['accepted', 'rejected'].includes(value.verdict)
+        && isNonEmptyString(value.actorRoleRef)
+        && isNonEmptyString(value.recordedAt);
+    }
+
+    function isMatterProjection(value) {
+      if (!isRecord(value)
+        || value.schemaVersion !== 'sage.matter-view.v1'
+        || !['fixture', 'live'].includes(value.projectionSource)
+        || !isRecord(value.matter)
+        || !isNonEmptyString(value.matter.matterId)
+        || !isNonEmptyString(value.matter.goal)
+        || !isNonEmptyString(value.matter.responsiblePartyRoleRef)
+        || !hasOwn(matterStageLabels, value.matter.stage)
+        || (value.matter.conclusion !== undefined && !['completed', 'stopped'].includes(value.matter.conclusion))
+        || !isOptionalString(value.matter.currentRevisionId)
+        || !isCount(value.matter.revisionCount)
+        || !isCount(value.matter.evidenceCount)
+        || !isCount(value.matter.unknownCount)
+        || !isCount(value.matter.dependencyCount)
+        || !isPendingClarification(value.matter.pendingClarification)
+        || !matterCompatibilityOutcomes.has(value.compatibilityOutcome)
+        || !matterAuthorizationStates.has(value.authorizationState)
+        || !matterAvailabilityStates.has(value.availabilityState)
+        || !matterActionabilities.has(value.actionability)
+        || (value.denialReason !== undefined && !matterDenialReasons.has(value.denialReason))
+        || (value.actionability === 'blocked' && value.denialReason === undefined)
+        || !Array.isArray(value.actions)
+        || !value.actions.every(isMatterAction)
+        || !Array.isArray(value.decisions)
+        || !value.decisions.every(isMatterDecision)
+        || !Array.isArray(value.attempts)
+        || !value.attempts.every(isMatterAttempt)
+        || !Array.isArray(value.artifacts)
+        || !value.artifacts.every(isMatterArtifact)
+        || !Array.isArray(value.receipts)
+        || !value.receipts.every(isMatterReceipt)) return false;
+      return true;
+    }
+
+    function parseServiceStateEnvelope(value) {
+      if (!isRecord(value)
+        || !hasOwn(value, 'service')
+        || !hasOwn(value, 'runtime')
+        || !hasOwn(value, 'matter')
+        || !isRecord(value.service)
+        || (value.runtime !== null && !isRecord(value.runtime))) return null;
+      return value;
+    }
+
+    function setMatterText(node, value) {
+      if (node !== null) node.textContent = value;
+    }
+
+    function renderMatterUnavailable(kind) {
+      const invalid = kind === 'invalid';
+      const label = invalid ? 'projection invalid' : 'projection unavailable';
+      const titleText = invalid ? '事项投影格式无效' : '当前没有可用的事项投影';
+      const note = invalid
+        ? '事项投影未通过 schema 校验，已拒绝显示；不会沿用上一次数据。'
+        : '当前没有可用的事项投影；不会用 fixture 或 placeholder 补齐。';
+      if (sageWorkspace !== null) {
+        sageWorkspace.dataset.projectionSource = 'unavailable';
+        sageWorkspace.dataset.matterRenderState = kind;
+      }
+      setMatterText(matterProjectionPill, label + ' · 不执行外部动作');
+      setMatterText(matterOverviewStage, invalid ? '格式无效' : '未读取');
+      setMatterText(matterCardTitle, titleText);
+      setMatterText(matterOverviewSourceNote, note);
+      setMatterText(matterOverviewSource, label);
+      setMatterText(matterOverviewRevision, '—');
+      setMatterText(matterPanelSource, label);
+      setMatterText(matterDetailId, '—');
+      setMatterText(matterDetailRevision, '—');
+      setMatterText(matterDetailGoal, titleText);
+      setMatterText(matterDetailStage, invalid ? '格式无效' : '未读取');
+      setMatterText(matterDetailActionability, '已阻断');
+      setMatterText(matterDetailDenial, invalid ? '事项投影格式无效' : '事项投影不可用');
+      if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', true);
+      setMatterText(matterActionSource, '不提交 · ' + label);
+      if (matterActionPreviews !== null) matterActionPreviews.textContent = '';
+    }
+
+    function appendMatterNode(parent, tagName, className, text) {
+      const node = document.createElement(tagName);
+      if (className !== '') node.className = className;
+      node.textContent = text;
+      parent.appendChild(node);
+      return node;
+    }
+
+    function appendMatterMeta(parent, label, value) {
+      const row = appendMatterNode(parent, 'p', 'sage-preview-meta', '');
+      appendMatterNode(row, 'span', '', label);
+      appendMatterNode(row, 'code', '', value);
+    }
+
+    function renderMatterActionPreviews(viewState) {
+      if (matterActionPreviews === null) return;
+      matterActionPreviews.textContent = '';
+      for (const action of viewState.actions) {
+        const article = document.createElement('article');
+        article.className = 'sage-action-preview-card';
+        article.dataset.actionPreview = action.type;
+        article.dataset.submissionState = 'not-submitted';
+        const head = appendMatterNode(article, 'div', 'sage-action-preview-head', '');
+        appendMatterNode(head, 'span', 'sage-card-label', 'ACTION PREVIEW');
+        appendMatterNode(head, 'strong', '', matterActionLabels[action.type]);
+        appendMatterNode(
+          article,
+          'div',
+          'sage-action-preview-state' + (action.actionability === 'blocked' ? ' is-blocked' : ''),
+          matterActionabilityLabels[action.actionability],
+        );
+        appendMatterMeta(article, 'revision', action.revisionId ?? '服务接线后确定');
+        appendMatterMeta(article, 'scope', action.actionScope ?? '能力恢复检查');
+        appendMatterMeta(
+          article,
+          '权限 · 可用性 · 兼容性',
+          viewState.authorizationState + ' · ' + viewState.availabilityState + ' · ' + viewState.compatibilityOutcome,
+        );
+        appendMatterNode(article, 'p', 'sage-preview-denial', '阻断原因：' + (action.denialReason ?? 'none'));
+        const foot = appendMatterNode(article, 'div', 'sage-preview-foot', '');
+        appendMatterNode(foot, 'span', '', '幂等键：服务接线后生成');
+        appendMatterNode(foot, 'span', 'sage-preview-not-submitted', '预览，不提交');
+        matterActionPreviews.appendChild(article);
+      }
+    }
+
+    function renderMatterProjection(value) {
+      if (value === null) {
+        renderMatterUnavailable('unavailable');
+        return;
+      }
+      if (!isMatterProjection(value)) {
+        renderMatterUnavailable('invalid');
+        return;
+      }
+      const projectionLabel = value.projectionSource === 'fixture' ? 'fixture projection' : 'live projection';
+      const revisionId = value.matter.currentRevisionId ?? 'revision pending';
+      if (sageWorkspace !== null) {
+        sageWorkspace.dataset.projectionSource = value.projectionSource;
+        sageWorkspace.dataset.matterRenderState = value.projectionSource;
+      }
+      setMatterText(matterProjectionPill, projectionLabel + ' · 不执行外部动作');
+      setMatterText(matterOverviewStage, matterStageLabels[value.matter.stage]);
+      setMatterText(matterCardTitle, value.matter.goal);
+      setMatterText(matterOverviewSourceNote, '当前投影来自 ' + projectionLabel + '，用于验证事项身份、阶段、证据和阻断位置。');
+      setMatterText(matterOverviewSource, projectionLabel);
+      setMatterText(matterOverviewRevision, revisionId);
+      setMatterText(matterPanelSource, projectionLabel);
+      setMatterText(matterDetailId, value.matter.matterId);
+      setMatterText(matterDetailRevision, revisionId);
+      setMatterText(matterDetailGoal, value.matter.goal);
+      setMatterText(matterDetailStage, matterStageLabels[value.matter.stage]);
+      setMatterText(matterDetailActionability, matterActionabilityLabels[value.actionability]);
+      setMatterText(matterDetailDenial, value.denialReason ?? 'none');
+      if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', value.actionability === 'blocked');
+      setMatterText(matterActionSource, '不提交 · ' + value.projectionSource);
+      renderMatterActionPreviews(value);
     }
 
     function setView(view) {
@@ -3249,11 +3540,73 @@ export function renderSageDocument(): string {
 
     // 022：事项列表分区。由 main 推导，renderer 只按 partition 字段分组呈现，绝不自判。
     let lastMatterList = null;
+    let matterContextLocalNotice = null;
+    function activeMatterContextOf(payload) {
+      const value = isRecord(payload) && isRecord(payload.activeContext) ? payload.activeContext : null;
+      if (value === null || !Number.isSafeInteger(value.contextGeneration) || value.contextGeneration < 0) return null;
+      if (value.state === 'inactive') {
+        return { state: 'inactive', contextGeneration: value.contextGeneration };
+      }
+      if (value.state !== 'active'
+        || !isNonEmptyString(value.matterId)
+        || !isNonEmptyString(value.revisionId)
+        || !isNonEmptyString(value.workspaceRef)
+        || !Number.isSafeInteger(value.frameGeneration)
+        || value.frameGeneration < 0) return null;
+      return {
+        state: 'active',
+        contextGeneration: value.contextGeneration,
+        matterId: value.matterId,
+        revisionId: value.revisionId,
+        workspaceRef: value.workspaceRef,
+        frameGeneration: value.frameGeneration,
+      };
+    }
+
+    function setMatterListNote(base, context) {
+      if (matterListNote === null) return;
+      if (matterContextLocalNotice !== null) {
+        matterListNote.dataset.contextSelectionNote = matterContextLocalNotice.kind;
+        matterListNote.textContent = base + ' ' + matterContextLocalNotice.text;
+        return;
+      }
+      if (context === null) {
+        matterListNote.dataset.contextSelectionNote = 'unavailable';
+        matterListNote.textContent = base + ' 事项选择未接线：activeContext 未读取或格式无效；选择按钮已禁用。';
+        return;
+      }
+      matterListNote.dataset.contextSelectionNote = 'ready';
+      matterListNote.textContent = base;
+    }
+
+    function appendMatterContextControl(row, item, context) {
+      if (item.lifecycle === 'archived') return;
+      const rawMatterId = typeof item.matterRef === 'string' ? item.matterRef : '';
+      const matterId = rawMatterId !== '' && rawMatterId.trim() === rawMatterId ? rawMatterId : '';
+      if (matterId === '') return;
+      const active = context !== null && context.state === 'active' && context.matterId === matterId;
+      const button = document.createElement('button');
+      button.className = 'sage-row-button';
+      button.type = 'button';
+      button.dataset.matterContextAction = 'select';
+      button.dataset.matterContextState = active ? 'active' : context === null ? 'unavailable' : 'selectable';
+      button.dataset.matterId = matterId;
+      button.dataset.contextGeneration = context === null ? '' : String(context.contextGeneration);
+      button.textContent = active ? '当前事项' : '选择事项';
+      button.disabled = active || context === null;
+      row.appendChild(button);
+    }
+
     function renderMatterList(payload) {
       if (matterRowsAction === null || matterRowsProgress === null) return;
       const list = payload !== null && typeof payload === 'object' && payload.matterList !== null && typeof payload.matterList === 'object'
         ? payload.matterList
         : null;
+      const activeContext = activeMatterContextOf(payload);
+      if (matterContextLocalNotice !== null
+        && (activeContext === null || matterContextLocalNotice.contextGeneration !== activeContext.contextGeneration)) {
+        matterContextLocalNotice = null;
+      }
       lastMatterList = list;
       const showAll = matterListAll !== null && matterListAll.checked === true;
       const known = list !== null && typeof list.state === 'string';
@@ -3267,10 +3620,8 @@ export function renderSageDocument(): string {
         if (matterCountProgress !== null) matterCountProgress.textContent = '—';
         if (matterCountAcceptance !== null) matterCountAcceptance.textContent = '—';
         if (matterAcceptanceNote !== null) matterAcceptanceNote.textContent = '';
-        if (matterListNote !== null) {
-          matterListNote.textContent = !known ? '列表未核验：这一版还没有接上事项列表。'
-            : '列表未核验：' + String(list.code ?? 'unknown') + '（不显示仿造行——fixture 不当列表数据）。';
-        }
+        setMatterListNote(!known ? '列表未核验：这一版还没有接上事项列表。'
+          : '列表未核验：' + String(list.code ?? 'unknown') + '（不显示仿造行——fixture 不当列表数据）。', activeContext);
         return;
       }
       const items = Array.isArray(list.items) ? list.items : [];
@@ -3306,6 +3657,7 @@ export function renderSageDocument(): string {
                   : '触发：' + String(trigger.kind ?? 'unknown');
             row.appendChild(tag);
           }
+          appendMatterContextControl(row, item, activeContext);
           matterRowsAction.appendChild(row);
           continue;
         }
@@ -3314,6 +3666,7 @@ export function renderSageDocument(): string {
           when.className = 'sage-roster-tag';
           when.textContent = '最近更新 ' + String(item.updatedAt ?? '');
           row.appendChild(when);
+          appendMatterContextControl(row, item, activeContext);
           matterRowsProgress.appendChild(row);
         }
         // 待验收 items are counted, never listed (US-094).
@@ -3331,14 +3684,66 @@ export function renderSageDocument(): string {
       if (matterAcceptanceNote !== null) {
         matterAcceptanceNote.textContent = acceptance.length === 0 ? '' : '待验收只显示计数：' + String(acceptance.length) + ' 项有观察到的产物候选；分项验收与整体完成语义未收口，本版不定义。';
       }
-      if (matterListNote !== null) {
-        matterListNote.textContent = visible.length === 0 ? '还没有任何事项记录（草案建项或出现待处理事实后才会出现在这里）。'
-          : (showAll ? '显示全部（含归档/完成——本版还没有这类事实来源，与默认一致）。' : '默认不展开归档/完成；分区由 main 每次读取重新推导。');
-      }
+      setMatterListNote(visible.length === 0 ? '还没有任何事项记录（草案建项或出现待处理事实后才会出现在这里）。'
+        : (showAll ? '显示全部（含归档/完成——本版还没有这类事实来源，与默认一致）。' : '默认不展开归档/完成；分区由 main 每次读取重新推导。'), activeContext);
     }
     if (matterListAll !== null) {
       matterListAll.addEventListener('change', () => { renderMatterList(lastStatePayload); });
     }
+
+    async function selectActiveMatter(matterId, expectedContextGeneration) {
+      let outcome = null;
+      try {
+        const response = await fetchWithinDeadline('/.sage/context/select', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ matterId, expectedContextGeneration }),
+        });
+        outcome = await response.json();
+      } catch {
+        outcome = { state: 'invalid', code: 'context-select-unreachable' };
+      }
+      if (isRecord(outcome) && outcome.state === 'selected') {
+        matterContextLocalNotice = null;
+        queueMicrotask(() => { void refresh(); });
+        return;
+      }
+      const code = isRecord(outcome) && isNonEmptyString(outcome.code)
+        ? outcome.code
+        : 'context-select-invalid-response';
+      matterContextLocalNotice = {
+        kind: isRecord(outcome) && outcome.state === 'refused' ? 'refused' : 'invalid',
+        text: '事项选择未完成：' + code + '。',
+        contextGeneration: expectedContextGeneration,
+      };
+      renderMatterList(lastStatePayload);
+    }
+
+    function registerMatterContextSelection(container) {
+      if (container === null) return;
+      container.addEventListener('click', (event) => {
+        const button = event.target?.closest?.('[data-matter-context-action]') ?? null;
+        if (button === null || button.disabled) return;
+        const matterId = typeof button.dataset.matterId === 'string' ? button.dataset.matterId : '';
+        const expectedContextGeneration = Number(button.dataset.contextGeneration);
+        const currentContext = activeMatterContextOf(lastStatePayload);
+        if (matterId === '' || !Number.isSafeInteger(expectedContextGeneration)
+          || currentContext === null || currentContext.contextGeneration !== expectedContextGeneration) {
+          matterContextLocalNotice = currentContext === null ? null : {
+            kind: 'invalid',
+            text: '事项选择未完成：context-select-client-stale。',
+            contextGeneration: currentContext.contextGeneration,
+          };
+          renderMatterList(lastStatePayload);
+          return;
+        }
+        button.disabled = true;
+        void selectActiveMatter(matterId, expectedContextGeneration)
+          .finally(() => { button.disabled = false; });
+      });
+    }
+    registerMatterContextSelection(matterRowsAction);
+    registerMatterContextSelection(matterRowsProgress);
 
     // 024：侧聊列表（派生记录）。打开/发送只动子会话；带回主对话是显式动作。
     function renderSideChats(payload) {
@@ -4291,22 +4696,31 @@ export function renderSageDocument(): string {
       try {
         const response = await fetchWithinDeadline(statePath, { cache: 'no-store' });
         if (!response.ok) throw new Error('state request failed');
-        // Off 状态的 Host P0-2 返回扁平 SageViewState；on 状态的 appservice 返回 { service, runtime }。
-        const payload = await response.json();
+        const payload = parseServiceStateEnvelope(await response.json());
+        if (payload === null) {
+          lastStatePayload = null;
+          renderMatterUnavailable('invalid');
+          renderAuth(undefined);
+          render(fallback());
+          renderCommand(null);
+          renderCapability(undefined);
+          renderModelConfig(undefined);
+          return;
+        }
         lastStatePayload = payload;
-        const state = payload !== null && typeof payload === 'object' && payload.runtime !== undefined ? payload.runtime : payload;
-        renderAuth(payload !== null && typeof payload === 'object' && payload.service !== undefined ? payload.service.auth : undefined);
-        render(state);
-        renderCommand(payload !== null && typeof payload === 'object' && payload.service !== undefined ? payload.service.command : null);
-        renderCapability(payload !== null && typeof payload === 'object' ? payload.capability : undefined);
-        renderModelConfig(payload !== null && typeof payload === 'object' ? payload.modelConfig : undefined);
-        renderWorkspaceAdoption(payload !== null && typeof payload === 'object' ? payload.workspaceAdoption : null);
-        renderWorkspaceList(payload !== null && typeof payload === 'object' ? payload.workspaces : undefined);
-        renderWorkspaceMutation(payload !== null && typeof payload === 'object' ? payload.workspaceMutation : null);
-        fillFileWorkspaces(payload !== null && typeof payload === 'object' ? payload.workspaces : undefined);
-        renderFileCandidates(payload !== null && typeof payload === 'object' ? payload.fileCandidates : null);
-        renderFileReferences(payload !== null && typeof payload === 'object' ? payload.fileReferences : []);
-        renderFileUse(payload !== null && typeof payload === 'object' ? payload.fileReferenceUse : null);
+        renderMatterProjection(payload.matter);
+        renderAuth(payload.service.auth);
+        render(payload.runtime);
+        renderCommand(payload.service.command ?? null);
+        renderCapability(payload.capability);
+        renderModelConfig(payload.modelConfig);
+        renderWorkspaceAdoption(payload.workspaceAdoption ?? null);
+        renderWorkspaceList(payload.workspaces);
+        renderWorkspaceMutation(payload.workspaceMutation ?? null);
+        fillFileWorkspaces(payload.workspaces);
+        renderFileCandidates(payload.fileCandidates ?? null);
+        renderFileReferences(Array.isArray(payload.fileReferences) ? payload.fileReferences : []);
+        renderFileUse(payload.fileReferenceUse ?? null);
         renderEditDrafts(payload);
         renderActionItems(payload);
         renderProjects(payload);
@@ -4323,20 +4737,22 @@ export function renderSageDocument(): string {
         renderModelQueue(payload);
         renderTerminal(payload);
         renderFeedback(payload);
-        renderAttachments(payload !== null && typeof payload === 'object' ? payload.attachments : null);
-        renderArtifacts(payload !== null && typeof payload === 'object' ? payload.artifacts : null);
+        renderAttachments(payload.attachments ?? null);
+        renderArtifacts(payload.artifacts ?? null);
         renderToolResults(payload);
         renderSites(payload);
         renderMatterList(payload);
         renderSideChats(payload);
-        renderPreferences(payload !== null && typeof payload === 'object' ? payload.preferences : null);
-        renderSettingsLeaves(payload !== null && typeof payload === 'object' ? payload.settingsLeaves : []);
-        const readout = payload !== null && typeof payload === 'object' ? payload.readout : null;
+        renderPreferences(payload.preferences ?? null);
+        renderSettingsLeaves(Array.isArray(payload.settingsLeaves) ? payload.settingsLeaves : []);
+        const readout = isRecord(payload.readout) ? payload.readout : null;
         renderVisibility(readout !== null && typeof readout === 'object' ? readout.visibility : null);
-        renderKnowledge(readout, payload !== null && typeof payload === 'object' ? payload.fileReferences : []);
+        renderKnowledge(readout, Array.isArray(payload.fileReferences) ? payload.fileReferences : []);
         renderPlugins(readout !== null && typeof readout === 'object' ? readout.plugins : null);
         renderDiagnostics(readout !== null && typeof readout === 'object' ? readout.diagnostics : null);
       } catch {
+        lastStatePayload = null;
+        renderMatterUnavailable('unavailable');
         render(fallback());
         renderCapability(undefined);
         renderModelConfig(undefined);
@@ -6750,6 +7166,13 @@ export function renderSageDocument(): string {
         const open = userMenuPanel.hidden;
         userMenuPanel.hidden = !open;
         userMenu.setAttribute('aria-expanded', String(open));
+      });
+      userMenuPanel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        userMenuPanel.hidden = true;
+        userMenu.setAttribute('aria-expanded', 'false');
+        userMenu.focus();
       });
     }
 

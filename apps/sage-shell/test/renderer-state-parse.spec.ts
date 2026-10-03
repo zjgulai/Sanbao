@@ -79,9 +79,10 @@ async function runEmbeddedScript(statePayload: unknown) {
 }
 
 describe('Sage renderer embedded state parsing', () => {
-  it('renders the nested { service, runtime } appservice state via its runtime field', async () => {
+  it('renders the exact nested { service, matter, runtime } appservice state via its runtime field', async () => {
     const stubs = await runEmbeddedScript({
       service: { status: 'unavailable', reason: 'identity-unavailable', correlation: 'c-1' },
+      matter: null,
       runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
     })
 
@@ -93,7 +94,7 @@ describe('Sage renderer embedded state parsing', () => {
     expect(stubs.runtimeDot.toggles).not.toContainEqual(['is-unavailable', true])
   })
 
-  it('keeps rendering the flat P0-2 SageViewState shape (off-state regression)', async () => {
+  it('rejects the retired flat P0-2 SageViewState shape', async () => {
     const stubs = await runEmbeddedScript({
       status: 'unavailable',
       message: 'Sage 暂时未检测到能力运行时服务，可重新检查。',
@@ -101,7 +102,7 @@ describe('Sage renderer embedded state parsing', () => {
     })
 
     expect(stubs.title.textContent).toBe('暂不可用')
-    expect(stubs.message.textContent).toBe('Sage 暂时未检测到能力运行时服务，可重新检查。')
+    expect(stubs.message.textContent).toBe('Sage 暂时无法读取受控状态，可稍后重新检查。')
     expect(stubs.runtimeLabel.textContent).toBe('暂不可用')
     expect(stubs.retry.hidden).toBe(false)
     expect(stubs.runtimeDot.toggles).toContainEqual(['is-unavailable', true])
@@ -110,6 +111,7 @@ describe('Sage renderer embedded state parsing', () => {
   it('falls back when the nested state carries a null runtime (unavailable runtime projection)', async () => {
     const stubs = await runEmbeddedScript({
       service: { status: 'unavailable', reason: 'identity-unavailable', correlation: 'c-2' },
+      matter: null,
       runtime: null,
     })
 
@@ -117,6 +119,18 @@ describe('Sage renderer embedded state parsing', () => {
     expect(stubs.message.textContent).toBe('Sage 暂时无法读取受控状态，可稍后重新检查。')
     expect(stubs.retry.hidden).toBe(false)
     expect(stubs.runtimeDot.toggles).toContainEqual(['is-unavailable', true])
+  })
+
+  it('fails closed when the service envelope omits the required matter slot', async () => {
+    const stubs = await runEmbeddedScript({
+      service: { status: 'unavailable', reason: 'identity-unavailable', correlation: 'c-missing' },
+      runtime: { status: 'ready', message: '不应显示的伪就绪。', retryable: false },
+    })
+
+    expect(stubs.title.textContent).toBe('暂不可用')
+    expect(stubs.message.textContent).toBe('Sage 暂时无法读取受控状态，可稍后重新检查。')
+    expect(stubs.runtimeLabel.textContent).toBe('暂不可用')
+    expect(stubs.retry.hidden).toBe(false)
   })
 })
 
@@ -129,6 +143,7 @@ describe('Sage renderer auth surface', () => {
         correlation: 'c-3',
         auth: { status: 'signed-out', displayName: null },
       },
+      matter: null,
       runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
     })
 
@@ -146,6 +161,7 @@ describe('Sage renderer auth surface', () => {
         correlation: 'c-4',
         auth: { status: 'signed-in', displayName: 'Alice' },
       },
+      matter: null,
       runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
     })
 
@@ -162,6 +178,7 @@ describe('Sage renderer auth surface', () => {
         correlation: 'c-5',
         auth: { status: 'pending', displayName: null },
       },
+      matter: null,
       runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
     })
 
@@ -259,6 +276,7 @@ describe('Sage renderer auth button disabled reset', () => {
           correlation: 'c-6',
           auth: { status: 'signed-out', displayName: null },
         },
+        matter: null,
         runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
       },
       actionResponse: { code: 'idp-unreachable', stage: 'login', retryable: true, correlation: 'x' },
@@ -278,6 +296,7 @@ describe('Sage renderer auth button disabled reset', () => {
           correlation: 'c-7',
           auth: { status: 'signed-out', displayName: null },
         },
+        matter: null,
         runtime: { status: 'ready', message: 'Sage 已检测到能力运行时服务。', retryable: false },
       },
       actionResponse: { auth: 'signed-out' },
@@ -357,7 +376,11 @@ async function runEmbeddedRetryScript(actionPayload: unknown) {
   const script = html.match(/<script>([\s\S]*)<\/script>/u)?.[1]
   expect(script, 'embedded script must be extractable from the served document').toBeTruthy()
   const harness = createRetryDocumentStub()
-  const statePayload = { status: 'ready', message: '运行时已就绪。', retryable: false }
+  const statePayload = {
+    service: { status: 'unavailable', reason: 'authenticated', correlation: 'c-retry' },
+    matter: null,
+    runtime: { status: 'ready', message: '运行时已就绪。', retryable: false },
+  }
   const fetchStub = async (_path: unknown, init?: { readonly method?: string }) =>
     init?.method === 'POST'
       ? { ok: true, json: async () => actionPayload }
@@ -395,6 +418,7 @@ describe('Sage renderer state convergence poll', () => {
             correlation: 'c-poll',
             auth: { status: 'signed-in', displayName: 'Alice' },
           },
+          matter: null,
           runtime: { status: 'ready', message: 'ok', retryable: false },
         }),
       }

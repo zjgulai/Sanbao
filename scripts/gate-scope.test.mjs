@@ -32,6 +32,8 @@ const REQUIRED_SAGE_CHECKS = [
   'sage-service-consumption-selftest',
   'sage-appservice-import-firewall',
   'sage-appservice-import-firewall-selftest',
+  'sage-route-authority',
+  'sage-route-authority-selftest',
   'adr-agent-records',
   'adr-agent-records-selftest',
   'docs-link-integrity',

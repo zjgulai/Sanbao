@@ -15,17 +15,29 @@ describe('Sage asset handler', () => {
       expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8')
       expect(response.headers.get('cache-control')).toBe('no-store')
       expect(response.headers.get('content-security-policy')).toBe(SAGE_DOCUMENT_CSP)
-      expect(SAGE_DOCUMENT_CSP).toContain("frame-src 'none'")
-      expect(SAGE_DOCUMENT_CSP).toContain("child-src 'none'")
-      expect(SAGE_DOCUMENT_CSP).toContain("frame-ancestors 'none'")
-      expect(SAGE_DOCUMENT_CSP).toContain("object-src 'none'")
-      expect(SAGE_DOCUMENT_CSP).toContain("connect-src 'self'")
       const body = await response.text()
       expect(body).toContain('<title>Sage</title>')
       expect(body).toContain('/.sage/state')
       expect(body).not.toContain('__DSH_TRANSPORT__')
       expect(body).not.toContain('data-sanbao-composer')
     }
+  })
+
+  it('serves the exact strict document CSP as an independent security contract', async () => {
+    const response = await createAssetHandler().fetch(request('/index.html'))
+    const csp = response.headers.get('content-security-policy')
+
+    expect(csp).toBe(SAGE_DOCUMENT_CSP)
+    expect(csp).toContain("default-src 'none'")
+    expect(csp).toContain("frame-src 'none'")
+    expect(csp).toContain("child-src 'none'")
+    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).toContain("object-src 'none'")
+    expect(csp).toContain("connect-src 'self'")
+    expect(csp).toContain("base-uri 'none'")
+    expect(csp).toContain("form-action 'none'")
+    expect(csp).not.toContain("'unsafe-eval'")
+    expect(csp).not.toMatch(/\b(?:https?|data|blob):/u)
   })
 
   it('allows a bodyless HEAD for the document', async () => {

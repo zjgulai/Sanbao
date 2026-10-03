@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createSessionAnchors } from '../src/main/session-anchors.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 035 (US-183/184) at the module and route seams.
@@ -142,10 +143,10 @@ describe('the message anchors store (ticket 035)', () => {
 describe('the anchors route (ticket 035)', () => {
   it('parses exactly, forwards, and keeps an unwired family honest', async () => {
     const seen: unknown[] = []
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       sessionAnchorsRead: async (request) => { seen.push({ read: request }); return { state: 'read', anchors: [] } },
       sessionAnchorLocate: async (request) => { seen.push({ locate: request }); return { state: 'missing', runSeq: request.runSeq, code: 'marker' } },
-    })
+    }))
     const post = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/anchors', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-035' }, providers } as never,
@@ -159,7 +160,7 @@ describe('the anchors route (ticket 035)', () => {
     expect((await post({ action: 'locate', runSeq: 1, extra: 1 })).status).toBe(400)
     expect((await post({ action: 'nope' })).status).toBe(400)
 
-    const unwired = createUnavailableFirstService(null, {})
+    const unwired = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     const postUnwired = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/anchors', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-035' }, providers: unwired } as never,

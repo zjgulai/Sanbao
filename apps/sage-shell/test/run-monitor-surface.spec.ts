@@ -9,6 +9,7 @@ import type { SessionChannelStatus } from '../src/appservice/contracts.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createRunLogs } from '../src/main/run-logs.js'
 import { shapeRunMonitor } from '../src/main/run-monitor.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 031 at the S1 routes (US-159~163): the monitor slot mirrors the session channel's own
@@ -52,12 +53,12 @@ function harness(options: { readonly wired?: boolean, readonly channel?: Session
     }
     return { ok: false, code: 'bridge-answer-unknown' }
   }
-  const providers = createUnavailableFirstService(null, options.wired === false ? {} : {
+  const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, options.wired === false ? {} : {
     // Production wires both slots from the same read — the monitor can never disagree with the card.
     sessionChannel: async () => status,
     runMonitor: async () => shapeRunMonitor('matter:1', status),
     runLogRead: createRunLogs(bridge),
-  })
+  }))
   const post = (path: string, body: unknown) => handleSageServiceRequest(
     new Request(`dsh-app://app${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
     { callerBinding: { correlation: 'c-031' }, providers } as never,

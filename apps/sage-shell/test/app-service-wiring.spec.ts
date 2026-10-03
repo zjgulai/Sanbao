@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createSageAppServiceProviders } from '../src/main/app-service.js'
+import { createActiveMatterContext } from '../src/main/active-matter-context.js'
 
 /**
  * Loop repair (ticket 033): the assembly point in `main/app-service.ts` was silently dropping
@@ -28,6 +29,50 @@ function assemble(overrides: Record<string, unknown>) {
 const marker = (code: string) => async () => ({ state: 'refused' as const, code })
 
 describe('the production assembly forwards every wired family (ticket 033 repair)', () => {
+  it('CTX-01B projects and forwards only the explicit main-owned active-context selection', async () => {
+    const context = createActiveMatterContext()
+    const selectActiveMatter = vi.fn(async (request: { readonly matterId: string; readonly expectedContextGeneration: number }) => ({
+      state: 'refused' as const,
+      code: 'active-context-unavailable' as const,
+      retryable: true,
+    }))
+    const signOut = vi.fn()
+    const service = assemble({
+      activeMatterContext: context,
+      selectActiveMatter,
+      vault: { ...vault, signOut },
+    })
+
+    expect((await (await service.readState()).json() as { activeContext: unknown }).activeContext)
+      .toEqual({ state: 'inactive', contextGeneration: 0 })
+    expect(await (await service.selectActiveMatter({
+      matterId: 'matter:chosen',
+      expectedContextGeneration: 0,
+    })).json()).toMatchObject({
+      state: 'refused',
+      code: 'active-context-unavailable',
+    })
+    expect(selectActiveMatter).toHaveBeenCalledTimes(1)
+    expect(selectActiveMatter).toHaveBeenCalledWith({ matterId: 'matter:chosen', expectedContextGeneration: 0 })
+
+    expect(context.activate({
+      expectedContextGeneration: 0,
+      next: {
+        actorScopeRef: 'actor:local',
+        matterId: 'matter:chosen',
+        revisionId: 'revision:1',
+        workspaceRef: 'workspace:1',
+        trustedWorkspaceRoot: '/trusted/workspace',
+        sessionRef: 'session:1',
+        frameGeneration: 4,
+      },
+    }).ok).toBe(true)
+    await service.logout()
+    expect(signOut).toHaveBeenCalledTimes(1)
+    expect(context.snapshot()).toBeNull()
+    expect(context.contextGeneration()).toBe(2)
+  })
+
   it('artifacts: status, observe, open, close, retry and fullscreen reach their ports', async () => {
     const service = assemble({
       artifacts: () => ({ state: 'read', cards: [], preview: { state: 'closed' } }),
@@ -46,17 +91,20 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(await (await service.fullscreenArtifact({ on: true })).json()).toMatchObject({ code: 'm-artifact-fullscreen' })
   })
 
-  it('attachments: status and the pick/upload/cancel trio reach their ports', async () => {
+  it('attachments: status, pick and cancel remain wired while upload cannot bypass admission', async () => {
+    const upload = vi.fn(marker('m-attach-upload'))
     const service = assemble({
       attachments: () => ({ state: 'read', items: [] }),
       attachmentsPick: async () => ({ state: 'picked', item: { itemId: 'm-attach-pick', name: 'f', path: '/p', bytes: 1 } }),
-      attachmentsUpload: marker('m-attach-upload'),
+      attachmentsUpload: upload,
       attachmentsCancel: async () => ({ state: 'cancelled', itemId: 'm-attach-cancel' }),
     })
     const state = await (await service.readState()).json() as { attachments: { state: string } }
     expect(state.attachments.state).toBe('read')
     expect(await (await service.pickAttachments()).json()).toMatchObject({ item: { itemId: 'm-attach-pick' } })
-    expect(await (await service.uploadAttachment({ itemId: 'i', matterRef: 'm', workspaceRoot: '/w' })).json()).toMatchObject({ code: 'm-attach-upload' })
+    expect(await (await service.uploadAttachment({ itemId: 'i', matterRef: 'm', workspaceRoot: '/w' })).json())
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(upload).not.toHaveBeenCalled()
     expect(await (await service.cancelAttachment({ itemId: 'i' })).json()).toMatchObject({ itemId: 'm-attach-cancel' })
   })
 
@@ -110,22 +158,28 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(await (await bare.inputSelectionsClear({ action: 'clear', kind: 'skill' })).json()).toMatchObject({ code: 'input-selections-unavailable' })
   })
 
-  it('ticket 036: the edits slot and its save/resend/verify reach the service', async () => {
+  it('ticket 036/AUTH-02B: the edits read reaches the service while writes cannot bypass admission', async () => {
+    const save = vi.fn(() => ({ state: 'refused' as const, code: 'raw-edit-save' }))
+    const resend = vi.fn(async () => ({ state: 'refused' as const, code: 'raw-edit-resend' }))
+    const verify = vi.fn(async () => ({ state: 'refused' as const, code: 'raw-edit-verify' }))
     const service = assemble({
       sessionEdits: () => ({ state: 'read', records: [{ editId: 'e-1', messageRef: 'r-1', originalText: 'm-edit', activeVersion: 1, versions: [] }], code: null, at: 't' }),
-      sessionEditsSave: () => ({ state: 'refused', code: 'm-edit-save' }),
-      sessionEditsResend: async () => ({ state: 'refused', code: 'm-edit-resend' }),
-      sessionEditsVerify: async () => ({ state: 'refused', code: 'm-edit-verify' }),
+      sessionEditsSave: save,
+      sessionEditsResend: resend,
+      sessionEditsVerify: verify,
     })
     const state = await (await service.readState()).json() as { sessionEdits: { records: Array<{ originalText: string }> } }
     expect(state.sessionEdits.records[0]?.originalText).toBe('m-edit')
-    expect(await (await service.sessionEditsSave({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'm-edit-save' })
-    expect(await (await service.sessionEditsResend({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'm-edit-resend' })
-    expect(await (await service.sessionEditsVerify({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'm-edit-verify' })
+    expect(await (await service.sessionEditsSave({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await service.sessionEditsResend({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await service.sessionEditsVerify({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(save).not.toHaveBeenCalled()
+    expect(resend).not.toHaveBeenCalled()
+    expect(verify).not.toHaveBeenCalled()
     const bare = assemble({})
-    expect(await (await bare.sessionEditsSave({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
-    expect(await (await bare.sessionEditsResend({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
-    expect(await (await bare.sessionEditsVerify({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
+    expect(await (await bare.sessionEditsSave({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await bare.sessionEditsResend({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await bare.sessionEditsVerify({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
   })
 
   it('ticket 035: the anchors slot and its two reads reach the service', async () => {
@@ -143,57 +197,62 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(await (await bare.sessionAnchorLocate({ action: 'locate', runSeq: 9 })).json()).toMatchObject({ code: 'session-anchors-unavailable' })
   })
 
-  it('ticket 034: the clarification read slot and its answer write reach the service', async () => {
+  it('ticket 034/AUTH-02B: clarification reads remain wired while answers cannot bypass admission', async () => {
+    const answer = vi.fn(async () => ({ state: 'refused' as const, code: 'raw-clarification-answer' }))
     const service = assemble({
       sessionClarifications: async () => ({ state: 'read', pending: [], deferred: [], receipts: [], code: null, at: 't' }),
-      sessionClarificationAnswer: async () => ({ state: 'refused', code: 'm-clarification-answer' }),
+      sessionClarificationAnswer: answer,
     })
     const state = await (await service.readState()).json() as { sessionClarifications: { state: string } }
     expect(state.sessionClarifications.state).toBe('read')
     expect(await (await service.sessionClarificationAnswer({ matterRef: 'm', requestId: 'q-1', answers: [] })).json())
-      .toMatchObject({ code: 'm-clarification-answer' })
-    // The unwired family answers a named refusal, never an empty success.
+      .toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(answer).not.toHaveBeenCalled()
     const bare = assemble({})
     expect(await (await bare.sessionClarificationAnswer({ matterRef: 'm', requestId: 'q-1', answers: [] })).json())
-      .toMatchObject({ code: 'session-clarifications-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
   })
 
-  it('ticket 039: the plan-mode slot and its one switch reach the service', async () => {
+  it('ticket 039/AUTH-02B: plan-mode reads remain wired while switching cannot bypass admission', async () => {
+    const switchMode = vi.fn(async () => ({
+      state: 'settled' as const, outcome: 'queued' as const, family: 'pending' as const,
+      view: { active: false, pending: true }, viewCode: null, at: 'raw-switch',
+    }))
     const service = assemble({
       sessionPlanMode: async () => ({ state: 'read', reason: null, active: false, pending: true }),
-      sessionPlanModeSwitch: async (request: { readonly active: boolean }) => ({
-        state: 'settled', outcome: 'queued', family: 'pending',
-        view: { active: false, pending: true }, viewCode: null, at: `m-${String(request.active)}`,
-      }),
+      sessionPlanModeSwitch: switchMode,
     })
     const state = await (await service.readState()).json() as { sessionPlanMode: { state: string, pending: boolean } }
     expect(state.sessionPlanMode).toMatchObject({ state: 'read', pending: true })
     expect(await (await service.sessionPlanModeSwitch({ active: true })).json())
-      .toMatchObject({ state: 'settled', outcome: 'queued', family: 'pending', at: 'm-true' })
-    // The unwired family answers a named refusal, never an unfounded settled outcome.
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(switchMode).not.toHaveBeenCalled()
     const bare = assemble({})
     expect(await (await bare.sessionPlanModeSwitch({ active: true })).json())
-      .toMatchObject({ code: 'plan-mode-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
   })
 
-  it('ticket 041: the approval read slot and its answer/withdraw writes reach the service', async () => {
+  it('ticket 041/AUTH-02B: approval reads remain wired while decisions cannot bypass admission', async () => {
+    const answer = vi.fn(async () => ({ state: 'recorded' as const, receipt: { requestId: 'r-1', state: 'accepted' as const, outcome: 'allowed-once' as const, submittedAt: 't', code: null } }))
+    const withdraw = vi.fn(async () => ({ state: 'refused' as const, code: 'raw-withdraw' }))
     const service = assemble({
       sessionApprovals: async () => ({ state: 'read', pending: [{ requestId: 'r-1', toolName: 'm-tool', callId: null, reason: null, withdrawable: true, raisedAt: 't' }], lapsed: [], receipts: [], code: null, at: null }),
-      sessionApprovalAnswer: async () => ({ state: 'recorded', receipt: { requestId: 'r-1', state: 'accepted', outcome: 'allowed-once', submittedAt: 't', code: null, verifyOnly: true } }),
-      sessionApprovalWithdraw: async () => ({ state: 'refused', code: 'm-withdraw' }),
+      sessionApprovalAnswer: answer,
+      sessionApprovalWithdraw: withdraw,
     })
     const state = await (await service.readState()).json() as { sessionApprovals: { state: string, pending: Array<{ toolName: string }> } }
     expect(state.sessionApprovals).toMatchObject({ state: 'read', pending: [{ toolName: 'm-tool' }] })
     expect(await (await service.sessionApprovalAnswer({ matterRef: 'm', requestId: 'r-1', outcome: 'allowed-once' })).json())
-      .toMatchObject({ state: 'recorded', receipt: { outcome: 'allowed-once' } })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(await (await service.sessionApprovalWithdraw({ matterRef: 'm', requestId: 'r-1' })).json())
-      .toMatchObject({ code: 'm-withdraw' })
-    // The unwired family answers a named refusal, never a fabricated decision.
+      .toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(answer).not.toHaveBeenCalled()
+    expect(withdraw).not.toHaveBeenCalled()
     const bare = assemble({})
     expect(await (await bare.sessionApprovalAnswer({ matterRef: 'm', requestId: 'r-1', outcome: 'rejected' })).json())
-      .toMatchObject({ code: 'approval-relay-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
     expect(await (await bare.sessionApprovalWithdraw({ matterRef: 'm', requestId: 'r-1' })).json())
-      .toMatchObject({ code: 'approval-relay-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
   })
 
   it('ticket 048: the feedback ports reach the service, unwired stays honest', async () => {

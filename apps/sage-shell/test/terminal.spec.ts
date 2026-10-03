@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createTerminal } from '../src/main/terminal.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 043 (US-203/204) at the module and route seams.
@@ -122,12 +123,12 @@ describe('the terminal store (ticket 043)', () => {
 describe('the terminal route (ticket 043)', () => {
   it('parses exactly, forwards, and keeps an unwired provider honest', async () => {
     const seen: unknown[] = []
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       terminalRead: async (request) => {
         seen.push(request)
         return { state: 'read', text: 'm-page', totalLines: 9, lineBegin: 0, lineEnd: 9, truncated: false }
       },
-    })
+    }))
     const post = (body: unknown, service = providers) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/terminal-read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-043' }, providers: service } as never,
@@ -144,7 +145,7 @@ describe('the terminal route (ticket 043)', () => {
     expect((await post({ terminalId: 't-1', matterRef: 'matter:9' })).status).toBe(400)
     expect((await post({})).status).toBe(400)
 
-    const unwired = createUnavailableFirstService(null, {})
+    const unwired = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     expect(await (await post({ terminalId: 't-1' }, unwired)).json()).toMatchObject({ code: 'terminals-provider-unavailable' })
   })
 })

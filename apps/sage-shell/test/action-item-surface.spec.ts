@@ -15,9 +15,9 @@ import { createSageFixtureViewState } from '../src/product/view-state.js'
 /**
  * Ticket 028 at the S1 routes (US-146~149).
  *
- * The acceptance asks for two traces: a correction linked to its original with receipts driven by
- * the real queue store, and a project summary that changes nothing but itself — the matter, the
- * draft's responsibility, the links and the visibility readout stay byte-equal across an assign.
+ * Store-level correction receipt progression remains covered by action-items.spec.ts. At the S1
+ * route, correction submission stays unavailable-first until the full protected-effect authority
+ * chain and dispatch bridge exist. Project grouping remains local and changes nothing but itself.
  */
 
 const dirs: string[] = []
@@ -99,38 +99,28 @@ describe('the action-item routes (ticket 028)', () => {
     expect(state.actionItems.items[0]?.state).toBe('done')
   })
 
-  it('links a correction to its original and upgrades the receipt through the real queue store', async () => {
+  it('keeps correction submission unavailable-first instead of bypassing admission into the queue store', async () => {
     const h = harness()
     h.setPaused(true)
-    const created = await (await h.post('/.sage/corrections', {
+    const outcome = await (await h.post('/.sage/corrections', {
       matterRef: 'matter:1',
       workspaceRoot: '/Users/someone/project',
       originalText: '原要求：先出季度对账单',
       originalAt: '2026-10-03T08:00:00.000Z',
       text: '更正副本：先出季度对账单（财务口径）',
-    })).json() as { state: string, correction: { original: unknown, receipt: unknown } }
-    expect(created.state).toBe('created')
-    expect(created.correction.original).toEqual({ text: '原要求：先出季度对账单', at: '2026-10-03T08:00:00.000Z' })
-    expect(created.correction.receipt).toEqual({ state: 'pending-application', reason: 'deferred' })
-    // Exactly one send, and it is the NEW text — the original is never re-sent.
-    expect(h.sends.map((call) => call.text)).toEqual(['更正副本：先出季度对账单（财务口径）'])
-
-    const itemId = h.pending.snapshot('matter:1').items[0]!.itemId
-    h.pending.markSubmitted('matter:1', itemId, 'rq-q')
-    const queued = await h.readState() as { actionItems: { corrections: Array<{ receipt: unknown }> } }
-    expect(queued.actionItems.corrections[0]?.receipt).toEqual({ state: 'pending-application', reason: 'queued' })
-
-    h.pending.foldQueue('matter:1', [])
-    const effective = await h.readState() as { actionItems: { corrections: Array<{ receipt: unknown }> } }
-    expect(effective.actionItems.corrections[0]?.receipt).toEqual({ state: 'effective' })
-    expect(h.sends).toHaveLength(1)
+    })).json()
+    expect(outcome).toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(h.sends).toEqual([])
+    expect(h.pending.snapshot('matter:1').items).toEqual([])
+    const state = await h.readState() as { actionItems: { corrections: unknown[] } }
+    expect(state.actionItems.corrections).toEqual([])
   })
 
   it('keeps every unwired act honest and parses the bodies exactly', async () => {
     const unwired = harness({ wired: false })
     const refused: Array<[string, unknown, string]> = [
       ['/.sage/action-items', { action: 'create', matterRef: 'matter:1', title: 'x' }, 'action-items-unavailable'],
-      ['/.sage/corrections', { matterRef: 'matter:1', workspaceRoot: '/w', originalText: 'x', text: 'y' }, 'action-items-unavailable'],
+      ['/.sage/corrections', { matterRef: 'matter:1', workspaceRoot: '/w', originalText: 'x', text: 'y' }, 'protected-effect-unavailable'],
       ['/.sage/projects', { action: 'create', name: 'A' }, 'projects-unavailable'],
     ]
     for (const [path, body, code] of refused) {

@@ -4,6 +4,7 @@ import { applyWorkspaceFrame, readWorkspaceList } from '../src/main/workspace-li
 import { resolveBridgeStreamCall } from '../src/host/bridge-endpoints.js'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 import { MAX_BRIDGE_STREAM_FRAMES } from '../src/protocol.js'
 
 /**
@@ -206,7 +207,7 @@ describe('the host-side stream resolver', () => {
 
 describe('the projection', () => {
   it('keeps unread distinct from empty', async () => {
-    const providers = createUnavailableFirstService(null, {})
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state', { method: 'GET' }), {
       callerBinding: { correlation: 'c-012' },
       providers,

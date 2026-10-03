@@ -1742,3 +1742,45 @@
 - **下一版默认动作**：写任何跨进程/跨包消费点之前，先在基座的**声明文件**里找到那个名字与那段签名，
   把文件路径与行写进决策记录；找不到就当作"还不存在"，不要用"听着像"的名字先接上。
   单元替身不得忽略被消费的名字——替身自己也要按名字分发，否则它证明的只是"调用者会调用某个东西"。
+
+## P-61 · 预烘焙 fixture 让窗口测试假绿：页面里看得到事项，不等于 `/.sage/state` 的 `matter` 真驱动了 DOM
+
+- **症状**：main 的 exact nested state 已含 `matter`，但 renderer 的首屏 HTML 直接调用 fixture 默认值，
+  refresh 只消费 `service/runtime`、完全忽略 `matter`。旧 Electron probe 在页面加载后读取
+  `data-projection-source="fixture"`，所以即使 state payload 从未写进事项主区也会绿；production 同一份
+  HTML 还会在任何受控投影到达前展示一个假的事项。
+- **根因类**：把「最终 DOM 里有目标值」误当作「目标值来自受控 wire」。这是 P-02/P-59 的来源分支：
+  fixture 同时充当初始 UI、测试期望与可见证据，绕开了真正要验的 payload→parser→DOM 因果链。
+- **已落地机制**：`gate:sage-shell-quality` 运行
+  `apps/sage-shell/test/matter-projection-renderer.spec.ts` 与
+  `apps/sage-shell/test/sage-fixture-projection-window.spec.ts`。production component 默认 `null`；
+  前者用不同于 fixture 的 live 值并覆盖 null/malformed 清旧值、flat/off 拒绝与零请求，后者等待
+  `/.sage/state` 返回后 DOM 才转成 fixture，并逐字核对 goal。probe 改严而实现未改时先产生 1/2 具名红，
+  证明这条检查确实能抓住预烘焙假绿。
+- **下一版默认动作**：任何 projection UI 测试都必须让初始 HTML 与 wire payload 的值刻意不同，先断言
+  初始 unavailable，再触发真实 refresh 并读消费者 DOM；如果删除 payload 消费后测试仍绿，立即把它记为
+  仪器缺陷。fixture 只能进入显式 fixture route，不能作为 production renderer 默认参数。
+
+## P-62 · 异步 effect 机械套同步命令壳：看似进了统一入口，实际丢掉 await 顺序、持久化边界或直接透传 provider
+
+- **症状**：`/.sage/session/send`、`stop`、`resume` 已有 main provider，也有一条同步 `runCommand`，最省事的接法是继续直接调用 provider，或把 Promise 塞进同步管线后把“函数被调用”当接线完成。前者绕过 request-scoped authority；后者无法证明 identity/policy、candidate freshness、compatibility、Registry、preflight、durable persistence 与 dispatch 的先后，还会在 dispatch 已发生但回执丢失时把普通失败误作可重试。
+- **根因类**：把“入口名字统一”当成“effect 语义统一”。同步 command 的返回时点、异步 provider 的副作用时点和 durable operation 的证据时点不是同一个时钟；机械包装只改变调用栈，不建立 authority 或 exactly-once 边界。这是 P-02（假绿）与 P-37（未知态误重试）的交叉类。
+- **已落地机制**：`gate:sage-route-authority` 的 matrix 分开登记 `runCommand` 与 `protectedAdmission`，并用 selftest 删除 composition 的 admission 调用来证明会红；`apps/sage-shell/test/protected-effect-admission.spec.ts` 钉住十步顺序、持久化前零 dispatch、dispatch 后 unknown/no-retry；`apps/sage-shell/test/protected-session-effects.spec.ts` 走生产 assembly，证明 active context/authority 缺失，以及 identity、revision、default link、workspace/path、matter candidate、frame 任一 stale 时，send/stop/resume 与 pending/queue/clarification/edits/plan-mode/approval 的 raw providers 调用数都为 0。
+- **下一版默认动作**：接任何可能产生外部或不可逆副作用的 Promise provider 前，先画清 candidate、fresh context、authority、preflight、durable preparation、dispatch 与 receipt 的时间顺序；同步管线不能表达就建立独立异步 admission。缺任一步时停在 provider 前并显示 unavailable；dispatch 被调用后只能核对同一 operation，禁止自动重发。route matrix 必须登记它实际进入哪种 authority 入口，不能用“都在 main”代替。
+- **详见**：[ADR-0249](adr/ADR-0249.md) 与 [Note](notes/implemented/architecture/2026-10-03-active-context-and-session-admission-batch-2.md)。
+
+## P-63 · 把登录、列表可见或 candidate 当事项读取授权：选择按钮能点，却在暗中铸造 actor 与 active context
+
+- **症状**：ActiveContext kernel 已存在后，最短接法是从 token vault 直接取 `identityHandle` 当 `actorScopeRef`，再用事项列表中出现过的 `matterId` 激活；另一种更隐蔽的接法是让 GET state、首次 send、matter link 或“最新 converted draft”顺便选择当前事项。界面看起来立刻可用，但刷新、重试、列表排序或另一个动作都会产生未授权的 context 写，且“已登录/看得到候选”被偷换成“可读取该事项”。
+- **根因类**：把认证、候选发现、读取授权与状态转换四种不同事实压成一个布尔值。IdP 只证明一次认证；列表行只是 candidate；read policy 才能产生事项范围内的 actor scope；active context 还需要 current revision、默认 workspace、fresh fold、frame 与 CAS。少任一层都不能安全激活。
+- **已落地机制**：`/.sage/context/select` 只接受 `matterId + expectedContextGeneration` 且只由显式按钮 POST；`active-matter-selection.ts` 固定读取 identity session 后再调用独立 `authorizeMatterRead`，后者的 allowed 结果才携带 `actorScopeRef`。production 没有该 provider时稳定 `active-context-unavailable`。`gate:sage-route-authority` 把 context selection 单列并用删除 `options.selectActiveMatter` source fact 的突变证明会红；route/renderer tests 证明 GET、render、send/link 与畸形/多字段 payload 都不能触发选择，成功也只能 refresh authoritative state。
+- **下一版默认动作**：任何“选择当前对象”功能先回答四个问题：谁明确发起、candidate 里允许哪些字段、哪一个独立 policy 返回 scope、哪些 fresh facts 在 CAS 前重算。禁止从 identity、列表可见性、recency、Host ready 或 route owner 推断授权；缺 policy 时显示未接线/不可用，不用 placeholder actor 或本地默认值追绿。
+- **详见**：[ADR-0250](adr/ADR-0250.md) 与 [Note](notes/implemented/architecture/2026-10-03-active-matter-selection-and-session-family-admission-batch-3.md)。
+
+## P-64 · 统一了 read 入口却继续用 newest draft 当 owner：admission 名字相同，数据仍会跨请求串事项
+
+- **症状**：13 条 read-only route 看起来都调用了同一个 admission，但 raw provider 内部仍通过设备级 `currentMatterRef()` 选“最新 converted draft”；另一个窗口完成转换、列表顺序变化或一次无关读取后，同样的 history/artifact/log 请求会悄悄换事项。另一种假绿是 policy 缺失时让 fixture、action `external-read` 或已有 ActiveContext 直接返回 allowed；state/search 甚至借单一 active matter 读取整个集合。
+- **根因类**：把“所有 route 经过同名函数”误当成“每次读取有同一 object-bound authority”。admission seam、request owner、matter/object policy 和 provider scope 是四个独立事实；缺任一项都不能调用 raw provider。设备级 recency 是排序事实，不是请求语境；ActiveContext 是协调 owner，不是 standing read grant；单事项 scope 也不能自然扩张到 aggregate/search。
+- **已落地机制**：13 条 read-only route 统一进入 async projection-read admission；production 仍缺 matter/object-bound policy 时在 provider 前 unavailable/blocked。Electron main 用 `projectionReadScope.run/current` 的 `AsyncLocalStorage` 只在 admitted callback 内暴露 request-scoped ActiveContext，provider 不再 fallback newest converted draft；callback 结束后 scope 失效。`/.sage/state` 与 `/.sage/search` 因集合/全局 scope 保持 blocked，fixture 不参与 authority。authority matrix 与定向测试分别守 provider 零调用、scope 隔离、无 recency fallback 和两个特殊 blocked 面。
+- **下一版默认动作**：每接一条 read route 都同时回答：稳定 operation 是什么、candidate/object 从哪里来、哪个 fresh policy 明确允许、provider 如何只在当前 request scope 取 owner、unavailable/denied 时哪些 I/O 必须为 0。看到 `latest`/`newest`/全局变量/fixture/旧 projection 被用作 current object 时立即判红；集合查询必须另给逐对象裁剪、redaction、分页与 denied/not-found anti-oracle，不能复用单对象 allow。
+- **详见**：[ADR-0251](adr/ADR-0251.md) 与 [Note](notes/implemented/architecture/2026-10-03-projection-read-admission-and-owner-batch-4.md)。

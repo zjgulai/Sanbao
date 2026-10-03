@@ -4,6 +4,7 @@ import { createWorkspaceMutations } from '../src/main/workspace-mutations.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import type { WorkspaceMutationRequest } from '../src/appservice/contracts.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /** A bridge whose answers are scripted per endpoint; records every call it was asked to make. */
 function bridgeWith(answers: Record<string, unknown>): { call: (endpoint: string, payload?: readonly unknown[]) => Promise<unknown>, calls: [string, readonly unknown[]][] } {
@@ -155,9 +156,9 @@ describe('the mutate route: /.sage/workspace/mutate', () => {
   })
 
   it('records the last mutation in the state projection so the surface can word it', async () => {
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       mutateWorkspace: async () => ({ state: 'settled', kind: 'delete', workspaceId: 'ws-1' }),
-    })
+    }))
     const before = await (await handleSageServiceRequest(
       new Request('dsh-app://app/.sage/state', { method: 'GET' }),
       { callerBinding: { correlation: 'c-012' }, providers } as never,

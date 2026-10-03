@@ -94,7 +94,7 @@ describe('the stop/resume/pending routes', () => {
     { callerBinding: { correlation: 'c-006' }, providers } as never,
   )
 
-  it('parses each body exactly and refuses anything else', async () => {
+  it('parses each body exactly, blocks raw providers, and refuses anything else', async () => {
     const seen: string[] = []
     const providers = createUnavailableFirstService(null, {
       sessionStop: (request) => { seen.push(`stop:${request.matterRef}`); return Promise.resolve({ state: 'stopped', paused: true, drained: [], consumed: [], dispatched: [], code: null }) },
@@ -105,7 +105,7 @@ describe('the stop/resume/pending routes', () => {
     expect((await post('/.sage/session/resume', JSON.stringify({ matterRef: 'm', workspaceRoot: '/a' }), providers)).status).toBe(200)
     expect((await post('/.sage/session/pending', JSON.stringify({ action: 'edit', itemId: 'p-1', text: 'x' }), providers)).status).toBe(200)
     expect((await post('/.sage/session/pending', JSON.stringify({ action: 'remove', itemId: 'p-1' }), providers)).status).toBe(200)
-    expect(seen).toEqual(['stop:m', 'resume:m:/a', 'edit:p-1', 'remove:p-1'])
+    expect(seen).toEqual([])
 
     for (const [path, body] of [
       ['/.sage/session/stop', JSON.stringify({ matterRef: '' })],
@@ -117,14 +117,14 @@ describe('the stop/resume/pending routes', () => {
     ] as const) {
       expect((await post(path, body, providers)).status, body).toBe(400)
     }
-    expect(seen).toHaveLength(4)
+    expect(seen).toHaveLength(0)
   })
 
   it('answers unavailable-first when the halves are unwired', async () => {
     const unwired = createUnavailableFirstService(null, {})
     expect(await (await post('/.sage/session/stop', JSON.stringify({ matterRef: 'm' }), unwired)).json())
-      .toMatchObject({ state: 'refused', code: 'session-channel-unavailable', paused: false })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable', paused: false })
     expect(await (await post('/.sage/session/pending', JSON.stringify({ action: 'remove', itemId: 'p' }), unwired)).json())
-      .toEqual({ ok: false, code: 'pending-store-unavailable' })
+      .toEqual({ ok: false, code: 'protected-effect-unavailable' })
   })
 })

@@ -194,7 +194,7 @@ describe('the approvals store (ticket 041)', () => {
 })
 
 describe('the approval routes (ticket 041)', () => {
-  it('parses exactly, forwards, and keeps unwired providers honest', async () => {
+  it('parses exactly and enters admission without calling raw approval providers', async () => {
     const seen: unknown[] = []
     const providers = createUnavailableFirstService(null, {
       sessionApprovalAnswer: async (request) => {
@@ -211,13 +211,10 @@ describe('the approval routes (ticket 041)', () => {
       { callerBinding: { correlation: 'c-041' }, providers: service } as never,
     )
     expect(await (await post('/.sage/session/approval-answer', { matterRef: 'matter:1', requestId: 'appr-1', outcome: 'allowed-once' })).json())
-      .toMatchObject({ state: 'recorded', receipt: { outcome: 'allowed-once' } })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(await (await post('/.sage/session/approval-withdraw', { matterRef: 'matter:1', requestId: 'appr-1' })).json())
-      .toMatchObject({ state: 'recorded', receipt: { outcome: 'withdrawn' } })
-    expect(seen).toEqual([
-      { answer: { matterRef: 'matter:1', requestId: 'appr-1', outcome: 'allowed-once' } },
-      { withdraw: { matterRef: 'matter:1', requestId: 'appr-1' } },
-    ])
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(seen).toEqual([])
 
     // Exactly the declared members; the outcome is one of the two decision words.
     expect((await post('/.sage/session/approval-answer', { matterRef: 'matter:1', requestId: 'appr-1', outcome: 'approved' })).status).toBe(400)
@@ -228,8 +225,8 @@ describe('the approval routes (ticket 041)', () => {
 
     const unwired = createUnavailableFirstService(null, {})
     expect(await (await post('/.sage/session/approval-answer', { matterRef: 'matter:1', requestId: 'appr-1', outcome: 'rejected' }, unwired)).json())
-      .toMatchObject({ code: 'approval-relay-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
     expect(await (await post('/.sage/session/approval-withdraw', { matterRef: 'matter:1', requestId: 'appr-1' }, unwired)).json())
-      .toMatchObject({ code: 'approval-relay-unavailable' })
+      .toMatchObject({ code: 'protected-effect-unavailable' })
   })
 })

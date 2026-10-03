@@ -1,7 +1,4 @@
-import {
-  createSageFixtureViewState,
-  type SageMatterViewState,
-} from './view-state.js'
+import type { SageMatterViewState } from './view-state.js'
 import {
   createSageActionPreview,
   type SageActionPreview,
@@ -75,20 +72,23 @@ function renderActionPreview(preview: SageActionPreview): string {
  * Keep the first UI slice framework-free and deterministic. The surrounding document owns the
  * transport bridge; this module owns only the visible component tree and local navigation hooks.
  */
-export function renderSageWorkspace(viewState: SageMatterViewState = createSageFixtureViewState()): string {
-  const projectionLabel = viewState.projectionSource === 'fixture' ? 'fixture projection' : 'live projection'
-  const stageLabel = STAGE_LABELS[viewState.matter.stage]
-  const actionabilityLabel = ACTIONABILITY_LABELS[viewState.actionability]
-  const goal = escapeHtml(viewState.matter.goal)
-  const matterId = escapeHtml(viewState.matter.matterId)
-  const revisionId = escapeHtml(viewState.matter.currentRevisionId ?? 'revision pending')
-  const denialReason = escapeHtml(viewState.denialReason ?? 'none')
-  const actionPreviews = viewState.actions
+export function renderSageWorkspace(viewState: SageMatterViewState | null = null): string {
+  const projectionSource = viewState?.projectionSource ?? 'unavailable'
+  const projectionLabel = viewState === null
+    ? 'projection unavailable'
+    : viewState.projectionSource === 'fixture' ? 'fixture projection' : 'live projection'
+  const stageLabel = viewState === null ? '未读取' : STAGE_LABELS[viewState.matter.stage]
+  const actionabilityLabel = viewState === null ? '已阻断' : ACTIONABILITY_LABELS[viewState.actionability]
+  const goal = escapeHtml(viewState?.matter.goal ?? '当前没有可用的事项投影')
+  const matterId = escapeHtml(viewState?.matter.matterId ?? '—')
+  const revisionId = escapeHtml(viewState?.matter.currentRevisionId ?? '—')
+  const denialReason = escapeHtml(viewState?.denialReason ?? (viewState === null ? '事项投影不可用' : 'none'))
+  const actionPreviews = viewState === null ? '' : viewState.actions
     .map((action) => createSageActionPreview(viewState, action.type))
     .map(renderActionPreview)
     .join('')
   return `
-    <div class="sage-app" data-sage-workspace data-projection-source="${viewState.projectionSource}">
+    <div class="sage-app" id="sage-workspace" data-sage-workspace data-projection-source="${projectionSource}" data-matter-render-state="${projectionSource}">
       <aside class="sage-sidebar" aria-label="Sage 导航">
         <div class="sage-brand" aria-label="Sage">
           <span class="sage-mark" aria-hidden="true"><span></span></span>
@@ -96,16 +96,16 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
         </div>
         <p class="sage-nav-label">工作台</p>
         <nav class="sage-nav" role="tablist" aria-label="工作台视图">
-          <button class="sage-nav-item is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-overview" data-view="overview">
+          <button class="sage-nav-item is-active" type="button" id="view-overview" role="tab" aria-selected="true" aria-controls="panel-overview" data-view="overview">
             <span class="sage-nav-icon" aria-hidden="true">⌂</span><span>总览</span>
           </button>
-          <button class="sage-nav-item" type="button" role="tab" aria-selected="false" aria-controls="panel-matter" data-view="matter">
+          <button class="sage-nav-item" type="button" id="view-matter" role="tab" aria-selected="false" aria-controls="panel-matter" data-view="matter">
             <span class="sage-nav-icon" aria-hidden="true">◌</span><span>经营事项</span><span class="sage-nav-count" id="nav-matter-count" data-nav-count="action" aria-label="待我处理" hidden></span>
           </button>
-          <button class="sage-nav-item" type="button" role="tab" aria-selected="false" aria-controls="panel-capabilities" data-view="capabilities">
+          <button class="sage-nav-item" type="button" id="view-capabilities" role="tab" aria-selected="false" aria-controls="panel-capabilities" data-view="capabilities">
             <span class="sage-nav-icon" aria-hidden="true">◇</span><span>能力</span>
           </button>
-          <button class="sage-nav-item" type="button" role="tab" aria-selected="false" aria-controls="panel-governance" data-view="governance">
+          <button class="sage-nav-item" type="button" id="view-governance" role="tab" aria-selected="false" aria-controls="panel-governance" data-view="governance">
             <span class="sage-nav-icon" aria-hidden="true">⊙</span><span>治理</span>
           </button>
           <button class="sage-nav-item" type="button" id="view-profile" role="tab" aria-selected="false" aria-controls="panel-profile" data-view="profile">
@@ -131,7 +131,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
             <p class="sage-breadcrumb">当前工作台 <span aria-hidden="true">/</span> 经营网络</p>
           </div>
           <div class="sage-topbar-meta">
-            <span class="sage-fixture-pill">${projectionLabel} · 不执行外部动作</span>
+            <span class="sage-fixture-pill" id="matter-projection-pill">${projectionLabel} · 不执行外部动作</span>
             <span class="sage-runtime-pill" data-runtime-badge>检查中</span>
             <div class="sage-user-menu">
               <button class="sage-user-menu-trigger" type="button" id="user-menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-panel">
@@ -209,10 +209,10 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
 
             <section class="sage-card sage-matter-card" aria-labelledby="matter-card-title">
               <div class="sage-card-head"><span class="sage-card-label">CURRENT MATTER</span><span class="sage-card-index">02</span></div>
-              <div class="sage-matter-status"><span class="sage-status-dot is-muted" aria-hidden="true"></span>${stageLabel}</div>
+              <div class="sage-matter-status"><span class="sage-status-dot is-muted" aria-hidden="true"></span><span id="matter-overview-stage">${stageLabel}</span></div>
               <h2 id="matter-card-title">${goal}</h2>
-              <p>当前投影来自 ${projectionLabel}，用于验证事项身份、阶段、证据和阻断位置。</p>
-              <div class="sage-matter-meta"><span>${projectionLabel}</span><span>${revisionId}</span></div>
+              <p id="matter-overview-source-note">当前投影来自 ${projectionLabel}，用于验证事项身份、阶段、证据和阻断位置。</p>
+              <div class="sage-matter-meta"><span id="matter-overview-source">${projectionLabel}</span><span id="matter-overview-revision">${revisionId}</span></div>
               <button class="sage-link-button" type="button" data-view-target="matter">打开事项脉络 <span aria-hidden="true">→</span></button>
             </section>
           </div>
@@ -229,7 +229,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
         </section>
 
         <section class="sage-panel" id="panel-matter" role="tabpanel" data-panel="matter" aria-labelledby="view-matter" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><span class="sage-fixture-pill">${projectionLabel}</span></div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><span class="sage-fixture-pill" id="matter-panel-source">${projectionLabel}</span></div>
                     <section class="sage-matter-list-section" aria-label="事项列表">
             <article class="sage-card sage-matter-list-card">
               <div class="sage-card-head"><span class="sage-card-label">MATTER LIST · ACTION NEED</span><span class="sage-card-index">D0</span></div>
@@ -596,12 +596,12 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
             </article>
           </section>
           <div class="sage-matter-layout">
-            <article class="sage-card sage-matter-main"><div class="sage-card-head"><span class="sage-card-label">MATTER / ${matterId}</span><span class="sage-card-index">${revisionId}</span></div><h2>${goal}</h2><p>这是 ViewState 的只读投影，用来验证事项身份、阶段、证据、阻断和责任位置；不读取外部业务数据。</p><div class="sage-state-row"><span>阶段</span><strong>${stageLabel}</strong></div><div class="sage-state-row"><span>动作性</span><strong class="is-blocked">${actionabilityLabel}</strong></div><div class="sage-state-row"><span>阻断原因</span><strong class="is-blocked">${denialReason}</strong></div></article>
+            <article class="sage-card sage-matter-main"><div class="sage-card-head"><span class="sage-card-label">MATTER / <span id="matter-detail-id">${matterId}</span></span><span class="sage-card-index" id="matter-detail-revision">${revisionId}</span></div><h2 id="matter-detail-goal">${goal}</h2><p>这是 ViewState 的只读投影，用来验证事项身份、阶段、证据、阻断和责任位置；不读取外部业务数据。</p><div class="sage-state-row"><span>阶段</span><strong id="matter-detail-stage">${stageLabel}</strong></div><div class="sage-state-row"><span>动作性</span><strong class="is-blocked" id="matter-detail-actionability">${actionabilityLabel}</strong></div><div class="sage-state-row"><span>阻断原因</span><strong class="is-blocked" id="matter-detail-denial">${denialReason}</strong></div></article>
             <aside class="sage-card sage-side-note"><span class="sage-card-label">WHY BLOCKED</span><h2>先把事实说清楚</h2><p>真实创建、审批、运行、停止、重试和回执仍必须等待 Application Service、真实 authority 与能力预检；本页只展示只读预览，不产生提交。</p><button class="sage-secondary-button" type="button" data-view-target="governance">查看边界</button></aside>
           </div>
           <section class="sage-action-preview-section" aria-label="动作预览">
-            <div class="sage-action-preview-heading"><div><span class="sage-card-label">READ-ONLY ACTION SURFACE</span><h2>下一步动作预览</h2></div><span class="sage-fixture-pill">不提交 · fixture</span></div>
-            <div class="sage-preview-grid">${actionPreviews}</div>
+            <div class="sage-action-preview-heading"><div><span class="sage-card-label">READ-ONLY ACTION SURFACE</span><h2>下一步动作预览</h2></div><span class="sage-fixture-pill" id="matter-action-source">不提交 · ${projectionSource}</span></div>
+            <div class="sage-preview-grid" id="matter-action-previews">${actionPreviews}</div>
           </section>
         </section>
 

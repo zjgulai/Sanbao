@@ -6,6 +6,7 @@ import type { CommandPipelinePorts, SageActionIntentV2 } from '../src/appservice
 import { identityResolutionDenied } from './fixtures/command-fakes.js'
 import { renderSageDocument } from '../src/product/renderer.js'
 import { FakeElement } from './support/sage-page.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 001 (US-117~123): the three command result states must reach the surface as three
@@ -38,7 +39,9 @@ const passingPorts: CommandPipelinePorts = {
 }
 
 function createService(commandPorts?: CommandPipelinePorts) {
-  const providers = createUnavailableFirstService(null, commandPorts === undefined ? {} : { commandPorts })
+  const providers = withProjectionReadTestAdmission(
+    createUnavailableFirstService(null, commandPorts === undefined ? {} : { commandPorts }),
+  )
   return {
     dispatch: async (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/actions', {
@@ -171,6 +174,7 @@ const runtime = { status: 'unavailable', message: 'Sage 暂时未检测到能力
 function servicePayload(command: unknown): unknown {
   return {
     service: { status: 'unavailable', reason: 'authenticated', correlation: 'c-1', auth: { status: 'signed-in', displayName: 'Alice' }, command },
+    matter: null,
     runtime,
   }
 }

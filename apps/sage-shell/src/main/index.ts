@@ -69,6 +69,9 @@ import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
 import { createHostLiveInventoryProjectionProvider } from './runtime-inventory.js'
 import { createRuntimeInventoryProvider, type RuntimeInventoryResult } from './runtime-inventory-provider.js'
+import { createActiveMatterContext } from './active-matter-context.js'
+import { selectActiveMatter as selectActiveMatterContext } from './active-matter-selection.js'
+import { projectionReadScope } from './projection-read-scope.js'
 
 const SCHEME = 'dsh-app'
 
@@ -155,8 +158,28 @@ async function main(paths: SagePaths): Promise<void> {
     process.stdout.write('sage shell: runtime inventory unavailable (assembly-invalid)\n')
   })
 
+  // CTX-01A: the active matter has one generation-bound owner in Electron main. This batch does
+  // not add an activation route or infer one from the newest draft, so it starts inactive and all
+  // session-core effects remain unavailable until a later approved selection owner is wired.
+  const activeMatterContext = createActiveMatterContext()
+  const invalidateActiveMatterContext = (): void => {
+    const snapshot = activeMatterContext.snapshot()
+    if (snapshot === null) return
+    activeMatterContext.invalidate({
+      expected: {
+        contextGeneration: snapshot.contextGeneration,
+        actorScopeRef: snapshot.actorScopeRef,
+        matterId: snapshot.matterId,
+        revisionId: snapshot.revisionId,
+        workspaceRef: snapshot.workspaceRef,
+        sessionRef: snapshot.sessionRef,
+        frameGeneration: snapshot.frameGeneration,
+      },
+    })
+  }
   const framePolicy = new FramePolicy({
     onContamination: (reason, generation) => {
+      invalidateActiveMatterContext()
       process.stdout.write(`sage shell: frame policy contaminated generation ${generation}: ${reason}\n`)
     },
   })
@@ -261,17 +284,17 @@ async function main(paths: SagePaths): Promise<void> {
       pending: pendingInputs,
     },
   )
-  // The channel's read projection follows the same "current matter" the draft card treats as
-  // current: the newest converted draft's receipt. Without one there is nothing to read, and the
-  // answer is `no-session` instead of an invented matter identity.
-  const currentMatterRef = (): string => {
-    const gate = drafts.list(signedIn())
-    if (gate.state !== 'ready') return ''
-    for (const draft of [...gate.drafts].reverse()) {
-      if (draft.status === 'converted' && draft.matterRef !== null && draft.matterRef !== '') return draft.matterRef
-    }
-    return ''
+  // READ-01A: reads may only obtain their matter from the current admitted request. Throwing here
+  // is a second fail-closed boundary if a future route calls a raw provider outside the runner.
+  const scopedMatterRef = (): string => {
+    const scope = projectionReadScope.current()
+    if (scope === undefined) throw new Error('projection read scope unavailable')
+    return scope.matterRef
   }
+  // The two local selection-preference writes are not projection reads. They still require the
+  // explicitly selected ActiveContext and refuse while it is absent; they never create an empty
+  // or draft-recency bucket.
+  const selectedMatterRef = (): string | undefined => activeMatterContext.snapshot()?.matterId
   // Ticket 014: the attachment chain. Candidates are sealed here (digest + length); the upload
   // streams the sealed version through the bridge to the base's own `uploadStream`; every record
   // stays in this process — reopening reads the durable session log instead (US-076).
@@ -428,7 +451,7 @@ async function main(paths: SagePaths): Promise<void> {
     file: join(paths.root, 'sessions', 'side-chats.json'),
   })
   const sideChatWiring = {
-    sideChats: () => sideChats.list(currentMatterRef()),
+    sideChats: () => sideChats.list(scopedMatterRef()),
     sideChatCreate: (request: { readonly matterRef: string }) => sideChats.create(request.matterRef),
     sideChatSend: (request: { readonly sideChatId: string, readonly text: string }) => sideChats.send(request),
     sideChatRead: (request: { readonly sideChatId: string }) => sideChats.read(request),
@@ -471,7 +494,7 @@ async function main(paths: SagePaths): Promise<void> {
     matterList: () => matterList.derive(),
   }
   const attachmentWiring = {
-    attachments: () => attachments.snapshot(currentMatterRef()),
+    attachments: () => attachments.snapshot(scopedMatterRef()),
     attachmentsPick: () => attachments.pick(),
     attachmentsUpload: (request: { readonly itemId: string, readonly matterRef: string, readonly workspaceRoot: string }) => attachments.upload(request),
     attachmentsCancel: (request: { readonly itemId: string }) => attachments.cancel(request),
@@ -504,7 +527,7 @@ async function main(paths: SagePaths): Promise<void> {
     void artifacts.observe({ matterRef, workspaceRoot: defaultLink.workspacePath }).catch(() => undefined)
   }
   const artifactWiring = {
-    artifacts: () => ({ state: 'read' as const, cards: artifacts.cardsFor(currentMatterRef()), preview: artifactPreview.state() }),
+    artifacts: () => ({ state: 'read' as const, cards: artifacts.cardsFor(scopedMatterRef()), preview: artifactPreview.state() }),
     artifactsObserve: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => artifacts.observe(request),
     artifactOpen: async (request: { readonly artifactId: string }) => {
       const record = artifacts.recordFor(request.artifactId)
@@ -529,7 +552,7 @@ async function main(paths: SagePaths): Promise<void> {
   }
   const sessionWiring = {
     sessionChannel: async () => {
-      const matterRef = currentMatterRef()
+      const matterRef = scopedMatterRef()
       const status = await sessionChannel.read({ matterRef })
       // Ticket 015: a fresh turn-end edge triggers one bounded artifact observation (cards only).
       if (status.state === 'read') observeArtifactsAfterTurn(matterRef, status.lastTurnEnd)
@@ -550,43 +573,42 @@ async function main(paths: SagePaths): Promise<void> {
     },
     sessionStop: (request: { readonly matterRef: string }) => sessionChannel.stop(request),
     sessionResume: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => sessionChannel.resume(request),
-    pendingUpdate: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => {
-      const matterRef = currentMatterRef()
-      if (request.action === 'edit') return pendingInputs.edit(matterRef, request.itemId, request.text)
-      return pendingInputs.remove(matterRef, request.itemId)
-    },
-    queueItemUpdate: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) =>
-      sessionChannel.queueItem({ matterRef: currentMatterRef(), ...request }),
-    sessionHistory: () => sessionHistory.status(currentMatterRef()),
-    sessionHistoryList: (request: { readonly beforeSeq?: number }) => sessionHistory.list({ matterRef: currentMatterRef(), ...request }),
-    sessionHistoryDetail: (request: { readonly runSeq: number }) => sessionHistory.detail({ matterRef: currentMatterRef(), runSeq: request.runSeq }),
+    sessionHistory: () => sessionHistory.status(scopedMatterRef()),
+    sessionHistoryList: (request: { readonly beforeSeq?: number }) => sessionHistory.list({ matterRef: scopedMatterRef(), ...request }),
+    sessionHistoryDetail: (request: { readonly runSeq: number }) => sessionHistory.detail({ matterRef: scopedMatterRef(), runSeq: request.runSeq }),
     // Ticket 034: the live cards must reflect the same current matter the channel reads.
-    sessionClarifications: () => clarifications.read({ matterRef: currentMatterRef() }),
+    sessionClarifications: () => clarifications.read({ matterRef: scopedMatterRef() }),
     sessionClarificationAnswer: (request: { readonly matterRef: string, readonly requestId: string, readonly answers: readonly unknown[] }) => clarifications.answer(request),
-    sessionAnchors: () => sessionAnchors.status(currentMatterRef()),
-    sessionAnchorsRead: () => sessionAnchors.read({ matterRef: currentMatterRef() }),
-    sessionAnchorLocate: (request: { readonly action: 'locate', readonly runSeq: number }) => sessionAnchors.locate({ matterRef: currentMatterRef(), runSeq: request.runSeq }),
-    inputSelections: () => inputSelections.read({ matterRef: currentMatterRef() }),
-    inputSelectionsSelect: (request: { readonly action: 'select', readonly kind: 'skill' | 'plugin', readonly ref: string }) => inputSelections.select({ matterRef: currentMatterRef(), kind: request.kind, ref: request.ref }),
-    inputSelectionsClear: (request: { readonly action: 'clear', readonly kind: 'skill' | 'plugin', readonly ref?: string }) => inputSelections.clear({ matterRef: currentMatterRef(), kind: request.kind, ...(request.ref === undefined ? {} : { ref: request.ref }) }),
+    sessionAnchors: () => sessionAnchors.status(scopedMatterRef()),
+    sessionAnchorsRead: () => sessionAnchors.read({ matterRef: scopedMatterRef() }),
+    sessionAnchorLocate: (request: { readonly action: 'locate', readonly runSeq: number }) => sessionAnchors.locate({ matterRef: scopedMatterRef(), runSeq: request.runSeq }),
+    inputSelections: () => inputSelections.read({ matterRef: scopedMatterRef() }),
+    inputSelectionsSelect: (request: { readonly action: 'select', readonly kind: 'skill' | 'plugin', readonly ref: string }) => {
+      const matterRef = selectedMatterRef()
+      return matterRef === undefined
+        ? { state: 'refused' as const, code: 'input-selections-unavailable' }
+        : inputSelections.select({ matterRef, kind: request.kind, ref: request.ref })
+    },
+    inputSelectionsClear: (request: { readonly action: 'clear', readonly kind: 'skill' | 'plugin', readonly ref?: string }) => {
+      const matterRef = selectedMatterRef()
+      return matterRef === undefined
+        ? { state: 'refused' as const, code: 'input-selections-unavailable' }
+        : inputSelections.clear({ matterRef, kind: request.kind, ...(request.ref === undefined ? {} : { ref: request.ref }) })
+    },
     // Ticket 039: the plan/goal mode rides the base's own collaboration state; the switch is one
     // named request and never writes a default (the store only talks to the two session endpoints).
-    sessionPlanMode: () => planMode.read({ matterRef: currentMatterRef() }),
-    sessionPlanModeSwitch: (request: { readonly active: boolean }) => planMode.switch({ matterRef: currentMatterRef(), active: request.active }),
+    sessionPlanMode: () => planMode.read({ matterRef: scopedMatterRef() }),
     siteTemplates: () => siteTemplates.read(),
-    sessionApprovals: () => approvals.read({ matterRef: currentMatterRef() }),
+    sessionApprovals: () => approvals.read({ matterRef: scopedMatterRef() }),
     sessionApprovalAnswer: (request: { readonly matterRef: string, readonly requestId: string, readonly outcome: 'allowed-once' | 'rejected' }) => approvals.answer(request),
     sessionApprovalWithdraw: (request: { readonly matterRef: string, readonly requestId: string }) => approvals.withdraw(request),
-    modelQueue: () => modelQueue.read({ matterRef: currentMatterRef() }),
-    terminal: () => terminal.status({ matterRef: currentMatterRef() }),
+    modelQueue: () => modelQueue.read({ matterRef: scopedMatterRef() }),
+    terminal: () => terminal.status({ matterRef: scopedMatterRef() }),
     feedback: () => feedback.status(),
     feedbackSubmit: (request: { readonly action: 'submit', readonly text: string, readonly code?: string, readonly stage?: string, readonly correlation?: string }) => feedback.submit(request),
     feedbackVerify: (request: { readonly action: 'verify', readonly requestId: string }) => feedback.verify(request),
-    terminalRead: (request: { readonly terminalId: string, readonly offset?: number, readonly lines?: number }) => terminal.read({ matterRef: currentMatterRef(), ...request }),
-    sessionEdits: () => sessionEdits.status(currentMatterRef()),
-    sessionEditsSave: (request: { readonly action: 'save', readonly messageRef: string, readonly text: string }) => sessionEdits.save({ matterRef: currentMatterRef(), messageRef: request.messageRef, text: request.text }),
-    sessionEditsResend: (request: { readonly action: 'resend', readonly editId: string, readonly workspaceRoot?: string }) => sessionEdits.resend({ matterRef: currentMatterRef(), editId: request.editId, workspaceRoot: request.workspaceRoot ?? '' }),
-    sessionEditsVerify: (request: { readonly action: 'verify', readonly editId: string }) => sessionEdits.verify({ matterRef: currentMatterRef(), editId: request.editId }),
+    terminalRead: (request: { readonly terminalId: string, readonly offset?: number, readonly lines?: number }) => terminal.read({ matterRef: scopedMatterRef(), ...request }),
+    sessionEdits: () => sessionEdits.status(scopedMatterRef()),
   }
 
   // One fold function serves the state projection and the link checks: the workspace facts keep
@@ -611,6 +633,7 @@ async function main(paths: SagePaths): Promise<void> {
         // `set-default` without a workspace clears the default; link/unlink always name one.
         if (request.action !== 'set-default') return matterLinks.snapshot()
         matterLinks.setDefault({ matterRef: request.matterRef, workspaceRef: '', actorRef })
+        if (activeMatterContext.snapshot()?.matterId === request.matterRef) invalidateActiveMatterContext()
         return matterLinks.snapshot()
       }
       if (request.action === 'link') {
@@ -624,9 +647,18 @@ async function main(paths: SagePaths): Promise<void> {
       }
       if (request.action === 'unlink') {
         matterLinks.unlink({ matterRef: request.matterRef, workspaceRef: request.workspaceRef, actorRef })
+        const active = activeMatterContext.snapshot()
+        if (active?.matterId === request.matterRef && active.workspaceRef === request.workspaceRef) {
+          invalidateActiveMatterContext()
+        }
         return matterLinks.snapshot()
       }
       matterLinks.setDefault({ matterRef: request.matterRef, workspaceRef: request.workspaceRef, actorRef })
+      const active = activeMatterContext.snapshot()
+      if (
+        active?.matterId === request.matterRef
+        && matterLinks.defaultOf(request.matterRef) !== active.workspaceRef
+      ) invalidateActiveMatterContext()
       return matterLinks.snapshot()
     },
     // Ticket 011: per-dispatch re-check of the chosen environment. No default → nothing to verify;
@@ -723,8 +755,7 @@ async function main(paths: SagePaths): Promise<void> {
   }
   const monitorWiring = {
     runMonitor: async () => {
-      const matterRef = currentMatterRef()
-      if (matterRef === '') return shapeRunMonitor(null, null)
+      const matterRef = scopedMatterRef()
       return shapeRunMonitor(matterRef, await sessionChannel.read({ matterRef }))
     },
     runLogRead: runLogs,
@@ -787,6 +818,62 @@ async function main(paths: SagePaths): Promise<void> {
         viewState,
         vault,
         adapter,
+        callerBinding,
+        activeMatterContext,
+        framePolicySnapshot: () => framePolicy.snapshot(),
+        // CTX-01B: the route carries only a matter id plus CAS generation. Electron main re-reads
+        // every trusted fact in fixed order. Production intentionally has no independent matter
+        // read-policy port yet, so selection stops at `read-access-unavailable` and the public
+        // outcome stays honest rather than borrowing identity, list visibility or draft recency.
+        selectActiveMatter: async (candidate) => {
+          const result = await selectActiveMatterContext({
+            candidate,
+            context: activeMatterContext,
+            ports: {
+              readActiveIdentitySession: () => {
+                const session = vault.identitySession()
+                return session === null ? undefined : { sessionRef: session.sessionRef }
+              },
+              authorizeMatterRead: () => undefined,
+              resolveCurrentRevision: ({ matterId }) => {
+                const current = matterRehydrate.resolveCurrent(matterId)
+                return current === undefined || 'denied' in current
+                  ? undefined
+                  : { matterId, revisionId: current.currentRevisionId }
+              },
+              resolveDefaultWorkspace: ({ matterId }) => {
+                const workspaceRef = matterLinks.defaultOf(matterId)
+                return workspaceRef === undefined ? undefined : { matterId, workspaceRef }
+              },
+              readFreshWorkspaceFold: async () => {
+                const fold = await foldWorkspaces()
+                return fold.state !== 'read'
+                  ? undefined
+                  : {
+                      state: 'read' as const,
+                      entries: fold.entries.map((entry) => ({
+                        workspaceId: entry.workspaceId,
+                        path: entry.path,
+                      })),
+                    }
+              },
+              snapshotFramePolicy: () => framePolicy.snapshot(),
+            },
+          })
+          if (result.ok) {
+            return { state: 'selected' as const, context: { state: 'active' as const, ...result.projection } }
+          }
+          if (result.code === 'stale-context-generation') {
+            return { state: 'refused' as const, code: 'active-context-stale' as const, retryable: true }
+          }
+          if (result.code === 'read-access-denied') {
+            return { state: 'refused' as const, code: 'active-context-denied' as const, retryable: false }
+          }
+          return { state: 'refused' as const, code: 'active-context-unavailable' as const, retryable: true }
+        },
+        // READ-01A: production has no matter/object-bound read-policy resolver yet. This explicit
+        // absent answer is a hard stop before revision, workspace, store or Host reads.
+        authorizeProjectionRead: () => undefined,
         ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
         // WT-02C.2E.2: the composed inventory provider rides the same flow until the
         // C2E.2 resolver wiring lands; nothing consumes it yet.
@@ -807,7 +894,16 @@ async function main(paths: SagePaths): Promise<void> {
         workspaceList: () => foldWorkspaces(),
         // Ticket 012 (write half): rename / delete-registration / reorder over the same bridge;
         // delete removes the registration only — the base keeps the directory and its sessions.
-        mutateWorkspace: createWorkspaceMutations((endpoint, payload) => host.bridgeCall(endpoint, payload)),
+        mutateWorkspace: async (request) => {
+          const outcome = await createWorkspaceMutations((endpoint, payload) => host.bridgeCall(endpoint, payload))(request)
+          const active = activeMatterContext.snapshot()
+          if (
+            outcome.state === 'settled'
+            && outcome.kind === 'delete'
+            && active?.workspaceRef === outcome.workspaceId
+          ) invalidateActiveMatterContext()
+          return outcome
+        },
         // Ticket 046: the eleven leaf rows. Sources: the host snapshot, the instance policy, and
         // the folded workspace observation — the last one never triggers a scan (D-090).
         settingsLeaves: () => {

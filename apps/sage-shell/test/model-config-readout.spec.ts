@@ -4,6 +4,7 @@ import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { renderSageDocument } from '../src/product/renderer.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from '../src/main/settings-readout.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 017 (US-043/044/047): the model-config view shows structure and state only — never a
@@ -39,7 +40,9 @@ const describeAnswer = {
 }
 
 async function stateWith(reader: (() => unknown) | undefined) {
-  const providers = createUnavailableFirstService(null, reader === undefined ? {} : { modelConfig: reader as never })
+  const providers = withProjectionReadTestAdmission(
+    createUnavailableFirstService(null, reader === undefined ? {} : { modelConfig: reader as never }),
+  )
   const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state', { method: 'GET' }), {
     providers,
     callerBinding: { correlation: 'c-017' },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { renderSageDocument } from '../src/product/renderer.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 045 (US-206~208): the user menu and the profile page must read one identity projection
@@ -15,9 +16,9 @@ import { renderSageDocument } from '../src/product/renderer.js'
  */
 
 function stateWith(auth: { status: string; displayName: string | null }): Promise<Record<string, unknown>> {
-  const providers = createUnavailableFirstService(null, {
+  const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
     authSnapshot: () => ({ status: auth.status as 'signed-in', displayName: auth.displayName }),
-  })
+  }))
   const request = new Request('dsh-app://app/.sage/state', { method: 'GET' })
   return handleSageServiceRequest(request, {
     providers,
@@ -127,6 +128,7 @@ async function mount(authSource: () => { status: string; displayName: string | n
           auth,
           command: null,
         },
+        matter: null,
         runtime: { status: 'ready', message: '运行时已就绪。', retryable: false },
       }),
     }

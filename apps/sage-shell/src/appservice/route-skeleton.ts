@@ -1,10 +1,18 @@
 /** Pure route skeleton for the main-owned /.sage/* surface (spec §3.1). */
-import type { DisplayPreferenceValues, ServiceDeps, WorkspaceMutationRequest } from './contracts.js'
+import type {
+  DisplayPreferenceValues,
+  ProjectionReadCandidate,
+  ServiceDeps,
+  WorkspaceMutationRequest,
+} from './contracts.js'
 import { parseSageActionIntentV2 } from './command-contracts.js'
 import type { SageActionIntentV2, SageDispatchIntent } from './command-contracts.js'
 import { MAX_SAGE_ACTION_BYTES, serviceJson } from './errors.js'
+import type { ProjectionReadOperation, ProjectionReadScope } from './projection-read-admission.js'
 
 const SAGE_STATE_PATH = '/.sage/state'
+/** CTX-01B: the only product route allowed to select/replace the main-owned active matter. */
+const SAGE_CONTEXT_SELECT_PATH = '/.sage/context/select'
 const SAGE_ACTIONS_PATH = '/.sage/actions'
 /** Ticket 025: mint the single pre-execution confirmation card for one exact intent. */
 const SAGE_ACTIONS_PREPARE_PATH = '/.sage/actions/prepare'
@@ -105,13 +113,59 @@ function transportDenial(status: number, headers: Record<string, string> = {}): 
   return new Response(null, { status, headers: { 'cache-control': 'no-store', ...headers } })
 }
 
+/** READ-01A: exact parsing stays ahead of this helper; raw providers run only inside the
+ * main-owned admission callback. Missing/malformed runners fail closed through each route's
+ * existing typed unavailable shape. */
+async function runProjectionRead(
+  deps: ServiceDeps,
+  operation: ProjectionReadOperation,
+  candidate: ProjectionReadCandidate,
+  read: (scope: ProjectionReadScope) => Promise<Response>,
+  blocked: () => Response | Promise<Response>,
+): Promise<Response> {
+  const runner = deps.providers.runProjectionRead
+  if (runner === undefined) return blocked()
+  try {
+    const result = await runner({ operation, candidate }, read)
+    return result.state === 'read' && result.value instanceof Response
+      ? result.value
+      : blocked()
+  } catch {
+    return blocked()
+  }
+}
+
 export async function handleSageServiceRequest(request: Request, deps: ServiceDeps): Promise<Response> {
   if (deps.callerBinding === null) return transportDenial(403)
 
   const url = new URL(request.url)
   if (url.pathname === SAGE_STATE_PATH) {
     if (request.method !== 'GET') return transportDenial(405, { allow: 'GET' })
-    return deps.providers.readState()
+    return runProjectionRead(
+      deps,
+      'state.read',
+      { kind: 'collection', collection: 'state' },
+      () => deps.providers.readState(),
+      () => deps.providers.readBlockedState?.() ?? serviceJson({
+        code: 'projection-read-unavailable',
+        stage: 'read-policy',
+        retryable: true,
+        correlation: deps.callerBinding?.correlation ?? 'projection-read-unavailable',
+      }, 200),
+    )
+  }
+
+  if (url.pathname === SAGE_CONTEXT_SELECT_PATH) {
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
+    const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    if (contentType !== 'application/json') return transportDenial(415)
+    const body = await readActionBodyWithinLimit(request)
+    if (body === undefined) return transportDenial(413)
+    const parsed = parseActiveMatterSelection(body)
+    if (parsed === undefined) {
+      return serviceJson({ code: 'invalid-context-selection', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
+    }
+    return deps.providers.selectActiveMatter(parsed)
   }
 
   if (url.pathname === SAGE_ACTIONS_PATH) {
@@ -215,8 +269,22 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-session-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    if (parsed.action === 'list') return deps.providers.sessionHistoryList(parsed)
-    return deps.providers.sessionHistoryDetail(parsed)
+    if (parsed.action === 'list') {
+      return runProjectionRead(
+        deps,
+        'session.history.list',
+        { kind: 'active-matter' },
+        () => deps.providers.sessionHistoryList(parsed),
+        () => serviceJson({ state: 'refused', code: 'session-history-unavailable' }, 200),
+      )
+    }
+    return runProjectionRead(
+      deps,
+      'session.history.detail',
+      { kind: 'active-matter' },
+      () => deps.providers.sessionHistoryDetail(parsed),
+      () => serviceJson({ state: 'missing', runSeq: parsed.runSeq, code: 'session-history-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_SESSION_SELECTIONS_PATH) {
@@ -258,8 +326,22 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-session-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    if (parsed.action === 'read') return deps.providers.sessionAnchorsRead(parsed)
-    return deps.providers.sessionAnchorLocate(parsed)
+    if (parsed.action === 'read') {
+      return runProjectionRead(
+        deps,
+        'session.anchors.read',
+        { kind: 'active-matter' },
+        () => deps.providers.sessionAnchorsRead(parsed),
+        () => serviceJson({ state: 'unavailable', code: 'session-anchors-unavailable' }, 200),
+      )
+    }
+    return runProjectionRead(
+      deps,
+      'session.anchors.locate',
+      { kind: 'active-matter' },
+      () => deps.providers.sessionAnchorLocate(parsed),
+      () => serviceJson({ state: 'missing', runSeq: parsed.runSeq, code: 'session-anchors-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_FEEDBACK_PATH) {
@@ -286,7 +368,13 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-session-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    return deps.providers.terminalRead(parsed)
+    return runProjectionRead(
+      deps,
+      'session.terminal.read',
+      { kind: 'active-matter' },
+      () => deps.providers.terminalRead(parsed),
+      () => serviceJson({ state: 'unavailable', code: 'terminals-provider-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_SESSION_APPROVAL_ANSWER_PATH || url.pathname === SAGE_SESSION_APPROVAL_WITHDRAW_PATH) {
@@ -391,7 +479,13 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-search-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    return deps.providers.search(parsed)
+    return runProjectionRead(
+      deps,
+      'search.query',
+      { kind: 'collection', collection: 'search' },
+      () => deps.providers.search(parsed),
+      () => serviceJson({ state: 'refused', code: 'search-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_ARTIFACTS_OBSERVE_PATH || url.pathname === SAGE_ARTIFACTS_OPEN_PATH
@@ -407,9 +501,25 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
       return serviceJson({ code: 'invalid-artifact-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
     if (url.pathname === SAGE_ARTIFACTS_OBSERVE_PATH) {
-      return deps.providers.observeArtifacts(parsed as { matterRef: string, workspaceRoot: string })
+      const observe = parsed as { matterRef: string, workspaceRoot: string }
+      return runProjectionRead(
+        deps,
+        'artifacts.observe',
+        { kind: 'matter-workspace', matterRef: observe.matterRef, workspaceRoot: observe.workspaceRoot },
+        () => deps.providers.observeArtifacts(observe),
+        () => serviceJson({ state: 'refused', code: 'artifact-store-unavailable' }, 200),
+      )
     }
-    if (url.pathname === SAGE_ARTIFACTS_OPEN_PATH) return deps.providers.openArtifact(parsed as { artifactId: string })
+    if (url.pathname === SAGE_ARTIFACTS_OPEN_PATH) {
+      const open = parsed as { artifactId: string }
+      return runProjectionRead(
+        deps,
+        'artifacts.open',
+        { kind: 'opaque', resource: 'artifact', id: open.artifactId },
+        () => deps.providers.openArtifact(open),
+        () => serviceJson({ state: 'refused', code: 'artifact-preview-unavailable' }, 200),
+      )
+    }
     if (url.pathname === SAGE_ARTIFACTS_CLOSE_PATH) return deps.providers.closeArtifact()
     if (url.pathname === SAGE_ARTIFACTS_FULLSCREEN_PATH) return deps.providers.fullscreenArtifact(parsed as { on: boolean })
     if (url.pathname === SAGE_ARTIFACTS_WINDOW_PATH) {
@@ -417,7 +527,13 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
       if (action !== null && typeof action === 'object' && action.action === 'open') return deps.providers.artifactWindowOpen()
       return deps.providers.artifactWindowClose()
     }
-    return deps.providers.retryArtifact()
+    return runProjectionRead(
+      deps,
+      'artifacts.retry',
+      { kind: 'opaque', resource: 'current-artifact' },
+      () => deps.providers.retryArtifact(),
+      () => serviceJson({ state: 'refused', code: 'artifact-preview-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_EXTERNAL_LINK_PATH) {
@@ -447,7 +563,16 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     }
     if (url.pathname === SAGE_EDIT_DRAFTS_CREATE_PATH) return deps.providers.createEditDraft(parsed as { referenceId: string, matterRef: string })
     if (url.pathname === SAGE_EDIT_DRAFTS_UPDATE_PATH) return deps.providers.updateEditDraft(parsed as { draftId: string, proposedText: string })
-    if (url.pathname === SAGE_EDIT_DRAFTS_DIFF_PATH) return deps.providers.diffEditDraft(parsed as { draftId: string })
+    if (url.pathname === SAGE_EDIT_DRAFTS_DIFF_PATH) {
+      const diff = parsed as { draftId: string }
+      return runProjectionRead(
+        deps,
+        'edit-drafts.diff',
+        { kind: 'opaque', resource: 'edit-draft', id: diff.draftId },
+        () => deps.providers.diffEditDraft(diff),
+        () => serviceJson({ state: 'refused', code: 'edit-draft-unavailable' }, 200),
+      )
+    }
     if (url.pathname === SAGE_EDIT_DRAFTS_PREPARE_WRITEBACK_PATH) return deps.providers.prepareEditDraftWriteback(parsed as { draftId: string })
     return deps.providers.writebackEditDraft(parsed as { draftId: string, confirmationId?: string })
   }
@@ -554,7 +679,13 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-run-log-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    return deps.providers.readRunLog(parsed)
+    return runProjectionRead(
+      deps,
+      'run-log.read',
+      { kind: 'workspace', workspaceRoot: parsed.workspaceRoot },
+      () => deps.providers.readRunLog(parsed),
+      () => serviceJson({ state: 'refused', code: 'run-log-unavailable' }, 200),
+    )
   }
 
   if (url.pathname === SAGE_MATTER_LINK_PATH) {
@@ -610,12 +741,55 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-file-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    if (url.pathname === SAGE_FILES_CANDIDATES_PATH) return deps.providers.listFileCandidates(parsed as { workspaceRoot: string, path: string })
-    if (url.pathname === SAGE_FILES_REFERENCE_PATH) return deps.providers.createFileReference(parsed as { workspaceRoot: string, path: string })
-    return deps.providers.useFileReference(parsed as { referenceId: string })
+    if (url.pathname === SAGE_FILES_CANDIDATES_PATH) {
+      const candidate = parsed as { workspaceRoot: string, path: string }
+      return runProjectionRead(
+        deps,
+        'workspace.files.list-candidates',
+        { kind: 'workspace', workspaceRoot: candidate.workspaceRoot },
+        () => deps.providers.listFileCandidates(candidate),
+        () => serviceJson({ state: 'refused', code: 'file-candidates-unavailable', entries: [], truncated: false, path: '' }, 200),
+      )
+    }
+    if (url.pathname === SAGE_FILES_REFERENCE_PATH) {
+      const reference = parsed as { workspaceRoot: string, path: string }
+      return runProjectionRead(
+        deps,
+        'workspace.files.create-reference',
+        { kind: 'workspace', workspaceRoot: reference.workspaceRoot },
+        () => deps.providers.createFileReference(reference),
+        () => serviceJson({ state: 'refused', code: 'file-reference-unavailable', reference: null }, 200),
+      )
+    }
+    const use = parsed as { referenceId: string }
+    return runProjectionRead(
+      deps,
+      'workspace.files.use-reference',
+      { kind: 'opaque', resource: 'file-reference', id: use.referenceId },
+      () => deps.providers.useFileReference(use),
+      () => serviceJson({ state: 'unknown', code: 'file-reference-unavailable', reference: null, text: null }, 200),
+    )
   }
 
   return transportDenial(404)
+}
+
+/** CTX-01B accepts only a matter candidate and the caller's last observed CAS generation. */
+function parseActiveMatterSelection(body: string): { readonly matterId: string; readonly expectedContextGeneration: number } | undefined {
+  let value: unknown
+  try { value = JSON.parse(body) } catch { return undefined }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const keys = Object.keys(record)
+  if (keys.length !== 2 || !keys.every((key) => key === 'matterId' || key === 'expectedContextGeneration')) return undefined
+  if (typeof record.matterId !== 'string' || record.matterId.trim() !== record.matterId || record.matterId === '' || record.matterId.length > 256) return undefined
+  if (typeof record.expectedContextGeneration !== 'number'
+    || !Number.isSafeInteger(record.expectedContextGeneration)
+    || record.expectedContextGeneration < 0) return undefined
+  return {
+    matterId: record.matterId,
+    expectedContextGeneration: record.expectedContextGeneration,
+  }
 }
 
 /** One patch of the eight display preferences: known keys, known values, nothing else. */

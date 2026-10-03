@@ -176,9 +176,12 @@ describe('the two entries share one value — eight items (US-108/220/221)', () 
   })
 
   it('shows the saved value at both entries only after a confirmed save', async () => {
-    const harness = await bootSagePage(statePayload({ preferences: prefs() }))
-    // A confirmed save answers {state:'saved'}; the same payload then serves the new value.
-    harness.setPayload({ state: 'saved', preferences: prefs({ requested: { ...ALTERNATE }, savedAt: '2026-10-02T12:06:00.000Z', effectiveTheme: 'light' }) })
+    const saved = prefs({ requested: { ...ALTERNATE }, savedAt: '2026-10-02T12:06:00.000Z', effectiveTheme: 'light' })
+    const harness = await bootSagePage(statePayload({ preferences: prefs() }), {
+      '/.sage/preferences': { state: 'saved', preferences: saved },
+    })
+    // The POST answers its narrow receipt; the following GET remains the exact nested state envelope.
+    harness.setPayload(statePayload({ preferences: saved }))
     harness.node('pref-save').dispatch('click')
     await harness.refresh()
     expect(harness.node('pref-note').textContent).toContain('已保存到本设备：2026-10-02T12:06:00.000Z')

@@ -189,7 +189,7 @@ describe('the sent-message edit store (ticket 036)', () => {
 })
 
 describe('the edits route (ticket 036)', () => {
-  it('parses exactly, forwards, and keeps an unwired family honest', async () => {
+  it('parses exactly and enters admission without calling raw edit providers', async () => {
     const seen: unknown[] = []
     const providers = createUnavailableFirstService(null, {
       sessionEditsSave: (request) => { seen.push({ save: request }); return { state: 'refused', code: 'marker-save' } },
@@ -200,14 +200,10 @@ describe('the edits route (ticket 036)', () => {
       new Request('dsh-app://app/.sage/session/edits', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-036' }, providers } as never,
     )
-    expect(await (await post({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'marker-save' })
-    expect(await (await post({ action: 'resend', editId: 'e-1', workspaceRoot: '/w' })).json()).toMatchObject({ code: 'marker-resend' })
-    expect(await (await post({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'marker-verify' })
-    expect(seen).toEqual([
-      { save: { action: 'save', messageRef: 'r-1', text: 't' } },
-      { resend: { action: 'resend', editId: 'e-1', workspaceRoot: '/w' } },
-      { verify: { action: 'verify', editId: 'e-1' } },
-    ])
+    expect(await (await post({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await post({ action: 'resend', editId: 'e-1', workspaceRoot: '/w' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await post({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(seen).toEqual([])
     expect((await post({ action: 'save', messageRef: 'r-1' })).status).toBe(400)
     expect((await post({ action: 'save', messageRef: '', text: 't' })).status).toBe(400)
     // 超出请求体上限的载荷在传输层就被挡（413），连解析都到不了；模块层另有 16,384 上限拒绝。
@@ -221,8 +217,8 @@ describe('the edits route (ticket 036)', () => {
       new Request('dsh-app://app/.sage/session/edits', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-036' }, providers: unwired } as never,
     )
-    expect(await (await postUnwired({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
-    expect(await (await postUnwired({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
-    expect(await (await postUnwired({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'session-edits-unavailable' })
+    expect(await (await postUnwired({ action: 'save', messageRef: 'r-1', text: 't' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await postUnwired({ action: 'resend', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
+    expect(await (await postUnwired({ action: 'verify', editId: 'e-1' })).json()).toMatchObject({ code: 'protected-effect-unavailable' })
   })
 })

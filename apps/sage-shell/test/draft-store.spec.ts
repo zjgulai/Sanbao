@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createDraftStore, type DraftStore } from '../src/main/draft-store.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 002, the draft half (US-004/007/009/010/011).
@@ -422,11 +423,11 @@ describe('the pipeline keeps an unconfirmed creation unretryable (US-119)', () =
     } as never)
     expect(result).toMatchObject({ code: 'outcome-unknown', stage: 'create', retryable: false })
     // And the classifier turns that into the shell's own unknown state, where 核对 is the only entry.
-    const outcome = createUnavailableFirstService(null, { commandPorts: {
+    const outcome = withProjectionReadTestAdmission(createUnavailableFirstService(null, { commandPorts: {
       ...PRODUCTION_FAIL_CLOSED_PORTS,
       resolveIdentityPolicy: () => ({ kind: 'authorized' as const, actor: {}, authoritySnapshot: {} }),
       createMatter: () => ({ unknown: true }),
-    } })
+    } }))
     await outcome.dispatch({
       matterId: 'draft:draft-1', revisionId: 'draft-revision:1', actionType: 'create-matter',
       actionScope: 'revision', payload: { goal: 'g', deliverable: 'd', responsibleParty: 'r' }, origin: 'renderer-action',

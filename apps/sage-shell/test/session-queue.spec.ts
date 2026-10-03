@@ -165,33 +165,37 @@ describe('the queue route (US-025/027/030)', () => {
     return { post, seen }
   }
 
-  it('parses exactly and forwards edit/remove; bad bodies are 400 and a missing port stays honest', async () => {
+  it('parses exactly and admits edit/remove without calling the raw provider; bad bodies stay 400', async () => {
     const h = routeHarness()
-    expect(await (await h.post('/.sage/session/queue', { action: 'edit', itemId: 'q-1', text: '新文本' })).json()).toEqual({ state: 'ok' })
-    expect(await (await h.post('/.sage/session/queue', { action: 'remove', itemId: 'q-1' })).json()).toEqual({ state: 'ok' })
-    expect(h.seen).toEqual([
-      { action: 'edit', itemId: 'q-1', text: '新文本' },
-      { action: 'remove', itemId: 'q-1' },
-    ])
+    expect(await (await h.post('/.sage/session/queue', { action: 'edit', itemId: 'q-1', text: '新文本' })).json())
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(await (await h.post('/.sage/session/queue', { action: 'remove', itemId: 'q-1' })).json())
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(h.seen).toEqual([])
     expect((await h.post('/.sage/session/queue', { action: 'edit', itemId: 'q-1', text: '' })).status).toBe(400)
     expect((await h.post('/.sage/session/queue', { action: 'remove', itemId: 'q-1', extra: 1 })).status).toBe(400)
     expect((await h.post('/.sage/session/queue', { action: 'steer', itemId: 'q-1' })).status).toBe(400)
 
     const unwired = routeHarness({ queueItemUpdate: undefined })
     expect(await (await unwired.post('/.sage/session/queue', { action: 'remove', itemId: 'q-1' })).json())
-      .toEqual({ state: 'refused', code: 'queue-store-unavailable' })
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 
-  it('accepts the steer send body and rejects an unknown mode', async () => {
+  it('accepts the steer body shape, blocks dispatch, and rejects an unknown mode', async () => {
+    let calls = 0
     const providers = createUnavailableFirstService(null, {
-      sessionSend: async (request: { readonly mode?: string }) => ({ state: 'accepted', sessionId: 's', requestId: 'r', mode: request.mode === 'steer' ? 'steer' as const : 'queue' as const }),
+      sessionSend: async (request: { readonly mode?: string }) => {
+        calls += 1
+        return { state: 'accepted', sessionId: 's', requestId: 'r', mode: request.mode === 'steer' ? 'steer' as const : 'queue' as const }
+      },
     })
     const post = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-008' }, providers } as never,
     )
     expect(await (await post({ matterRef: 'm', workspaceRoot: '/w', text: 't', mode: 'steer' })).json())
-      .toMatchObject({ state: 'accepted', mode: 'steer' })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(calls).toBe(0)
     expect((await post({ matterRef: 'm', workspaceRoot: '/w', text: 't', mode: 'sprint' })).status).toBe(400)
     expect((await post({ matterRef: 'm', workspaceRoot: '/w', text: 't', mode: 'steer', extra: 1 })).status).toBe(400)
   })

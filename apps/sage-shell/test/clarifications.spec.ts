@@ -271,7 +271,7 @@ describe('the clarifications store (ticket 034)', () => {
 })
 
 describe('the clarification answer route (ticket 034)', () => {
-  it('parses exactly and forwards to the port; exact bodies and caps are 400s; unwired is a named refusal', async () => {
+  it('parses exactly and enters admission without calling the raw port; exact bodies and caps are 400s', async () => {
     const seen: unknown[] = []
     const providers = createUnavailableFirstService(null, {
       sessionClarificationAnswer: async (request) => { seen.push({ answer: request }); return { state: 'refused', code: 'marker' } },
@@ -281,10 +281,8 @@ describe('the clarification answer route (ticket 034)', () => {
       { callerBinding: { correlation: 'c-034' }, providers } as never,
     )
     expect(await (await post({ matterRef: 'matter:1', requestId: 'req-1', answers: [{ questionId: 'q1', selected: ['A'], custom: '补充' }] })).json())
-      .toMatchObject({ state: 'refused', code: 'marker' })
-    expect(seen).toEqual([
-      { answer: { matterRef: 'matter:1', requestId: 'req-1', answers: [{ questionId: 'q1', selected: ['A'], custom: '补充' }] } },
-    ])
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(seen).toEqual([])
 
     const answerBad = [
       { matterRef: 'matter:1', requestId: 'req-1' },
@@ -308,6 +306,6 @@ describe('the clarification answer route (ticket 034)', () => {
       { callerBinding: { correlation: 'c-034' }, providers: unwired } as never,
     )
     expect(await (await postUnwired({ matterRef: 'matter:1', requestId: 'req-1', answers: [{ questionId: 'q1', selected: ['A'] }] })).json())
-      .toMatchObject({ state: 'refused', code: 'session-clarifications-unavailable' })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 })

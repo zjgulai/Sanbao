@@ -3,10 +3,44 @@ import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
 import type { SageActionIntentV2, SageDispatchIntent } from './command-contracts.js'
 import type { ActionConfirmationCard } from './action-confirmations.js'
+import type {
+  ProjectionReadAdmissionResult,
+  ProjectionReadIntent,
+  ProjectionReadScope,
+} from './projection-read-admission.js'
 
 export interface CallerBinding {
   readonly correlation: string
 }
+
+/** CTX-01B: the only active-context facts that may leave Electron main. Actor identity, login
+ * session and trusted workspace root are deliberately absent. */
+export type ActiveMatterContextStatus =
+  | { readonly state: 'unavailable'; readonly contextGeneration: null }
+  | { readonly state: 'inactive'; readonly contextGeneration: number }
+  | {
+      readonly state: 'active'
+      readonly contextGeneration: number
+      readonly matterId: string
+      readonly revisionId: string
+      readonly workspaceRef: string
+      readonly frameGeneration: number
+    }
+
+export interface ActiveMatterSelectionRequest {
+  /** Candidate only. Electron main independently resolves revision, access, environment and session. */
+  readonly matterId: string
+  /** Optimistic CAS token from the latest state projection; it is not authority. */
+  readonly expectedContextGeneration: number
+}
+
+export type ActiveMatterSelectionOutcome =
+  | { readonly state: 'selected'; readonly context: Extract<ActiveMatterContextStatus, { readonly state: 'active' }> }
+  | {
+      readonly state: 'refused'
+      readonly code: 'active-context-unavailable' | 'active-context-denied' | 'active-context-stale'
+      readonly retryable: boolean
+    }
 
 export type ServiceUnavailableReason = 'identity-unavailable' | 'authenticated'
 
@@ -1517,6 +1551,8 @@ export type ReadoutProvider = (context: { readonly lastCommand: ServiceCommandSt
 
 export interface SageServiceState {
   readonly service: ServiceStatus
+  /** Explicit selection state. Reading this field never activates or replaces a context. */
+  readonly activeContext: ActiveMatterContextStatus
   /** The one matter projection slot (WT-02D.1): fixture-filled only under an explicit fixture mode; null = stable unavailable, never a placeholder. */
   readonly matter: SageMatterViewState | null
   readonly runtime: SageViewState | null
@@ -1596,8 +1632,32 @@ export interface SageServiceState {
   readonly feedback: FeedbackStatus
 }
 
+/** READ-01A: renderer values remain candidates until a main-owned projection-read runner binds
+ * them to one fresh request scope. Opaque ids are resolved only after policy admission. */
+export type ProjectionReadCandidate =
+  | { readonly kind: 'active-matter' }
+  | { readonly kind: 'collection'; readonly collection: 'state' | 'search' }
+  | { readonly kind: 'workspace'; readonly workspaceRoot: string }
+  | { readonly kind: 'matter-workspace'; readonly matterRef: string; readonly workspaceRoot: string }
+  | {
+      readonly kind: 'opaque'
+      readonly resource: 'file-reference' | 'artifact' | 'current-artifact' | 'edit-draft'
+      readonly id?: string
+    }
+
+export type ProjectionReadRouteRunner = (
+  intent: ProjectionReadIntent<ProjectionReadCandidate>,
+  read: (scope: ProjectionReadScope) => Promise<Response>,
+) => Promise<ProjectionReadAdmissionResult<Response>>
+
 export interface ServiceProviders {
+  /** READ-01A: every read-only product route enters this runner before invoking its raw provider. */
+  readonly runProjectionRead?: ProjectionReadRouteRunner
   readonly readState: () => Promise<Response>
+  /** Stable state-route denial that performs no provider, store or Host read. */
+  readonly readBlockedState: () => Promise<Response>
+  /** CTX-01B: explicit user selection; no GET, send or link route may call this implicitly. */
+  readonly selectActiveMatter: (request: ActiveMatterSelectionRequest) => Promise<Response>
   /** Ticket 010: pick an existing directory and adopt it; never creates a directory. */
   readonly adoptWorkspace: () => Promise<Response>
   /** Ticket 012 (write half): rename / delete-registration / reorder, each over the bridge. */

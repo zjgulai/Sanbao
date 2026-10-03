@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createFileCandidates, createFileReferences, isWorkspaceRelativePath } from '../src/main/workspace-files.js'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 013, the reference chain (US-077~082).
@@ -211,7 +212,7 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
 
   it('parses each of the three bodies exactly and refuses everything else before any provider runs', async () => {
     const seen: string[] = []
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       listFileCandidates: async (request) => {
         seen.push(`candidates:${request.path}`)
         return { state: 'read', code: null, entries: [], truncated: false, path: request.path }
@@ -224,7 +225,7 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
         seen.push(`use:${request.referenceId}`)
         return { state: 'unknown', code: 'reference-not-found', reference: null, text: null }
       },
-    })
+    }))
 
     expect((await post('/.sage/workspace/files/candidates', JSON.stringify({ workspaceRoot: '/root', path: '' }), providers)).status).toBe(200)
     expect((await post('/.sage/workspace/files/reference', JSON.stringify({ workspaceRoot: '/root', path: 'a.md' }), providers)).status).toBe(200)
@@ -249,7 +250,7 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
   })
 
   it('keeps POST-only and JSON-only transport rules, and answers unavailable-first when unwired', async () => {
-    const providers = createUnavailableFirstService(null, {})
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     expect((await get('/.sage/workspace/files/candidates', providers)).status).toBe(405)
     const wrongType = await handleSageServiceRequest(
       new Request('dsh-app://app/.sage/workspace/files/use', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' }),
@@ -272,12 +273,12 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
       'workspaceFiles/read': { ok: true, result: { version: 'v1', text: 'abc' } },
     })
     const store = createFileReferences(bridge.call, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-1' })
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       listFileCandidates: createFileCandidates(bridge.call),
       createFileReference: store.create,
       useFileReference: store.use,
       fileReferences: store.list,
-    })
+    }))
     const created = await (await post('/.sage/workspace/files/reference', JSON.stringify({ workspaceRoot: '/root', path: 'a.md' }), providers)).json() as { reference: { referenceId: string } , state: string }
     expect(created.state).toBe('created')
 

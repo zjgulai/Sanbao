@@ -127,15 +127,113 @@ async function run() {
   const window = createSageWindow(policy)
   await loadTrustedUrl(window, policy, `${SAGE_APP_ORIGIN}/index.html`)
 
-  // 1. The Sage document runs under the strict CSP and keeps the fixture marker visible.
-  const documentFacts = await evaluate(window, `(() => ({
-    overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
-    title: document.querySelector('#state-title').textContent,
-    workspaceProjectionSource: document.querySelector('[data-sage-workspace]')?.getAttribute('data-projection-source') ?? null,
-  }))()`)
+  // 1. The strict-CSP document starts unavailable, then the real state read must drive the
+  // fixture marker into the DOM. Waiting here prevents a pre-baked fixture shell from passing.
+  const documentFacts = await evaluate(window, `(async () => {
+    const deadline = Date.now() + 4000
+    while (Date.now() < deadline) {
+      const workspace = document.querySelector('[data-sage-workspace]')
+      if (workspace?.getAttribute('data-projection-source') === 'fixture') {
+        return {
+          overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
+          title: document.querySelector('#state-title').textContent,
+          workspaceProjectionSource: workspace.getAttribute('data-projection-source'),
+          matterRenderState: workspace.getAttribute('data-matter-render-state'),
+          matterId: document.querySelector('#matter-detail-id')?.textContent ?? null,
+          matterGoal: document.querySelector('#matter-detail-goal')?.textContent ?? null,
+          matterRevision: document.querySelector('#matter-detail-revision')?.textContent ?? null,
+        }
+      }
+      await new Promise((resolve) => { setTimeout(resolve, 10) })
+    }
+    const workspace = document.querySelector('[data-sage-workspace]')
+    return {
+      overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
+      title: document.querySelector('#state-title').textContent,
+      workspaceProjectionSource: workspace?.getAttribute('data-projection-source') ?? null,
+      matterRenderState: workspace?.getAttribute('data-matter-render-state') ?? null,
+      matterId: document.querySelector('#matter-detail-id')?.textContent ?? null,
+      matterGoal: document.querySelector('#matter-detail-goal')?.textContent ?? null,
+      matterRevision: document.querySelector('#matter-detail-revision')?.textContent ?? null,
+    }
+  })()`)
   evidence.documentFacts = documentFacts
   requireCondition(documentFacts.overviewVisible === true, 'inline script did not run under the strict CSP')
   requireCondition(documentFacts.workspaceProjectionSource === 'fixture', 'fixture marker is not visible in the workspace document')
+  requireCondition(documentFacts.matterRenderState === 'fixture', 'fixture wire state did not drive the renderer')
+  requireCondition(documentFacts.matterGoal === fixtureProjection?.().matter.goal, 'fixture wire goal did not drive the renderer')
+
+  // 1b. Exercise the semantic and keyboard contract in Chromium rather than only in the Fake DOM.
+  const uiContractFacts = await evaluate(window, `(() => {
+    const pairs = [
+      ['overview', 'view-overview', 'panel-overview'],
+      ['matter', 'view-matter', 'panel-matter'],
+      ['capabilities', 'view-capabilities', 'panel-capabilities'],
+      ['governance', 'view-governance', 'panel-governance'],
+      ['profile', 'view-profile', 'panel-profile'],
+      ['readout', 'view-readout', 'panel-readout'],
+      ['settings', 'view-settings', 'panel-settings'],
+    ]
+    const tabPairsValid = pairs.every(([view, tabId, panelId]) => {
+      const tab = document.querySelector('[data-view="' + view + '"]')
+      const panel = document.querySelector('[data-panel="' + view + '"]')
+      return tab?.id === tabId
+        && tab.getAttribute('aria-controls') === panelId
+        && panel?.id === panelId
+        && panel.getAttribute('aria-labelledby') === tabId
+    })
+    const trigger = document.querySelector('#user-menu')
+    const panel = document.querySelector('#user-menu-panel')
+    trigger.click()
+    const opened = panel.hidden === false && trigger.getAttribute('aria-expanded') === 'true'
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    panel.dispatchEvent(escape)
+    const escaped = escape.defaultPrevented
+      && panel.hidden === true
+      && trigger.getAttribute('aria-expanded') === 'false'
+      && document.activeElement === trigger
+    const css = document.querySelector('style')?.textContent ?? ''
+    return {
+      tabPairsValid,
+      opened,
+      escaped,
+      reducedMotionRule: css.includes('@media (prefers-reduced-motion: reduce)'),
+      allControlFocusRule: css.includes(':where(button, select, input, textarea):focus-visible'),
+    }
+  })()`)
+  evidence.uiContractFacts = uiContractFacts
+  requireCondition(uiContractFacts.tabPairsValid === true, 'tab and panel ARIA references are not reciprocal')
+  requireCondition(uiContractFacts.opened === true, 'user menu did not open in the real renderer')
+  requireCondition(uiContractFacts.escaped === true, 'Escape did not close the user menu and return focus')
+  requireCondition(uiContractFacts.reducedMotionRule === true, 'reduced-motion rule is absent from the served document')
+  requireCondition(uiContractFacts.allControlFocusRule === true, 'focus-visible rule does not cover all interactive control families')
+
+  // 1c. Reflow the same built document at the narrow breakpoint and at 200% zoom. These checks do
+  // not judge visual taste; they only block horizontal clipping of the product shell.
+  window.setMinimumSize(320, 400)
+  window.setContentSize(657, 840)
+  await delay(50)
+  const narrowLayout = await evaluate(window, `(() => ({
+    innerWidth: window.innerWidth,
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    noHorizontalOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  }))()`)
+  evidence.narrowLayout = narrowLayout
+  requireCondition(narrowLayout.innerWidth <= 657, 'real window did not enter the requested narrow viewport')
+  requireCondition(narrowLayout.noHorizontalOverflow === true, 'narrow viewport has horizontal overflow')
+
+  window.webContents.setZoomFactor(2)
+  await delay(50)
+  const zoomLayout = await evaluate(window, `(() => ({
+    zoomFactor: 2,
+    innerWidth: window.innerWidth,
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    noHorizontalOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  }))()`)
+  evidence.zoomLayout = zoomLayout
+  requireCondition(zoomLayout.noHorizontalOverflow === true, '200% zoom has horizontal overflow')
 
   // 2. The real protocol wire carries the fixture matter projection.
   const stateProbe = await evaluate(window, `fetch('/.sage/state', {cache: 'no-store'})
@@ -144,6 +242,9 @@ async function run() {
   evidence.stateProbe = stateProbe.status === 200
     ? {
         status: stateProbe.status,
+        matterId: stateProbe.body?.matter?.matter?.matterId ?? null,
+        matterGoal: stateProbe.body?.matter?.matter?.goal ?? null,
+        matterRevision: stateProbe.body?.matter?.matter?.currentRevisionId ?? null,
         matterProjectionSource: stateProbe.body?.matter?.projectionSource ?? null,
         matterActionability: stateProbe.body?.matter?.actionability ?? null,
         matterDenialReason: stateProbe.body?.matter?.denialReason ?? null,
@@ -155,6 +256,10 @@ async function run() {
   requireCondition(stateProbe.status === 200, `/.sage/state over the wire returned ${JSON.stringify(stateProbe.status)}`)
   const wire = evidence.stateProbe
   requireCondition(wire.matterProjectionSource === 'fixture', 'matter projection source is not fixture on the wire')
+  requireCondition(documentFacts.matterId === wire.matterId, 'rendered matterId did not come from the same wire projection')
+  requireCondition(documentFacts.matterGoal === wire.matterGoal, 'rendered goal did not come from the same wire projection')
+  requireCondition(documentFacts.matterRevision === wire.matterRevision, 'rendered revision did not come from the same wire projection')
+  requireCondition(documentFacts.workspaceProjectionSource === wire.matterProjectionSource, 'rendered projectionSource did not come from the same wire projection')
   requireCondition(wire.matterActionability === 'blocked', 'fixture matter is not blocked')
   requireCondition(wire.matterDenialReason === 'fixture-only', 'fixture matter denial reason is not fixture-only')
   requireCondition(wire.serviceStatus === 'unavailable', 'service status drifted from unavailable-first')

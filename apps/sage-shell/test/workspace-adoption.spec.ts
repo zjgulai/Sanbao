@@ -4,6 +4,7 @@ import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createWorkspaceAdoption } from '../src/main/workspace-adoption.js'
 import { renderSageDocument } from '../src/product/renderer.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 010, adoption chain (US-057~062). The order is the contract: pick first, create only when
@@ -82,7 +83,7 @@ describe('the adoption route and its projection', () => {
   }
 
   it('answers only POST and reports an unwired custodian instead of doing nothing', async () => {
-    const providers = createUnavailableFirstService(null, {})
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     const wrongMethod = await post(providers, 'GET')
     expect(wrongMethod.status).toBe(405)
     expect(wrongMethod.body).toBeNull()
@@ -100,7 +101,9 @@ describe('the adoption route and its projection', () => {
 
   it('projects the last attempt so the surface can show what happened', async () => {
     let outcome = { state: 'cancelled' as const }
-    const providers = createUnavailableFirstService(null, { adoptWorkspace: async () => outcome })
+    const providers = withProjectionReadTestAdmission(
+      createUnavailableFirstService(null, { adoptWorkspace: async () => outcome }),
+    )
     expect((await post(providers)).body).toEqual({ state: 'cancelled' })
 
     const state = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state', { method: 'GET' }), {

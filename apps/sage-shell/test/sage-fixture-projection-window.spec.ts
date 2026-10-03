@@ -19,7 +19,34 @@ interface ProbeResult {
   readonly chromium: string | null
   readonly processType: string | null
   readonly evidence: {
-    readonly documentFacts?: { readonly overviewVisible: boolean; readonly title: string; readonly workspaceProjectionSource: string | null }
+    readonly documentFacts?: {
+      readonly overviewVisible: boolean
+      readonly title: string
+      readonly workspaceProjectionSource: string | null
+      readonly matterId: string | null
+      readonly matterGoal: string | null
+      readonly matterRevision: string | null
+    }
+    readonly uiContractFacts?: {
+      readonly tabPairsValid: boolean
+      readonly opened: boolean
+      readonly escaped: boolean
+      readonly reducedMotionRule: boolean
+      readonly allControlFocusRule: boolean
+    }
+    readonly narrowLayout?: {
+      readonly innerWidth: number
+      readonly clientWidth: number
+      readonly scrollWidth: number
+      readonly noHorizontalOverflow: boolean
+    }
+    readonly zoomLayout?: {
+      readonly zoomFactor: number
+      readonly innerWidth: number
+      readonly clientWidth: number
+      readonly scrollWidth: number
+      readonly noHorizontalOverflow: boolean
+    }
     readonly stateProbe?: Record<string, unknown>
     readonly actionsProbe?: { readonly status: number; readonly code: string | null; readonly stage: string | null }
     readonly sageRootEntries?: readonly string[]
@@ -168,6 +195,33 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
       serviceStatus: 'unavailable',
       runtimeStatus: 'ready',
       authStatus: 'signed-out',
+    })
+    expect({
+      matterId: result.evidence.documentFacts?.matterId,
+      matterGoal: result.evidence.documentFacts?.matterGoal,
+      matterRevision: result.evidence.documentFacts?.matterRevision,
+      projectionSource: result.evidence.documentFacts?.workspaceProjectionSource,
+    }).toEqual({
+      matterId: result.evidence.stateProbe?.matterId,
+      matterGoal: result.evidence.stateProbe?.matterGoal,
+      matterRevision: result.evidence.stateProbe?.matterRevision,
+      projectionSource: result.evidence.stateProbe?.matterProjectionSource,
+    })
+
+    expect(result.evidence.uiContractFacts).toEqual({
+      tabPairsValid: true,
+      opened: true,
+      escaped: true,
+      reducedMotionRule: true,
+      allControlFocusRule: true,
+    })
+    expect(result.evidence.narrowLayout).toMatchObject({
+      noHorizontalOverflow: true,
+    })
+    expect(result.evidence.narrowLayout?.innerWidth).toBeLessThanOrEqual(657)
+    expect(result.evidence.zoomLayout).toMatchObject({
+      zoomFactor: 2,
+      noHorizontalOverflow: true,
     })
 
     // The blocked write path stays typed.

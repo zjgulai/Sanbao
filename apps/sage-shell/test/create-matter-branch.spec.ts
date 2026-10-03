@@ -15,6 +15,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SageDispatchIntent } from '../src/appservice/command-contracts.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 002, creation half. ADR-0005 is explicit: every formal matter is created by the custody
@@ -124,9 +125,9 @@ describe('create-matter is a custody action, not a local write', () => {
   })
 
   it('classifies the custody gap as not-ready so the surface offers no replay', async () => {
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       commandPorts: { ...PRODUCTION_FAIL_CLOSED_PORTS, ...authorityAllows },
-    })
+    }))
     const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/actions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

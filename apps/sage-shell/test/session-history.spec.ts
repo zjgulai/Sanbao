@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createSessionHistory } from '../src/main/session-history.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 009 (US-024/097~100) at the module and route seams.
@@ -191,10 +192,10 @@ describe('the cold-history module (ticket 009)', () => {
 describe('the history route (ticket 009)', () => {
   it('parses exactly, forwards markers, and keeps an unwired family honest', async () => {
     const seen: unknown[] = []
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       sessionHistoryList: async (request) => { seen.push({ list: request }); return { state: 'read', runs: [], hasMore: false, nextBeforeSeq: null } },
       sessionHistoryDetail: async (request) => { seen.push({ detail: request }); return { state: 'missing', runSeq: request.runSeq, code: 'marker' } },
-    })
+    }))
     const post = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/history', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-009' }, providers } as never,
@@ -207,7 +208,7 @@ describe('the history route (ticket 009)', () => {
     expect((await post({ action: 'list', beforeSeq: -1 })).status).toBe(400)
     expect((await post({ action: 'list', extra: 1 })).status).toBe(400)
 
-    const unwired = createUnavailableFirstService(null, {})
+    const unwired = withProjectionReadTestAdmission(createUnavailableFirstService(null, {}))
     const postUnwired = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/session/history', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
       { callerBinding: { correlation: 'c-009' }, providers: unwired } as never,

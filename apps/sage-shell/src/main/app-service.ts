@@ -9,7 +9,9 @@ import type { SageMatterViewState } from '../product/view-state.js'
 import { createSageFixtureViewState } from '../product/view-state.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../appservice/composition.js'
 import { serviceJson } from '../appservice/errors.js'
-import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus } from '../appservice/contracts.js'
+import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner } from '../appservice/contracts.js'
+import { admitProjectionRead } from '../appservice/projection-read-admission.js'
+import type { ProjectionReadOperation, ProjectionReadScope } from '../appservice/projection-read-admission.js'
 import type { CommandPipelinePorts, SageDispatchIntent } from '../appservice/command-contracts.js'
 import type { ActionConfirmationsWiring } from '../appservice/action-confirmations.js'
 import type { RuntimeEffectiveObservation } from '../protocol.js'
@@ -21,6 +23,16 @@ import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
 import type { StrictRehydratePort } from './matter-rehydrate-port.js'
+import type { CallerBinding } from '../appservice/contracts.js'
+import type {
+  ActiveMatterContextStatus,
+  ActiveMatterSelectionOutcome,
+  ActiveMatterSelectionRequest,
+} from '../appservice/contracts.js'
+import type { ProtectedEffectAdmissionPorts } from '../appservice/protected-effect-admission.js'
+import type { ActiveMatterContext } from './active-matter-context.js'
+import type { FramePolicyState } from './frame-policy.js'
+import { projectionReadScope } from './projection-read-scope.js'
 
 /** WT-02D.1 fixture switch: read once from env. The fixture projection only fills the read-only
  * matter slot for local verification and can never satisfy production authority. */
@@ -40,6 +52,28 @@ export interface SageAppServiceOptions {
   readonly viewState: SageViewState
   readonly vault: TokenVault
   readonly adapter: OidcAdapter
+  /** AUTH-02A: request-local caller and main-owned active context. Neither may be reconstructed
+   * from renderer fields, draft recency, Host state, or an earlier request. */
+  readonly callerBinding?: CallerBinding | null
+  readonly activeMatterContext?: ActiveMatterContext
+  readonly framePolicySnapshot?: () => FramePolicyState
+  /** CTX-01B: the only path that may replace the active matter tuple. */
+  readonly selectActiveMatter?: (request: ActiveMatterSelectionRequest) => Promise<ActiveMatterSelectionOutcome>
+  /** READ-01A: authentication is not read authority. This independent provider must bind one
+   * current session + matter + operation to an actor scope before any store or Host read. */
+  readonly authorizeProjectionRead?: (request: {
+    readonly sessionRef: string
+    readonly matterId: string
+    readonly operation: ProjectionReadOperation
+  }) =>
+    | { readonly state: 'allowed'; readonly actorScopeRef: string; readonly decisionRef: string }
+    | { readonly state: 'denied' }
+    | undefined
+    | Promise<
+      | { readonly state: 'allowed'; readonly actorScopeRef: string; readonly decisionRef: string }
+      | { readonly state: 'denied' }
+      | undefined
+    >
   readonly fixtureProjection?: () => SageMatterViewState
   /** WT-02C.2E.2: main-owned runtime inventory provider; the seam exists ahead of its
    * C2E.2 resolver consumer and carries no behavior change for current routes. */
@@ -254,6 +288,336 @@ function createAuthorizationCommandPorts(options: SageAppServiceOptions & { read
   }
 }
 
+function fixtureProjectionReadScope(options: SageAppServiceOptions): ProjectionReadScope {
+  const fixture = options.fixtureProjection?.()
+  return {
+    matterRef: fixture?.matter.matterId ?? 'fixture:matter',
+    revisionRef: fixture?.matter.currentRevisionId ?? 'fixture:revision',
+    workspaceRef: 'fixture:workspace',
+    trustedWorkspaceRoot: 'fixture:workspace-root',
+    sessionRef: 'fixture:session',
+    actorScopeRef: 'fixture:actor',
+    contextGeneration: 0,
+    frameGeneration: 0,
+  }
+}
+
+function matchesProjectionReadScope(
+  options: SageAppServiceOptions,
+  scope: ProjectionReadScope,
+): 'allowed' | 'unavailable' | 'stale' {
+  const binding = options.callerBinding
+  const snapshot = options.activeMatterContext?.snapshot()
+  const frame = options.framePolicySnapshot?.()
+  const identitySession = options.vault.identitySession()
+  if (
+    binding === undefined
+    || binding === null
+    || snapshot === undefined
+    || snapshot === null
+    || snapshot.sessionRef === null
+    || frame === undefined
+    || identitySession === null
+  ) return 'unavailable'
+  if (!frame.ready || frame.contaminated) return 'unavailable'
+  if (
+    identitySession.sessionRef !== scope.sessionRef
+    || snapshot.sessionRef !== scope.sessionRef
+    || snapshot.matterId !== scope.matterRef
+    || snapshot.revisionId !== scope.revisionRef
+    || snapshot.workspaceRef !== scope.workspaceRef
+    || snapshot.trustedWorkspaceRoot !== scope.trustedWorkspaceRoot
+    || snapshot.actorScopeRef !== scope.actorScopeRef
+    || snapshot.contextGeneration !== scope.contextGeneration
+    || snapshot.frameGeneration !== scope.frameGeneration
+    || frame.generation !== scope.frameGeneration
+  ) return 'stale'
+  return options.activeMatterContext?.match({
+    contextGeneration: scope.contextGeneration,
+    actorScopeRef: scope.actorScopeRef,
+    matterId: scope.matterRef,
+    revisionId: scope.revisionRef,
+    workspaceRef: scope.workspaceRef,
+    sessionRef: scope.sessionRef,
+    frameGeneration: scope.frameGeneration,
+  }).ok === true ? 'allowed' : 'stale'
+}
+
+/** READ-01A: one production runner owns the entire projection-read admission sequence. The only
+ * bypass is the explicit state fixture used by the local window probe; it is visibly fixture-only
+ * and cannot authorize any other route. */
+function createProjectionReadRunner(options: SageAppServiceOptions): ProjectionReadRouteRunner {
+  return async (intent, read) => {
+    const correlation = options.callerBinding?.correlation ?? randomUUID()
+    if (options.fixtureProjection !== undefined && intent.operation === 'state.read') {
+      const scope = fixtureProjectionReadScope(options)
+      try {
+        const value = await projectionReadScope.run(scope, () => read(scope))
+        return value instanceof Response
+          ? { state: 'read', correlation, value }
+          : { state: 'unavailable', code: 'projection-read-unavailable', stage: 'read', retryable: true, correlation }
+      } catch {
+        return { state: 'unavailable', code: 'projection-read-unavailable', stage: 'read', retryable: true, correlation }
+      }
+    }
+
+    return admitProjectionRead<ProjectionReadCandidate, Response>({
+      intent,
+      correlation,
+      ports: {
+        verifyCaller: async () => {
+          const binding = options.callerBinding
+          return binding === undefined || binding === null
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { bindingRef: binding.correlation } }
+        },
+        resolveInitialContext: async ({ caller }) => {
+          const binding = options.callerBinding
+          if (binding === undefined || binding === null || caller.bindingRef !== binding.correlation) {
+            return { state: 'denied' as const }
+          }
+          const snapshot = options.activeMatterContext?.snapshot()
+          const identitySession = options.vault.identitySession()
+          if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null || identitySession === null) {
+            return { state: 'unavailable' as const }
+          }
+          if (identitySession.sessionRef !== snapshot.sessionRef) return { state: 'stale' as const }
+          return {
+            state: 'allowed' as const,
+            value: {
+              scope: 'request' as const,
+              callerBindingRef: binding.correlation,
+              sessionRef: snapshot.sessionRef,
+              matterRef: snapshot.matterId,
+              contextGeneration: snapshot.contextGeneration,
+              frameGeneration: snapshot.frameGeneration,
+            },
+          }
+        },
+        authorizeRead: async ({ operation, initialContext }) => {
+          const decision = await options.authorizeProjectionRead?.({
+            sessionRef: initialContext.sessionRef,
+            matterId: initialContext.matterRef,
+            operation,
+          })
+          if (decision === undefined) return { state: 'unavailable' as const }
+          if (decision.state === 'denied') return { state: 'denied' as const }
+          return {
+            state: 'allowed' as const,
+            value: { decisionRef: decision.decisionRef, actorScopeRef: decision.actorScopeRef },
+          }
+        },
+        resolveFreshScope: async ({ initialContext, readPolicy }) => {
+          const snapshot = options.activeMatterContext?.snapshot()
+          const frame = options.framePolicySnapshot?.()
+          if (
+            snapshot === undefined
+            || snapshot === null
+            || snapshot.sessionRef === null
+            || frame === undefined
+            || !frame.ready
+            || frame.contaminated
+          ) return { state: 'unavailable' as const }
+          if (
+            snapshot.sessionRef !== initialContext.sessionRef
+            || snapshot.matterId !== initialContext.matterRef
+            || snapshot.contextGeneration !== initialContext.contextGeneration
+            || snapshot.frameGeneration !== initialContext.frameGeneration
+            || snapshot.frameGeneration !== frame.generation
+            || snapshot.actorScopeRef !== readPolicy.actorScopeRef
+          ) return { state: 'stale' as const }
+
+          const currentRevision = options.matterRehydrate?.({
+            matterId: snapshot.matterId,
+            revisionId: snapshot.revisionId,
+          })
+          if (currentRevision === undefined) return { state: 'unavailable' as const }
+          if ('denied' in currentRevision || !currentRevision.current) return { state: 'stale' as const }
+
+          const links = options.matterLinks?.()
+          if (links === undefined || links.state !== 'read') return { state: 'unavailable' as const }
+          const defaults = links.links.filter((link) => link.matterRef === snapshot.matterId && link.isDefault)
+          if (
+            defaults.length !== 1
+            || defaults[0]?.workspaceRef !== snapshot.workspaceRef
+            || defaults[0]?.workspacePath !== snapshot.trustedWorkspaceRoot
+          ) return { state: 'stale' as const }
+
+          const readWorkspaceList = options.workspaceList
+          if (readWorkspaceList === undefined) return { state: 'unavailable' as const }
+          let workspaces: WorkspaceListStatus
+          try {
+            workspaces = await readWorkspaceList()
+          } catch {
+            return { state: 'unavailable' as const }
+          }
+          if (workspaces.state !== 'read') return { state: 'unavailable' as const }
+          const matches = workspaces.entries.filter((entry) => entry.workspaceId === snapshot.workspaceRef)
+          if (matches.length !== 1 || matches[0]?.path !== snapshot.trustedWorkspaceRoot) {
+            return { state: 'stale' as const }
+          }
+
+          return {
+            state: 'allowed' as const,
+            value: {
+              matterRef: snapshot.matterId,
+              revisionRef: snapshot.revisionId,
+              workspaceRef: snapshot.workspaceRef,
+              trustedWorkspaceRoot: snapshot.trustedWorkspaceRoot,
+              sessionRef: snapshot.sessionRef,
+              actorScopeRef: readPolicy.actorScopeRef,
+              contextGeneration: snapshot.contextGeneration,
+              frameGeneration: snapshot.frameGeneration,
+            },
+          }
+        },
+        matchCandidate: async ({ candidate, scope }) => {
+          if (candidate.kind === 'collection') return { state: 'unavailable' as const }
+          if (candidate.kind === 'active-matter') {
+            return { state: 'allowed' as const, value: { candidateRef: `matter:${scope.matterRef}` } }
+          }
+          if (candidate.kind === 'workspace') {
+            return candidate.workspaceRoot === scope.trustedWorkspaceRoot
+              ? { state: 'allowed' as const, value: { candidateRef: `workspace:${scope.workspaceRef}` } }
+              : { state: 'denied' as const }
+          }
+          if (candidate.kind === 'matter-workspace') {
+            return candidate.matterRef === scope.matterRef && candidate.workspaceRoot === scope.trustedWorkspaceRoot
+              ? { state: 'allowed' as const, value: { candidateRef: `matter-workspace:${scope.matterRef}:${scope.workspaceRef}` } }
+              : { state: 'denied' as const }
+          }
+          // Opaque reference/artifact/draft ids need a main-owned object-to-scope resolver. None
+          // exists yet, so an active-matter grant cannot be stretched to cover them.
+          return { state: 'unavailable' as const }
+        },
+        checkPreReadFreshness: async ({ scope }) => {
+          const state = matchesProjectionReadScope(options, scope)
+          return state === 'allowed'
+            ? { state: 'allowed' as const, value: { freshnessRef: `${scope.contextGeneration}:${scope.frameGeneration}:${scope.revisionRef}` } }
+            : { state }
+        },
+        read: async ({ scope }) => projectionReadScope.run(scope, async () => ({
+          state: 'allowed' as const,
+          value: await read(scope),
+        })),
+        validatesReadValue: (value: unknown): value is Response => value instanceof Response,
+        checkPostReadFreshness: async ({ scope }) => {
+          const state = matchesProjectionReadScope(options, scope)
+          return state === 'allowed'
+            ? { state: 'allowed' as const, value: { freshnessRef: `${scope.contextGeneration}:${scope.frameGeneration}:${scope.revisionRef}` } }
+            : { state }
+        },
+      },
+    })
+  }
+}
+
+/** AUTH-02A/02B assemble caller/context/candidate checks for the admitted session family. Later
+ * authority ports remain absent, and composition withholds dispatch, so production stays
+ * unavailable-first. Every request rechecks the identity session, current revision, default link,
+ * fresh workspace fold and renderer frame before the active snapshot can be reused. */
+function createSessionCoreProtectedEffectPorts(
+  options: SageAppServiceOptions,
+): Omit<ProtectedEffectAdmissionPorts, 'dispatch'> {
+  return {
+    verifyCaller: async () => {
+      const binding = options.callerBinding
+      return binding === undefined || binding === null
+        ? { state: 'unavailable' as const }
+        : { state: 'allowed' as const, value: { bindingRef: binding.correlation } }
+    },
+    resolveActiveContext: async ({ caller }) => {
+      const binding = options.callerBinding
+      if (binding === undefined || binding === null || caller.bindingRef !== binding.correlation) {
+        return { state: 'denied' as const }
+      }
+      const snapshot = options.activeMatterContext?.snapshot()
+      if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) {
+        return { state: 'unavailable' as const }
+      }
+      const identitySession = options.vault.identitySession()
+      if (identitySession === null) return { state: 'unavailable' as const }
+      // A login identity handle is not an authorization actor scope. Only the session binding is
+      // comparable here; the independent policy stage must bind actorScopeRef later.
+      if (identitySession.sessionRef !== snapshot.sessionRef) return { state: 'stale' as const }
+
+      const currentRevision = options.matterRehydrate?.({
+        matterId: snapshot.matterId,
+        revisionId: snapshot.revisionId,
+      })
+      if (currentRevision === undefined) return { state: 'unavailable' as const }
+      if ('denied' in currentRevision || !currentRevision.current) return { state: 'stale' as const }
+
+      const links = options.matterLinks?.()
+      if (links === undefined || links.state !== 'read') return { state: 'unavailable' as const }
+      const defaults = links.links.filter((link) => link.matterRef === snapshot.matterId && link.isDefault)
+      if (
+        defaults.length !== 1
+        || defaults[0]?.workspaceRef !== snapshot.workspaceRef
+        || defaults[0]?.workspacePath !== snapshot.trustedWorkspaceRoot
+      ) return { state: 'stale' as const }
+
+      const readWorkspaceList = options.workspaceList
+      if (readWorkspaceList === undefined) return { state: 'unavailable' as const }
+      let workspaces: WorkspaceListStatus
+      try {
+        workspaces = await readWorkspaceList()
+      } catch {
+        return { state: 'unavailable' as const }
+      }
+      if (workspaces.state !== 'read') return { state: 'unavailable' as const }
+      const matches = workspaces.entries.filter((entry) => entry.workspaceId === snapshot.workspaceRef)
+      if (matches.length !== 1 || matches[0]?.path !== snapshot.trustedWorkspaceRoot) {
+        return { state: 'stale' as const }
+      }
+
+      const frame = options.framePolicySnapshot?.()
+      if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }
+      if (snapshot.frameGeneration !== frame.generation) return { state: 'stale' as const }
+      return {
+        state: 'allowed' as const,
+        value: {
+          scope: 'request' as const,
+          callerBindingRef: binding.correlation,
+          sessionRef: snapshot.sessionRef,
+          matterRef: snapshot.matterId,
+          revisionRef: snapshot.revisionId,
+          generation: String(snapshot.contextGeneration),
+        },
+      }
+    },
+    matchCandidate: async ({ context }) => {
+      const active = options.activeMatterContext
+      const frame = options.framePolicySnapshot?.()
+      const snapshot = active?.snapshot()
+      if (active === undefined || frame === undefined || !frame.ready || frame.contaminated || snapshot === undefined || snapshot === null || snapshot.sessionRef === null) {
+        return { state: 'unavailable' as const }
+      }
+      if (
+        snapshot.frameGeneration !== frame.generation
+        || String(snapshot.contextGeneration) !== context.generation
+        || snapshot.sessionRef !== context.sessionRef
+        || snapshot.matterId !== context.matterRef
+        || snapshot.revisionId !== context.revisionRef
+      ) return { state: 'stale' as const }
+      const matched = active.match({
+        contextGeneration: snapshot.contextGeneration,
+        actorScopeRef: snapshot.actorScopeRef,
+        matterId: snapshot.matterId,
+        revisionId: snapshot.revisionId,
+        workspaceRef: snapshot.workspaceRef,
+        sessionRef: snapshot.sessionRef,
+        frameGeneration: snapshot.frameGeneration,
+      })
+      if (!matched.ok) return { state: 'stale' as const }
+      return {
+        state: 'allowed' as const,
+        value: { candidateRef: `active:${context.matterRef}:${context.revisionRef}:${context.generation}` },
+      }
+    },
+  }
+}
+
 /** Assemble providers for one request; callers pass a fresh `viewState` per evaluation. */
 export function createSageAppServiceProviders(options: SageAppServiceOptions): ServiceProviders {
   const { viewState, vault, adapter } = options
@@ -261,6 +625,18 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     authSnapshot: () => vault.status() === 'pending'
       ? { status: 'pending' as const, displayName: null }
       : vault.snapshot(),
+    activeMatterContext: (): ActiveMatterContextStatus => {
+      const context = options.activeMatterContext
+      if (context === undefined) return { state: 'unavailable', contextGeneration: null }
+      const projection = context.projection()
+      return projection === null
+        ? { state: 'inactive', contextGeneration: context.contextGeneration() }
+        : { state: 'active', ...projection }
+    },
+    ...(options.selectActiveMatter === undefined ? {} : { selectActiveMatter: options.selectActiveMatter }),
+    runProjectionRead: createProjectionReadRunner(options),
+    protectedEffectPorts: createSessionCoreProtectedEffectPorts(options),
+    protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),
     ...(options.runtimeEffective === undefined ? {} : { runtimeEffective: options.runtimeEffective }),
     ...(options.modelConfig === undefined ? {} : { modelConfig: options.modelConfig }),
@@ -395,6 +771,21 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
       )
     },
     logout: async () => {
+      const active = options.activeMatterContext
+      const snapshot = active?.snapshot()
+      if (active !== undefined && snapshot !== undefined && snapshot !== null) {
+        active.invalidate({
+          expected: {
+            contextGeneration: snapshot.contextGeneration,
+            actorScopeRef: snapshot.actorScopeRef,
+            matterId: snapshot.matterId,
+            revisionId: snapshot.revisionId,
+            workspaceRef: snapshot.workspaceRef,
+            sessionRef: snapshot.sessionRef,
+            frameGeneration: snapshot.frameGeneration,
+          },
+        })
+      }
       vault.signOut()
       return serviceJson({ auth: 'signed-out' }, 200)
     },

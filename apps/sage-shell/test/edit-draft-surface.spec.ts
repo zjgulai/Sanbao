@@ -10,6 +10,7 @@ import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import type { FileReferenceRecord } from '../src/appservice/contracts.js'
 import { createEditDrafts } from '../src/main/edit-drafts.js'
 import { renderSageDocument } from '../src/product/renderer.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 027 at the S1 routes (US-140~145).
@@ -76,14 +77,14 @@ function harness(options: { readonly wired?: boolean, readonly execute?: (reques
       return options.execute!(request)
     } }),
   })
-  const providers = createUnavailableFirstService(null, options.wired === false ? {} : {
+  const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, options.wired === false ? {} : {
     editDrafts: editDrafts.list,
     editDraftCreate: editDrafts.create,
     editDraftUpdate: editDrafts.update,
     editDraftDiff: editDrafts.diff,
     editDraftPrepareWriteback: editDrafts.prepareWriteback,
     editDraftWriteback: editDrafts.writeback,
-  })
+  }))
   const post = (path: string, body: unknown) => handleSageServiceRequest(
     new Request(`dsh-app://app${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
     { callerBinding: { correlation: 'c-027' }, providers } as never,

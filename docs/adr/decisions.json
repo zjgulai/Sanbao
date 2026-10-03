@@ -7329,6 +7329,317 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0248",
+      "title": "ADR-0248 · UI 接线第一批：冻结 Qoder 来源、57-route authority 真值与 matter payload 驱动 DOM",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Qoder 来源分为 main、Q-COMMITTED、Q-LOCAL 与 Q-DIRTY-OBSERVED；原 dirty worktree 只读，双采样稳定也只产生 observation，绝不自动应用。",
+          "constraints": [
+            "保护 Qoder dirty worktree",
+            "不把历史绿灯当本轮交付"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "固定 57-route authority truth matrix：13 read-only、5 local-preference、37 protected-effect、2 unsupported；2 条经 runCommand，35 条 protected bypass 保持 violation。",
+          "constraints": [
+            "Application Service 唯一编排入口",
+            "truth gate 不等于安全合规"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "CB1 保持 partial；origin-required、frame-ready、active-session、read-policy 缺项必须显式，不得因 route 在 main 内终止而推断完整 caller authority。",
+          "constraints": [
+            "caller binding fail closed",
+            "read policy 独立于 route ownership"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "renderer 只接受 exact nested service envelope；production 初始 matter 为 unavailable，null/fixture/live/malformed 真正驱动并清空 DOM，flat/off 退场。",
+          "constraints": [
+            "ADR-0184 main 唯一 owner",
+            "production 禁止 fixture placeholder"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "第一批不做 AUTH-02、真实 provider、Ticket 018/019 dirty 吸收、dependency 变更或完整视觉迁移；动态事项 action 保持只读、零 ActionIntent。",
+          "constraints": [
+            "Sanbao 只作证据",
+            "UI-01 技术选择前置",
+            "未接线就说未接线"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0249",
+      "title": "ADR-0249 · UI 接线第二批：main-owned active context 与 session protected-effect admission",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "活动事项上下文只由 Electron main 的 generation-bound kernel 持有；默认 inactive，不从 renderer、Host 或最新 converted draft 推断，也不新增 activation route。",
+          "constraints": [
+            "main-owned context",
+            "candidate is not authority",
+            "no draft-recency inference"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "session protected effect 使用独立异步 admission，固定 caller 到 dispatch 的十步顺序；持久化前零 dispatch，dispatch 后未知不自动重试。",
+          "constraints": [
+            "durable before dispatch",
+            "outcome unknown is not retryable",
+            "fail closed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "send、stop、resume 进入 admission；真实 authority provider 缺失时返回 protected-effect-unavailable，raw session provider 调用次数为零。",
+          "constraints": [
+            "renderer workspaceRoot is not authority",
+            "unavailable is not product-ready"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "57-route 分母不变：2 条 runCommand、3 条 protected admission、32 条 protected bypass violation；gate 只证明 matrix 与源码一致。",
+          "constraints": [
+            "truth gate is not availability proof",
+            "remaining bypasses stay explicit"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "本批 UI 只加固 Sage-owned renderer 的 ARIA、键盘、CSP、品牌隔离和 wire 同源；不新增依赖、不吸收 Qoder 018/019、不宣称视觉迁移完成。",
+          "constraints": [
+            "Sanbao is evidence only",
+            "UI-01 remains prerequisite"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0250",
+      "title": "ADR-0250 · UI 接线第三批：显式事项选择与 session-family authority 收口",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "事项选择只能由显式 POST 触发，candidate 只有 matterId 与 expectedContextGeneration；GET、send、link、draft recency 与 Host observation 均不得隐式激活。",
+          "constraints": [
+            "explicit selection only",
+            "candidate is not authority",
+            "CAS generation"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "selection 必须依次重读 identity session、独立 read authorization、current revision、default workspace、fresh workspace fold 与 FramePolicy；actor scope 只来自 read authorization。",
+          "constraints": [
+            "authentication is not authorization",
+            "trusted facts are main-owned",
+            "fail closed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "真实 matter read-policy provider 缺失时 production selection 返回 active-context-unavailable；route、kernel 与 UI 存在不等于选择功能可用。",
+          "constraints": [
+            "unavailable is not product-ready",
+            "no list-visibility inference"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "十条 session-family route 使用 protected admission，并在每次请求前重核 session、revision、default link、fresh workspace/path 与 frame；完整 authority 缺失时 raw provider 零调用。",
+          "constraints": [
+            "fresh context per request",
+            "deny before provider",
+            "no renderer root authority"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "58-route truth 为 2 runCommand、10 protected admission、1 context selection 与 25 protected bypass；本批不做视觉迁移、dependency 变更或 Qoder 018/019 产品写入。",
+          "constraints": [
+            "truth gate is not availability proof",
+            "remaining bypasses stay explicit",
+            "UI-01 remains prerequisite"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0251",
+      "title": "ADR-0251 · UI 接线第四批：projection read admission 与 request-scoped owner",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "13 条 read-only route 的 15 个 operation 统一进入 async projection-read admission；按 caller、initial context、read policy、fresh scope、candidate、pre freshness、read/decode、post freshness 固定顺序通过后才返回。",
+          "constraints": [
+            "one read authority seam",
+            "provider zero-call before allow",
+            "stable named operations",
+            "post-read drift discards value"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "production 缺 matter/object-bound read policy 时保持 unavailable-first；action grant、external-read、instance-operator、列表可见与 fixture 均不能补 projection-read authority。",
+          "constraints": [
+            "authentication is not read authorization",
+            "fixture is not authority",
+            "no local identity fallback"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "main 以 projectionReadScope.run/current 建立 admitted callback 内的 request-scoped ActiveContext owner；禁止 newest converted draft 或 scope 缺失 fallback。",
+          "constraints": [
+            "AsyncLocalStorage request scope",
+            "read does not activate context",
+            "no cross-request reuse"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "state 与 search 是集合或全局读取，在集合 policy、逐对象裁剪/redaction 与 anti-oracle 未定义前保持 unavailable/blocked。",
+          "constraints": [
+            "single matter scope does not widen",
+            "aggregate remains blocked",
+            "search remains blocked"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "本批只证明 13-route bypass 收口、request owner 与 unavailable-first，不声明真实读取可用；不改 dependency/package/lockfile，不 commit、不 push。",
+          "constraints": [
+            "wiring is not product availability",
+            "dirty local delivery only",
+            "no release claim"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0252",
+      "title": "ADR-0252 · UI 接线第五批：correction submit admission 收口",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "第五批只关闭 POST /.sage/corrections 的 submit bypass；稳定 operation 为 session.correction.submit，candidate 只使用 request matterRef。",
+          "constraints": [
+            "single-route tranche",
+            "exact operation",
+            "no neighboring route claim"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "protected intent 只携带 originalText、可选 originalAt 与 text；workspaceRoot 不是 authority 且不得进入 intent 或 authority ports。",
+          "constraints": [
+            "renderer path is untrusted",
+            "trusted root is main-derived",
+            "no workspaceRoot in intent"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "production 后续 authority、persistence 与 dispatch ports 缺失时保持 unavailable-first；raw correction provider 与 send 均为零调用。",
+          "constraints": [
+            "fail closed",
+            "provider zero-call before allow",
+            "no product availability claim"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "现有 raw owner 先 send 后记录，不满足 durable-before-dispatch，不得作为 production dispatch 或 persistence provider。",
+          "constraints": [
+            "durable operation identity before dispatch",
+            "outcome-unknown reconciliation required",
+            "no raw-owner fallback"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "protected admission 更新为 11 条、direct-provider bypass 留存 24 条；本批不改视觉、dependency、package/lockfile，不 commit、不 push。",
+          "constraints": [
+            "24 bypasses remain explicit",
+            "wiring is not send availability",
+            "local dirty delivery only"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0253",
+      "title": "ADR-0253 · UI 接线第六批：attachment upload admission 收口",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "第六批只关闭 POST /.sage/attachments/upload bypass；稳定 operation 为 session.attachment.upload，candidate 精确使用 request matterRef。",
+          "constraints": [
+            "single-route tranche",
+            "exact matter candidate",
+            "pick and cancel remain out of scope"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "protected intent payload 只携带 itemId；itemId 只是 opaque clue，workspaceRoot、path、digest、bytes 与 bridge / Host facts 不进入 authority。",
+          "constraints": [
+            "payload only itemId",
+            "renderer root is untrusted",
+            "main must resolve exact sealed record"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "production 后续 authority、persistence 与 dispatch ports 缺失时保持 unavailable-first；raw upload、Host endpoints 与 file I/O 均为零调用。",
+          "constraints": [
+            "fail closed",
+            "provider zero-call before allow",
+            "no attachment availability claim"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "现有 raw owner 的 run-local candidate、renderer root 与 upload begin / commit external state 不满足 durable operation、idempotency 和 outcome-unknown reconciliation，不得作为 production dispatch 或 persistence provider。",
+          "constraints": [
+            "durable operation identity before dispatch",
+            "outcome-unknown reconciliation required",
+            "no raw-owner fallback"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "protected admission 更新为 12 条、direct-provider bypass 留存 23 条；本批不改 pick/cancel、renderer、Host、kernel、dependency、package/lockfile，不跑真实 upload E2E，不 commit、不 push。",
+          "constraints": [
+            "23 bypasses remain explicit",
+            "wiring is not upload availability",
+            "local dirty delivery only"
+          ]
+        }
+      ]
     }
   ]
 }

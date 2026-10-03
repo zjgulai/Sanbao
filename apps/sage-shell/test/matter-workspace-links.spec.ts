@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createMatterLinkStore, foldLinks, type MatterLinkRecord } from '../src/main/matter-workspace-links.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
+import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 011 (US-065~070).
@@ -135,14 +136,14 @@ describe('the link route and its assertions', () => {
 
   it('blocks a dispatch whose default environment is gone, without running the pipeline', async () => {
     let ran = 0
-    const providers = createUnavailableFirstService(null, {
+    const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       // The gate answers "gone"; nothing else in the service may run.
       verifyEnvironment: () => ({ ok: false, code: 'environment-unavailable' }),
       commandPorts: {
         ...PRODUCTION_FAIL_CLOSED_PORTS,
         resolveIdentityPolicy: () => { ran += 1; return { kind: 'denied' as const, code: 'invalid-request' as const, reason: 'should not run' } },
       },
-    })
+    }))
     const response = await handleSageServiceRequest(
       new Request('dsh-app://app/.sage/actions', {
         method: 'POST',

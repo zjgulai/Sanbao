@@ -226,7 +226,7 @@ describe('read: reopening reads, never re-sends; a broken stream reconciles from
 })
 
 describe('the send route', () => {
-  it('parses exactly {matterRef, workspaceRoot, text} and answers unavailable-first when unwired', async () => {
+  it('parses exactly {matterRef, workspaceRoot, text} and blocks the raw provider before authority', async () => {
     const seen: string[] = []
     const providers = createUnavailableFirstService(null, {
       sessionSend: (request) => {
@@ -239,8 +239,8 @@ describe('the send route', () => {
       { callerBinding: { correlation: 'c-005' }, providers: target } as never,
     )
     expect(await (await post(JSON.stringify({ matterRef: 'receipt:1', workspaceRoot: '/a', text: '开始' }))).json())
-      .toEqual({ state: 'accepted', sessionId: 's-1', requestId: 'r-1' })
-    expect(seen).toEqual(['receipt:1:/a:开始'])
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(seen).toEqual([])
 
     for (const body of [
       'not json',
@@ -252,7 +252,7 @@ describe('the send route', () => {
     }
     const unwired = createUnavailableFirstService(null, {})
     expect(await (await post(JSON.stringify({ matterRef: 'm', workspaceRoot: '/a', text: 'x' }), unwired)).json())
-      .toEqual({ state: 'refused', code: 'session-channel-unavailable' })
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 })
 

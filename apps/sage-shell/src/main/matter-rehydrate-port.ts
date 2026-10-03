@@ -40,6 +40,12 @@ export interface MatterRehydratePortOptions {
 
 export interface MatterRehydratePort {
   readonly strictRehydrate: StrictRehydratePort
+  /** CTX-01B: resolve the current revision for an already access-authorized matter candidate.
+   * The caller must run the independent read-access port first; this method is not authorization. */
+  readonly resolveCurrent: (matterId: string) =>
+    | { readonly currentRevisionId: string }
+    | { readonly denied: 'not-found' }
+    | undefined
   /** Stop serving and release the database handle; later calls fail closed. */
   close(): void
 }
@@ -85,6 +91,26 @@ export function createMatterRehydratePort(options: MatterRehydratePortOptions): 
         return undefined
       }
       return { matter: loaded.matter, current: currentRevisionId === request.revisionId }
+    },
+    resolveCurrent: (matterId) => {
+      const database = opened()
+      if (database === undefined) return undefined
+      let loaded
+      try {
+        loaded = database.load(matterId)
+      } catch {
+        return undefined
+      }
+      if (loaded.kind === 'not-found') return { denied: 'not-found' }
+      if (loaded.kind === 'blocked') return undefined
+      try {
+        const currentRevisionId = projectBusinessMatter(loaded.matter).currentRevisionId
+        return typeof currentRevisionId === 'string' && currentRevisionId !== ''
+          ? { currentRevisionId }
+          : undefined
+      } catch {
+        return undefined
+      }
     },
     close: () => {
       closed = true
