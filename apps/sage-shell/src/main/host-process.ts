@@ -6,6 +6,7 @@ import { once } from 'node:events'
 import { Readable, Writable } from 'node:stream'
 import {
   HostResponseDecoder,
+  BRIDGE_ENDPOINTS,
   SHELL_HOST_PROTOCOL_VERSION,
   SHELL_PIPE_CHUNK_BYTES,
   SHELL_REQUEST_PIPE_FD,
@@ -21,6 +22,20 @@ import {
   type RuntimeEffectiveObservation,
 } from '../protocol.js'
 import type { HostRuntime } from './runtime.js'
+
+/** How long one read-only bridge call may stay unanswered before Electron reports the result as unknown. */
+const READONLY_BRIDGE_TIMEOUT_MS = 10_000
+/** Ticket 014: one attachment commit runs the base's own `uploadStream`, which lasts as long as the
+ *  whole file takes to reach the store; the read-only window would cut every real upload short. */
+const ATTACHMENT_COMMIT_TIMEOUT_MS = 120_000
+
+/** Rejection that carries a stable machine code instead of a prose-only message. */
+export class BridgeCallError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(message)
+    this.name = 'BridgeCallError'
+  }
+}
 
 interface PendingResponse {
   readonly resolve: (response: Response) => void
@@ -104,6 +119,13 @@ export class ShellHostProcess {
   private nextStreamId = 1
   private readonly pending = new Map<number, PendingResponse>()
   private readonly blockedResponses = new Set<number>()
+  private readonly bridgePending = new Map<string, {
+    readonly resolve: (value: unknown) => void
+    readonly reject: (error: Error) => void
+    /** Present only for stream calls: frames arrive here, in order, before the terminal result. */
+    readonly onFrame?: (frame: unknown) => void
+    lastSeq: number
+  }>()
   private readyResolve!: (ready: HostReady) => void
   private readyReject!: (error: Error) => void
   private readonly readyPromise = new Promise<HostReady>((resolve, reject) => {
@@ -443,6 +465,29 @@ export class ShellHostProcess {
 
   private handleMessage(message: HostEvent): void {
     switch (message.type) {
+      case 'bridge-result': {
+        const pending = this.bridgePending.get(message.callId)
+        if (pending === undefined) return
+        this.bridgePending.delete(message.callId)
+        if (message.ok === true) pending.resolve(message.result)
+        else pending.reject(new BridgeCallError(message.code, `sage shell: bridge call refused with ${JSON.stringify(message.code)}`))
+        return
+      }
+      case 'bridge-frame': {
+        const pending = this.bridgePending.get(message.callId)
+        // Unknown call, or a call that is not a stream: a frame with nowhere to go is dropped.
+        if (pending?.onFrame === undefined) return
+        // The Host's `seq` is the ordering authority: duplicates and out-of-order frames are
+        // ignored rather than merged, so a replay can never resurrect a stale workspace.
+        if (message.seq <= pending.lastSeq) return
+        pending.lastSeq = message.seq
+        try {
+          pending.onFrame(message.frame)
+        } catch {
+          // A consumer that throws must not take the whole IPC channel down with it.
+        }
+        return
+      }
       case 'ready': {
         if (this.terminal || this.readyState !== 'pending') return
         if (message.profileGeneration !== this.runtime.expectedProfileGeneration) {
@@ -520,6 +565,90 @@ export class ShellHostProcess {
     }
     this.pending.clear()
     this.blockedResponses.clear()
+    for (const pending of this.bridgePending.values()) {
+      pending.reject(new BridgeCallError('bridge-host-lost', 'sage shell: bridge Host stopped before answering'))
+    }
+    this.bridgePending.clear()
     this.responsePipe?.resume()
+  }
+
+  /**
+   * Invoke one allowlisted read-only base method inside the Host process.
+   * Both refusals (unknown endpoint, Host not active) happen before any frame leaves Electron.
+   * @param endpoint - logical endpoint from the shared read-only allowlist.
+   * @param payload - positional arguments; the allowlisted endpoints currently take none.
+   * @returns the plain-data result the Host serialized.
+   */
+  /** Run one allowlisted bridge endpoint in this process; never reaches the render side.
+   *  Read endpoints answer with state; interactive and write endpoints are named explicitly in the
+   *  frozen map, so a caller cannot smuggle a new capability in through a string. */
+  async bridgeCall(endpoint: string, payload: readonly unknown[] = []): Promise<unknown> {
+    if (!Object.hasOwn(BRIDGE_ENDPOINTS, endpoint)) {
+      throw new BridgeCallError('bridge-endpoint-unsupported', `sage shell: bridge endpoint ${JSON.stringify(endpoint)} is not allowlisted`)
+    }
+    if (BRIDGE_ENDPOINTS[endpoint] === 'stream') {
+      throw new BridgeCallError('bridge-stream-requires-consumer', `sage shell: bridge endpoint ${JSON.stringify(endpoint)} is a stream and needs a frame consumer`)
+    }
+    const child = this.child
+    if (this.snapshot.kind !== 'active' || child === undefined || !child.connected) {
+      throw new BridgeCallError('bridge-host-not-ready', 'sage shell: bridge requires an active Host')
+    }
+    const callId = randomUUID()
+    const answer = new Promise<unknown>((resolve, reject) => {
+      this.bridgePending.set(callId, { resolve, reject, lastSeq: -1 })
+    })
+    try {
+      this.send({ type: 'bridge-call', callId, endpoint, payload })
+    } catch (error) {
+      this.bridgePending.delete(callId)
+      throw new BridgeCallError('bridge-send-failed', error instanceof Error ? error.message : String(error))
+    }
+    const timeout = setTimeout(() => {
+      const pending = this.bridgePending.get(callId)
+      if (pending === undefined) return
+      this.bridgePending.delete(callId)
+      pending.reject(new BridgeCallError('bridge-result-unknown', 'sage shell: bridge call did not answer in time'))
+    }, endpoint === 'attachment/upload-commit' ? ATTACHMENT_COMMIT_TIMEOUT_MS : READONLY_BRIDGE_TIMEOUT_MS)
+    try {
+      return await answer
+    } finally {
+      clearTimeout(timeout)
+      this.bridgePending.delete(callId)
+    }
+  }
+
+  /** Run one allowlisted **stream** endpoint: frames arrive in order at `onFrame`, and the promise
+   *  settles with the subscription's terminal outcome (a refusal code included). The Host bounds
+   *  the frame count; a consumer that throws is its own problem and never breaks the channel. */
+  async bridgeStream(endpoint: string, payload: readonly unknown[], onFrame: (frame: unknown) => void): Promise<unknown> {
+    if (!Object.hasOwn(BRIDGE_ENDPOINTS, endpoint) || BRIDGE_ENDPOINTS[endpoint] !== 'stream') {
+      throw new BridgeCallError('bridge-endpoint-unsupported', `sage shell: bridge endpoint ${JSON.stringify(endpoint)} is not an allowlisted stream`)
+    }
+    const child = this.child
+    if (this.snapshot.kind !== 'active' || child === undefined || !child.connected) {
+      throw new BridgeCallError('bridge-host-not-ready', 'sage shell: bridge requires an active Host')
+    }
+    const callId = randomUUID()
+    const answer = new Promise<unknown>((resolve, reject) => {
+      this.bridgePending.set(callId, { resolve, reject, onFrame, lastSeq: -1 })
+    })
+    try {
+      this.send({ type: 'bridge-call', callId, endpoint, payload })
+    } catch (error) {
+      this.bridgePending.delete(callId)
+      throw new BridgeCallError('bridge-send-failed', error instanceof Error ? error.message : String(error))
+    }
+    const timeout = setTimeout(() => {
+      const pending = this.bridgePending.get(callId)
+      if (pending === undefined) return
+      this.bridgePending.delete(callId)
+      pending.reject(new BridgeCallError('bridge-result-unknown', 'sage shell: bridge stream did not answer in time'))
+    }, READONLY_BRIDGE_TIMEOUT_MS)
+    try {
+      return await answer
+    } finally {
+      clearTimeout(timeout)
+      this.bridgePending.delete(callId)
+    }
   }
 }

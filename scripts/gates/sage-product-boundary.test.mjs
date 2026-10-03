@@ -39,7 +39,7 @@ test('rejects a missing required product file and retired source files', () => {
   assert.ok(retiredAdapter.violations.some((violation) => violation.includes('adapter/handler.ts') && violation.includes('retired')))
 })
 
-test('rejects every product-side escape hatch and direct host service access', () => {
+test('rejects every product-side escape hatch and keeps the service ban off the host process only', () => {
   for (const token of ['/api', '/plugins', '/.dsh/remote-stream', '/.sanbao/', '__DSH_TRANSPORT__', 'localStorage', 'ctx.get(', '@deepseek-ai/', '../host/']) {
     const result = checkSageProductBoundary({
       files: withFile('apps/sage-shell/src/product/renderer.ts', 'const drift = ' + JSON.stringify(token)),
@@ -48,11 +48,21 @@ test('rejects every product-side escape hatch and direct host service access', (
     assert.ok(result.violations.some((violation) => violation.includes(token)), token)
   }
 
-  const directHost = checkSageProductBoundary({
-    files: withFile('apps/sage-shell/src/host/index.ts', "const drift = ctx.get('connection')"),
+  // ADR-0198: the Cordis host process may read a service — the consumption registry
+  // (gate:sage-service-consumption) is what reds an unregistered or stale consumer.
+  const hostRead = checkSageProductBoundary({
+    files: withFile('apps/sage-shell/src/host/readonly-bridge.ts', "const settings = ctx.get('settingsController')"),
   })
-  assert.equal(directHost.passed, false)
-  assert.ok(directHost.violations.some((violation) => violation.includes('ctx.get') && violation.includes('retirement')))
+  assert.equal(hostRead.passed, true, JSON.stringify(hostRead.violations))
+
+  // Every other source tree keeps the lexical ban, so the ban cannot be walked out of.
+  for (const path of ['apps/sage-shell/src/main/index.ts', 'apps/sage-shell/src/appservice/composition.ts', 'apps/sage-shell/src/profile/paths.ts']) {
+    const result = checkSageProductBoundary({
+      files: [...files, { path, text: "const drift = ctx.get('settingsController')" }],
+    })
+    assert.equal(result.passed, false, path)
+    assert.ok(result.violations.some((violation) => violation.includes(path) && violation.includes('ctx.get')), path)
+  }
 })
 
 test('rejects an upstream product token but ignores a comment that documents the guard', () => {

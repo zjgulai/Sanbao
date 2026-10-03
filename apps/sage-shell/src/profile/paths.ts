@@ -53,6 +53,8 @@ export interface SagePaths {
   readonly activeProfileFile: string
   /** Instance-local Organization Policy file (WT-02B.2E); the operator provisions it manually. */
   readonly organizationPolicyFile: string
+  /** Device-local draft records (ticket 002, US-011): never synced, encrypted at rest. */
+  readonly draftsDir: string
 }
 
 /** One validated, active materialized profile. */
@@ -162,6 +164,7 @@ export function resolveSagePaths(input: { home: string; root?: string; platform?
     stagingDir: join(profilesDir, '.sage-staging'),
     activeProfileFile: join(root, ACTIVE_PROFILE_FILE),
     organizationPolicyFile: join(root, ORGANIZATION_POLICY_FILE),
+    draftsDir: join(root, 'drafts'),
   }
 }
 
@@ -183,6 +186,7 @@ function ownedDirectories(paths: SagePaths): readonly string[] {
     paths.profilesDir,
     paths.generationsDir,
     paths.stagingDir,
+    paths.draftsDir,
   ]
 }
 

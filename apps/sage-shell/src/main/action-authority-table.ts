@@ -23,4 +23,15 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'external-read',
     requiresDecision: true,
   } satisfies ActionAuthorityEntry),
+  // Creation is custody-side (ADR-0005: every formal matter is hosted; a client must never mint
+  // one locally and merge later), so it carries its own scope and an external-write effect class.
+  // Registering it is what lets a create request reach the creation branch instead of dying as
+  // an unregistered action type; whether it then succeeds depends on a real custodian port.
+  'create-matter': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'create-matter',
+    actionScope: 'matter.create',
+    effectClass: 'external-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

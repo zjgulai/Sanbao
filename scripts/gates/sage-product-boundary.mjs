@@ -11,6 +11,14 @@ import { join, relative } from 'node:path'
 
 const SOURCE_ROOT = 'apps/sage-shell/src'
 const PRODUCT_ROOT = SOURCE_ROOT + '/product/'
+/**
+ * The Cordis host process (ADR-0198). It boots the profile and carries the container, so it is the
+ * one Sage source tree allowed to read a Cordis service — and only through the consumption
+ * registry (`scripts/gates/sage-service-consumption.json`), which reds any unregistered or stale
+ * consumer. Everything else under `src/` stays lexically clean, so the retirement of the P0-2
+ * product adapter cannot re-enter through source drift.
+ */
+const HOST_CONSUMER_ROOT = SOURCE_ROOT + '/host/'
 
 const REQUIRED_FILES = [
   PRODUCT_ROOT + 'contracts.ts',
@@ -115,8 +123,10 @@ export function checkSageProductBoundary({ files }) {
     for (const token of UPSTREAM_TOKENS) {
       if (hasToken(text, token)) violations.push(path + ' still contains retired upstream token ' + JSON.stringify(token))
     }
+    if (path.startsWith(HOST_CONSUMER_ROOT)) continue
     if (hasToken(text, 'ctx.get(')) {
-      violations.push(path + ' calls ctx.get after the P0-2 adapter retirement — no Sage shell source consumes a Cordis service (WT-02D.1)')
+      violations.push(path + ' calls ctx.get outside ' + HOST_CONSUMER_ROOT
+        + ' — only the Cordis host process may read a service, and only when the consumer is registered (ADR-0198)')
     }
   }
 

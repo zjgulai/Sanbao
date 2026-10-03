@@ -105,9 +105,103 @@ describe('matter projection slot (WT-02D.1)', () => {
     expect(denial).toMatchObject({ code: 'identity-unavailable', stage: 'identity-policy' })
   })
 
-  it('exposes only the four service ports (no store/adapter surface)', () => {
+  it('exposes only the named service ports (no store/adapter surface)', () => {
     const service = createUnavailableFirstService(null, { fixtureProjection: createSageFixtureViewState })
-    expect(Object.keys(service).sort()).toEqual(['dispatch', 'login', 'logout', 'readState'])
+    // The set is closed and explicit: ticket 010 added adoption as its own named port, ticket 012
+    // added workspace mutation, ticket 013 the three file-reference verbs, ticket 002 the three
+    // draft verbs, ticket 011 the link verb, ticket 003 reconcile + cancel, ticket 005 the send
+    // verb, ticket 006 the stop/resume/pending trio, ticket 020 the preferences save, ticket 014
+    // the attachment pick/upload/cancel trio, ticket 015 the artifact observe/open/close/retry
+    // quartet, ticket 021 the search read, ticket 024 the side-chat quartet, ticket 025 the two
+    // confirmation-prepare verbs, ticket 027 the five edit-draft verbs, ticket 028 the five
+    // action-item verbs + the project trio, ticket 029 the four matter-admin verbs, ticket 031 the
+    // monitor read, ticket 032 the plan create/accept + step prepare/execute quartet, ticket 033
+    // the external-link open + preview fullscreen, ticket 008 the queue-item edit/remove, ticket 009 the cold-history
+    // list/detail pair; any further
+    // port must be a deliberate edit here rather than something that rides in silently.
+    expect(Object.keys(service).sort()).toEqual([
+      'acceptPlan',
+      'adoptWorkspace',
+      'archiveMatter',
+      'artifactWindowClose',
+      'artifactWindowOpen',
+      'assignMatterGroup',
+      'assignProject',
+      'batchMatters',
+      'cancelAttachment',
+      'cancelDraftConfirm',
+      'closeArtifact',
+      'completeActionItem',
+      'convertDraft',
+      'createActionItem',
+      'createDraft',
+      'createEditDraft',
+      'createFileReference',
+      'createMatterGroup',
+      'createPlan',
+      'createProject',
+      'createSideChat',
+      'diffEditDraft',
+      'dispatch',
+      'executePlanStep',
+      'feedbackSubmit',
+      'feedbackVerify',
+      'fullscreenArtifact',
+      'inputSelectionsClear',
+      'inputSelectionsSelect',
+      'linkWorkspace',
+      'listFileCandidates',
+      'login',
+      'logout',
+      'mutateWorkspace',
+      'observeArtifacts',
+      'openArtifact',
+      'openExternalLink',
+      'pickAttachments',
+      'prepareActionConfirmation',
+      'prepareDraftConfirmation',
+      'prepareEditDraftWriteback',
+      'preparePlanStep',
+      'readRunLog',
+      'readSideChat',
+      'readState',
+      'reconcileDraft',
+      'removeMatterGroup',
+      'renameMatter',
+      'renameMatterGroup',
+      'restoreMatter',
+      'resumeSession',
+      'retryArtifact',
+      'returnSideChat',
+      'savePreferences',
+      'search',
+      'sendSessionPrompt',
+      'sendSideChat',
+      'sessionAnchorLocate',
+      'sessionAnchorsRead',
+      'sessionApprovalAnswer',
+      'sessionApprovalWithdraw',
+      'sessionClarificationAnswer',
+      'sessionEditsResend',
+      'sessionEditsSave',
+      'sessionEditsVerify',
+      'sessionHistoryDetail',
+      'sessionHistoryList',
+      'sessionPlanModeSwitch',
+      'startActionItem',
+      'stopSession',
+      'submitCorrection',
+      'terminalRead',
+      'unassignProject',
+      'updateActionItem',
+      'updateDraft',
+      'updateEditDraft',
+      'updatePendingInput',
+      'updateQueueItem',
+      'uploadAttachment',
+      'useFileReference',
+      'writebackEditDraft',
+    ])
   })
 })
 

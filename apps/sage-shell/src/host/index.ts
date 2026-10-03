@@ -1,6 +1,7 @@
 /** Plain-Node child process: boots the profile and carries API plus SPA assets over framed pipes. */
 
 import { createReadStream, createWriteStream, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
 import { homedir } from 'node:os'
 import { join, sep } from 'node:path'
@@ -12,6 +13,8 @@ import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 // Type-only: loads the module augmentation that declares ctx.get('connection') as HostConnectionHandle.
 import type {} from '@deepseek-ai/dsh-client-connection'
 import {
+  BRIDGE_ENDPOINTS,
+  MAX_BRIDGE_STREAM_FRAMES,
   HostRequestDecoder,
   SHELL_HOST_PROTOCOL_VERSION,
   SHELL_PIPE_CHUNK_BYTES,
@@ -25,6 +28,10 @@ import {
   type HostEvent,
   type HostRequestFrame,
 } from '../protocol.js'
+import { resolveBridgeCall, resolveBridgeStreamCall, type BridgeOutcome, type BridgeStreamEmitter } from './bridge-endpoints.js'
+import { createAttachmentUploads } from './attachment-uploads.js'
+import { createUserQuestionsRelay, installUserQuestionsRelay } from './user-questions-relay.js'
+import { createApprovalRelay, installApprovalRelay } from './approval-relay.js'
 import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
 import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
 import { createAssetHandler } from './assets.js'
@@ -54,6 +61,10 @@ export interface HostController {
   armRuntimeInvalidation(): void
   /** Dispatch one custom-protocol request and stream its response to the response pipe. */
   fetch(command: HostFetchCommand, body: ReadableStream<Uint8Array> | null): Promise<void>
+  /** Run one allowlisted read-only base call in this process; never reaches the render side. */
+  bridgeCall(endpoint: string, payload?: readonly unknown[]): Promise<BridgeOutcome>
+  /** Run one stream endpoint; frames go to `emit` in order, the promise settles with the end. */
+  bridgeStream(endpoint: string, payload: readonly unknown[], emit: BridgeStreamEmitter): Promise<BridgeOutcome>
   /** Abort one in-flight request. */
   cancel(streamId: number): void
   /** Stop accepting messages and await complete host teardown. */
@@ -150,10 +161,23 @@ export async function runShellHost(input: {
     rejected: { requestBodyMode: () => 'buffered', fetch: async () => new Response(null, { status: 404 }) },
   }
   const requests = new Map<number, AbortController>()
+  // Ticket 014: one registry of open upload sessions per boot. Nothing here is durable; closing it
+  // fails every waiter so an in-flight commit settles before the fiber is torn down.
+  const attachmentUploads = createAttachmentUploads(() => randomUUID())
+  // Ticket 034: the shell's clarification answerer — questions raised inside this runtime are
+  // claimed here and relayed to Electron main over the bridge (`session/questions` /
+  // `session/answer`); disposed with the boot so no waterfall outlives its host.
+  const userQuestionsRelay = createUserQuestionsRelay({ now: () => new Date().toISOString(), mintId: () => randomUUID() })
+  installUserQuestionsRelay(ctx, userQuestionsRelay)
+  // Ticket 041: the approval question rides the same relay shape — the Shell is the answerer.
+  const approvalRelay = createApprovalRelay({ now: () => new Date().toISOString(), mintId: () => randomUUID() })
+  installApprovalRelay(ctx, approvalRelay)
   let disposing: Promise<void> | undefined
 
   const dispose = async (): Promise<void> => {
     disposing ??= (async () => {
+      userQuestionsRelay.dispose()
+      attachmentUploads.close()
       for (const controller of requests.values()) controller.abort()
       requests.clear()
       await current?.fiber.dispose()
@@ -214,6 +238,10 @@ export async function runShellHost(input: {
         requests.delete(command.streamId)
       }
     },
+    // The payload is part of the call: dropping it here made every parameterised endpoint answer
+    // bridge-payload-invalid no matter what main sent.
+    bridgeCall: (endpoint, payload = []) => resolveBridgeCall(ctx, endpoint, payload, { uploads: attachmentUploads }),
+    bridgeStream: (endpoint, payload, emit) => resolveBridgeStreamCall(ctx, endpoint, payload, emit),
     dispose,
   }
 }
@@ -437,6 +465,23 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
     if (!isHostCommand(message)) {
       send({ type: 'fatal', message: 'sage shell: invalid Electron IPC command' })
       void stop(1)
+      return
+    }
+    if (message.type === 'bridge-call') {
+      let seq = 0
+      const answer = BRIDGE_ENDPOINTS[message.endpoint] === 'stream'
+        ? controller.bridgeStream(message.endpoint, message.payload, (frame) => {
+          send({ type: 'bridge-frame', callId: message.callId, seq, frame })
+          seq += 1
+          // Main's bound is the same constant, so one extra frame is always refused there first.
+          return seq < MAX_BRIDGE_STREAM_FRAMES
+        })
+        : controller.bridgeCall(message.endpoint, message.payload)
+      void answer.then((outcome) => {
+        send(outcome.ok === true
+          ? { type: 'bridge-result', callId: message.callId, ok: true, result: outcome.result }
+          : { type: 'bridge-result', callId: message.callId, ok: false, code: outcome.code })
+      })
       return
     }
     void stop()

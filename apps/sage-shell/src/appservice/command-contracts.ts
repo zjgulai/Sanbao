@@ -17,6 +17,12 @@ export type CommandErrorCode =
   | 'decision-required' | 'compatibility-unknown' | 'requires-new-revision'
   | 'registry-unavailable' | 'capability-unavailable' | 'persistence-unavailable'
   | 'cancelled-before-dispatch' | 'conflict' | 'outcome-unknown'
+  // Ticket 011: the matter's chosen execution environment failed its per-dispatch re-check.
+  // Its own code so the surface can prompt instead of replaying the action into another workspace.
+  | 'environment-unavailable'
+  // Ticket 025: the single pre-execution confirmation is the necessary condition of its dispatch.
+  // Missing / changed / already-spent stay distinct so the surface can ask for the right redo.
+  | 'confirmation-required' | 'confirmation-stale' | 'confirmation-consumed'
 
 export interface CommandDenied {
   readonly code: CommandErrorCode
@@ -83,6 +89,16 @@ export interface CommandPipelinePorts {
   readonly strictRehydrate: (req: { readonly matterId: string; readonly revisionId: string }) =>
     | { readonly matter: BusinessMatter; readonly current: boolean }
     | { readonly denied: 'not-found' | 'stale-revision' }
+    | undefined
+  /** Creation custodian (ADR-0005). A formal matter is created by the custody side, never by a
+   *  local write and never by appending to the execution-side store; absence of this port is the
+   *  honest "custodian not wired" answer, which the pipeline reports as a retryable not-ready. */
+  readonly createMatter?: (req: { readonly intent: SageDispatchIntent; readonly correlation: string }) =>
+    | { readonly receiptRef: string }
+    /** Ticket 003 (US-119): the custodian could not confirm the outcome; the truth is *unknown*
+     *  and the only honest entry is a reconcile of the same request — never a replay. */
+    | { readonly unknown: true }
+    | { readonly denied: 'custody-unavailable' }
     | undefined
   readonly resolveTarget: (req: { readonly matter: BusinessMatter }) =>
     | { readonly targetRequirement: unknown }

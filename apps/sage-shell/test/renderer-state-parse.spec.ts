@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderSageDocument } from '../src/product/renderer.js'
+import { FakeElement } from './support/sage-page.js'
 
 /**
  * Parse-level regression for the embedded renderer script (final-review HIGH-1).
@@ -13,31 +14,10 @@ import { renderSageDocument } from '../src/product/renderer.js'
  * the compiled body, so no untrusted value reaches code generation.
  */
 
-interface StubElement {
-  textContent: string
-  hidden: boolean
-  disabled: boolean
-  tabIndex: number
-  dataset: Record<string, string>
-  toggles: Array<[string, boolean]>
-  addEventListener: (type: string, handler: () => void) => void
-  setAttribute: () => void
-  classList: { toggle: (cls: string, on: boolean) => void }
-}
-
-function stubElement(dataset: Record<string, string> = {}): StubElement {
-  const toggles: Array<[string, boolean]> = []
-  return {
-    textContent: '',
-    hidden: false,
-    disabled: false,
-    tabIndex: 0,
-    dataset,
-    toggles,
-    addEventListener: () => undefined,
-    setAttribute: () => undefined,
-    classList: { toggle: (cls: string, on: boolean) => { toggles.push([cls, on]) } },
-  }
+function stubElement(dataset: Record<string, string> = {}): FakeElement {
+  const node = new FakeElement('div')
+  Object.assign(node.dataset, dataset)
+  return node
 }
 
 function createDocumentStub() {
@@ -56,7 +36,7 @@ function createDocumentStub() {
   login.hidden = true
   logout.hidden = true
   const document = {
-    querySelector(selector: string): StubElement {
+    querySelector(selector: string): FakeElement {
       if (selector === '#state-title') return title
       if (selector === '#state-message') return message
       if (selector === '#retry') return retry
@@ -65,13 +45,20 @@ function createDocumentStub() {
       if (selector === '#auth-name') return authName
       return stubElement()
     },
-    querySelectorAll(selector: string): StubElement[] {
+    querySelectorAll(selector: string): FakeElement[] {
       if (selector === '[data-runtime-label]') return [runtimeLabel]
       if (selector === '[data-runtime-badge]') return [runtimeBadge]
       if (selector === '[data-runtime-dot]') return [runtimeDot]
+      // In the served document these nodes carry the family attributes too, so the same objects
+      // come back either way (ticket 045: one projection writes every identity entry).
+      if (selector === '[data-identity-label]') return [authName]
+      if (selector === '[data-logout-entry]') return [logout]
       if (selector === '[data-view]') return [navItem]
       if (selector === '[data-panel]') return [panel]
       return []
+    },
+    createElement(): FakeElement {
+      return stubElement()
     },
   }
   return { document, title, message, retry, runtimeLabel, runtimeDot, login, logout, authName }
@@ -147,7 +134,8 @@ describe('Sage renderer auth surface', () => {
 
     expect(stubs.login.hidden).toBe(false)
     expect(stubs.logout.hidden).toBe(true)
-    expect(stubs.authName.textContent).toBe('')
+    // Ticket 045 (US-207): signed-out shows 未就绪 rather than an empty cell, and never a name.
+    expect(stubs.authName.textContent).toBe('未就绪：未登录')
   })
 
   it('shows the logout button and display name for a signed-in auth snapshot', async () => {
@@ -179,7 +167,7 @@ describe('Sage renderer auth surface', () => {
 
     expect(stubs.login.hidden).toBe(true)
     expect(stubs.logout.hidden).toBe(true)
-    expect(stubs.authName.textContent).toBe('正在登录…')
+    expect(stubs.authName.textContent).toBe('未就绪：登录中')
   })
 
   it('leaves the auth surface untouched for the flat P0-2 payload (no service envelope)', async () => {
@@ -230,12 +218,16 @@ async function runEmbeddedAuthClickScript(options: {
   const login = capture(stubs.login, 'login')
   const logout = capture(stubs.logout, 'logout')
   const document = {
-    querySelector(selector: string): StubElement {
+    querySelector(selector: string): FakeElement {
       if (selector === '#login') return login
       if (selector === '#logout') return logout
       return stubs.document.querySelector(selector)
     },
-    querySelectorAll(selector: string): StubElement[] {
+    querySelectorAll(selector: string): FakeElement[] {
+      // The embedded script reaches these nodes through their family attributes, so the same
+      // handler-capturing objects must come back from both lookups.
+      if (selector === '[data-identity-label]') return [stubs.authName]
+      if (selector === '[data-logout-entry]') return [logout]
       return stubs.document.querySelectorAll(selector)
     },
   }
@@ -339,19 +331,22 @@ function createRetryDocumentStub() {
   const navItem = stubElement({ view: 'overview' })
   const panel = stubElement({ panel: 'overview' })
   const document = {
-    querySelector(selector: string): StubElement {
+    querySelector(selector: string): FakeElement {
       if (selector === '#state-title') return title
       if (selector === '#state-message') return message
       if (selector === '#retry') return retry
       return stubElement()
     },
-    querySelectorAll(selector: string): StubElement[] {
+    querySelectorAll(selector: string): FakeElement[] {
       if (selector === '[data-runtime-label]') return [runtimeLabel]
       if (selector === '[data-runtime-badge]') return [runtimeBadge]
       if (selector === '[data-runtime-dot]') return [runtimeDot]
       if (selector === '[data-view]') return [navItem]
       if (selector === '[data-panel]') return [panel]
       return []
+    },
+    createElement(): FakeElement {
+      return stubElement()
     },
   }
   return { document, renders, retryHandlers }

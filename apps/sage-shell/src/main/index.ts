@@ -3,23 +3,72 @@
 import { readFileSync } from 'node:fs'
 import { readdir, realpath, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { app, dialog, protocol, shell } from 'electron'
+import { join } from 'node:path'
+import { app, dialog, nativeTheme, protocol, shell } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import type { SageViewState } from '../product/contracts.js'
+import type { DraftRecord } from './draft-store.js'
+import type { DraftStatus, WorkspaceListStatus } from '../appservice/contracts.js'
+import type { SageActionIntentV2, SageDispatchIntent } from '../appservice/command-contracts.js'
 import { handleSageServiceRequest, isSageServicePath } from '../appservice/route-skeleton.js'
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
+import { isRuntimeEffectiveObservation } from '../protocol.js'
+import { createMatterRehydratePort } from './matter-rehydrate-port.js'
+import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
+import { createWorkspaceAdoption } from './workspace-adoption.js'
+import { createWorkspaceMutations } from './workspace-mutations.js'
+import { createFileCandidates, createFileReferences } from './workspace-files.js'
+import { createDraftStore } from './draft-store.js'
+import { createSessionChannel, type SessionAttachmentInput } from './session-channel.js'
+import { createAttachments } from './attachments.js'
+import { createArtifacts } from './artifacts.js'
+import { createSearch } from './search.js'
+import { createMatterList } from './matter-list.js'
+import { createSideChats } from './side-chats.js'
+import { createActionConfirmationStore } from '../appservice/action-confirmations.js'
+import { createEditDrafts } from './edit-drafts.js'
+import { createActionItems } from './action-items.js'
+import { createMatterProjects } from './matter-projects.js'
+import { createMatterAdmin } from './matter-admin.js'
+import { createMatterGroups } from './matter-groups.js'
+import { shapeRunMonitor } from './run-monitor.js'
+import { createRunLogs } from './run-logs.js'
+import { createPlans } from './plans.js'
+import { createArtifactPreview } from './artifact-preview.js'
+import { createPreviewContainer, createPreviewWindowContainer } from './preview-window.js'
+import { createExternalLinks } from './external-links.js'
+import { createSessionHistory } from './session-history.js'
+import { createClarifications } from './clarifications.js'
+import { createSessionAnchors } from './session-anchors.js'
+import { createSessionEdits } from './session-edits.js'
+import { createInputSelections } from './input-selections.js'
+import { createPlanMode } from './plan-mode.js'
+import { createSiteTemplates } from './site-templates.js'
+import { createApprovals } from './approvals.js'
+import { createModelQueue } from './model-queue.js'
+import { createTerminal } from './terminal.js'
+import { createFeedback } from './feedback.js'
+import { createPendingInputs } from './pending-inputs.js'
+import { createPreferences } from './preferences.js'
+import type { PreferenceValues } from './preferences.js'
+import { listSettingsLeaves } from './settings-leaves.js'
+import { createMatterLinkStore } from './matter-workspace-links.js'
+import { classifyDiagnostics, classifyPlugins, classifyVisibility } from './sage-readout.js'
+import { loadOrganizationPolicy } from './organization-policy.js'
+import { readWorkspaceList } from './workspace-list.js'
 import { resolveHostRuntime, resolveSageElectronPaths } from './runtime.js'
 import { routeSchemeRequest } from './route.js'
 import { FramePolicy } from './frame-policy.js'
 import { verifySageServiceCaller } from './appservice-binding.js'
 import { createSageWindow, loadTrustedUrl } from './window.js'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { createProductionAdapter } from './oidc-runtime.js'
 import { createTokenVault } from './token-vault.js'
 import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
 import { createHostLiveInventoryProjectionProvider } from './runtime-inventory.js'
-import { createRuntimeInventoryProvider } from './runtime-inventory-provider.js'
+import { createRuntimeInventoryProvider, type RuntimeInventoryResult } from './runtime-inventory-provider.js'
 
 const SCHEME = 'dsh-app'
 
@@ -67,9 +116,16 @@ async function main(paths: SagePaths): Promise<void> {
   const ready = await host.start()
   process.stdout.write(`sage shell: host ready, dsh ${ready.dshVersion}\n`)
 
+  // Step-3 wiring: the Sage-owned matter store becomes the real rehydrate provider. It opens
+  // lazily on first command, so a broken store degrades to the fail-closed denial instead of
+  // blocking startup; steps 4-10 keep their fail-closed ports.
+  const matterRehydrate = createMatterRehydratePort({ sagePaths: paths })
+  app.on('will-quit', () => { matterRehydrate.close() })
+
   // WT-02C.2E.2: one main-owned composition read of the full runtime inventory. It never
   // blocks startup and emits exactly one stable, non-sensitive stdout line; the registry
   // port does not exist yet, so production currently reads the stages before it.
+  let runtimeInventoryResult: RuntimeInventoryResult | undefined
   const runtimeInventory = createRuntimeInventoryProvider({
     paths,
     hostProjection: createHostLiveInventoryProjectionProvider({
@@ -91,6 +147,7 @@ async function main(paths: SagePaths): Promise<void> {
     runtimeEffective: { read: () => host.readRuntimeEffective() },
   })
   void runtimeInventory.read().then((result) => {
+    runtimeInventoryResult = result
     process.stdout.write(result.kind === 'available'
       ? 'sage shell: runtime inventory available\n'
       : `sage shell: runtime inventory unavailable (${result.code})\n`)
@@ -107,6 +164,605 @@ async function main(paths: SagePaths): Promise<void> {
   // WT-02D.1: the fixture switch only fills the read-only matter slot for local verification;
   // it can never satisfy production authority and is read once at startup.
   const fixtureProjection = resolveFixtureProjection(process.env)
+
+  // Ticket 002: the device-local draft store. Signed out means locked: the product neither reads
+  // nor writes a draft until the identity is established again (US-011).
+  const drafts = createDraftStore({
+    draftsDir: paths.draftsDir,
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    randomKey: () => randomBytes(32),
+  })
+  const signedIn = (): boolean => vault.status() === 'signed-in'
+  const toDraftStatus = (gate: { readonly state: 'locked' } | { readonly state: 'ready', readonly drafts: readonly DraftRecord[] }): DraftStatus =>
+    gate.state === 'locked'
+      ? { state: 'locked' as const, drafts: [] }
+      : {
+          state: 'unlocked' as const,
+          drafts: gate.drafts.map((draft) => ({
+            draftId: draft.draftId,
+            fields: draft.fields,
+            clarification: draft.clarification,
+            history: draft.history,
+            status: draft.status,
+            matterRef: draft.matterRef,
+            attempt: draft.attempt ?? null,
+            complete: draft.fields.goal.trim() !== '' && draft.fields.deliverable.trim() !== '' && draft.fields.responsibility.trim() !== '',
+            createdAt: draft.createdAt,
+            updatedAt: draft.updatedAt,
+          })),
+        }
+  const draftWiring = {
+    draftList: () => toDraftStatus(drafts.list(signedIn())),
+    draftCreate: (request: { readonly rawInput: string }) => {
+      const gate = drafts.create(request.rawInput, signedIn())
+      return gate === undefined ? undefined : toDraftStatus(gate)
+    },
+    draftUpdate: (request: {
+      readonly draftId: string
+      readonly fields?: { readonly goal?: string, readonly deliverable?: string, readonly responsibility?: string, readonly projectRef?: string }
+      readonly clarification?: string
+      readonly selectedEntryIds?: readonly string[]
+    }) => {
+      const gate = drafts.update(request.draftId, {
+        ...(request.fields === undefined ? {} : { fields: request.fields }),
+        ...(request.clarification === undefined ? {} : { clarification: request.clarification }),
+        ...(request.selectedEntryIds === undefined ? {} : { selectedEntryIds: request.selectedEntryIds }),
+      }, signedIn())
+      return gate === undefined ? undefined : toDraftStatus(gate)
+    },
+    draftPrepareConversion: (request: { readonly draftId: string }) => drafts.prepareConversion(request.draftId, signedIn()),
+    draftBeginAttempt: (request: { readonly draftId: string, readonly correlation: string }) => { drafts.beginAttempt(request.draftId, request.correlation) },
+    draftNoteAttempt: (request: { readonly draftId: string, readonly correlation: string, readonly state: 'unknown' | 'failed' }) => { drafts.noteAttempt(request.draftId, request.correlation, request.state) },
+    draftCancelAttempt: (request: { readonly draftId: string }) => {
+      const record = drafts.cancelAttempt(request.draftId)
+      return record === undefined ? undefined : toDraftStatus({ state: 'ready', drafts: [record] })
+    },
+    // Ticket 003: reconcile asks the custodian about the *same* request. There is no custodian
+    // query port in this slice, so the honest answer is "still unknown" — never a settled guess.
+    reconcileDraftCreation: () => ({ state: 'unknown' as const, code: 'custodian-query-unavailable' }),
+    draftCommitConversion: (request: { readonly draftId: string, readonly matterRef: string }) => { drafts.commitConversion(request.draftId, request.matterRef) },
+  }
+
+  // Ticket 011: Sage-owned matter ↔ workspace links. The trail is the store; the fold is the
+  // current association set. Paths come from the adopted-workspace fold, never from a file read.
+  const matterLinks = createMatterLinkStore({
+    linksDir: join(paths.root, 'matter-links'),
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+  })
+  // Ticket 005: the session channel. Bindings persist so a restart reuses the session and never
+  // re-sends; the ack the surface shows comes from the base's own prompt receipt.
+  // Ticket 020: the desktop observation main owns (US-111) plus the device preference record.
+  const preferences = createPreferences({
+    file: join(paths.root, 'preferences', 'display.prefs'),
+    now: () => new Date().toISOString(),
+    randomKey: () => randomBytes(32),
+  })
+  const observedSystemDark = (): boolean | null => nativeTheme.shouldUseDarkColors === undefined ? null : nativeTheme.shouldUseDarkColors
+  const preferenceWiring = {
+    preferences: () => preferences.snapshot(observedSystemDark()),
+    preferencesSave: (request: Partial<PreferenceValues>) => preferences.save(request, observedSystemDark()),
+  }
+
+  const pendingInputs = createPendingInputs({
+    pendingDir: join(paths.root, 'pending-inputs'),
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    randomKey: () => randomBytes(32),
+  })
+  const sessionChannel = createSessionChannel(
+    (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    {
+      bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+      now: () => new Date().toISOString(),
+      nextId: () => randomUUID(),
+      streamCall: (endpoint, payload, onFrame) => host.bridgeStream(endpoint, payload, onFrame),
+      pending: pendingInputs,
+    },
+  )
+  // The channel's read projection follows the same "current matter" the draft card treats as
+  // current: the newest converted draft's receipt. Without one there is nothing to read, and the
+  // answer is `no-session` instead of an invented matter identity.
+  const currentMatterRef = (): string => {
+    const gate = drafts.list(signedIn())
+    if (gate.state !== 'ready') return ''
+    for (const draft of [...gate.drafts].reverse()) {
+      if (draft.status === 'converted' && draft.matterRef !== null && draft.matterRef !== '') return draft.matterRef
+    }
+    return ''
+  }
+  // Ticket 014: the attachment chain. Candidates are sealed here (digest + length); the upload
+  // streams the sealed version through the bridge to the base's own `uploadStream`; every record
+  // stays in this process — reopening reads the durable session log instead (US-076).
+  const attachments = createAttachments({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    pickFiles: async () => {
+      const picked = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], title: '选择要上传的附件' })
+      return picked.canceled ? null : picked.filePaths
+    },
+    ensureSession: (matterRef, workspaceRoot) => sessionChannel.ensureSession(matterRef, workspaceRoot),
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+  })
+  // Ticket 009: cold history — its own store; reads ride the session bindings file only.
+  const sessionHistory = createSessionHistory({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+  })
+  // Ticket 034: the clarification loop — pending cards come from the host relay, answers resolve
+  // its waterfall; while the 007 pause holds, nothing may be dispatched.
+  const clarifications = createClarifications({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+    pending: pendingInputs,
+  })
+  // Ticket 035: message anchors — pure history reads (no activation, no full transcript).
+  const sessionAnchors = createSessionAnchors({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+  })
+  // Ticket 036: sent-message edit versions. Resends ride the channel's own send (the same
+  // command entry); the original text comes from the channel's last transcript, never a claim.
+  const sessionEdits = createSessionEdits({
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    transcriptOf: (matterRef: string) => sessionChannel.transcriptOf(matterRef),
+    send: (input) => sessionChannel.send(input),
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+  })
+  // Ticket 038: the input-area selectors — read-only lists plus a per-request carry. The plugin
+  // rows are the SAME composed inventory projection the rear readout prints; the skills catalog
+  // rides the bridge's `skills/snapshot`. A selection never writes enablement state.
+  const inputSelections = createInputSelections({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    now: () => new Date().toISOString(),
+    plugins: () => {
+      const snapshot = host.readSnapshot()
+      const classified = classifyPlugins(runtimeInventoryResult, snapshot.kind === 'active'
+        ? { kind: 'active', bootId: snapshot.bootId, runtimeGeneration: snapshot.runtimeGeneration, loaderPhase: snapshot.loaderPhase }
+        : { kind: 'unavailable' })
+      if (classified.state !== 'read') return { state: 'unavailable', code: classified.code ?? 'inventory-not-read' }
+      return { state: 'read', rows: classified.components.map((component) => ({ identity: component.identity, version: component.version, digestShort: component.artifactDigestShort })) }
+    },
+  })
+  const sendWithSelections = async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer', readonly attachments?: readonly SessionAttachmentInput[] }) => {
+    // Ticket 038: this request's carried skill/plugin references ride as a bounded prefix; only
+    // an accepted/deferred request consumes them (a refusal keeps the selection for a retry).
+    const prefix = inputSelections.carryPrefix(request.matterRef)
+    const outcome = await sessionChannel.send({ ...request, text: prefix + request.text })
+    if (outcome.state === 'accepted' || outcome.state === 'deferred') inputSelections.consume(request.matterRef)
+    return outcome
+  }
+  // Ticket 039 (US-192/193): the plan/goal mode — the state is the base's own service projection
+  // (`ctx.planMode` cropped view over the folded session log), the switch is one named request,
+  // and nothing here writes any global default (the two session endpoints are the whole surface).
+  const planMode = createPlanMode({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+  })
+  // Ticket 040: the site starting-template catalog is presentation-only. No catalog source
+  // exists today, so production reads honestly `unavailable` — never an invented list; a future
+  // source (Sage-owned) plugs into this same port, and nothing here ever creates or publishes.
+  const siteTemplates = createSiteTemplates({})
+  // Ticket 041 (US-197~199): the external-authorization waits — the live relay registry read plus
+  // the two named writes (answer with a decision word / withdraw). Failures and lapses can never
+  // read as approved; the surface is the deliverable, the base keeps dispatching blocked.
+  const approvals = createApprovals({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+    pending: pendingInputs,
+  })
+  // Ticket 042 (US-200~202): the model-queue verdict — a pure read folding the base's own durable
+  // retry records; readiness flips on log transitions, never on a UI timer, and retries are the
+  // base's own policy (this store submits nothing).
+  const modelQueue = createModelQueue({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+  })
+  // Ticket 043 (US-203/204): the integrated terminal — read-only. The store only lists sessions
+  // and pages bounded scrollback; open/close of the panel is renderer-local, so a run is never
+  // cancelled by it and terminal output can never enter the conversation or the artifact list.
+  const terminal = createTerminal({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    bindingsFile: join(paths.root, 'sessions', 'bindings.json'),
+    now: () => new Date().toISOString(),
+  })
+  // Ticket 048 (US-223/224): the feedback entry — user text + structured diagnostics only. No
+  // destination exists today, so the sink port stays unwired and submits answer a named 缺项;
+  // the store attaches nothing beyond the request itself (no log, stack, path or credential).
+  const feedback = createFeedback({
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+  })
+  // Ticket 021: search is a read — local matter records plus the base's bounded session search.
+  // The local side reads the same converted-draft facts the draft card shows; nothing is written.
+  const search = createSearch({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    listMatterFacts: () => {
+      const gate = drafts.list(signedIn())
+      if (gate.state !== 'ready') return []
+      const facts = []
+      for (const draft of gate.drafts) {
+        if (draft.status !== 'converted' || draft.matterRef === null || draft.matterRef === '') continue
+        facts.push({
+          matterRef: draft.matterRef,
+          goal: draft.fields.goal,
+          deliverable: draft.fields.deliverable,
+          responsibility: draft.fields.responsibility,
+          projectRef: draft.fields.projectRef,
+        })
+      }
+      return facts
+    },
+  })
+  const searchWiring = {
+    search: (request: { readonly query: string }) => search.search(request.query),
+  }
+  // Ticket 024: side chats fork the matter's main session; every side prompt goes to the CHILD
+  // session only, and carrying text back rides the one main send path (explicit act only).
+  const sideChats = createSideChats({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    streamCall: (endpoint, payload, onFrame) => host.bridgeStream(endpoint, payload, onFrame),
+    ensureMainSession: (matterRef) => {
+      const link = matterLinks.snapshot().links.find((entry) => entry.matterRef === matterRef && entry.isDefault)
+      return sessionChannel.ensureSession(matterRef, link?.workspacePath ?? '')
+    },
+    sendToMain: async (matterRef, text) => {
+      const link = matterLinks.snapshot().links.find((entry) => entry.matterRef === matterRef && entry.isDefault)
+      const outcome = await sessionChannel.send({ matterRef, workspaceRoot: link?.workspacePath ?? '', text })
+      if (outcome.state === 'accepted') return { state: 'accepted' as const }
+      if (outcome.state === 'deferred') return { state: 'deferred' as const }
+      return { state: 'refused' as const, code: outcome.code }
+    },
+    isPaused: (matterRef) => pendingInputs.isPaused(matterRef),
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    file: join(paths.root, 'sessions', 'side-chats.json'),
+  })
+  const sideChatWiring = {
+    sideChats: () => sideChats.list(currentMatterRef()),
+    sideChatCreate: (request: { readonly matterRef: string }) => sideChats.create(request.matterRef),
+    sideChatSend: (request: { readonly sideChatId: string, readonly text: string }) => sideChats.send(request),
+    sideChatRead: (request: { readonly sideChatId: string }) => sideChats.read(request),
+    sideChatReturn: (request: { readonly sideChatId: string, readonly text: string }) => sideChats.returnToMain(request),
+  }
+  // Ticket 029: the Sage-owned matter administration — recoverable archive (a fact source for
+  // the list's archived lifecycle), service-adjudicated rename (port left unwired: the formal
+  // record belongs to the custody side), and per-target batches. Nothing here stops a run,
+  // releases a responsibility, widens a read scope or deletes a record.
+  const matterAdmin = createMatterAdmin({
+    now: () => new Date().toISOString(),
+    knownMatter: (matterRef) => matterList.derive().items.some((item) => item.matterRef === matterRef),
+  })
+  // Ticket 022: the matter list derives on every read from the stores itself — drafts, pending
+  // inputs and observed artifacts — so a fact change moves the item and nothing is cached (US-093).
+  const matterList = createMatterList({
+    listDraftFacts: () => {
+      const gate = drafts.list(signedIn())
+      if (gate.state !== 'ready') return { state: 'unavailable' as const, code: gate.state === 'locked' ? 'matter-list-locked' : 'matter-list-unreadable' }
+      const facts = []
+      for (const draft of gate.drafts) {
+        // Converted drafts are matters; drafts with an open attempt are matters still forming.
+        const attempt = draft.attempt ?? null
+        if (draft.status !== 'converted' && attempt === null) continue
+        facts.push({
+          draftId: draft.draftId,
+          matterRef: draft.matterRef,
+          title: draft.fields.goal,
+          attempt: attempt === null ? null : { correlation: attempt.correlation, state: attempt.state },
+          updatedAt: draft.updatedAt,
+        })
+      }
+      return { state: 'ready' as const, facts }
+    },
+    pendingCount: (matterRef) => pendingInputs.snapshot(matterRef).items.filter((item) => item.state === 'pending').length,
+    acceptanceCandidateCount: (matterRef) => artifacts.cardsFor(matterRef).length,
+    archivedOf: (matterRef) => matterAdmin.isArchived(matterRef),
+  })
+  const matterListWiring = {
+    matterList: () => matterList.derive(),
+  }
+  const attachmentWiring = {
+    attachments: () => attachments.snapshot(currentMatterRef()),
+    attachmentsPick: () => attachments.pick(),
+    attachmentsUpload: (request: { readonly itemId: string, readonly matterRef: string, readonly workspaceRoot: string }) => attachments.upload(request),
+    attachmentsCancel: (request: { readonly itemId: string }) => attachments.cancel(request),
+  }
+  // Ticket 015: artifact cards come from the session's own observation feed, stat-confirmed; the
+  // side preview is one main-owned surface, created on the first open and destroyed on close.
+  let sageWindow: BrowserWindow | null = null
+  const artifacts = createArtifacts({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    streamCall: (endpoint, payload, onFrame) => host.bridgeStream(endpoint, payload, onFrame),
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+  })
+  const artifactPreview = createArtifactPreview({
+    callBridge: (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    createContainer: () => createPreviewContainer({ window: () => sageWindow }),
+    // Ticket 044: the separate window surface — same non-privileged contract, own OS window.
+    createWindowContainer: () => createPreviewWindowContainer({ window: () => sageWindow }),
+    now: () => new Date().toISOString(),
+  })
+  // One observation read per new turn-end edge (never a timer): the fold is what says a turn
+  // ended, and the matter's default environment names the workspace the clues belong to.
+  const lastTurnEndSeen = new Map<string, string>()
+  const observeArtifactsAfterTurn = (matterRef: string, turnEnd: string | null): void => {
+    if (matterRef === '' || turnEnd === null || turnEnd === '') return
+    if (lastTurnEndSeen.get(matterRef) === turnEnd) return
+    lastTurnEndSeen.set(matterRef, turnEnd)
+    const defaultLink = matterLinks.snapshot().links.find((link) => link.matterRef === matterRef && link.isDefault)
+    if (defaultLink === undefined) return
+    void artifacts.observe({ matterRef, workspaceRoot: defaultLink.workspacePath }).catch(() => undefined)
+  }
+  const artifactWiring = {
+    artifacts: () => ({ state: 'read' as const, cards: artifacts.cardsFor(currentMatterRef()), preview: artifactPreview.state() }),
+    artifactsObserve: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => artifacts.observe(request),
+    artifactOpen: async (request: { readonly artifactId: string }) => {
+      const record = artifacts.recordFor(request.artifactId)
+      if (record === undefined) return { state: 'refused' as const, code: 'artifact-unknown' }
+      return artifactPreview.open(record)
+    },
+    artifactClose: async () => artifactPreview.close(),
+    artifactRetry: () => artifactPreview.retry(),
+    // Ticket 033: the layout switch moves the same loaded document — never a reload.
+    artifactWindowOpen: () => artifactPreview.openWindow(),
+    artifactWindowClose: () => artifactPreview.closeWindow(),
+    artifactFullscreen: (request: { readonly on: boolean }) => artifactPreview.setExpanded(request.on),
+  }
+  // Ticket 033 (D-036): the only external-link path — validate, then the system browser; Sage
+  // never fetches, probes or reads the site.
+  const externalLinks = createExternalLinks({
+    openExternal: (url) => shell.openExternal(url),
+    now: () => new Date().toISOString(),
+  })
+  const externalLinkWiring = {
+    externalLinkOpen: (raw: string) => externalLinks.open(raw),
+  }
+  const sessionWiring = {
+    sessionChannel: async () => {
+      const matterRef = currentMatterRef()
+      const status = await sessionChannel.read({ matterRef })
+      // Ticket 015: a fresh turn-end edge triggers one bounded artifact observation (cards only).
+      if (status.state === 'read') observeArtifactsAfterTurn(matterRef, status.lastTurnEnd)
+      return status
+    },
+    // Ticket 014: the next send carries this matter's stored-but-unsent attachments; only a
+    // confirmed acceptance marks them sent — the receipt was staged on this same session.
+    sessionSend: async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' }) => {
+      const stored = attachments.storedFor(request.matterRef)
+      const outcome = await sendWithSelections({
+        ...request,
+        ...(stored.length === 0 ? {} : { attachments: stored }),
+      })
+      if (outcome.state === 'accepted' && stored.length > 0) {
+        attachments.markSent(stored.map((attachment) => attachment.receiptId), outcome.requestId)
+      }
+      return outcome
+    },
+    sessionStop: (request: { readonly matterRef: string }) => sessionChannel.stop(request),
+    sessionResume: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => sessionChannel.resume(request),
+    pendingUpdate: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => {
+      const matterRef = currentMatterRef()
+      if (request.action === 'edit') return pendingInputs.edit(matterRef, request.itemId, request.text)
+      return pendingInputs.remove(matterRef, request.itemId)
+    },
+    queueItemUpdate: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) =>
+      sessionChannel.queueItem({ matterRef: currentMatterRef(), ...request }),
+    sessionHistory: () => sessionHistory.status(currentMatterRef()),
+    sessionHistoryList: (request: { readonly beforeSeq?: number }) => sessionHistory.list({ matterRef: currentMatterRef(), ...request }),
+    sessionHistoryDetail: (request: { readonly runSeq: number }) => sessionHistory.detail({ matterRef: currentMatterRef(), runSeq: request.runSeq }),
+    // Ticket 034: the live cards must reflect the same current matter the channel reads.
+    sessionClarifications: () => clarifications.read({ matterRef: currentMatterRef() }),
+    sessionClarificationAnswer: (request: { readonly matterRef: string, readonly requestId: string, readonly answers: readonly unknown[] }) => clarifications.answer(request),
+    sessionAnchors: () => sessionAnchors.status(currentMatterRef()),
+    sessionAnchorsRead: () => sessionAnchors.read({ matterRef: currentMatterRef() }),
+    sessionAnchorLocate: (request: { readonly action: 'locate', readonly runSeq: number }) => sessionAnchors.locate({ matterRef: currentMatterRef(), runSeq: request.runSeq }),
+    inputSelections: () => inputSelections.read({ matterRef: currentMatterRef() }),
+    inputSelectionsSelect: (request: { readonly action: 'select', readonly kind: 'skill' | 'plugin', readonly ref: string }) => inputSelections.select({ matterRef: currentMatterRef(), kind: request.kind, ref: request.ref }),
+    inputSelectionsClear: (request: { readonly action: 'clear', readonly kind: 'skill' | 'plugin', readonly ref?: string }) => inputSelections.clear({ matterRef: currentMatterRef(), kind: request.kind, ...(request.ref === undefined ? {} : { ref: request.ref }) }),
+    // Ticket 039: the plan/goal mode rides the base's own collaboration state; the switch is one
+    // named request and never writes a default (the store only talks to the two session endpoints).
+    sessionPlanMode: () => planMode.read({ matterRef: currentMatterRef() }),
+    sessionPlanModeSwitch: (request: { readonly active: boolean }) => planMode.switch({ matterRef: currentMatterRef(), active: request.active }),
+    siteTemplates: () => siteTemplates.read(),
+    sessionApprovals: () => approvals.read({ matterRef: currentMatterRef() }),
+    sessionApprovalAnswer: (request: { readonly matterRef: string, readonly requestId: string, readonly outcome: 'allowed-once' | 'rejected' }) => approvals.answer(request),
+    sessionApprovalWithdraw: (request: { readonly matterRef: string, readonly requestId: string }) => approvals.withdraw(request),
+    modelQueue: () => modelQueue.read({ matterRef: currentMatterRef() }),
+    terminal: () => terminal.status({ matterRef: currentMatterRef() }),
+    feedback: () => feedback.status(),
+    feedbackSubmit: (request: { readonly action: 'submit', readonly text: string, readonly code?: string, readonly stage?: string, readonly correlation?: string }) => feedback.submit(request),
+    feedbackVerify: (request: { readonly action: 'verify', readonly requestId: string }) => feedback.verify(request),
+    terminalRead: (request: { readonly terminalId: string, readonly offset?: number, readonly lines?: number }) => terminal.read({ matterRef: currentMatterRef(), ...request }),
+    sessionEdits: () => sessionEdits.status(currentMatterRef()),
+    sessionEditsSave: (request: { readonly action: 'save', readonly messageRef: string, readonly text: string }) => sessionEdits.save({ matterRef: currentMatterRef(), messageRef: request.messageRef, text: request.text }),
+    sessionEditsResend: (request: { readonly action: 'resend', readonly editId: string, readonly workspaceRoot?: string }) => sessionEdits.resend({ matterRef: currentMatterRef(), editId: request.editId, workspaceRoot: request.workspaceRoot ?? '' }),
+    sessionEditsVerify: (request: { readonly action: 'verify', readonly editId: string }) => sessionEdits.verify({ matterRef: currentMatterRef(), editId: request.editId }),
+  }
+
+  // One fold function serves the state projection and the link checks: the workspace facts keep
+  // coming from the base's own follow stream, whether the caller is a read or a re-verification.
+  let lastWorkspaceFold: WorkspaceListStatus | undefined
+  const foldWorkspaces = async (): Promise<WorkspaceListStatus> => {
+    const status = await readWorkspaceList((endpoint, payload, onFrame) => host.bridgeStream(endpoint, payload, onFrame))
+    lastWorkspaceFold = status
+    return status
+  }
+  // Ticket 025/027: one confirmation store per run serves both the dispatch gate and the edit
+  // drafts' writeback card; the facts home both read is the matter's chosen default environment.
+  const actionConfirmations = {
+    store: createActionConfirmationStore({ now: () => new Date().toISOString() }),
+    facts: (intent: SageActionIntentV2) => ({ environmentRef: matterLinks.defaultOf(intent.matterId) ?? null }),
+  }
+  const matterLinkWiring = {
+    matterLinks: () => matterLinks.snapshot(),
+    matterLinkApply: async (request: { readonly action: 'link' | 'unlink' | 'set-default', readonly matterRef: string, readonly workspaceRef?: string }) => {
+      const actorRef = vault.status() === 'signed-in' ? 'session:verified' : 'session:anonymous'
+      if (request.workspaceRef === undefined) {
+        // `set-default` without a workspace clears the default; link/unlink always name one.
+        if (request.action !== 'set-default') return matterLinks.snapshot()
+        matterLinks.setDefault({ matterRef: request.matterRef, workspaceRef: '', actorRef })
+        return matterLinks.snapshot()
+      }
+      if (request.action === 'link') {
+        // Only an actually adopted workspace may be linked: the live fold is the authority, and it
+        // is a metadata read — no file content is touched (US-070).
+        const status = await foldWorkspaces()
+        const entry = status.state === 'read' ? status.entries.find((item) => item.workspaceId === request.workspaceRef) : undefined
+        if (entry === undefined) return matterLinks.snapshot()
+        matterLinks.link({ matterRef: request.matterRef, workspaceRef: request.workspaceRef, workspacePath: entry.path, actorRef })
+        return matterLinks.snapshot()
+      }
+      if (request.action === 'unlink') {
+        matterLinks.unlink({ matterRef: request.matterRef, workspaceRef: request.workspaceRef, actorRef })
+        return matterLinks.snapshot()
+      }
+      matterLinks.setDefault({ matterRef: request.matterRef, workspaceRef: request.workspaceRef, actorRef })
+      return matterLinks.snapshot()
+    },
+    // Ticket 011: per-dispatch re-check of the chosen environment. No default → nothing to verify;
+    // a default that is no longer in the live fold blocks the dispatch (never a switch).
+    verifyEnvironment: async (request: { readonly intent: SageDispatchIntent }) => {
+      const matterRef = 'matterId' in request.intent ? request.intent.matterId : undefined
+      if (matterRef === undefined) return { ok: true as const }
+      const chosen = matterLinks.defaultOf(matterRef)
+      if (chosen === undefined) return { ok: true as const }
+      const status = await foldWorkspaces()
+      if (status.state !== 'read') return { ok: false as const, code: 'environment-unavailable' as const }
+      return status.entries.some((entry) => entry.workspaceId === chosen)
+        ? { ok: true as const }
+        : { ok: false as const, code: 'environment-unavailable' as const }
+    },
+    // Ticket 025: one confirmation store per run (records are this-run only, like every other
+    // in-process fact here). The facts home is the matter's chosen default environment; both
+    // prepare and the per-dispatch re-check read it from the same place. A create-matter intent
+    // targets `draft:<id>`, which has no links yet, so its facts read null.
+    actionConfirmations,
+  }
+
+  // Ticket 013: one in-process reference store for this run; ids and timestamps stay main-owned.
+  const fileReferences = createFileReferences((endpoint, payload) => host.bridgeCall(endpoint, payload), {
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+  })
+  const createFileReferenceWiring = {
+    createFileReference: fileReferences.create,
+    useFileReference: fileReferences.use,
+    fileReferences: fileReferences.list,
+  }
+
+  // Ticket 027: edit drafts over the same references; the writeback's one-time credential rides
+  // the shared confirmation store. No executor is wired here — the base exposes reads and one
+  // opaque version token and no write verb — so a confirmed writeback answers not-ready, and the
+  // unconfirmed one still never reaches the source.
+  const editDrafts = createEditDrafts((endpoint, payload) => host.bridgeCall(endpoint, payload), {
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    references: fileReferences.list,
+    confirmations: actionConfirmations,
+  })
+  const editDraftWiring = {
+    editDrafts: editDrafts.list,
+    editDraftCreate: editDrafts.create,
+    editDraftUpdate: editDrafts.update,
+    editDraftDiff: editDrafts.diff,
+    editDraftPrepareWriteback: editDrafts.prepareWriteback,
+    editDraftWriteback: editDrafts.writeback,
+  }
+
+  // Ticket 028: Sage-owned action items + the linked corrections. A correction rides the session
+  // channel's own send (ack ≠ effective); its receipt upgrades only on the queue's own states —
+  // still queued counts as 待应用, the consumption reading is the only 已生效 evidence. Projects
+  // are pure grouping records: nothing here touches responsibility, visibility or matter facts.
+  const actionItems = createActionItems({
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    send: async (request) => {
+      const outcome = await sendWithSelections({ matterRef: request.matterRef, workspaceRoot: request.workspaceRoot, text: request.text })
+      if (outcome.state === 'accepted') return { state: 'accepted' as const, requestId: outcome.requestId }
+      if (outcome.state === 'deferred') return { state: 'deferred' as const, itemId: outcome.itemId }
+      return { state: 'refused' as const, code: outcome.code }
+    },
+    pendingStateOf: (matterRef, itemId) => pendingInputs.snapshot(matterRef).items.find((entry) => entry.itemId === itemId)?.state,
+  })
+  const matterProjects = createMatterProjects({ now: () => new Date().toISOString(), nextId: () => randomUUID() })
+  // Ticket 031: the run monitor derives from the SAME session-channel projection the
+  // conversation card reads (no local copy); the run log is a bounded read over the content port.
+  const runLogs = createRunLogs((endpoint, payload) => host.bridgeCall(endpoint, payload))
+  // Ticket 032: the plan deliverable. Readiness reads the same premise home as the 011 gate
+  // (matter links + the live workspace fold); step dispatch rides the shared confirmation store
+  // and has no production executor — a confirmed step answers not-ready instead of a fake run.
+  const plans = createPlans({
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    premises: (matterRef) => {
+      const environmentRef = matterLinks.defaultOf(matterRef) ?? null
+      if (environmentRef === null) return { state: 'read' as const, environmentRef, environmentPresent: null, reason: null }
+      const fold = lastWorkspaceFold
+      if (fold === undefined) return { state: 'read' as const, environmentRef, environmentPresent: null, reason: 'workspace-fold-not-read' }
+      if (fold.state !== 'read') return { state: 'unavailable' as const, environmentRef, environmentPresent: null, reason: 'workspace-fold-unreadable' }
+      return { state: 'read' as const, environmentRef, environmentPresent: fold.entries.some((entry) => entry.workspaceId === environmentRef), reason: null }
+    },
+    confirmations: actionConfirmations,
+  })
+  const planWiring = {
+    plans: plans.list,
+    planCreate: plans.create,
+    planAccept: plans.accept,
+    planPrepareStep: plans.prepareStep,
+    planExecuteStep: plans.executeStep,
+  }
+  const monitorWiring = {
+    runMonitor: async () => {
+      const matterRef = currentMatterRef()
+      if (matterRef === '') return shapeRunMonitor(null, null)
+      return shapeRunMonitor(matterRef, await sessionChannel.read({ matterRef }))
+    },
+    runLogRead: runLogs,
+  }
+  const matterAdminWiring = {
+    matterAdmin: matterAdmin.list,
+    matterAdminArchive: matterAdmin.archive,
+    matterAdminRestore: matterAdmin.restore,
+    matterAdminBatch: matterAdmin.batch,
+    matterAdminRename: matterAdmin.rename,
+  }
+  // Ticket 049: Sage-owned task groups — named create/rename/remove with their own receipts and a
+  // known-item gate for membership. The store is handed no other port: organization only, so a
+  // group change cannot infer a fact, a scope, a responsibility or a permission.
+  const matterGroups = createMatterGroups({
+    now: () => new Date().toISOString(),
+    nextId: () => randomUUID(),
+    knownItem: (itemId) => matterList.derive().items.some((item) => item.itemId === itemId),
+  })
+  const matterGroupsWiring = {
+    matterGroups: matterGroups.list,
+    matterGroupsCreate: matterGroups.create,
+    matterGroupsRename: matterGroups.rename,
+    matterGroupsRemove: matterGroups.remove,
+    matterGroupsAssign: matterGroups.assign,
+  }
+  const actionItemWiring = {
+    actionItems: actionItems.list,
+    actionItemCreate: actionItems.createItem,
+    actionItemUpdate: actionItems.updateItem,
+    actionItemStart: actionItems.start,
+    actionItemComplete: actionItems.complete,
+    correctionCreate: actionItems.submitCorrection,
+    projects: matterProjects.list,
+    projectCreate: matterProjects.create,
+    projectAssign: matterProjects.assign,
+    projectUnassign: matterProjects.unassign,
+  }
 
   // WT-02B.2B login wiring: in-memory vault plus a production adapter (real loopback,
   // real fetch, node randomness; shell.openExternal stays fail-closed on failure via
@@ -135,6 +791,113 @@ async function main(paths: SagePaths): Promise<void> {
         // WT-02C.2E.2: the composed inventory provider rides the same flow until the
         // C2E.2 resolver wiring lands; nothing consumes it yet.
         runtimeInventory,
+        // Ticket 030: the capability surface reads the same main-owned roster observation the
+        // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
+        // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.
+        matterRehydrate: matterRehydrate.strictRehydrate,
+        // Ticket 017: the model-config view reads the base's own settings document through the
+        // read-only bridge; the bridge refuses before touching a provider when it cannot.
+        // Ticket 010: pick an existing directory, then adopt it — a cancelled pick stops after
+        // the first call, so nothing is created and nothing is recorded.
+        adoptWorkspace: createWorkspaceAdoption((endpoint, payload) => host.bridgeCall(endpoint, payload)),
+        // Ticket 012: one subscription per read; folding starts empty, so a reconnect reconciles
+        // against the fresh baseline instead of merging into a stale local view.
+        // One fold function serves the projection, the link checks and the index leaf: the
+        // workspace facts keep coming from the base's own follow stream, never a scan.
+        workspaceList: () => foldWorkspaces(),
+        // Ticket 012 (write half): rename / delete-registration / reorder over the same bridge;
+        // delete removes the registration only — the base keeps the directory and its sessions.
+        mutateWorkspace: createWorkspaceMutations((endpoint, payload) => host.bridgeCall(endpoint, payload)),
+        // Ticket 046: the eleven leaf rows. Sources: the host snapshot, the instance policy, and
+        // the folded workspace observation — the last one never triggers a scan (D-090).
+        settingsLeaves: () => {
+          const snapshot = host.readSnapshot()
+          const policy = loadOrganizationPolicy({ policyPath: paths.organizationPolicyFile, readFileBytes: (path) => readFileSync(path) })
+          const folded = lastWorkspaceFold
+          return listSettingsLeaves({
+            host: { kind: snapshot.kind === 'active' ? 'active' : 'unavailable' },
+            organizationRef: policy.kind === 'loaded' ? policy.policy.organizationId : null,
+            workspaceCount: folded?.state === 'read' ? folded.entries.length : 0,
+            workspaceFoldRead: folded?.state === 'read',
+          })
+        },
+        // Ticket 020: the display preferences (both entries read this one slot).
+        ...preferenceWiring,
+        // Ticket 005: the session channel (read projection + one send verb).
+        ...sessionWiring,
+        // Ticket 014: this run's attachment items and the pick/upload/cancel acts.
+        ...attachmentWiring,
+        // Ticket 015: artifact cards and the one side-preview's acts.
+        ...artifactWiring,
+        // Ticket 033: the controlled external-link entry (system browser, scheme-validated).
+        ...externalLinkWiring,
+        // Ticket 021: the read-only search (matters local + session content).
+        ...searchWiring,
+        // Ticket 022: the action-need-partitioned matter list (derived per read).
+        ...matterListWiring,
+        // Ticket 024: the current matter's side chats (children of its main session).
+        ...sideChatWiring,
+        // Ticket 011: the link state and its per-dispatch environment re-check.
+        ...matterLinkWiring,
+        // Ticket 027: the edit-draft family (create/update/diff/prepare-writeback/writeback).
+        ...editDraftWiring,
+        // Ticket 028: action items + corrections + the project grouping.
+        ...actionItemWiring,
+        // Ticket 029: matter administration (archive/restore/batch/rename).
+        ...matterAdminWiring,
+        // Ticket 049: task groups (create/rename/remove/membership — organization only).
+        ...matterGroupsWiring,
+        // Ticket 031: the run monitor + the bounded run-log read.
+        ...monitorWiring,
+        // Ticket 032: the plan deliverable + the two-stage step dispatch.
+        ...planWiring,
+        // Ticket 013: candidates come from the base's own confined listing, a reference is one
+        // stat (never a content read), and use re-stats before reading. The records live in this
+        // process only; the surface words them as this-run references, never as durable ones.
+        listFileCandidates: createFileCandidates((endpoint, payload) => host.bridgeCall(endpoint, payload)),
+        ...createFileReferenceWiring,
+        // Ticket 002: drafts live on this device; the conversion half runs the same pipeline as
+        // every command (composition does the running; this half only validates and receipts).
+        ...draftWiring,
+        // Ticket 026: the four rear read-only families. Every fact here is one main already holds
+        // (or an explicit absence); nothing is inferred and no conclusion is composed.
+        readout: (context) => {
+          const snapshot = host.readSnapshot()
+          const policy = loadOrganizationPolicy({ policyPath: paths.organizationPolicyFile, readFileBytes: (path) => readFileSync(path) })
+          return {
+            visibility: classifyVisibility({
+              policy: policy.kind === 'loaded'
+                ? { kind: 'loaded', organizationId: policy.policy.organizationId }
+                : { kind: policy.kind },
+              matterProjection: fixtureProjection?.(),
+            }),
+            plugins: classifyPlugins(runtimeInventoryResult, snapshot.kind === 'active'
+              ? { kind: 'active', bootId: snapshot.bootId, runtimeGeneration: snapshot.runtimeGeneration, loaderPhase: snapshot.loaderPhase }
+              : { kind: 'unavailable' }),
+            knowledge: { state: 'not-wired', reason: 'knowledge-store-unavailable' },
+            diagnostics: classifyDiagnostics({
+              snapshot: snapshot.kind === 'active'
+                ? {
+                    kind: 'active',
+                    harnessVersion: snapshot.harnessVersion,
+                    hostProtocolVersion: snapshot.hostProtocolVersion,
+                    activeGeneration: snapshot.activeGeneration,
+                    manifestSha256: snapshot.manifestSha256,
+                    bootId: snapshot.bootId,
+                    runtimeGeneration: snapshot.runtimeGeneration,
+                  }
+                : { kind: 'unavailable' },
+              dataRoot: paths.root,
+              lastCommand: context.lastCommand,
+            }),
+          }
+        },
+        modelConfig: () => host.bridgeCall('settings/describe')
+          .then(classifySettingsDescribe, classifySettingsDescribeFailure),
+        runtimeEffective: () => {
+          const observation = host.readRuntimeEffective()
+          return isRuntimeEffectiveObservation(observation) ? observation : undefined
+        },
         // WT-02D.2A: the authorization path runs over the instance-local policy file; absent
         // or unreadable keeps every command port fail closed.
         authority: {
@@ -149,6 +912,7 @@ async function main(paths: SagePaths): Promise<void> {
   })
 
   const window = createSageWindow(framePolicy)
+  sageWindow = window
   await loadTrustedUrl(window, framePolicy, `${SCHEME}://app/index.html`)
   if (process.env.SAGE_DEVTOOLS === '1') window.webContents.openDevTools({ mode: 'detach' })
 

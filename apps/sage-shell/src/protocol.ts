@@ -88,6 +88,11 @@ export type HostResponseFrame = {
 /** Commands retained on Node IPC because they do not carry Fetch payload bytes. */
 export type HostCommand = {
   readonly type: 'shutdown'
+} | {
+  readonly type: 'bridge-call'
+  readonly callId: string
+  readonly endpoint: string
+  readonly payload: readonly unknown[]
 }
 
 /** Why the live registry observation is unavailable (WT-02C.2E.3). */
@@ -191,7 +196,132 @@ export type HostEvent = {
 } | {
   readonly type: 'fatal'
   readonly message: string
+} | {
+  readonly type: 'bridge-result'
+  readonly callId: string
+  readonly ok: true
+  readonly result: unknown
+} | {
+  readonly type: 'bridge-result'
+  readonly callId: string
+  readonly ok: false
+  readonly code: string
+} | {
+  /** One frame of a stream endpoint. `seq` is the Host's own ordering and must be strictly
+   *  increasing per call; a consumer may therefore drop duplicates and out-of-order frames. */
+  readonly type: 'bridge-frame'
+  readonly callId: string
+  readonly seq: number
+  readonly frame: unknown
 }
+
+/**
+ * Endpoints the main→Host controlled-method bridge may invoke, each carrying its own kind.
+ * One home for both halves (P-07): the Electron side refuses anything outside this map before
+ * sending, and the Host side refuses again before touching a service.
+ *
+ * - `read` reads state and changes nothing;
+ * - `interactive` asks the user (the host may open a picker, so it can block on a person);
+ * - `write` changes local state and must be named explicitly — never inferred from a verb;
+ * - `stream` pushes frames until the read's own bound ends it.
+ *
+ * ADR-0203: the map is the bridge's whole surface. `directoryPicker/createDirectory` is
+ * deliberately absent: the first release adopts existing directories only.
+ * ADR-0205: endpoint names map 1:1 onto the base's Remote owners, so `workspace/insert-before`
+ * is the base's own `workspaceController.insertBefore` and nothing else.
+ */
+export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 'write' | 'stream'>> = Object.freeze({
+  'settings/describe': 'read',
+  'directory/pick': 'interactive',
+  'workspace/create': 'write',
+  'workspace/rename': 'write',
+  // `workspace/delete` removes the registration only: the base keeps the directory and its logs.
+  'workspace/delete': 'write',
+  'workspace/insert-before': 'write',
+  'workspace/follow': 'stream',
+  // Ticket 013: reads over the base's `workspaceFiles` service. The scope's workspaceRoot is
+  // resolved from a live session, never minted here (ADR-0207).
+  'workspaceFiles/list': 'read',
+  'workspaceFiles/stat': 'read',
+  'workspaceFiles/read': 'read',
+  // Ticket 015: the content port for artifact previews — raw byte windows, whole files, and the
+  // bounded observation feed that surfaces file changes as clues (never an OS watch).
+  'workspaceFiles/readBytes': 'read',
+  'workspaceFiles/readAll': 'read',
+  'workspaceFiles/changes': 'stream',
+  // Ticket 005: the session channel over the base's `sessionController`. `prompt` is a write
+  // (it admits input to the agent inbox); `page` is the cold history read that reconciles the
+  // final state; `follow` streams durable events and live assistant frames.
+  'session/create': 'write',
+  'session/prompt': 'write',
+  'session/page': 'read',
+  'session/follow': 'stream',
+  // Ticket 006: stop cancels the active turn; the queue drain removes still-pending occurrences
+  // so a paused Sage leaves nothing in the inbox that a later kick could consume; `control`
+  // carries the authoritative queue snapshot.
+  'session/cancel': 'write',
+  'session/queue-remove': 'write',
+  'session/queue-edit': 'write',
+  'session/control': 'stream',
+  // Ticket 021: session content search — a read. The provider is checked before the call so a
+  // deployment without `sessionQuery` answers a named "unavailable", never an empty result.
+  'session/search': 'read',
+  // Ticket 024: fork one completed-turn prefix into a child session (the side chat's carrier).
+  'session/fork': 'write',
+  // Ticket 034: the clarification relay. `questions` reads the host relay's live pending batches
+  // (a question exists exactly while the base's `ask()` waterfall is blocked on it); `answer`
+  // resolves that waterfall with the user's selection. Both answer the relay, never the model.
+  'session/questions': 'read',
+  'session/answer': 'write',
+  // Ticket 039: plan/goal collaboration mode. `plan-mode` reads the cropped projection view
+  // (`{active, pending}`) through `ctx.planMode` for the live agent; `plan-mode-switch` is one
+  // named selection whose receipt is the base's own outcome (committed / queued / cancelled /
+  // noop) — a queued selection only takes force at the next accepted pre-step.
+  'session/plan-mode': 'read',
+  'session/plan-mode-switch': 'write',
+  // Ticket 041: the approval relay. `approvals` reads the live pending waits (a wait exists
+  // exactly while the base's `approval/request` waterfall is blocked on it); `approve` resolves
+  // one with exactly the user's decision (`allowed-once` is the base's sole grant — the relay
+  // never manufactures one); `approval-withdraw` aborts the asker's own signal, so the wait
+  // settles `cancelled` and a late answer is discarded — never converted into an approval.
+  'session/approvals': 'read',
+  'session/approve': 'write',
+  'session/approval-withdraw': 'write',
+  // Ticket 043: the integrated terminal, READ-ONLY. `terminals` lists the owner's live PTY
+  // sessions (bounded snapshots); `terminal-read` pages the retained scrollback. No write
+  // endpoint exists at all — no spawn/kill/signal/send — so 打开/关闭面板 cannot affect a run
+  // and terminal output can never enter the conversation or the artifact list.
+  'session/terminals': 'read',
+  'session/terminal-read': 'read',
+  // Ticket 038: the mounted skills catalog (`ctx.skills.snapshot`) — bounded summaries plus the
+  // discovery-completeness flag; this is the ONLY read the input-area selector rides.
+  'skills/snapshot': 'read',
+  // Ticket 014: the attachment upload chain over the base's `fileUploads` service. One upload is a
+  // named sequence — begin mints the upload id, ordered chunks carry the sealed bytes, commit runs
+  // the base's own `uploadStream` and answers the receipt, abort cancels before/while it runs.
+  'attachment/upload-begin': 'write',
+  'attachment/upload-chunk': 'write',
+  'attachment/upload-commit': 'write',
+  'attachment/upload-abort': 'write',
+})
+
+/** A stream endpoint may push at most this many frames; crossing it ends the stream with a refusal
+ *  instead of letting one subscription grow without bound. */
+export const MAX_BRIDGE_STREAM_FRAMES = 256
+
+/** Ticket 014: attachment upload bounds, one home for both halves of the bridge. A candidate at or
+ *  below {@link MAX_ATTACHMENT_BYTES} travels in ordered {@link MAX_ATTACHMENT_CHUNK_BYTES} chunks;
+ *  the host refuses a declared size or a chunk beyond these, main refuses before sending one. */
+export const MAX_ATTACHMENT_BYTES = 64 * 1024 * 1024
+export const MAX_ATTACHMENT_CHUNK_BYTES = 128 * 1024
+
+/** How long a stream read waits for the next frame before reporting what it has (ADR-0206).
+ *  The base's follow generations never end by themselves, so without this window a read would
+ *  answer only when its caller's timeout fired. */
+export const BRIDGE_STREAM_QUIET_MS = 150
+
+const BRIDGE_CALL_ID = /^[A-Za-z0-9_-]{1,64}$/u
+const BRIDGE_ENDPOINT = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/u
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -431,8 +561,16 @@ export class HostResponseDecoder {
 }
 
 export function isHostCommand(message: unknown): message is HostCommand {
-  return typeof message === 'object' && message !== null && 'type' in message
-    && (message as Record<string, unknown>).type === 'shutdown'
+  if (typeof message === 'object' && message !== null && 'type' in message
+    && (message as Record<string, unknown>).type === 'shutdown') return true
+  const candidate = snapshotPlainDataRecord(message)
+  if (candidate === undefined || candidate.type !== 'bridge-call') return false
+  return hasExactKeys(candidate, ['type', 'callId', 'endpoint', 'payload'])
+    && typeof candidate.callId === 'string' && BRIDGE_CALL_ID.test(candidate.callId)
+    && typeof candidate.endpoint === 'string'
+    && BRIDGE_ENDPOINT.test(candidate.endpoint)
+    && Object.hasOwn(BRIDGE_ENDPOINTS, candidate.endpoint)
+    && Array.isArray(candidate.payload) && candidate.payload.length <= 8
 }
 
 function snapshotPlainDataRecord(message: unknown): Record<string, unknown> | undefined {
@@ -488,6 +626,19 @@ export function isHostEvent(message: unknown): message is HostEvent {
       return hasExactKeys(candidate, ['type'])
     case 'fatal':
       return hasExactKeys(candidate, ['type', 'message']) && typeof candidate.message === 'string'
+    case 'bridge-frame':
+      return hasExactKeys(candidate, ['type', 'callId', 'seq', 'frame'])
+        && typeof candidate.callId === 'string' && BRIDGE_CALL_ID.test(candidate.callId)
+        && typeof candidate.seq === 'number' && Number.isSafeInteger(candidate.seq) && candidate.seq >= 0
+    case 'bridge-result': {
+      if (typeof candidate.callId !== 'string' || !BRIDGE_CALL_ID.test(candidate.callId)) return false
+      // A success frame and a failure frame are different shapes: neither may smuggle the other's payload.
+      if (hasExactKeys(candidate, ['type', 'callId', 'ok', 'result'])) return candidate.ok === true
+      if (hasExactKeys(candidate, ['type', 'callId', 'ok', 'code'])) {
+        return candidate.ok === false && typeof candidate.code === 'string'
+      }
+      return false
+    }
     default:
       return false
   }

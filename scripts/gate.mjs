@@ -413,7 +413,9 @@ const CHECKS = [
   {
     name: 'sage-product-boundary',
     remediation:
-      'Sage renderer 只能访问固定 `/.sage/*` 合同；移除上游 frontend / Composer / raw stream / 通用 API 消费，并确保仅 apps/sage-shell/src/adapter/capability-adapter.ts 调用 ctx.get(\'connection\')。新建 source 文件未暂存时也在本项工作树射程内。',
+      'Sage renderer 只能访问固定 `/.sage/*` 合同；移除上游 frontend / Composer / raw stream / 通用 API 消费。'
+      + 'ctx.get 只在 apps/sage-shell/src/host/（Cordis 宿主进程）允许，且该消费必须登记在 scripts/gates/sage-service-consumption.json（否则由 sage-service-consumption 判红）；'
+      + '其余 src/ 子树一律词法禁 ctx.get。新建 source 文件未暂存时也在本项工作树射程内。',
     run() {
       return checkSageProductBoundary({ files: collectSageProductBoundaryFiles(repoRoot) })
     },
@@ -421,7 +423,7 @@ const CHECKS = [
   {
     name: 'sage-product-boundary-selftest',
     remediation:
-      '跑 node --test scripts/gates/sage-product-boundary.test.mjs；缺自有 product/adapter、上游 token 回流、产品层直读 ctx、Composer/stream 残留或空射程都必须判红。',
+      '跑 node --test scripts/gates/sage-product-boundary.test.mjs；缺自有 product、上游 token 回流、产品层或 main/appservice/profile 直读 ctx、host 侧消费被误判、Composer/stream 残留或空射程都必须判红。',
     run() {
       return runNodeTestFile('scripts/gates/sage-product-boundary.test.mjs', 'Sage 产品边界判据的反向自测失败')
     },

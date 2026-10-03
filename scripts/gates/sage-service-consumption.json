@@ -1,5 +1,25 @@
 {
-  "$comment": "Sage BASE 独立服务消费登记。只登记 apps/sage-shell；旧 packages 与历史应用继续由 service-consumption.json 在 legacy scope 显式核对。WT-02D.1 起 apps/sage-shell 真实为零消费——P0-2 唯一消费点 adapter/capability-adapter.ts 已随 route 收口退场；此 scope 显式启用 allowEmptyRegistry，任何新增 ctx.get 消费必须随提交登记（否则本项对未登记消费者判红）。",
+  "$comment": "Sage BASE 独立服务消费登记。只登记 apps/sage-shell；旧 packages 与历史应用继续由 service-consumption.json 在 legacy scope 显式核对。ADR-0198 起：Cordis 宿主进程（apps/sage-shell/src/host/）可以读服务，但每个消费点必须登记在这里（sage-product-boundary 仍在其余 src/ 子树词法禁 ctx.get）；未登记、少登记、多登记（陈旧）都判红，所以这张表既放行也守卫。allowEmptyRegistry 只为「射程内确实零消费」的历史时刻保留。",
   "schemaVersion": 1,
-  "consumptions": []
+  "consumptions": [
+    {
+      "file": "apps/sage-shell/src/host/bridge-endpoints.ts",
+      "services": [
+        "settingsController",
+        "workspaceController",
+        "directoryPickerController",
+        "workspaceFiles",
+        "sessions",
+        "sessionController",
+        "fileUploads",
+        "sessionQuery",
+        "sageUserQuestionRelay",
+        "skills",
+        "planMode",
+        "agents",
+        "sageApprovalRelay",
+        "terminals"
+      ]
+    }
+  ]
 }

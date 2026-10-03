@@ -4840,6 +4840,2443 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0198",
+      "title": "ADR-0198 · 只读基座事实的消费家：Cordis 宿主进程按登记消费，其余 src/ 保持词法禁 `ctx.get`",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "sage-product-boundary 的 ctx.get 词法禁跳过 apps/sage-shell/src/host/**；其余 src/ 子树（product/main/appservice/profile）照旧一律禁。",
+          "constraints": [
+            "仅 host 子树获得读服务能力，渲染与编排面能力不变",
+            "RETIRED_FILES 与上游 token 检查不受影响"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "host 侧每个 ctx.get 消费必须在 scripts/gates/sage-service-consumption.json 登记；本票登记 host/readonly-bridge.ts → settingsController。",
+          "constraints": [
+            "服务名多算少算、文件已删或不再消费都判红",
+            "动态消费必须标 dynamic: true"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "两条 selftest 的钉子同步改为双向：host 消费不再判红且 main/appservice/profile 仍判红；消费登记条数必须等于实际消费文件数，真实登记处须在严格模式下通过。",
+          "constraints": [
+            "禁止只测绿方向：旧钉子（host 判红、0 消费文件）必须被替换为新语义而不是删除",
+            "严格模式（不传 allowEmptyRegistry）必须对真实登记处判绿"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "050 只读桥：端点白名单两端各判一次；结果必须过纯数据判定，不合格以 bridge-result-not-plain-data 拒绝；不开任何写侧 RPC。",
+          "constraints": [
+            "端点白名单只有一个家（protocol.ts 的 READONLY_BRIDGE_ENDPOINTS）",
+            "拒绝路径不降级呈现、不截断结果"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0199",
+      "title": "ADR-0199 · 能力面只读投影：已配置／已启用／可用三态分开，基座自由文本不上屏",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "能力三态在 main 分类一次（CapabilityStatus），界面只做码到文案的映射；observed=false 时不带任何行、只带原因码。",
+          "constraints": [
+            "分类逻辑只住在 appservice/composition.ts",
+            "界面不得自行从 runtimeEffective 原文推断状态"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "行状态只用 enabled / configured-not-enabled 两词；external 恒为 not-wired + capability-registry-unavailable。禁用词：已停用（对未就绪）、不可用（对未接线）。",
+          "constraints": [
+            "configured-not-enabled 不得写成已停用",
+            "not-wired 不得写成不可用或空目录"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "基座 broken 自由文本不上屏，就地映射为机器码 preset-failed-to-activate；投影中不得出现基座原句与路径。",
+          "constraints": [
+            "断言：序列化投影不含 /Users、secret、基座原句",
+            "文案表归界面所有"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "main/index.ts 接线时用 isRuntimeEffectiveObservation 重校验 readRuntimeEffective() 的 unknown 返回；不合格按未读出处理。",
+          "constraints": [
+            "禁止把 unknown 直接断言成观测类型",
+            "不合格不得进入分类路径"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "能力面无安装/启用/停用/撤销控件；渲染脚本的 fetch 目标只允许 state/login/logout 三个常量或转发变量。",
+          "constraints": [
+            "面板内不得出现 button/form/input",
+            "脚本不得出现其它写路径字面量"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0200",
+      "title": "ADR-0200 · 步骤 3 接真存储：matter 事件库成为 rehydrate 的生产 provider",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "步骤 3 由 Sage 自有 matter 事件库提供真实 rehydrate；步骤 4-10 保持 fail-closed，本 ADR 不打开任何后续步骤。",
+          "constraints": [
+            "合并点只允许覆盖 strictRehydrate 一个端口",
+            "端口形状与 CommandPipelinePorts.strictRehydrate 完全一致"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "库打不开、load 抛错、blocked、投影抛错、端口已关闭一律返回 undefined（provider 不可用），不得映射为空历史。",
+          "constraints": [
+            "not-found 是唯一的否定性答案，且必须与 provider 不可用区分",
+            "任何不确定路径不得产生 {matter,...} 或 {denied} 形态"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "生产限额在接线处显式选定：maxStreamEvents=4096、maxPayloadBytes=1MiB、busyTimeoutMs=2000，并写明理由。",
+          "constraints": [
+            "不得依赖库内隐式默认值",
+            "数值变更属于本 ADR 的修订面"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "not-found 在管线上表现为 policy-denied@rehydrate，不向渲染面泄漏事项是否存在。",
+          "constraints": [
+            "断言存在性与无权限不可区分"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "库惰性打开（坏库不阻塞启动），app will-quit 时关闭。",
+          "constraints": [
+            "启动路径不得因存储失败而拒绝启动",
+            "关闭后调用必须 fail closed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0201",
+      "title": "ADR-0201 · 建项是托管侧动作：独立分支、不写本地、没有托管方就报未就绪",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "create-matter 在第 2 步之后走独立创建分支，不进入第 3-10 步。",
+          "constraints": [
+            "分支判定只按 actionType，不按 matterId/revisionId 猜测",
+            "现有 10 步语义不变"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "托管方缺席时返回 persistence-unavailable@create（retryable），渲染面归入 not-ready 且不给重试入口。",
+          "constraints": [
+            "不得返回 policy-denied 或 invalid-request 掩盖真实原因",
+            "not-ready 三态纪律沿用 001"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "创建分支不得 append 到本地执行库，也不得调用 strictRehydrate；两条都要有断言。",
+          "constraints": [
+            "断言 strictRehydrate 未被调用",
+            "断言本地库目录未被创建"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "ACTION_AUTHORITY_TABLE 增 create-matter（matter.create / external-write / requiresDecision:false），作用是让请求可评估，不是授权。",
+          "constraints": [
+            "entry 缺失必须是 invalid，不是静默放行",
+            "放行仍取决于组织策略里的 grant"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "创建成功路径以托管方回执为准：有 receiptRef 才返回 CommandAccepted，否则没有已建项。",
+          "constraints": [
+            "不允许管线自己生成回执",
+            "回执缺失不得产生 settled 归类"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0202",
+      "title": "ADR-0202 · 模型配置只读面：结构、层级与凭据状态上屏，值一律不上屏，连通性自成一格",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "模型配置只投 ns/revision/applies/saved/secrets 计数；值、schema、base/user 内容与秘密 key 路径一律不上屏。",
+          "constraints": [
+            "断言：序列化后的投影不含 sk-、机器路径、配置值、秘密 key 名",
+            "投影不得包含任何 settings 原文片段"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "形状不可识别时整份拒绝（unavailable + not-plain-data），不做部分渲染。",
+          "constraints": [
+            "缺 writable/hasDocument/namespaces 任一即拒",
+            "拒绝路径不得产生 namespaces 条目"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "connectivityTest 是投影自己的字段，界面按其措辞；不认识时显示无法核验，不得默认成已测试。",
+          "constraints": [
+            "视图不得硬编码未测试文案而不读字段",
+            "saved 与 connectivityTest 必须可分别读出"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "存在缺凭据的命名空间时，汇总句必须指出缺口，不得出现整项完成的措辞。",
+          "constraints": [
+            "缺凭据计数来自 secrets.set < secrets.total"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "本票面只读：无 button/form/input，脚本 fetch 目标仍限于既有三个路径常量或转发变量。",
+          "constraints": [
+            "不夹带保存与凭据写入",
+            "卡片内不出现编辑控件"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0203",
+      "title": "ADR-0203 · 桥从\"只读\"扩成\"受控方法\"：端点带类型，逐个登记，创建目录的调用永不入表",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "端点表 BRIDGE_ENDPOINTS 带 kind（read/interactive/write）；settings/describe=read、directory/pick=interactive、workspace/create=write。",
+          "constraints": [
+            "写端点必须显式命名，不得从动作动词推断",
+            "表是冻结对象，两端各自判存"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "守卫一条不删：端点判存、活跃世代、纯数据、既有拒绝码；新增 bridge-payload-invalid 与 bridge-path-invalid。",
+          "constraints": [
+            "拒绝路径不得触碰 provider",
+            "结果仍必须过纯数据判定"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "采纳路径必须是绝对、非空、无 NUL、≤4096 字符；桥面永不包含 directoryPicker/createDirectory（首版不新建目录）。",
+          "constraints": [
+            "断言 createDirectory 不在端点表中",
+            "相对路径一律 bridge-path-invalid"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "pick 返回 null 视为用户取消，回 {ok:true,result:{path:null}}；供应商缺席或抛错仍是拒绝。",
+          "constraints": [
+            "取消不得产生错误码",
+            "取消不得落任何记录"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "消费登记随文件改名同步；host/readonly-bridge.ts 与 callReadOnly 一并退场，不留旧的只读命名。",
+          "constraints": [
+            "登记条目必须与当前消费逐项一致",
+            "旧名不得以别名形式残留"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "桥不做授权判断；动作是否被允许仍由 Application Service 与 Authority 决定。",
+          "constraints": [
+            "桥不得引入角色/策略判断",
+            "拒绝码不表达权限语义"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0204",
+      "title": "ADR-0204 · 桥加\"流式调用\"：帧有界、序号为序、重连以基线对账",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "HostEvent 增 bridge-frame{callId,seq,frame}；端点表 kind 增 stream，workspace/follow 为第一个 stream 端点。",
+          "constraints": [
+            "seq 必须是安全整数且非负",
+            "帧型与 bridge-result 一样走 isHostEvent 精确键校验"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "帧数上限 256（MAX_BRIDGE_STREAM_FRAMES），超出以 bridge-stream-overflow 终止；consumer 提前关闭以 bridge-stream-closed 收口。",
+          "constraints": [
+            "两侧各自判定上限",
+            "越过上限不得继续推帧"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "seq 由 host 单调给出，main 侧丢弃 seq <= lastSeq 的帧（重复与乱序都不合并）。",
+          "constraints": [
+            "消费者不得自行排序",
+            "重放不得复活已删除的行"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "每次读取从空状态折叠；新 baseline 覆盖一切，这是重连对账的实现方式。",
+          "constraints": [
+            "不得把新 baseline 并进旧视图",
+            "不得跨订阅复用折叠状态"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "order 只排序已知 id，未知 id 忽略；upsert 可新增；remove 只删已有；archived 只改计数。",
+          "constraints": [
+            "任何增量都不得凭空产生一行",
+            "存在性由基座裁决"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "消费侧逐帧判型；不认识的帧计数（unapplied）而不套用。",
+          "constraints": [
+            "不得静默跳过",
+            "unapplied 随投影上报"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "bridgeCall 对 stream 端点直接拒绝（bridge-stream-requires-consumer）。",
+          "constraints": [
+            "stream 端点必须走 bridgeStream",
+            "拒绝发生在触碰 provider 之前"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0205",
+      "title": "ADR-0205 · 桥的服务面取自基座自己的声明：服务名、方法形状、取消信号",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "桥只消费基座声明里的 owner 服务名：settingsController、workspaceController、directoryPickerController。",
+          "constraints": [
+            "名字必须能在基座 declare module 里找到",
+            "消费登记表须与 ctx.get 参数清单逐项一致"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "方法形状与请求对象逐字对齐基座 lib/types 声明；请求对象多成员即拒。",
+          "constraints": [
+            "不得转发多余成员",
+            "insertBefore 的无锚形态必须省略键而不是传 null"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "pick 与 follow 的 AbortSignal 由桥创建并在同一 finally 里 abort。",
+          "constraints": [
+            "等待期间不得 abort",
+            "订阅不得跨调用存活"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "拒绝码只从结构性远程错（isDSHRemoteError===true 且 code 为串）映射；未知码落 bridge-provider-failed；基座消息不过桥。",
+          "constraints": [
+            "未标记 Error 的 code 不得采信",
+            "映射表外的 code 不得原样透传"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "近名服务（workspaceRegistry / directoryPicker）必须答 bridge-provider-unavailable，并有断言。",
+          "constraints": [
+            "断言须在单元层覆盖三个端点",
+            "允许的名单同样进消费登记"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0206",
+      "title": "ADR-0206 · 流式读以静默窗口收束：基座的 follow 世代永不自己结束",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "流式读每等一帧最多 BRIDGE_STREAM_QUIET_MS=150，窗口内无新帧即以 ok:true 报告 {frames} 收束。",
+          "constraints": [
+            "窗口每次等待重开",
+            "已有帧不得因窗口丢失"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "窗口收束是正常结束，不是 bridge-result-unknown。",
+          "constraints": [
+            "帧计数进入结果",
+            "不得用超时冒充收束"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "收束、越上限或 consumer 提前关闭后，在同一 finally 里 abort 调用持有的 signal。",
+          "constraints": [
+            "订阅不得跨调用存活",
+            "abort 必须发生在退出路径上"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "不引入长期订阅缓存；每次读取都是新世代，重连以新 baseline 对账。",
+          "constraints": [
+            "不得在 main 侧缓存列表事实",
+            "重连语义沿用 ADR-0204 D4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0207",
+      "title": "ADR-0207 · 文件读面的 scope 来自真实会话；引用建立只 stat、取用先重核版本",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "文件面 scope 只由 sessions.list() 中 header.cwd 等于请求根的活动会话构造；无绑定会话即 bridge-file-scope-unavailable，不触文件服务。",
+          "constraints": [
+            "不得铸造 sessionId",
+            "不得用沙箱根或他人会话顶替"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "引用只从工作区限定 list 的候选中建立；main 侧拒绝绝对路径、. 与 .. 段并答 file-path-outside-workspace，不经桥。",
+          "constraints": [
+            "拒绝发生在桥调用之前",
+            "候选路径始终是工作区相对路径"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "建立引用只发一次 workspaceFiles/stat；记录创建时 version 与 absolutePath，此后不改写。",
+          "constraints": [
+            "不得调用 read 或目录扫描",
+            "version 记录后保持不变"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "取用先 stat 重核；token 不等或 read 返回的 token 不符即 source-changed，阻断于 read 之前且 text 为 null。",
+          "constraints": [
+            "不等时不得调用 read",
+            "不得交付与持有 token 不符的内容"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "取不到（not-found 等）归 source-not-readable；文案不宣称删除、不换源。",
+          "constraints": [
+            "不得出现源文件已删除一类表述",
+            "不得自动重指向其他来源"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "引用记录是进程内记录（本次运行），界面明说未持久化。",
+          "constraints": [
+            "不得宣称已落库",
+            "状态投影来自 main 持有的记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0208",
+      "title": "ADR-0208 · 后置四族只读呈现：只印已观察事实、安装证据与启动观察分开、版本标识取可核验来源",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "可见范围只印已读到的组织与主责；缺席分别带 policy-unreadable / projection-absent 与固定句；无邀请/范围变更入口。",
+          "constraints": [
+            "不得发明或回填范围值",
+            "列表出现某人不得暗示读取权"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "插件族分印安装时证据与本次启动观察；清单缺席只答未核验+原因码，不得写停用或可用结论。",
+          "constraints": [
+            "两半不得合并成挂载/兼容结论",
+            "不得由工具数或连接成功推导可用"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "知识库未接线即写明；引用条目只读呈现来源/版本/可达性；取用留在 013 卡上，本族零控件。",
+          "constraints": [
+            "不得给创建/编辑/发布/退役入口",
+            "不得把无 provider 说成空列表"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "诊断的版本/协议/世代/manifest 摘要只取自 Host 快照；manifestVerified 仅活跃快照为真；无更新入口。",
+          "constraints": [
+            "renderer 自报的版本不得成为显示值",
+            "不得出现检查更新或立即更新入口"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "后置面板内不得存在任何 button 或 input 控件（结构断言）。",
+          "constraints": [
+            "断言按文档切片执行",
+            "新增控件即破坏该族只读性质"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0209",
+      "title": "ADR-0209 · 草案是本设备对象：加密落盘、登出即锁、确认才转换、缺项与重复都不放行",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "草案为本设备对象：数据根 drafts/ 下 AES-256-GCM 落盘、设备密钥文件 0600；未登录时读/写/列举一律拒绝，重登后同设备可恢复。",
+          "constraints": [
+            "锁定时不得解密或列举",
+            "不得声称绑定了系统钥匙串"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "新建草案只把输入存为前史，三必填与项目留空；只有用户 update 能写字段；缺项时界面与 main 两侧都拒绝。",
+          "constraints": [
+            "不得从整理结果自动写交付/责任",
+            "main 侧必须独立拒绝缺项"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "确认由 main 构造 create-matter intent 并经同一条流水线交托管端口；成功只以服务回执写入草案。",
+          "constraints": [
+            "不得本地铸事项号",
+            "无托管方时草案保持未转换"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "已转换草案再次确认即在 main 拒绝（draft-already-converted），不二次调用托管侧。",
+          "constraints": [
+            "拒绝发生在流水线之前",
+            "重复请求不得产生第二个事项"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "转换请求只包含已勾选前史片段；未勾选文本不得出现于请求。",
+          "constraints": [
+            "未选前史留在本地草案",
+            "字段内容来自用户确认值"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "草案模块不得引入网络依赖；界面明说仅当前设备保存、不自动同步。",
+          "constraints": [
+            "无 fetch/http/net 依赖",
+            "无后台同步任务"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0210",
+      "title": "ADR-0210 · 事项↔工作区关联：留痕即存储，链接待审、默认环境逐次重验、解除不换源",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "关联状态＝只追加 JSONL 留痕的折叠；每条记录含 linkId/时刻/动作/事项/工作区/actorRef；损坏留痕整条不可读。",
+          "constraints": [
+            "不得引入第二张可变表",
+            "actorRef 由 main 命名"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "link 前必须先从实时折叠读到该工作区（仅 follow 元数据）；该路径不得出现 workspaceFiles 调用。",
+          "constraints": [
+            "读不到就不落记录",
+            "关联路径零内容读取"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "set-default 仅对当前已链工作区生效；unlink 默认所在工作区同时清除默认；不带 workspace 的 set-default 即清除。",
+          "constraints": [
+            "默认不得漂移到其他工作区",
+            "默认只来自已链关系"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "每次派发前用实时折叠重验默认环境；不在即以 environment-unavailable 阻断于流水线之前，retryable=true。",
+          "constraints": [
+            "阻断时流水线不得执行",
+            "无默认环境时不拦截",
+            "不得自动换到其他工作区"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "unlink 只追加解除记录；既有引用保持原 workspaceRoot 与创建版本不变。",
+          "constraints": [
+            "解除不得改写引用记录",
+            "解除不得删除任何内容"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0211",
+      "title": "ADR-0211 · 建项的三态：尝试在发出前落盘、未知只给核对、失败可修正、取消不丢内容",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "确认先在草案上开 attempt{correlation,at,state:pending} 再跑流水线；崩溃后磁盘仍有'该请求存在且结果未知'。",
+          "constraints": [
+            "attempt 与草案同文件持久化",
+            "correlation 由 main 生成"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "托管返回 {unknown:true} → 流水线交 outcome-unknown（不可重试）；草案记 unknown；未知态禁用确认入口、只留核对。",
+          "constraints": [
+            "未知态不得出现重试建项",
+            "outcome-unknown 必须不可重试"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "核对按 attempt 的 correlation 查询；已生效才写回执并置 converted；查不到即 unknown，绝不自动判定成功；过期应答按 correlation 对号丢弃。",
+          "constraints": [
+            "无查询端口时答 unknown",
+            "不得自动结算"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "failed 表示确定未生效，确认入口恢复可用（修正后为新一次尝试）。",
+          "constraints": [
+            "failed 不得与 unknown 合并",
+            "新尝试换新 correlation"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "cancel 仅清 pending attempt；字段/前史/勾选/澄清不变；unknown 不可取消。",
+          "constraints": [
+            "取消不改内容",
+            "unknown 不提供取消"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0212",
+      "title": "ADR-0212 · 会话通道：ack 只表示受理、执行只看日志里未结束的一轮、最终文本以历史为准",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "session/prompt 的回执按基座原样投影为已受理；界面不得把 ack 写成已开始工作。",
+          "constraints": [
+            "ack 与执行是两个字段两句话",
+            "载荷 {requestId,sessionId,mode,text} 精确校验"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "执行态只来自日志：turn/start 未配对 turn/end 即执行中，配对后显示 reason。",
+          "constraints": [
+            "accepted 不更新执行态",
+            "未知事件只计数不解释"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "最终文本只取 assistant/message；流断或缺失时自动 session/page 重读并标 reconciled；对账失败如实报 code，不拿流文本充当最终态。",
+          "constraints": [
+            "live 帧对最终文本零贡献",
+            "失败不发明文本"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "matter→session 绑定持久化；read 只复用与读取，无绑定回 no-session；发送是独立动词。",
+          "constraints": [
+            "重开不得重发",
+            "读取不得创建会话"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "流沿用静默窗口有界收束；基座 session/* 拒绝码映射为 bridge-session-*。",
+          "constraints": [
+            "长订阅不在本票",
+            "错误码只映射已知码"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0213",
+      "title": "ADR-0213 · 停止＝暂停＋取消＋收回：暂停期输入不进 inbox，竞态结果如实分账",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "暂停期间 send 只存 Sage 待继续项、不调用 prompt；输入不进 inbox 是结构事实。",
+          "constraints": [
+            "暂停期桥调用计数为 0",
+            "恢复前不派发"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "停止＝pause → cancel → control 快照 → 对仍属我方的 occurrence updateQueue{remove} 并 returnToPending('drained-at-stop')。",
+          "constraints": [
+            "队列不留可被 kick 消费的孤儿",
+            "拿不到快照时如实报 code"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "快照中已消失的已提交项冻结为 consumed('consumed-by-race')，不回可重发队列。",
+          "constraints": [
+            "drained 与 consumed 分账可查",
+            "不得二次派发已执行内容"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "resume 是唯一派发路径且按 pending 顺序；无绑定时该显式动作才创建会话。",
+          "constraints": [
+            "读路径不创建会话",
+            "按序派发并转 submitted"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "edit/remove 只对 pending 生效；submitted/consumed 冻结；记录与草案共用设备密封。",
+          "constraints": [
+            "被拒编辑不得改文本",
+            "重开不自动续跑"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0214",
+      "title": "ADR-0214 · 显示偏好：单一权威值、两种状态分开、失败即回退",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "偏好＝本设备一条密封记录；外观页与用户菜单都只读 state.preferences、只写 /.sage/preferences。",
+          "constraints": [
+            "不得两处各存一份",
+            "写入只有一条路由"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "requested 与 savedAt 分开；effectiveTheme 由 main 观察 system 解析；applies 首版恒 live；已保存字样只挂 savedAt。",
+          "constraints": [
+            "无 savedAt 时不得出现已保存字样",
+            "立即生效不等于已持久化"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "写入失败＝refused；两处入口重写回已保存值并提示已回退（提示不被轮询覆盖）。",
+          "constraints": [
+            "失败不得显示为已生效",
+            "回退到已保存版本"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "system 且无观察时 effectiveTheme=null，界面显示未核验，不猜主题。",
+          "constraints": [
+            "不得兜底为浅色",
+            "未核验有专属句子"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "快捷键/语音/任务监控布局本版无入口；不引入内置浏览器开关（US-112/113）。",
+          "constraints": [
+            "文档内不得出现这类控件",
+            "卡片正文明确说明不在本版"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "外观卡放个人资料面板，不进后置只读面板。",
+          "constraints": [
+            "后置面板保持零控件（026 断言）",
+            "交互面与只读面分区"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0215",
+      "title": "ADR-0215 · 叶子设置页只读注册表：来源可追、写入口在契约上就不存在、索引读观察不扫描",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "SETTINGS_LEAF_IDS 是 11 页唯一名单；每行带 title/source/note，未接线行以未接线起句并给原因。",
+          "constraints": [
+            "未接线不得写成停用",
+            "缺席与零值分开说"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "SettingsLeaf.writeEntry 恒 null、本版无任何写端口；新增写入口必须先改契约与断言。",
+          "constraints": [
+            "页面不得有 button/input/select",
+            "禁用控件同样算入口"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "来源取自 host 快照、实例策略文件、follow 折叠观察；三者缺席各给未核验句。",
+          "constraints": [
+            "折叠未读不等于 0",
+            "来源必须写成可核对的类别名"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "索引页只读折叠观察；源码与 wiring 切片不得出现 workspaceFiles/readdir/scandir。",
+          "constraints": [
+            "fold 与其它工作区读同源",
+            "不得触发目录扫描"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "11 页放独立设置面板，面板级零控件断言。",
+          "constraints": [
+            "与 026 后置族分区",
+            "面板切片内无控件"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0216",
+      "title": "ADR-0216 · 外观八项：一条 v2 记录、两入口同值、失败回退在各入口、清单外项零控件",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "DisplayPreferenceValues 八项是唯一形状；存储升 sage.preferences.v2，路由与存储共用同一键/值白名单；v1 三值记录不半采纳（默认值 + savedAt null）。",
+          "constraints": [
+            "8 键封闭集，逐值白名单",
+            "旧版本记录不得部分采纳"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "设置页外观段一次提交八项 patch；快捷菜单逐项即时单键 patch；两处只读 state.preferences、只写 /.sage/preferences；失败以入口为单位回退并挂本地提示。",
+          "constraints": [
+            "不得两处各存一份",
+            "失败不得显示为已生效",
+            "本地提示不被轮询覆盖"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "重启后 requested 读回八项已存值，effectiveTheme 由重启时观察解析（无观察=null）。",
+          "constraints": [
+            "不猜主题",
+            "设备密钥复用不重造记录"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "清单外三行（快捷键/语音/任务监控浮层布局）标不可配置、内置浏览器开关标不迁入；块内零控件，全文档控件 aria-label 不得出现这些词。",
+          "constraints": [
+            "不留看起来能改的控件",
+            "用语为不可配置/不迁入而非停用"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "panel-settings 重划为外观段（可保存，唯一写面）+ 叶子页只读组；046 的面板级零控件断言重划到叶子组切片。",
+          "constraints": [
+            "外观段有 data-settings-writable 标记",
+            "叶子组保持零写入口"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "DEFAULT_DISPLAY_PREFERENCE_VALUES 是默认值唯一 home，存储默认与 unavailable-first 回退同源。",
+          "constraints": [
+            "不得两处默认字面量漂移"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0217",
+      "title": "ADR-0217 · 附件上传链：候选即封存版本、流式过宿主 uploadStream、回执摘要核验、receipt 同会话",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "pick 只产生候选（sha256+字节数封存，64MiB 上限）；投影只带 name/bytes/stage，机器路径不进任何跨端数据。",
+          "constraints": [
+            "选取不触发上传",
+            "取消是事实",
+            "路径零出现在投影与桥载荷"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "桥加 attachment/upload-begin|chunk|commit|abort；宿主注册表按序 128KiB 分块、终块校长；commit 先行使 store 流式消费；commit 时限 120s。",
+          "constraints": [
+            "队列不聚合整文件",
+            "其余桥调用时限不动",
+            "乱序/越界/非规范 base64 拒绝"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "回执摘要=封存摘要才 stored；不一致=source-changed（需重选，同 item 再传被拒）；部分失败重试同一封存版本。",
+          "constraints": [
+            "两次尝试字节逐位相同",
+            "不重新生成内容",
+            "不同内容不得套旧封存"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "receipt 会话作用域（跨会话=attachment-invalid→bridge-attachment-invalid）；上传与 send/resume 共用 ensureSession；本地记录运行内，持久记录=会话日志。",
+          "constraints": [
+            "重开不重跑上传",
+            "空/非串/超 16 receipts 不转发"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "stored 附件随下一条消息发送（text 可空）；仅受理回执标 sent；暂停期带附件发送整体拒绝；历史折叠只补带附件 user/message 行并按 rpcId 去重。",
+          "constraints": [
+            "ack 不是已发送到模型",
+            "echo 模型不变",
+            "拆半承诺被拒"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "传输中/核验/关联生效分句；上传成功不写已读取/已使用；不做独立附件列表与跨消息复用。",
+          "constraints": [
+            "词表扫描断言",
+            "工单 §7 边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0218",
+      "title": "ADR-0218 · 产物卡与侧面预览：线索经 stat 核验成卡、一次打开一个非特权容器、版本冻结与迟到守卫",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "changes 帧是线索；逐条 stat 核验（版本一致）才写 ready（版本已核验）；不一致=未能核验、缺失=观察时不存在（留旧版本）、目录/dotfile 不产卡；投影零机器路径；卡片是候选非验收结论；turn-end 边沿触发一次有界观察。",
+          "constraints": [
+            "线索不直接成卡",
+            "非 OS 监听/非计时器",
+            "措辞不得称交付或验收"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "内容端口按版本：read（offset/limit）与 readBytes（offset/length）分开校验，readAll 超限=too-large 明确失败不截断。",
+          "constraints": [
+            "读永不写/不转换",
+            "容量承诺不在本票"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "一次打开一个非特权容器：独立非持久 session、无 preload/特权 IPC、仅 sage-preview:// 可读（内存映射，关闭即清）、其余请求取消、导航/弹窗拒绝；HTML 离线交互；容器只在通过的 open 创建、close 销毁且不动会话。",
+          "constraints": [
+            "卡片出现不创建容器",
+            "privileged renderer 永不嵌 frame",
+            "关闭回收资源"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "生成号守卫：每次 open 领代，stat/read/load 后各验；迟到结果一律丢弃；close 先代++再销毁；迟到不得覆盖新选择或复活已关闭预览。",
+          "constraints": [
+            "superseded 明确码",
+            "close 后无任何路径重开"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "打开只读卡片版本；stat/read 报他版本=artifact-version-changed（retryable）；重试同记录同版本；永不静默切最新、永不重跑生成。",
+          "constraints": [
+            "失败有码有可重试性",
+            "重试不改版本"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "office 打开即拒（artifact-format-deferred）且卡片声明无内置预览/不自动转换/不把可下载写成可预览；binary 拒并标不支持。",
+          "constraints": [
+            "Office 仍是文件卡",
+            "无自动转换"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0219",
+      "title": "ADR-0219 · CSV 预览：按实测定标的上限、切在明处、解析失败与空文件分开",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "CSV 上限 { maxRows: 2000, maxColumns: 64, maxCellCharacters: 200 } 来自本仓实测（2000×64=38.47ms 在 ≤50ms 预算内且低于读取页上限；50k×32=1255.51ms 排除；2000×16×200=149.90ms 且超页上限）；基座默认只作读取边界事实。",
+          "constraints": [
+            "不以基座默认当产品承诺",
+            "选定值须有实测行支撑"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "csv-caps.spec 解析记录 Note 的 JSON 块并与代码常量比对，另断言命令与决定性命中行仍在。",
+          "constraints": [
+            "记录与实现漂移即红"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "行/列/单元格三类超出各自计数并在表格下方逐条写明；行上限经 limit=maxRows+1 请求、eof 即未读完；无静默丢弃。",
+          "constraints": [
+            "eof 必须被消费",
+            "每类 cut 有独立句子"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "parse-failed（未闭合引号/引号后杂字符/未引号字段内引号）=artifact-csv-parse-failed 不可重试；空文件=empty 独句；超限=artifact-too-large 可重试同版本；渲染两句互斥。",
+          "constraints": [
+            "解析失败不得伪装空文档",
+            "空文件与失败不同句"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "RFC4180 引号/转义/引号内换行、CRLF/LF、tab（.tsv）解析；列数不齐不判失败；解析为纯函数，表格文档脚本禁用只读。",
+          "constraints": [
+            "无脚本文档",
+            "查看为主"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0220",
+      "title": "ADR-0220 · 搜索两区：事项本地匹配 + 基座会话检索、引擎缺席是其自己的状态、命中只读",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "两区各自成源：事项=本地已建项草案事实匹配（goal 标题+关键属性、按 matterRef 去重、上限 20）；会话=bridge session/search 一次调用，hasMore 如实显示；统一排序不做。",
+          "constraints": [
+            "事项不依赖基座",
+            "不新增存储",
+            "不跨对象排序"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "引擎缺席=桥先检 ctx.get('sessionQuery') 返 bridge-search-unavailable→main unavailable→渲染'不可用（这不是无结果）'，与空结果句互斥；事项区不受影响。",
+          "constraints": [
+            "缺席不伪装无结果",
+            "两句各有断言",
+            "检查先于调用"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "查询边界三道：渲染器（空不发）、route（trim/≤500/无 NUL 否则 400）、桥（同界再验 bridge-search-query-rejected）。",
+          "constraints": [
+            "空关键词零请求",
+            "边界三道一致"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "命中只读：全部桥流量=恰好一条 session/search；渲染命中无动作；在途查询忽略重复点击（至多一个查询）。",
+          "constraints": [
+            "零写副作用有断言",
+            "不激活执行/不加载正文",
+            "分页不并发重复"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "main 校验 {items,hasMore} 逐字段，不合法=bridge-answer-unrecognised；sessionId/snippet 原样透传。",
+          "constraints": [
+            "不二次加工 snippet",
+            "形状守卫在 main"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0221",
+      "title": "ADR-0221 · 事项列表行动需求分区：main 逐读推导、触发事实可追、待验收只计数、缺席不造行",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "四源推导：attempt unknown/failed→待我处理（correlation 为 ref）、pending→进行中；待继续输入计数→待我处理；产物候选计数→待验收；其余→进行中；优先级 待办>待验收>进行中。",
+          "constraints": [
+            "无 attempt 无 matterRef 的编辑草案不列",
+            "推导只用本地真事实"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "同 matterRef 草案合并为一项（新记录标题/时间，开放 attempt 仍触发）；分区内 updatedAt 倒序；每分区上限 50。",
+          "constraints": [
+            "去重', 排序可断言"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "待我处理项带 triggers[{kind,ref,count?}] 逐条成句；每次读重新推导不缓存，事实变则分区随投影走。",
+          "constraints": [
+            "每项可指触发事实",
+            "无 UI 缓存固定"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "待验收只出计数+未收口句，不列行；计数=观察产物候选数。",
+          "constraints": [
+            "不定义完成语义",
+            "候选非交付措辞"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "lifecycle active|archived：默认只显 active、可筛选；本版无 archived 事实来源，机制在数据不造。",
+          "constraints": [
+            "默认不展开归档/完成",
+            "不造数据"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "记录门不可读=整列表 unavailable+码；渲染 未核验句，无任何行；fixture 事项投影不得充当列表数据。",
+          "constraints": [
+            "unavailable-first",
+            "fixture 不当列表数据"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0222",
+      "title": "ADR-0222 · 应用内提醒：分区与计数即提醒、无第二份未读、负空间由测试守住",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "提醒=同一投影事实：侧栏 chip 与列表卡计数同源 matterList.counts、同一渲染趟；chip 仅在 read 且 action>0 显示，0 或不可读恒隐藏。",
+          "constraints": [
+            "无第二份未读",
+            "缺席不读作无事"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "负空间扫描断言：src 全树禁 Notification/requestPermission/setBadge/flashFrame/app.dock 等 token；renderer 禁 document.title= 等标题面改动。",
+          "constraints": [
+            "未来系统通知须先改测试",
+            "扫描由变异电池验证会红"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "契约不得出现字段形 unread；chip 文本==卡计数文本（数字同源断言）。",
+          "constraints": [
+            "提醒词汇只有 partition+count"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "chip/计数在每次状态轮询由同一 payload 重渲（setPayload+refresh 断言同变），无用户动作无缓存。",
+          "constraints": [
+            "回到应用即随投影更新"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "系统通知/徽章/后台到达后置（US-116 边界），本票不预置接点。",
+          "constraints": [
+            "发出通知不等于已读（后置原则已记）"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0223",
+      "title": "ADR-0223 · 侧聊：fork 已完成轮派生子会话、主侧分别投影、带回主对话只走显式动作",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "桥加 session/fork（write）；侧聊=主会话已完成轮前缀的子会话，记录持久化（0600）；侧聊发送只 prompt 子会话；fork-unavailable 原码透传。",
+          "constraints": [
+            "核验项收口：在途可 fork、截断=完成轮边界"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "事项只绑主对话；侧聊按 matterRef 列出、可重启重载；主投影不含侧聊内容；全程 prompt/follow sessionId 恒为子会话。",
+          "constraints": [
+            "主会话只作 fork 源",
+            "分别投影有断言"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "带回主对话唯一路径=显式动作，经主对话同一发送路径（ack≠执行/暂停/回显沿既有合同）；侧聊历史不动；无合并控件。",
+          "constraints": [
+            "无自动合并路径",
+            "不新造合并机制"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "暂停期侧聊发送拒绝（side-chat-paused）；文本≤16384；记录上限 16；存储损坏=unavailable 不造历史。",
+          "constraints": [
+            "不改道待继续",
+            "不造历史"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "侧聊附件、自动同步、协作者可见范围管理首版不做。",
+          "constraints": [
+            "按工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0224",
+      "title": "ADR-0224 · 动作级执行前确认：单卡＋一次性凭据＋派发前逐次重验",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "确认=一次性凭据：prepare 铸 id 并绑定 intent 指纹（origin 不入）+ facts 指纹；consume 恰好一次；required/consumed/stale 三码。",
+          "constraints": [
+            "记录仅本运行、上限 64 淘汰最旧",
+            "未铸过的 id=required 不许猜"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "指纹不符即标死记录（stale 为终局），事实恢复不放行。",
+          "constraints": [
+            "US-126 不许沿用旧页面状态"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "可选 actionConfirmations（store+facts）在 dispatch（非 retry、环境门之后）与 convertDraft（开 attempt 之前）执行 consume；失败 stage=confirmation、retryable=false、流水线零步。",
+          "constraints": [
+            "absent=本票前形状",
+            "两条路径同一 store 与 facts 家"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "卡列对象/动作/范围/资源/时间/前提；费用预估 unavailable 如实；effect=not-yet-happened；页面无审批/队列/代理词、恰两控件、一级直连。",
+          "constraints": [
+            "有断言",
+            "文案明说确认≠效果已发生、变化需重新确认"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "草案面两步：prepare-confirm 取卡（main 同一 builder 组装 intent）；convert 体为精确 {draftId} 或 {draftId, confirmationId}；卡属草案、跨轮询存活；stale/consumed/required 转本地重新确认提示。",
+          "constraints": [
+            "卡只在自身确认点击后消费",
+            "取消仅本地"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "多级审批流、卡持久化、费用估计器首版不做。",
+          "constraints": [
+            "D-106~118 为后置输入"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0225",
+      "title": "ADR-0225 · 事项修改稿：绑定源版本的快照、按内容比较的 Diff、独立具名的回写",
+      "status": "accepted（2026-10-02）",
+      "date": "2026-10-02",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "修改稿从已有引用生成：stat 校验引用版本 + read 一页（≤400 行，未读完整拒）；记录绑定 matterRef/path/basedVersion/basedText/proposedText；生成只读取。",
+          "constraints": [
+            "视图 13 键钉住，无 workspaceRoot/absolutePath/basedText/payload",
+            "源新内容不泄漏"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Diff 由 Sage 按内容行级比较（LCS，两侧同线尾规则，超预算退整替）；标注 basedVersion/currentVersion/sourceChanged；令牌只比较不解析。",
+          "constraints": [
+            "不依赖 Git",
+            "源变为一等状态，不回退 basedVersion、不自动合并"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "回写=独立具名动作：prepare 铸单卡（目标版本+影响+unavailable 费用+not-yet-happened）；指纹=path+basedVersion+proposed 摘要骑共享确认 store；执行序 fresh-stat→端口存在性→consume→执行端口；源变拒绝并 retire；缺席 not-ready 不消耗；只有回执才 written；抛错=unknown。",
+          "constraints": [
+            "executeWriteback 是唯一写入路径，生产不接线",
+            "模块不 import 可写 fs 能力（扫描断言）"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "下载/导出无回写效果：无此类控件；生成/保存/Diff 对源文件零写入（S5 真字节断言）。",
+          "constraints": [
+            "每步前后文件 base64 相同"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "无版本控制入口：路由表无 git/commit/worktree/export 动词；卡片互动控件钉死五枚且无提交/推送/分支/下载/导出词。",
+          "constraints": [
+            "D-053：回写不做任何版本库操作"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "受控修改信息：视图只含路径/版本/状态/工作副本；投影 JSON 无 payload/arguments/toolInput 字段。",
+          "constraints": [
+            "有断言"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "真实 Git 接线与 Worktree 写操作、Office 原格式预览、D-010 自动合并、回写端口生产接线首版不做。",
+          "constraints": [
+            "基座无写动词，等 seam"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0226",
+      "title": "ADR-0226 · 行动项、要求更正与项目汇总：Sage 自建对象、关联式更正、纯分组合并",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "行动项=事项内工作记录：open→in-progress→done；完成不追记录不发消息不触其他存储；登记执行冻结当时 revision/title/note；update 只 bump revision；done 后 start 拒绝；视图九键钉住。",
+          "constraints": [
+            "记录仅本运行（持久化后置）",
+            "不含交付/工具/运行词汇"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "更正=关联原要求的新消息：同一发送路径、每更正一次发送、原要求绝不重发；回执 received/pending-application/effective 只按真实读数升级（队列 consumed 才生效）；refused 原码记录不重试；original {text,at} 留存。",
+          "constraints": [
+            "受理≠生效永不冒充",
+            "不覆盖、不重放"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "项目=纯分组：name+refs；事项最多一个项目、变更=move 留 trail(action/from/to/at)；汇总按 ref 引用同一记录不复制事实；归属变化读态逐槽 byte-equal（仅 projects 槽变）。",
+          "constraints": [
+            "视图键钉住无 responsibility/visibility/revision",
+            "D-089 当时依据"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "路由 /.sage/action-items（create/update/start/complete）、/.sage/corrections、/.sage/projects（create/assign/unassign）；槽 actionItems/projects；未接线各码如实。",
+          "constraints": [
+            "精确体；单事项单次操作"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "分派给他人、跨项目批量改属、项目级权限继承、行动项持久化首版不做。",
+          "constraints": [
+            "矩阵首版不做清单"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0227",
+      "title": "ADR-0227 · 事项管理：可恢复归档、服务裁决重命名、逐项批量",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "归档=可恢复的列表退役：Sage-owned matter-admin 记录 {matterRef,archivedAt,ground 声明}+trail；knownMatter 同码防枚举、幂等；只写自己的记录（不停止/不解除责任/不扩权/不删，读态逐槽 byte-equal）；022 archivedOf 接活 lifecycle，默认折叠、标签「已归档（可恢复；≠停止执行）」；恢复只回列表呈现。",
+          "constraints": [
+            "ground∈{completed,stopped} 为声明",
+            "恢复不改执行状态"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "重命名=服务裁决端口+回读：view 分 requested/effective，effective 只取回读值；未接线=matter-rename-unavailable 如实。",
+          "constraints": [
+            "请求绝不冒充生效值",
+            "不触 fail-closed 管线"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "批量=逐项：1–32 项、仅 archive/restore；每目标一行 {outcome,code}+counts；形状无整体成功字段，页面明说逐项为准；无权/不存在同码不静默跳过；malformed 整拒不触目标。",
+          "constraints": [
+            "无批量审批/授权",
+            "无整体成功"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "归档≠停止（会话暂停，006 会话作用域）≠隐藏（无此功能无入口）；归档 JSON 无 hidden/pause 词汇（扫描断言），停止入口只在会话卡。",
+          "constraints": [
+            "三事实分开（US-154）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "批量审批/授权、删除与保留策略（独立受控流程无入口）、归档持久化首版不做。",
+          "constraints": [
+            "工单明确不做 + 本运行边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0228",
+      "title": "ADR-0228 · 运行监控四轴与只读运行日志：不合成单一状态、游标式有界读取",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "四轴各自为事实：步骤=会话同一投影（同源一读）；预算=预留/消耗/账单三个分开 unknown（不许 0 冒充）；设备/后台=各自 reason 的 unknown；视图无 overall/runStatus/total 字段（形状+扫描断言）。",
+          "constraints": [
+            "不合成单一运行状态",
+            "未知≠零"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "面板开合=本地视图状态：收起/展开零请求零会话动作、刷新后保持；面板代码无 stop/cancel。",
+          "constraints": [
+            "折叠不取消运行（有断言）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "上下文/压缩只读：context unknown+compaction unknown；无压缩触发入口（控件钉住）；文案明说压缩不得泄漏私有侧聊或扩大外传。",
+          "constraints": [
+            "未确认不压缩=无压缩命令面"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "运行日志=游标式有界只读（S5）：stat+read 逐页 ≤200 行、单行>2000 截断计数；追加不失效游标（旋转判定=变小非变化）；变小=file-rotated 置空游标提示从头（不重复不漏标）；缺文件自码；活会话作用域；不触会话/转录；无导出入口。",
+          "constraints": [
+            "同尺寸重写不可检测=已知局限",
+            "不存在≠空日志"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "预算预留/结算、后台执行主体、设备接管协议、日志导出首版不做。",
+          "constraints": [
+            "工单明确不做"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0229",
+      "title": "ADR-0229 · 方案预览与步骤执行：接受只记回执、未知即阻断、执行以投影为唯一读数",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "接受方案=回执：accept 只标记 accepted+acceptedAt，不铸卡、不消耗、不派发、不触会话（计数 0+lastStepRun null 断言）；create 有守卫；重复 accept 幂等。",
+          "constraints": [
+            "接受≠执行（US-165/166）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "步骤就绪按动作前提每次重推导：unknown=阻断（不出现失败措辞）、环境缺失=not-ready、未选定=ready 逐次核验；prepare 只对 ready 铸卡（拒绝在铸卡之前）；渲染面仅 ready 行有执行入口。",
+          "constraints": [
+            "未知按阻断非失败",
+            "不就绪不派发=结构性"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "执行两步：prepare-step 铸单卡（骑 025 store）→execute-step 先重验新鲜度（变了 retire+拒绝）再 consume（原码直传）；端口缺席=not-ready 不消耗可重放；每次尝试写 lastStepRun，响应随行同一投影；渲染以投影为唯一结果读数，local notice 只留未记录态。",
+          "constraints": [
+            "一次凭据一次派发",
+            "生产未接线=fail-closed 不伪装"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "退出检查=投影事实+真实未保存字段合成（进行中/待继续/未保存三类，空清单 D-014 句）；取消=零请求保持后台；stop=发 /.sage/session/stop 且明说不能承诺撤回/不等于远端效果已知；本页无退出触发器。",
+          "constraints": [
+            "关闭窗口≠退出（D-013）",
+            "停止不承诺撤回（D-022）"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "引导只读：展开/收起本地零请求零配置写入；文案钉住不替代登录授权、实验不直通生产。环境只读三行事实各标源（runtime/011 关联/折叠），无装配/跨设备/远端执行入口。",
+          "constraints": [
+            "引导不自动修改任何配置"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "方案持久化打磨、步骤依赖图、生产执行主体接线、退出系统窗口联动首版不做。",
+          "constraints": [
+            "工单明确不做"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0230",
+      "title": "ADR-0230 · 成果补全：受控外链、typed 工具结果、只读网页成果目录与全屏预览（含生产装配断链修复）",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "受控外链：唯一入口=具名 open；仅 http/https（其余各有拒绝码，内嵌凭据拒绝）；校验后交注入 opener（生产 shell.openExternal）；未接线/抛出都非成功；投影只回 scheme+host；模块无读取/抓取路径。",
+          "constraints": [
+            "外链仅在显式动作下打开",
+            "不自动联网（结构事实）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "全屏=同一文档布局切换：ready 态加 expanded；fullscreen 动作不重载不重读版本；渲染按钮随投影翻转；退出全屏焦点还给触发器；未打开拒绝。",
+          "constraints": [
+            "全屏走离线资源",
+            "退出恢复焦点（有断言）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "图片查看=纯 UI：CSS-only 缩放（100/150/200%）+ overflow:auto 平移；文档零脚本；批注入口缺位（文案声明无入口）。",
+          "constraints": [
+            "批注后置",
+            "CSP 不放行 script"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "typed 工具结果：严格解析 text/key-values/table/link/image（各有界）；敏感字段脱敏不泄漏原始值；不支持类型按名拒绝且不用替代渲染；链接复用 D1 校验；图片仅认本运行就绪 image 产物；视图无脚本无权威动作；provider 缺席=槽 unavailable。",
+          "constraints": [
+            "raw payload 不透传",
+            "明确拒绝而非近似"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "网页成果目录=同一观察卡的 html 筛选：显示同源版本+访问限制；文案钉住已托管≠上线、无发布/部署/托管入口；唯一控件=预览（离线）；名册断言。",
+          "constraints": [
+            "已托管交付≠网站上线",
+            "不新建事实源"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "生产装配断链修复：app-service 补五族（附件/产物/搜索/事项列表/侧聊）声明与转发及 033 两端口；守护 spec test/app-service-wiring.spec.ts 每族独有标记穿透生产装配函数，丢键即红。",
+          "constraints": [
+            "知道⇒拦住",
+            "真实窗口行为待真机复跑"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "图片批注、真实发布/托管与站点上线、图表编辑首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0231",
+      "title": "ADR-0231 · 暂停期新输入只登记不唤醒：冻结派发、活的清单与队列版本对账",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "暂停态发送=登记：入设备本地清单、返回 deferred、对桥零调用（无 create/prompt/stream）；回执句钉住已收到尚未执行；带附件整体拒绝。",
+          "constraints": [
+            "暂停不唤醒（结构事实）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "查看/编辑/移除不唤醒：只触待继续存储零桥调用；查看沿会话读投影原样显示。",
+          "constraints": [
+            "有断言"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "冻结派发：dispatching 态先冻结再 prompt，派发文本==记录文本（期间编辑/移除 item-frozen）；拒绝回 pending、成功才 submitted；渲染只读标签。",
+          "constraints": [
+            "不悄悄改已派发文本"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "活的清单+重暂停止步：每轮重读清单取下一 pending；每轮先查暂停位，重暂停止步返回 interrupted（paused=true、其余留 pending）；渲染句含未含内容没有被送出。",
+          "constraints": [
+            "不按陈旧快照派发"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "队列版本对账：记录带单调 revision；resume 收束后按权威队列快照只增记（在=记 queueItemId；不在=保持 submitted；absent:consumed 仅 stop）；快照缺失带 code 说明。",
+          "constraints": [
+            "误判被取走=冻结用户等待中的输入（禁）"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "旧输入合并/顺序细则、多 resume 去重、跨设备同步首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0232",
+      "title": "ADR-0232 · 会话内队列：queue/steer 双模式、权威快照投影与逐项修改",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "双发送模式：send mode queue|steer（默认 queue，白名单外落回）；路由 3–4 键精确体；ack 回显 mode；渲染只在选 steer 时携带；暂停态 steer 同权只登记零桥调用。",
+          "constraints": [
+            "steer=下一步骤边界插入（US-025）"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "队列投影=权威快照：read 做一次有界 session/control 读；occurrences {queueItemId,position,requestId,preview≤140}；缺席=unavailable 不以空列表冒充；不由本地 echo 推导。",
+          "constraints": [
+            "US-028 权威一致"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "逐项编辑/移除：桥 updateQueue 扩 edit 文本块 + session/queue-edit 端点 + not-found 分类映射；queueItem 裁剪校验（queue-edit-invalid/queue-no-session）；被消费=queue-item-not-found→渲染句已开始处理不重复提交；一次点击恰一条请求。",
+          "constraints": [
+            "US-027 不静默丢弃、不重复提交"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "暂停与措辞：暂停态只显示待继续（队列行不渲染）；steer 文案只承诺步骤边界消费；全页无已打断字样。",
+          "constraints": [
+            "US-026/029"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "负空间：文案明示无定时/循环自动化入口；队列区控件名册钉住 [保存修改][移除]，按钮不含定时/循环/自动化/计划任务词。",
+          "constraints": [
+            "US-030"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "定时/循环自动化、队列项 steer 搬移、批量队列操作、跨会话队列首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0233",
+      "title": "ADR-0233 · 冷历史与运行历史：纯历史接点、逐运行详情与当时实际模型",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "纯历史接点：list 只调 session/page（throughSeq:-1，maxMessages 有界），不激活/不重发/不重跑上传；no-session 不建会话，直接 missing。",
+          "constraints": [
+            "US-024 纯历史零副作用"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "运行列表倒序+游标分页：turn/start|end 组运行、未闭合=进行中；newest-first、MAX_RUNS=50；hasMore 时携带 nextBeforeSeq。",
+          "constraints": [
+            "US-097"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "逐运行详情窗口过滤：一次有界页后按 seq≥runSeq 且<下一运行起点过滤；outputPreview≤2000+outputTruncated、userTexts≤4×300；失败=missing+code。",
+          "constraints": [
+            "US-098 有界、整段不透传"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "当时实际模型=该运行 request/header 的 config.{provider,model} 快照；取不到为 null 不借今日默认；渲染注明与本事项当前选择分开显示。",
+          "constraints": [
+            "US-099"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "不可读保持 missing：渲染句自报缺失不显示空白成功；空态（从未读取）与缺失分开；status 供槽。",
+          "constraints": [
+            "US-100"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "两次运行对照（US-101）、跨会话历史、历史搜索/导出、自动轮询首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0234",
+      "title": "ADR-0234 · 澄清问答闭环：宿主中继、单发回答与待继续中止",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "宿主中继纯内核 + prepend 注册监听 + provide('sageUserQuestionRelay')：只认领带 agent（id=sessionId）的请求，其余 next() 委托；resolve 前按声明候选项校验；abort/teardown 一律 reject ASK_ABORTED。",
+          "constraints": [
+            "US-177/178",
+            "官方 remotes 可能在链上，靠前截吞"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "桥面 session/questions(read)+session/answer(write)；顺带修复 008 queue-edit 未进 allowlist（真实恒 unsupported），新增 handler⊆allowlist 源头守护。",
+          "constraints": [
+            "ADR-0198 消费登记",
+            "知道⇒拦住"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "main store：pending=中继注册表；所属运行=按需一页历史里的未闭合运行；回执结算 accepted→effective 仅凭 tool/result 证据、停止中消失→aborted、无 ack→unknown；verifyOnly 由活状态派生。",
+          "constraints": [
+            "US-177/178/182"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "一题一提交：按 sessionId:requestId 冻结结局，重复点击/刷新返回同一回执、永不再发；未过桥拒绝不落记录；四态文案只给核对不给重试。",
+          "constraints": [
+            "US-178"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "停止→待继续：消失且无回答的卡以 deferred(stopped) 保留（非暂停记 gone）；不自动继续；暂停态提交被拒 clarification-paused（零桥调用）。",
+          "constraints": [
+            "US-182/FW-002"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "渲染面：活卡（候选项+自定义同权+所属运行+意图徽章）；一次点击恰一条具名写；回答路径不触 matter/draft 端点。",
+          "constraints": [
+            "US-179"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "历史回看：detail 增 clarifications（tool/call+tool/result 解析，未闭合 answered:false），只读渲染无提交控件。",
+          "constraints": [
+            "US-180 与 US-024 同接点"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "多轮澄清审批化、跨事项模板、plan-review 专用版式、答案改写撤回首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0235",
+      "title": "ADR-0235 · 消息锚点：轮次跳点、本地短预览与保留现场的缺失",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "锚点=轮次引用+有界短预览：read 只调一次有界 session/page，runsOfRecords 组轮（turn/start 为锚），{runSeq,turn,promptPreview≤140}，newest-first MAX50；no-session 不建会话；失败=unavailable+code；预览随列表随行（点预览零桥调用）。",
+          "constraints": [
+            "US-183",
+            "US-024 同接点"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "定位=一次有界窗口读：locate 调一次 session/page{beforeSeq:runSeq}，返回 located{runSeq,turn,promptPreview≤300}；失败/不在页=missing+code（US-184 可判定）。",
+          "constraints": [
+            "US-184"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "渲染面：读取按钮+锚点行+[锚点预览]（本地弹层零请求）=[定位到此轮消息][关闭预览]；hover 零监听零命令；located 标记随投影重建（保现场）；未接线/无会话/失败具名句。",
+          "constraints": [
+            "N05 hover 不发命令",
+            "US-184 不空白"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "runsOfRecords 增 firstUserText（加法，轮分组仍一个家）；短预览由该轮自身文本现算。",
+          "constraints": [
+            "009 共核"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "锚点收藏/分享、跨事项跳转、全文检索式定位首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0236",
+      "title": "ADR-0236 · 已发消息的编辑与重发：版本链、同入口单身份与核对解冻",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "版本链+原消息不可改写：save 首次从通道 transcript 捕获原文后不可变；每次保存追加版本（≤16）；保存零桥调用；渲染并排回看原消息（未改写）与版本链。",
+          "constraints": [
+            "US-185"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "同入口单身份：resend 走通道 send（同 session/prompt 路径），每版本 requestId 铸造一次且跨点击稳定；原 rpcId 永不作重发身份；inFlight 闸+基座 rpcId 去重⇒重复点击不并行不重派；已接收/已生效重复点击返回同一回执零调用。",
+          "constraints": [
+            "US-186"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "未知只给核对：无 ack→unknown，重发拒 edit-verify-required；verify 有界查 rpcId：命中→effective；未命中且原 unknown→not-delivered（显式核对后才允许显式再发，身份不变）；原 accepted→保持 accepted（edit-version-not-visible）；暂停态重发拒 edit-paused 且回到未提交。",
+          "constraints": [
+            "US-187"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "身份随行：SessionChannelEntry 增 messageRef（echo=requestId/历史=rpcId）；send 增可选 requestId（缺省随机铸，非法拒绝）。",
+          "constraints": [
+            "005 deliberate 扩展"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "历史删除、他人消息编辑、编辑后自动继续首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0237",
+      "title": "ADR-0237 · 回复操作与后续建议：投影动作清单、确定失败判据与只填不发的建议",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "turnEndKind 归一：字符串原样/对象取 kind/其余 ended；005 fold、009 history、031 监控、侧聊统一使用（真实运行不再恒落 ended 的跨票修复）。",
+          "constraints": [
+            "dsh-agent-loop turn/end.reason.kind"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "动作清单=投影事实：SessionChannelStatus.reply{text,endKind,failed,actions}；无文本空清单；有文本恒 copy+quote；retry 仅 endKind==='error'；渲染面只画清单按钮。",
+          "constraints": [
+            "US-188 只呈现已核实动作"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "未知（流断）撤回 retry、保留 copy/quote，改给核对（重新读取会话）＝零写调用；受理≠执行文案照旧。",
+          "constraints": [
+            "未知态只出现核对入口"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "重试=同一发送入口（/.sage/session/send，最近一条用户行文本、新身份）；回执 accepted/deferred/refused→未确认只给核对；在途不并行。",
+          "constraints": [
+            "US-186 同入口先例"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "后续建议=最新方案 ready 步骤（≤3）chips；点击只填输入区零请求；未接线/无可推进具名负空间。",
+          "constraints": [
+            "点击后输入区有内容但未发送"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "自定义模板、回复评分、自动追问首版不做。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0238",
+      "title": "ADR-0238 · 输入区技能与插件选择器：挂载投影只读、选择随请求携带与「未挂载≠已停用」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "技能清单=ctx.skills.snapshot 经桥 skills/snapshot（read）：有界摘要+complete；缺席=skills-unavailable（unavailable-first）；消费登记+skills。",
+          "constraints": [
+            "US-189",
+            "US-190 不完整≠已失效"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "插件清单=与 readout 相同的 classifyPlugins 结果（同一 runtime inventory 投影）；不可读=未核验句（不以空列表冒充，也不说成已停用）。",
+          "constraints": [
+            "US-191 实际挂载状态"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "select 校验：技能须已读且 userInvocable（未知=not-listed/model-only 各有码）；插件须在当前挂载行（缺席=not-mounted）；≤4 去重；clear 单项/整类；全程零桥写。",
+          "constraints": [
+            "未挂载不说成已失效",
+            "不改启用状态"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "carryPrefix=[/skill:x] [/plugin:y] 前缀经同一发送入口随请求携带；accepted/deferred 后 consume 清空、refused 保留；事项间不泄漏。",
+          "constraints": [
+            "US-190 只对本次请求生效"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "渲染面只读清单（名称/来源/可用性；model-only 禁用+显句）；选中 chips 文案=随下一次发送携带，插件 chip 显式不改变启用状态/不代表已获得能力；select/clear 各恰一条 POST。",
+          "constraints": [
+            "US-189/191 UI 层"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "启用/安装/授权/配置写与市场跳转首版不做。",
+          "constraints": [
+            "工单边界 §7.5"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0239",
+      "title": "ADR-0239 · 目标/计划模式：服务投影只读、具名切换与「不回执不改显示、不写默认」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "模式读取=服务投影裁剪视图经桥 session/plan-mode（read）：agents.get(sessionId)→planMode.get(agent)→{active,pending}（缺席归一 false）；提供者缺席=bridge-provider-unavailable；无活代理=bridge-session-not-live（恢复会话可能 active，绝不假装 inactive）；形状不符=bridge-plan-mode-unreadable。",
+          "constraints": [
+            "US-192 状态来自服务投影"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "切换=一条具名请求 session/plan-mode-switch（write）：{sessionId, active} 恰两键→planMode.set；四结果词 committed|queued|cancelled|noop 原样过桥（queued 绝不折叠成成功），非四值=bridge-plan-mode-unreadable。",
+          "constraints": [
+            "US-192 回执生效后才显示为新模式"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "main/plan-mode.ts：switch 成功后以 session/plan-mode 后读填 view（未生效显示当前实际模式；后读失败=view:null+viewCode 如实）；family=applied/pending/unchanged，outcome 原名保留；无会话=refused plan-mode-no-session；只触这两个端点、不写任何跨事项默认、事项间零泄漏。",
+          "constraints": [
+            "US-193 事项内切换不写全局默认",
+            "失败不伪报成功"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "渲染面：互斥两钮（实际模式（当前）；pending 目标（下一步生效）而当前保持（当前）——回执前不改显示）；注记区分 current/pending/未接线/no-session；回执三族文案；退出计划=退出不等于方案已执行；US-194 plan-review 澄清卡把 detail 渲染为方案预览+接受方案不等于执行其中动作，提交仍同卡。",
+          "constraints": [
+            "US-192/193/194 UI 层",
+            "接受方案≠执行",
+            "退出计划无已执行暗示"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：模式级审批、模式团队策略下发、计划模式自动执行；设置页模式默认的修改面不在本票。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0240",
+      "title": "ADR-0240 · 站点起步模板：只读目录、选择只填草案输入与「无站点创建请求面」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "目录=可注入 Sage 侧 provider 端口（main/site-templates.ts）：缺席=site-templates-provider-unavailable、抛错=failed、形状不符=unreadable；条目 templateId/name/source/version 有界＋prompt|null（超长/缺失→null=列出但不可插入）；≤50 条；空列表不冒充空目录。",
+          "constraints": [
+            "US-195 名称与来源",
+            "不可用显示原因不静默替换"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "选择=仅本次草案输入的本地插入、零请求零副作用：写入草案输入框（空→填入；非空→换行追加，不替换用户输入）；无 bridge 调用者；协议表无 site 端点（spec 断言）；不写配置、不建站点、不触草案存储。",
+          "constraints": [
+            "US-195 选择只产生草案输入",
+            "US-196 无远端效果",
+            "选择后无站点创建请求（有断言）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "UI 文案不越权：面板标只读且明说不建站/不写配置/无远端效果；插入回执句=选模板不等于已建站或已发布；无 prompt 条目=提示词未接线（不代表已失效）；预览禁用（未接线）；不可用态带具名原因。",
+          "constraints": [
+            "不把选了模板显示为已建站/已发布"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "首版不做：站点创建、发布、域名与上线核验（§7.8）；模板市场写操作；模板内容写入草案存储/随建项携带（版本化嵌入语义留待模板来源确定后另议）。",
+          "constraints": [
+            "工单边界 §7.8"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0241",
+      "title": "ADR-0241 · 外部授权等待：中继作答、封闭词表与「失效不兑现、不伪造已批准」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "宿主中继=Shell 作答链（镜像 034）：approval/request waterfall prepend 认领带 agent 请求；provide sageApprovalRelay；桥 session/approvals(read)/session/approve(write)/session/approval-withdraw(write)。",
+          "constraints": [
+            "US-197 显示范围与来源"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "只有两个用户决定词（allowed-once 仅此一次授权 / rejected），其他值 refusal approval-outcome-invalid——中继从不制造授权；withdraw 以封闭词 cancelled 结算；signal 中止归 cancelled；dispose 全 cancelled fail-closed。",
+          "constraints": [
+            "US-197 未获授权不派发",
+            "US-198 撤回入口"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "main store：提交成功=accepted+所选词；桥未确认=unknown（只给核对，绝不为已批准）；effective 仅在日志同 id approval/decided 与所选一致时；cancelled/unavailable 或暂停下消失=lapsed（失效需重新申请，回执 outcome 归 null）；暂停/无会话/非等待中具名拒答；提交去重一次。",
+          "constraints": [
+            "US-199 旧等待失效不自动兑现",
+            "不伪造已批准"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "渲染面：等待卡（等待授权：工具｜来源：说明｜调用：callId＋[批准（仅此一次）][拒绝][撤回等待]）；等待≠失败也≠已批准；提交后等待生效证据句；lapsed=需重新申请；unknown=只给核对（零 POST）；不可撤回明说。",
+          "constraints": [
+            "US-198 不显示为失败也不显示为已批准"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：多级审批与授权策略下发（§7.1/§7.3）、approval/policy 写、凭据读取；真机审批链验核后置。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0242",
+      "title": "ADR-0242 · 模型排队三态：日志事实折叠、就绪无计时器与「超时=结果未知、不重复提交」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "三态=同一份日志事实折叠（main/model-queue.ts 纯读，唯一桥调用=一次有界 session/page）：llm/retry 按 retryId 去重有界并匹配 llm/retry-started；最后一条重试＋轮次开合＋其后 assistant/message 决定 waiting/retrying/ready/unknown。",
+          "constraints": [
+            "US-200 三态来自服务事实"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "就绪不由界面计时器推断：delayMs 只作服务端安排的延迟展示（不倒计）；三态只在日志转换时翻转，ready=llm/retry-started＋其后消息。",
+          "constraints": [
+            "US-201 就绪来自服务事实"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "超时（轮次已闭无恢复证据）=verdict unknown＋verifyOnly＋reason model-queue-unresolved；不是失败、不给重试；核对=只读重读零 POST。",
+          "constraints": [
+            "US-201 超时=结果未知只给核对"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "与错误三态分家：词表独立；文案不出现请重试/确定失败；waiting 明说不是失败也不是需要重复提交。",
+          "constraints": [
+            "US-200 与错误三态不混用"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "排队与重试不重复提交（结构）：store 无写路径，调用表恰 session/page；重试是基座自有策略。首版不做排队优先级/跨账号配额调度/自动故障切换。",
+          "constraints": [
+            "US-202",
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0243",
+      "title": "ADR-0243 · 集成终端只读呈现：两读端点、缺项未就绪与「面板开关不触执行」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "只读桥两枚：session/terminals（list 有界≤16、裁 pid 无 cwd；缺席=bridge-provider-unavailable、无活代理=bridge-session-not-live）与 session/terminal-read（有界滚动页 text≤64KiB 截断标注）；消费登记 +terminals；host 表 +2。",
+          "constraints": [
+            "US-203 侧面板只读入口"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "未就绪=缺项具名绝无空终端：无服务=unavailable+terminals-provider-unavailable（未就绪句）；零会话是合法空态另一句（不在此创建终端）。",
+          "constraints": [
+            "US-203 无可用终端显示未就绪与缺项",
+            "不显示空终端（有断言）"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "只有清单内会话可分页：read 先对最近 list 投影校验，不在清单=terminal-not-listed 零桥调用；offset/lines 双层校验（offset≤1e6、lines 1–500）。",
+          "constraints": [
+            "US-204 只读观察"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "面板开关不触执行（结构）：无 spawn/kill/signal/send/cancel 写端点；打开=本地开关+一条读页，关闭=纯本地零请求；调用表恰两读（spec 断言）；块内无 input/textarea/select。",
+          "constraints": [
+            "US-203 打开/关闭不影响执行",
+            "US-204 不进对话历史/不作产物/不接收权威动作"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：终端内命令执行授权扩面、会话持久化与导出、真实 shell 包装承诺；写半边桥面永不出现。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0244",
+      "title": "ADR-0244 · 产物独立预览窗口：同版本引用、显式打开与「关窗不动运行」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "独立窗口=同合同的第二表面显式动作才创建：createWindowContainer（注入；生产=真实非特权 BrowserWindow 同 partition/无 preload/navigation 拒绝）；openWindow 仅在 ready 且存在已备文稿时可调用；卡片渲染/boot/面板 open 一律不触窗口（工厂计数=0 断言）。",
+          "constraints": [
+            "US-205 仅在显式动作下打开"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "同一版本引用=同一份已备文稿：store 保存 lastLoad；openWindow 零桥调用零重生成并以同一引用喂窗口；spec 断言 windowLoads[0] === panelLoads[0]，并存时只有一个版本值来源。",
+          "constraints": [
+            "验收② 不出现两份权威版本值",
+            "同版本重开不重跑生成"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "迟到结果丢弃：窗口加载携带 generation 守卫；加载期间发生新选择则销毁该窗口并拒 artifact-superseded，绝不让旧版本成为第二权威。",
+          "constraints": [
+            "迟到结果不覆盖当前选择"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "关窗不动运行：closeWindow 只销毁窗口并把 window:false；面板与产物记录不动；本模块桥面只读（workspaceFiles/*），无任何 session/cancel 写路径；close() 同时释放两个表面（各自只回收自己的 sage-preview 令牌）。",
+          "constraints": [
+            "关闭不取消运行",
+            "关闭独立窗口回原工作面不改产物记录"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：多窗口标签管理、窗口内编辑与回写、窗口级权限策略；真实 Electron 窗口真机验证后置。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0245",
+      "title": "ADR-0245 · 反馈入口：文本＋结构化诊断的封闭载荷与「未知只核对、不重提交」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "载荷封闭且可断言：sink 收到恰 {requestId, at, text, diagnostics:{code,stage,correlation}}——键集 spec 逐字断言+deepEqual；store 不读日志/堆栈/路径/凭据；text≤4000、诊断≤128 先验于派发。",
+          "constraints": [
+            "US-223 只提交文本与结构化诊断",
+            "不自动附日志/堆栈/机器路径/凭据"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "回执三态+缺项：可读 ack=accepted；ack 不可读/sink 失败=unknown（记录）；sink 具名拒绝=refused（不记录）；生产未接线=unavailable+feedback-sink-unavailable 缺项句（不伪报不记录）。",
+          "constraints": [
+            "US-224 回执区分已接收与结果未知"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "未知只核对不重提交：verify(requestId) 只回读记录、零派发（sink 调用数不变断言）；渲染面未知只给[核对同一提交]，核对走 verify 绝不产生第二条 submit；不存在=not-found。",
+          "constraints": [
+            "US-224 未知只给核对同一提交的入口"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "入口在关于与诊断卡（O13 语义位）；027 只读卡零控件守护以精确 id+数量钉住 feedback-submit 这一个 deliberate 例外，其余控件仍为 0。",
+          "constraints": [
+            "027 守护 deliberate 更新"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：日志上传、崩溃自动上报、工单系统集成；真实远端 sink 到位前生产恒缺项。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0246",
+      "title": "ADR-0246 · 任务分组：Sage 自有的组织对象（具名命令＋逐项回执；只改变列表组织）",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "四个具名命令各自回执：create/rename/remove/assign 返回 created/renamed/removed/batch；改名回读 trim 后生效值（请求不冒充生效）；trail 记录；名称 1–120、批量 1–32 先验。",
+          "constraints": [
+            "US-225 建立/改名/移除为具名命令并逐项回执"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "不隐式产生：未知分组的操作=group-unknown 拒绝，绝不静默建档；成员目标过 knownItem 门，未知逐项 item-unknown（未知与无权同码，不枚举）。",
+          "constraints": [
+            "US-225 不隐式产生"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "成员批量逐行 ok/unchanged/refused+计数，batch 键集封闭、无整体成功字段；已在该分组/不在该分组=未变化行；空批量拒绝。",
+          "constraints": [
+            "US-225 逐项回执"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "只改变列表组织：store 除自身成员集零写入、依赖面不含授权/范围/责任端口；断言 derive 逐字节相等+装配零调用+未接线=matter-groups-unavailable 缺项。",
+          "constraints": [
+            "US-226 不改变事项事实、可见范围、责任或权限"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首版不做：共享与协作语义、按分组批量授权、跨设备同步；分组为进程内记录，持久化后置。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
     }
   ]
 }

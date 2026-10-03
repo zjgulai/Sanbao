@@ -33,6 +33,20 @@ export function runCommand(input: {
   if (identity === undefined) return denied(correlation, 'identity-policy', 'identity-unavailable', { retryable: true })
   if (identity.kind === 'denied') return denied(correlation, 'identity-policy', 'policy-denied')
 
+  // Creation branch (ADR-0005): a formal matter belongs to the custody side, so a create request
+  // never walks the existing-matter steps and must never become a local write. Without a real
+  // custodian the honest answer is "not ready yet", not a locally minted matter.
+  if (intent.actionType === 'create-matter') {
+    const created = ports.createMatter?.({ intent, correlation })
+    if (created === undefined || 'denied' in created) {
+      return denied(correlation, 'create', 'persistence-unavailable', { retryable: true })
+    }
+    // US-119: an unconfirmed creation is `outcome-unknown`, and unknown is never retryable — the
+    // surface offers 核对 for the same request instead of replaying it.
+    if ('unknown' in created) return denied(correlation, 'create', 'outcome-unknown', { retryable: false })
+    return { correlation, receiptRef: created.receiptRef }
+  }
+
   // Step 3: strict rehydrate of the current BusinessMatter.
   const rehydrated = ports.strictRehydrate({ matterId: intent.matterId, revisionId: intent.revisionId })
   if (rehydrated === undefined) return denied(correlation, 'rehydrate', 'identity-unavailable', { retryable: true })

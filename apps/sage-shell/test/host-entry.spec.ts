@@ -123,4 +123,27 @@ describe('runShellHost lifecycle', () => {
 
     expect(invalidations).toEqual(['runtime-invalidated'])
   })
+
+  it('answers a bridge call from the booted context without ever throwing across the channel', async () => {
+    const profile = emptyProfile()
+    const controller = await runShellHost({ ...profile, writeResponse })
+
+    // This profile mounts no bundles, so the allowlisted endpoint must be refused as unavailable, not thrown.
+    await expect(controller.bridgeCall('settings/describe')).resolves.toEqual({
+      ok: false,
+      code: 'bridge-provider-unavailable',
+    })
+    // `session/prompt` is allowlisted since ticket 005; an endpoint nobody declared still refuses.
+    await expect(controller.bridgeCall('session/unsupported')).resolves.toEqual({
+      ok: false,
+      code: 'bridge-endpoint-unsupported',
+    })
+    // And the allowlisted one needs its declared payload before any provider is reached.
+    await expect(controller.bridgeCall('session/prompt')).resolves.toEqual({
+      ok: false,
+      code: 'bridge-payload-invalid',
+    })
+
+    await controller.dispose()
+  })
 })
