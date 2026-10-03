@@ -261,6 +261,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState = createSageF
                 <div class="sage-state-row"><span>目标（必填）</span><input class="sage-row-input" id="draft-goal" type="text" aria-label="目标"></div>
                 <div class="sage-state-row"><span>预期交付（必填）</span><input class="sage-row-input" id="draft-deliverable" type="text" aria-label="预期交付"></div>
                 <div class="sage-state-row"><span>责任（必填）</span><input class="sage-row-input" id="draft-responsibility" type="text" aria-label="责任"></div>
+                <p id="draft-responsibility-note" class="sage-card-note" role="status" aria-live="polite"></p>
                 <div class="sage-state-row"><span>项目（可选，最多一个）</span><input class="sage-row-input" id="draft-project" type="text" aria-label="项目"></div>
                 <div class="sage-state-row"><span>澄清（可选）</span><textarea class="sage-draft-input" id="draft-clarification" rows="2" aria-label="澄清"></textarea></div>
                 <button class="sage-secondary-button" id="draft-save" type="button">保存草案</button>

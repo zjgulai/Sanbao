@@ -271,6 +271,7 @@ export function renderSageDocument(): string {
     const draftGoal = document.querySelector('#draft-goal');
     const draftDeliverable = document.querySelector('#draft-deliverable');
     const draftResponsibility = document.querySelector('#draft-responsibility');
+    const draftResponsibilityNote = document.querySelector('#draft-responsibility-note');
     const draftProject = document.querySelector('#draft-project');
     const draftClarification = document.querySelector('#draft-clarification');
     const draftSave = document.querySelector('#draft-save');
@@ -1171,6 +1172,10 @@ export function renderSageDocument(): string {
     // 002：草案面。字段只由用户输入写；确认按钮只在三项必填都有内容时可用；已建项只说服务回执。
     let currentDraftId = null;
     let draftRevision = null;
+    // 004（US-008）：责任默认值的注入账。默认只在表单面提供、来源是 main 的登录投影；这两个变量
+    // 记住「上次注入的默认值」与「注入所依据的版本」，以便身份态变化时重算且不覆盖用户正在输入的文本。
+    let draftResponsibilityRevision = null;
+    let draftResponsibilityDefaultShown = null;
     // 025：已展开的执行前确认卡（含它所属的草案）。它只在卡片自己的「确认执行」点击后被消费；
     // 2s 轮询不清它（只有换草案、取消或该草案已建项才清）。
     let pendingDraftConfirmation = null;
@@ -2112,9 +2117,48 @@ export function renderSageDocument(): string {
       if (!stale) {
         setField(draftGoal, typeof current.fields.goal === 'string' ? current.fields.goal : '');
         setField(draftDeliverable, typeof current.fields.deliverable === 'string' ? current.fields.deliverable : '');
-        setField(draftResponsibility, typeof current.fields.responsibility === 'string' ? current.fields.responsibility : '');
         setField(draftProject, typeof current.fields.projectRef === 'string' ? current.fields.projectRef : '');
         setField(draftClarification, typeof current.clarification === 'string' ? current.clarification : '');
+      }
+      // 004（US-008）：责任默认值只在表单面提供，来源是 main 的登录投影（同一份 auth 值）——
+      // 不是 renderer 自造，也让 UI 自报文本永远进不了任何判定；默认文本在用户点「保存草案」
+      // 时才随其保存动作落盘，未认证/未就绪时保持为空并说明缺失（不伪造占位身份）。
+      {
+        const auth = payload !== null && typeof payload === 'object' && payload.service !== null && typeof payload.service === 'object'
+          ? payload.service.auth : null;
+        const authStatus = auth !== null && typeof auth === 'object' && typeof auth.status === 'string' ? auth.status : 'signed-out';
+        const authName = auth !== null && typeof auth === 'object' && typeof auth.displayName === 'string' && auth.displayName !== '' ? auth.displayName : null;
+        const savedResponsibility = typeof current.fields.responsibility === 'string' ? current.fields.responsibility : '';
+        const responsibilityRevision = current.updatedAt + '|' + authStatus + '|' + String(authName);
+        if (!stale || responsibilityRevision !== draftResponsibilityRevision) {
+          draftResponsibilityRevision = responsibilityRevision;
+          if (savedResponsibility !== '') {
+            // 已保存值优先；只把默认位让开，绝不改写用户已保存的内容。
+            if (!stale) setField(draftResponsibility, savedResponsibility);
+            draftResponsibilityDefaultShown = null;
+            if (draftResponsibilityNote !== null) draftResponsibilityNote.textContent = '';
+          } else {
+            const offered = authStatus === 'signed-in' && authName !== null ? authName : null;
+            const currentText = draftResponsibility !== null && typeof draftResponsibility.value === 'string' ? draftResponsibility.value : '';
+            // 注入只发生在输入框为空、或仍是我们上次注入的默认文本时——用户正在输入的文本不被覆盖。
+            if (offered !== null && (currentText === '' || currentText === draftResponsibilityDefaultShown)) {
+              setField(draftResponsibility, offered);
+            }
+            if (offered === null && currentText === draftResponsibilityDefaultShown && currentText !== '') {
+              setField(draftResponsibility, '');
+            }
+            draftResponsibilityDefaultShown = offered;
+            if (draftResponsibilityNote !== null) {
+              draftResponsibilityNote.textContent = offered !== null
+                ? '责任默认：当前登录身份「' + offered + '」——来自 main 的登录投影，可改；随「保存草案」落盘；改责任值不改变任何权限判定。'
+                : authStatus === 'pending'
+                  ? '未就绪：登录进行中——完成前不填默认责任（不用占位身份）。'
+                  : authStatus === 'signed-in'
+                    ? '已认证：身份显示名未提供——责任默认值不伪造（可手动填写）。'
+                    : '未认证：责任字段没有默认值——登录后自动填入当前身份（不用占位身份填充）。';
+            }
+          }
+        }
       }
       const attempt = current.attempt !== null && typeof current.attempt === 'object' ? current.attempt : null;
       const attemptState = attempt !== null && typeof attempt.state === 'string' ? attempt.state : null;
@@ -3928,7 +3972,10 @@ export function renderSageDocument(): string {
 
     function draftSelections() {
       if (draftHistory === null) return [];
-      return draftHistory.children
+      // Real DOM: children 是 HTMLCollection（没有数组方法）——2026-10-03 真机探针抓到
+      // .filter 直呼会让「保存草案」点击在实机抛 TypeError、整条保存链不发包；Fake DOM
+      // 的 children 是数组，测不出这一类。这里必须先转数组。
+      return Array.from(draftHistory.children)
         .filter((row) => row.dataset.historyEntryId !== undefined && row.querySelector('[data-history-toggle]') !== null)
         .filter((row) => row.querySelector('[data-history-toggle]').checked === true)
         .map((row) => row.dataset.historyEntryId);

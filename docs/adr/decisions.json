@@ -7277,6 +7277,58 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0247",
+      "title": "ADR-0247 · 建项责任默认值：main 登录投影一处取值、表单面默认与「改责任不动权限」",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "责任默认只从 main 的 service.auth 投影取（真登录链 vault 快照）；renderer 不自造；identity handle 是运行期内部引用，不进 renderer 面、不落草案记录、不写表单值。",
+          "constraints": [
+            "US-008 责任字段默认当前登录身份",
+            "2B.2E handle 不进 renderer"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "默认只在表单面提供：saved 责任非空优先、默认位让开；注入仅当输入为空或仍等于上次注入值（不覆盖用户输入）；仅随用户保存草案落盘（US-010 不破）。",
+          "constraints": [
+            "US-010 字段只由用户 update 写",
+            "ADR-0209 草案纪律"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "无身份不伪造：signed-out=空+未认证缺失句；pending=登录中；signed-in 无显示名=显示名未提供不伪造；身份态变化按修订号重算，未被动过的默认撤回。",
+          "constraints": [
+            "US-008 不用占位身份填充"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "改责任值不改变任何权限判定：草案路由双层精确键拒一切 identity 形状走私（400）；一次编辑恰一个 port、命令/授权管线零调用；编辑前后 service.auth/reason/command 逐字节不变。",
+          "constraints": [
+            "US-008 UI 自报身份不作为授权依据"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "真机探针抓到 HTMLCollection.filter 缺陷并修复为 Array.from；此类实机专属缺陷 Fake DOM 电池抓不住，靠真机探针，LOOP 行坦登记。",
+          "constraints": [
+            "真机验收不可由 Fake DOM 替代"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "首版不做：组织岗位、协作管理、主责交接；跨组织任职与主责指定待 Identity/Policy 后续。",
+          "constraints": [
+            "工单边界"
+          ]
+        }
+      ]
     }
   ]
 }
