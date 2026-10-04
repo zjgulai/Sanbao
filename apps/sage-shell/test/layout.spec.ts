@@ -87,14 +87,19 @@ function realShellRoot(): string {
 
 function walkJs(libRoot: string): string[] {
   const out: string[] = []
-  const visit = (dir: string) => {
+  const visit = (dir: string, skipDirs: ReadonlySet<string> = new Set<string>()): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name)
-      if (entry.isDirectory()) visit(full)
-      else if (entry.name.endsWith('.js')) out.push(relative(libRoot, full))
+      if (entry.isDirectory()) {
+        if (!skipDirs.has(entry.name)) visit(full)
+      } else if (entry.name.endsWith('.js')) out.push(relative(libRoot, full))
     }
   }
   // WT-02D.1: the Host no longer carries product routes (`adapter/` retired); host-scope output is host/ + product/.
-  for (const dir of ['host', 'product']) visit(join(libRoot, dir))
+  visit(join(libRoot, 'host'))
+  // ADR-0261 P1: `product/app/**` is the React source tree that the esbuild step bundles into
+  // `product/app-bundle.js` (registered in HOST_LIB_FILES); its raw tsc emit still carries bare
+  // runtime imports and is intentionally not materialized, so it is not host scope.
+  visit(join(libRoot, 'product'), new Set(['app']))
   return out
 }

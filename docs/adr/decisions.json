@@ -8080,6 +8080,90 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0261",
+      "title": "ADR-0261 · UI-DECISION-01：renderer 采用 Sage-owned React 19 + esbuild（单文件内联、CSP 零变更）",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "renderer 技术栈采用 Sage-owned React 19（react/react-dom 19.x）＋ esbuild 单文件 bundle ＋ jsdom 组件测试环境；A（继续 framework-free）与 C（其他组件层）否决。",
+          "constraints": [
+            "self-owned react 19",
+            "esbuild single-file bundle",
+            "jsdom component tests",
+            "no vite",
+            "no second component layer"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "精确版本在 P1 开工时按 registry 现查并以 -E 钉死；锁点＝apps/sage-shell/package.json＋apps/sage-shell/pnpm-lock.yaml（壳为独立 pnpm 项目，根 pnpm-lock.yaml 不改）。",
+          "constraints": [
+            "save-exact",
+            "shell-local lockfile",
+            "root lockfile untouched"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "依赖全部只入 devDependencies（构建期/测试期），不进运行时 profile。",
+          "constraints": [
+            "no runtime dependencies",
+            "profile seed untouched"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "CSP 零变更：bundle 以 SAGE_APP_BUNDLE 常量内联进同一文档（现行 script-src 'unsafe-inline' 已容许）；SAGE_DOCUMENT_CSP 与 host/assets.ts 不改；服务化另开票。",
+          "constraints": [
+            "inline script",
+            "CSP unchanged",
+            "assets handler unchanged",
+            "serving ticket separate"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "构建链＝tsc → scripts/build-renderer.mjs（esbuild）→ lib/product/app-bundle.js → materialize；HOST_LIB_FILES 增 product/app-bundle.js；源码保留同形状占位 app-bundle.ts。",
+          "constraints": [
+            "tsc first",
+            "esbuild overwrites js only",
+            "placeholder keeps typecheck green",
+            "no code-splitting"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "测试纪律：既有 Electron-vitest、两套窗口探针与 Fake DOM 壳测试保留；React 组件测试在 test/product-app/**（per-file jsdom）；Fake DOM 不接 React；迁移期以真实 Electron 窗口探针＋1440 截图为可视/行为主判据。",
+          "constraints": [
+            "per-file jsdom environment",
+            "fake dom not react",
+            "window probe is visual authority"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "strangler 分阶段：P1 基础设施（不接管任何区域）→ P2 事项工作台区 → P3 支持卡群 → P4 其余面板；同一区域单一 owner；每阶段单提交可回滚。",
+          "constraints": [
+            "single owner per region",
+            "single-commit rollback",
+            "P1 takes over nothing"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "边界保持：theme-tokens.ts 唯一 token owner（React 只消费闭合 token 与既有 class）；fixture 边界与 fail-closed 首帧不动；renderSageDocument 最终收缩为骨架＋首帧＋内联 bundle＋挂载点 #sage-app-root；回滚不触 ViewState/路由/authority/CSP。",
+          "constraints": [
+            "single token owner",
+            "fixture boundary untouched",
+            "mount point #sage-app-root",
+            "rollback surface limited"
+          ]
+        }
+      ]
     }
   ]
 }

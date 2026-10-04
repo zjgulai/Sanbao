@@ -1,10 +1,11 @@
-import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { createRequire } from 'node:module'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+
+import { buildProductionLibrary } from './support/build-production-library.js'
 
 const PROBE_PATH = fileURLToPath(new URL('./support/sage-fixture-projection-probe.mjs', import.meta.url))
 const RESULT_PREFIX = 'SAGE_FIXTURE_PROJECTION_RESULT '
@@ -221,6 +222,7 @@ interface ProbeResult {
       readonly displayChromeNodeCount: number
       readonly navItemCount: number
       readonly navItemIds: readonly string[]
+      readonly reactAppMounted: boolean
     }
     readonly navigationFacts?: {
       readonly requestedStage: string
@@ -360,22 +362,6 @@ interface ProbeRun {
   readonly result: ProbeResult
 }
 
-const require_ = createRequire(import.meta.url)
-
-/** The window probe exercises production code, so compile `src/` to `lib/` first. */
-function buildProductionLibrary(): void {
-  const tscPath = join(dirname(require_.resolve('typescript/package.json')), 'bin', 'tsc')
-  const build = spawnSync(process.execPath, [tscPath, '--build', 'tsconfig.json'], {
-    cwd: fileURLToPath(new URL('../', import.meta.url)),
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-    encoding: 'utf8',
-    timeout: 120_000,
-  })
-  if (build.status !== 0) {
-    throw new Error(`tsc build failed before the fixture-projection window probe:\n${build.stdout}\n${build.stderr}`)
-  }
-}
-
 function outputBytes(stdout: string, stderr: string): number {
   return Buffer.byteLength(stdout) + Buffer.byteLength(stderr)
 }
@@ -504,6 +490,7 @@ function expectFixtureStage(run: ProbeRun, stage: FixtureStage): void {
     matterVisible: true,
     workspaceProjectionSource: 'fixture',
     matterId: 'matter:sage.shopify-abi.fixture',
+    reactAppMounted: true,
   })
   expect(result.evidence.stageFacts).toMatchObject({
     trackCurrentStage: stage,
@@ -569,6 +556,7 @@ function expectUnavailableProjection(run: ProbeRun): void {
     workspaceProjectionSource: 'unavailable',
     matterId: '—',
     matterGoal: '当前没有可用的事项投影',
+    reactAppMounted: true,
   })
   expect(run.result.evidence.stageFacts).toMatchObject({
     trackCurrentStage: 'unavailable',

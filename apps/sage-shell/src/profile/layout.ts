@@ -28,6 +28,7 @@ export const HOST_LIB_FILES = [
   'product/contracts.js',
   'product/view-state.js',
   'product/action-preview.js',
+  'product/app-bundle.js',
   'product/component-renderer.js',
   'product/theme-tokens.js',
   'product/renderer.js',

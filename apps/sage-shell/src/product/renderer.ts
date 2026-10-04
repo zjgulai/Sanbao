@@ -1,5 +1,6 @@
 /** Static, self-owned Sage renderer. It has no upstream UI, slot, or runtime dependency. */
 
+import { SAGE_APP_BUNDLE } from './app-bundle.js'
 import { renderSageWorkspace } from './component-renderer.js'
 import { SAGE_ACTIONS_PATH, SAGE_REQUEST_TIMEOUT_MS, SAGE_STATE_PATH } from './contracts.js'
 import { renderSageDensityTokenCss, renderSageThemeTokenCss } from './theme-tokens.js'
@@ -8,6 +9,9 @@ import { renderSageDensityTokenCss, renderSageThemeTokenCss } from './theme-toke
 export function renderSageDocument(): string {
   const statePath = JSON.stringify(SAGE_STATE_PATH)
   const actionsPath = JSON.stringify(SAGE_ACTIONS_PATH)
+  // ADR-0261 P1: the esbuild bundle (or the placeholder module) rides the same strict-CSP
+  // document as one extra inline script; the empty placeholder must not add an empty tag.
+  const appScript = SAGE_APP_BUNDLE === '' ? '' : `<script>${SAGE_APP_BUNDLE}</script>`
   return `<!doctype html>
 <html lang="zh-CN" data-sage-theme-requested="unknown" data-sage-theme-effective="unknown" data-sage-density="unknown">
 <head>
@@ -7428,6 +7432,8 @@ export function renderSageDocument(): string {
     // (pending → signed-in, logout, supersession) must land without relying on a click's fetch settling.
     setInterval(() => { void refresh(); }, 2000);
   </script>
+  <div id="sage-app-root" hidden></div>
+  ${appScript}
 </body>
 </html>`
 }

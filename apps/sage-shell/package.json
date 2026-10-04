@@ -14,12 +14,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
+    "build": "tsc && node scripts/build-renderer.mjs",
     "test": "node scripts/test.mjs run",
     "materialize": "node scripts/materialize.mjs",
     "preview": "node scripts/preview.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "dev": "tsc && electron ."
+    "dev": "tsc && node scripts/build-renderer.mjs && electron ."
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
@@ -32,7 +32,13 @@
     "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.2",
     "@deepseek-ai/dsh-launch-environment": "0.2.0-rc.2",
     "@types/node": "^22.20.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "electron": "43.3.0",
+    "esbuild": "0.28.2",
+    "jsdom": "30.1.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "typescript": "5.6.3",
     "vitest": "^4.1.11"
   }

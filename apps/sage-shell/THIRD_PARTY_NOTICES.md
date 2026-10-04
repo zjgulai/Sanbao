@@ -57,3 +57,14 @@ P0-2 的自有页面由 `src/product/renderer.ts` 输出，并仅通过 `src/ada
 `@deepseek-ai/dsh-host-webserver` 与 `@deepseek-ai/dsh-web-frontend` 可能仍因 profile 的锁定依赖图存在，但 Sage 不再调用前者的 index 注入，也不再从 Sage 的资产或路由层服务、注入或改写后者的页面、客户端 bundle 或 Conversation slot。保留依赖图不等于保留产品 UI 消费面；依赖删减需在后续单独审计后进行，不能凭名称盲删。
 
 已移除的 Composer 兼容适配、上游客户端 fixture 与默认 onboarding 不再属于 Sage 的运行时或测试物化面。因此本 notice 不再把它们陈述为当前消费事实；本文件第 1–2 节的 MIT 许可与只读 vendor 参照仍完整保留。
+
+## 4. 渲染器 bundle：React（MIT）与构建期工具
+
+`src/product/app/` 的 Sage 自有渲染器应用使用 React，并由 esbuild 在构建期把 react/react-dom 代码打包进 `lib/product/app-bundle.js`（单文件内联进 Sage 文档，ADR-0261）。以下包以精确版本锁在 `apps/sage-shell/package.json` 的 devDependencies：
+
+| 包 | 性质 | 许可 |
+| --- | --- | --- |
+| `react`、`react-dom` | 代码随 bundle 分发进产品文档 | MIT（Copyright (c) Meta Platforms, Inc. and affiliates.；条款全文同 §2） |
+| `esbuild` | 仅构建期使用，不随产品分发 | MIT |
+| `jsdom` | 仅测试期使用，不随产品分发 | MIT |
+| `@types/react`、`@types/react-dom` | DefinitelyTyped 类型声明，仅编译期使用 | MIT |

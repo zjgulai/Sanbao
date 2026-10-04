@@ -1,10 +1,11 @@
-import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { createRequire } from 'node:module'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+
+import { buildProductionLibrary } from './support/build-production-library.js'
 
 const PROBE_PATH = fileURLToPath(new URL('./support/sage-frame-policy-window-probe.mjs', import.meta.url))
 const RESULT_PREFIX = 'SAGE_FRAME_POLICY_WINDOW_RESULT '
@@ -47,22 +48,6 @@ interface ProbeRun {
   readonly exitCode: number | null
   readonly signal: NodeJS.Signals | null
   readonly result: ProbeResult
-}
-
-const require_ = createRequire(import.meta.url)
-
-/** The window probe exercises production code, so compile `src/` to `lib/` first. */
-function buildProductionLibrary(): void {
-  const tscPath = join(dirname(require_.resolve('typescript/package.json')), 'bin', 'tsc')
-  const build = spawnSync(process.execPath, [tscPath, '--build', 'tsconfig.json'], {
-    cwd: fileURLToPath(new URL('../', import.meta.url)),
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-    encoding: 'utf8',
-    timeout: 120_000,
-  })
-  if (build.status !== 0) {
-    throw new Error(`tsc build failed before the frame-policy window probe:\n${build.stdout}\n${build.stderr}`)
-  }
 }
 
 function outputBytes(stdout: string, stderr: string): number {

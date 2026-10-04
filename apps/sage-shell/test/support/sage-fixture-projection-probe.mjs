@@ -472,12 +472,13 @@ async function run() {
         displayChromeNodeCount: document.querySelectorAll('.sage-hero, .sage-network-card').length,
         navItemCount: document.querySelectorAll('.sage-nav-item').length,
         navItemIds: Array.from(document.querySelectorAll('.sage-nav-item')).map((item) => item.id),
+        reactAppMounted: window.__SAGE_APP_MOUNTED__ === true,
       }
     }
     const deadline = Date.now() + 4000
     while (Date.now() < deadline) {
       const facts = snapshot()
-      if (facts.title !== '正在检查' && facts.workspaceProjectionSource === ${JSON.stringify(expectedProjection)}) return facts
+      if (facts.title !== '正在检查' && facts.workspaceProjectionSource === ${JSON.stringify(expectedProjection)} && facts.reactAppMounted === true) return facts
       await new Promise((resolve) => { setTimeout(resolve, 10) })
     }
     return snapshot()
@@ -495,6 +496,8 @@ async function run() {
   // Batch 12 / UI-01A: dense operational scale, no display-scale chrome in the real document.
   requireCondition(documentFacts.displayChromeNodeCount === 0, 'display-scale hero/network chrome is still present in the real document')
   requireCondition(documentFacts.navItemCount === 6 && JSON.stringify(documentFacts.navItemIds) === JSON.stringify(['view-matter', 'view-search', 'view-automation', 'view-knowledge', 'view-capabilities', 'view-settings']), 'navigation is not the six-item target set')
+  // ADR-0261 P1: the React root must mount under the strict CSP document before any region moves over.
+  requireCondition(documentFacts.reactAppMounted === true, 'React app did not mount under the strict CSP document')
   requireCondition(documentFacts.sectionHeadingFontPx !== null && documentFacts.sectionHeadingFontPx <= 24 && documentFacts.sectionHeadingFontPx >= 16, `matter section heading is not on the operational scale (${documentFacts.sectionHeadingFontPx}px)`)
   requireCondition(documentFacts.matterGoalFontPx !== null && documentFacts.matterGoalFontPx <= 24 && documentFacts.matterGoalFontPx >= 16, `matter goal heading is not on the operational scale (${documentFacts.matterGoalFontPx}px)`)
 
