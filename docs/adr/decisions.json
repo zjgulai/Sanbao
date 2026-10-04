@@ -8164,6 +8164,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0262",
+      "title": "ADR-0262 · Sanbao 承载面：Sage 壳以 sage-sanbao:// 非特权面承载 sanbao UI 并注入 `__SANBAO_HOST__` 壳桥",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增 Sage 主进程承载面 sanbao-surface.ts：sage-sanbao:// 特权 scheme（standard+secure+stream，ready 前注册）只读服务注入 root（realpath 双前缀防穿越），承载文档运行于独立非持久 partition（sandbox/contextIsolation/nodeIntegration:false/禁 window.open/禁出 scheme 导航/单向 webRequest 闸门）。",
+          "constraints": [
+            "privileged scheme registered before ready",
+            "read-only protocol handler",
+            "non-persistent sandboxed partition",
+            "navigation and window.open denied",
+            "path traversal guarded"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "桥面＝sandboxed preload 经 contextBridge 暴露 __SANBAO_HOST__（protocolVersion 1，13 方法转 ipcRenderer.invoke），main 侧 ipcMain.handle 白名单＋参数形状校验；未知方法/坏参/异常一律 honest unavailable，renderer 不可见堆栈。",
+          "constraints": [
+            "allowlist methods",
+            "argument shape validation",
+            "no stack leak",
+            "no privileged channel beyond the port"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "createSanbaoHostPort(facts) 镜像 sanbao runtime/host.ts 全部 13 方法与类型（不跨仓 import）；生产默认 facts＝每方法 honest unavailable（壳尚未提供该类事实）；facts 可注入供测试/探针。",
+          "constraints": [
+            "cross-repo mirror only",
+            "honest unavailable by default",
+            "injectable facts",
+            "no credentials",
+            "no real model calls"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "验收＝真实 Electron 探针（live/honest/负控，exit 0/2/1）＋窗口 spec 纳入既有 Vitest 流程；截图留 .birdview/evidence；生产启动创建/打开承载面与 FramePolicy 接入、写路径真接线均留待后续批次并登记为未接线。",
+          "constraints": [
+            "named assertions must fail on negative control",
+            "gate quick/full stay green",
+            "production open timing deferred",
+            "write paths remain honest unavailable"
+          ]
+        }
+      ]
     }
   ]
 }

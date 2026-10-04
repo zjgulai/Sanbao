@@ -73,6 +73,7 @@ import { createRuntimeInventoryProvider, type RuntimeInventoryResult } from './r
 import { createActiveMatterContext } from './active-matter-context.js'
 import { selectActiveMatter as selectActiveMatterContext } from './active-matter-selection.js'
 import { projectionReadScope } from './projection-read-scope.js'
+import { registerSanbaoSurfaceScheme } from './sanbao-surface.js'
 
 const SCHEME = 'dsh-app'
 
@@ -87,6 +88,9 @@ protocol.registerSchemesAsPrivileged([{
     codeCache: true,
   },
 }])
+
+// Sanbao 承载面（sage-sanbao://）与 dsh-app 同一注册点——特权 scheme 必须在 app ready 前注册。
+registerSanbaoSurfaceScheme()
 
 /** Configure Electron storage before its ready event can initialize Chromium defaults. */
 function configureElectronPaths(paths: SagePaths): void {
