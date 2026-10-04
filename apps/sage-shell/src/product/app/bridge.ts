@@ -61,6 +61,48 @@ export type ToolResultsRegionMessage =
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'results', readonly results: readonly ToolResultView[] }
 
+/** The run-monitor slot reads its own members defensively; steps carry the only live axis. */
+export interface RunMonitorSlotView {
+  readonly state?: string
+  readonly steps?: { readonly state?: string, readonly reason?: unknown } | null
+}
+
+export type RunMonitorRegionMessage =
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'read', readonly slot: RunMonitorSlotView }
+
+/** The wire fields the artifact card and its preview panel read. */
+export interface ArtifactCardView {
+  readonly artifactId?: string
+  readonly name?: string
+  readonly kind?: string
+  readonly bytes?: number
+  readonly version?: string
+  readonly state?: string
+}
+
+export interface ArtifactPreviewView {
+  readonly state?: string
+  readonly artifactId?: string
+  readonly name?: string
+  readonly version?: string
+  readonly expanded?: boolean
+  readonly window?: boolean
+  readonly code?: string
+  readonly retryable?: boolean
+}
+
+export type ArtifactsRegionMessage =
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'cards', readonly cards: readonly ArtifactCardView[], readonly preview: ArtifactPreviewView }
+
+/** One run-log page: the display rows and the legacy-computed notice sentence. */
+export interface RunLogResult {
+  readonly lines: readonly { readonly no?: unknown, readonly text?: unknown }[]
+  readonly append: boolean
+  readonly notice: string
+}
+
 export interface AppBridgeSnapshot {
   /** Last message per region key (`matter`, `sites`, `tool-results`, ...); absent = unavailable. */
   readonly regions: Readonly<Record<string, unknown>>
@@ -103,6 +145,13 @@ export function createAppBridgeStore(): AppBridgeStore {
 export interface LegacyActions {
   openArtifact?: (artifactId: string) => Promise<unknown>
   openExternalLink?: (url: string) => Promise<string>
+  runLogOpen?: (path: string) => Promise<RunLogResult>
+  runLogContinue?: () => Promise<RunLogResult>
+  observeArtifacts?: () => Promise<string | null>
+  retryArtifactPreview?: () => Promise<unknown>
+  closeArtifactPreview?: () => Promise<unknown>
+  setArtifactFullscreen?: (on: boolean) => Promise<void>
+  artifactWindow?: (action: 'open' | 'close') => Promise<string>
 }
 
 /** Read one region slice off the store snapshot with a typed default. */

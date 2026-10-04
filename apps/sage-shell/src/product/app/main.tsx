@@ -14,7 +14,9 @@ import { createRoot } from 'react-dom/client'
 import type { JSX } from 'react'
 
 import { createAppBridgeStore } from './bridge.js'
+import { ArtifactRegion } from './artifact-view.js'
 import { MatterRegion } from './matter-view.js'
+import { MonitorRegion } from './monitor-view.js'
 import { SitesRegion } from './sites-view.js'
 import { ToolResultsRegion } from './tool-results-view.js'
 
@@ -54,6 +56,16 @@ if (sitesHost !== null) {
 const toolResultsHost = document.getElementById('sage-region-tool-results')
 if (toolResultsHost !== null) {
   createRoot(toolResultsHost).render(<ToolResultsRegion store={store} container={toolResultsHost} />)
+}
+
+const runMonitorHost = document.getElementById('sage-region-run-monitor')
+if (runMonitorHost !== null) {
+  createRoot(runMonitorHost).render(<MonitorRegion store={store} container={runMonitorHost} />)
+}
+
+const artifactHost = document.getElementById('sage-region-artifacts')
+if (artifactHost !== null) {
+  createRoot(artifactHost).render(<ArtifactRegion store={store} container={artifactHost} />)
 }
 
 const markerHost = document.getElementById('sage-app-root')

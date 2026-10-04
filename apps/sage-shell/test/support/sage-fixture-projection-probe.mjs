@@ -1083,23 +1083,29 @@ async function run() {
   // mapping the legacy script would have applied (artifacts known -> cards; read tool results ->
   // results), and both region roots must carry their machine state for the real-window read.
   const expectedSitesState = stateProbe.status === 200 && stateProbe.body?.artifacts !== null && stateProbe.body?.artifacts !== undefined && typeof stateProbe.body?.artifacts === 'object' ? 'cards' : 'unavailable'
+  const expectedArtifactsState = expectedSitesState
+  const expectedRunMonitorState = stateProbe.status === 200 && stateProbe.body?.runMonitor !== null && stateProbe.body?.runMonitor !== undefined && typeof stateProbe.body?.runMonitor === 'object' && stateProbe.body.runMonitor.state === 'read' ? 'read' : 'unavailable'
   const expectedToolResultsState = stateProbe.status === 200 && stateProbe.body?.toolResults !== null && stateProbe.body?.toolResults !== undefined && typeof stateProbe.body?.toolResults === 'object' && stateProbe.body.toolResults.state === 'read' ? 'results' : 'unavailable'
   const regionFacts = await evaluate(window, `(async () => {
     const snapshot = () => ({
       sites: document.querySelector('#sage-region-sites')?.getAttribute('data-region-state') ?? null,
       toolResults: document.querySelector('#sage-region-tool-results')?.getAttribute('data-region-state') ?? null,
+      runMonitor: document.querySelector('#sage-region-run-monitor')?.getAttribute('data-region-state') ?? null,
+      artifacts: document.querySelector('#sage-region-artifacts')?.getAttribute('data-region-state') ?? null,
     })
     const deadline = Date.now() + 4000
     while (Date.now() < deadline) {
       const facts = snapshot()
-      if (facts.sites !== null && facts.toolResults !== null) return facts
+      if (facts.sites !== null && facts.toolResults !== null && facts.runMonitor !== null && facts.artifacts !== null) return facts
       await new Promise((resolve) => { setTimeout(resolve, 10) })
     }
     return snapshot()
   })()`)
-  evidence.regionFacts = { expectedSitesState, expectedToolResultsState, ...regionFacts }
+  evidence.regionFacts = { expectedSitesState, expectedToolResultsState, expectedRunMonitorState, expectedArtifactsState, ...regionFacts }
   requireCondition(regionFacts.sites === expectedSitesState, `sites region state is ${regionFacts.sites}, expected ${expectedSitesState}`)
   requireCondition(regionFacts.toolResults === expectedToolResultsState, `tool-results region state is ${regionFacts.toolResults}, expected ${expectedToolResultsState}`)
+  requireCondition(regionFacts.runMonitor === expectedRunMonitorState, `run-monitor region state is ${regionFacts.runMonitor}, expected ${expectedRunMonitorState}`)
+  requireCondition(regionFacts.artifacts === expectedArtifactsState, `artifacts region state is ${regionFacts.artifacts}, expected ${expectedArtifactsState}`)
   const wire = evidence.stateProbe
   if (expectedProjection === 'fixture') {
     requireCondition(wire.matterPresent === true, 'fixture matter is absent on the wire')

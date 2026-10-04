@@ -420,7 +420,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-artifact-section" aria-label="产物卡与侧面预览">
-            <article class="sage-card sage-artifact-card">
+            <article class="sage-card sage-artifact-card" id="sage-region-artifacts" data-sage-region="artifacts" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">ARTIFACTS · CARD FIRST, OPEN ON CLICK</span><span class="sage-card-index">D4</span></div>
               <h2>产物卡与侧面预览</h2>
               <p class="sage-card-note">卡片只展示本次运行观察到的文件变化（线索经一次 stat 核验后给出"就绪"版本），<strong>卡片出现不会创建或加载任何预览</strong>。点击卡片才按该版本读取内容，并在 main 管理的右侧容器中打开；预览失败可对<strong>同一版本</strong>重试——不静默切到最新版本、不重跑生成。Office 原格式本版不内置预览、不自动转换，也不把"可下载"写成"可预览"。</p>
@@ -523,7 +523,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-run-monitor-section" aria-label="运行监控">
-            <article class="sage-card sage-run-monitor-card">
+            <article class="sage-card sage-run-monitor-card" id="sage-region-run-monitor" data-sage-region="run-monitor" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">RUN MONITOR · FOUR AXES · LOG READ-ONLY</span><span class="sage-card-index">D8</span></div>
               <h2>运行监控、用量与运行日志</h2>
               <p class="sage-card-note">四轴<strong>各自独立</strong>呈现、不合成单一「运行状态」：步骤来自会话的同一投影；预算／用量分<strong>预留／消耗／最终账单</strong>三态，来源未接线时为「未知」——<strong>不以零代替未知</strong>。设备<strong>离线不等于运行取消、也不等于被其他设备接管</strong>。后台执行主体在 Host 侧：<strong>折叠或关闭这个面板不会取消运行</strong>（面板只是本地视图状态）。上下文用量与压缩只读呈现；压缩是否发生由执行侧决定，本版没有压缩读数、也没有压缩触发入口；任何压缩都不得把私有侧聊带入主对话或扩大外传。运行日志<strong>只读、有界续读</strong>，不进入普通对话同步；导出需独立核权（本版无导出入口）。</p>

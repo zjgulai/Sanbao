@@ -391,20 +391,6 @@ export function renderSageDocument(): string {
     const matterGroupsReadback = document.querySelector('#matter-groups-readback');
     const matterGroupsBatchRows = document.querySelector('#matter-groups-batch-rows');
     const matterGroupsTrail = document.querySelector('#matter-groups-trail');
-    const monitorToggle = document.querySelector('#monitor-toggle');
-    const monitorBody = document.querySelector('#monitor-body');
-    const monitorSteps = document.querySelector('#monitor-steps');
-    const monitorBudgetReserved = document.querySelector('#monitor-budget-reserved');
-    const monitorBudgetConsumed = document.querySelector('#monitor-budget-consumed');
-    const monitorBudgetBilled = document.querySelector('#monitor-budget-billed');
-    const monitorDevice = document.querySelector('#monitor-device');
-    const monitorBackground = document.querySelector('#monitor-background');
-    const monitorContext = document.querySelector('#monitor-context');
-    const runLogPath = document.querySelector('#run-log-path');
-    const runLogOpen = document.querySelector('#run-log-open');
-    const runLogContinue = document.querySelector('#run-log-continue');
-    const runLogNote = document.querySelector('#run-log-note');
-    const runLogRows = document.querySelector('#run-log-rows');
     const planTitle = document.querySelector('#plan-title');
     const planSteps = document.querySelector('#plan-steps');
     const planCreate = document.querySelector('#plan-create');
@@ -514,15 +500,6 @@ export function renderSageDocument(): string {
     const attachmentPick = document.querySelector('#attachment-pick');
     const attachmentNote = document.querySelector('#attachment-note');
     const attachmentItems = document.querySelector('#attachment-items');
-    const artifactObserve = document.querySelector('#artifact-observe');
-    const artifactNote = document.querySelector('#artifact-note');
-    const artifactCards = document.querySelector('#artifact-cards');
-    const artifactPreview = document.querySelector('#artifact-preview');
-    const artifactPreviewNote = document.querySelector('#artifact-preview-note');
-    const artifactRetry = document.querySelector('#artifact-retry');
-    const artifactClose = document.querySelector('#artifact-close');
-    const artifactExpand = document.querySelector('#artifact-expand');
-    const artifactWindow = document.querySelector('#artifact-window');
     const sideChatCreate = document.querySelector('#side-chat-create');
     const sideChatNote = document.querySelector('#side-chat-note');
     const sideChatRows = document.querySelector('#side-chat-rows');
@@ -1468,9 +1445,7 @@ export function renderSageDocument(): string {
     const matterGroupsSelected = new Set();
     let matterGroupsPicked = null;
     // 031：监控面。面板开合是本地视图状态（不发请求、不取消运行）；日志游标本页保留。
-    let monitorCollapsed = false;
     let runLogCursor = null;
-    let runLogLocalNotice = null;
     // 032：方案面。接受回执与步骤执行结果都从投影读；被拒绝的代码走 local-notice 守卫。
     let planLocalNotice = null;
     let currentPlanId = null;
@@ -1486,7 +1461,6 @@ export function renderSageDocument(): string {
     let linkLocalNotice = null;
     let sessionLocalNotice = null;
     let attachmentLocalNotice = null;
-    let artifactLocalNotice = null;
     let queueLocalNotice = null;
     let historyLocalNotice = null;
     let clarificationLocalNotice = null;
@@ -2037,23 +2011,11 @@ export function renderSageDocument(): string {
       }
     }
 
-    // 031：四轴渲染。每一轴独立取值与措辞——任何情况下都不合成单一「运行状态」。
-    function renderRunMonitor(payload) {
-      if (monitorSteps === null) return;
+    // 031 / Batch 17（ADR-0261 P3）：四轴渲染归 React 区域；这里只把 payload 槽发布给区域桥。
+    function publishRunMonitorSlice(payload) {
       const slot = payload !== null && typeof payload === 'object' ? payload.runMonitor : null;
       const state = slot !== null && typeof slot === 'object' && typeof slot.state === 'string' ? slot.state : 'unavailable';
-      const steps = slot !== null && typeof slot === 'object' && slot.steps !== null && typeof slot.steps === 'object' ? slot.steps : null;
-      monitorSteps.textContent = state !== 'read' || steps === null ? '不可用（监控未读取）'
-        : steps.state === 'running' ? '执行中（会话有未结束的一轮）'
-          : steps.state === 'idle' ? '空闲（没有未结束的轮）'
-            : '不可用（' + String(steps.reason ?? 'unknown') + '）';
-      const budgetText = '未知（来源未接线——未知≠零，不用数字冒充）';
-      if (monitorBudgetReserved !== null) monitorBudgetReserved.textContent = budgetText;
-      if (monitorBudgetConsumed !== null) monitorBudgetConsumed.textContent = budgetText;
-      if (monitorBudgetBilled !== null) monitorBudgetBilled.textContent = budgetText;
-      if (monitorDevice !== null) monitorDevice.textContent = '未知（未接上设备绑定读数）——离线≠运行取消，≠被其他设备接管';
-      if (monitorBackground !== null) monitorBackground.textContent = '未知（Host 侧执行主体未接线）——面板开合不影响运行';
-      if (monitorContext !== null) monitorContext.textContent = '未知（无上下文读数；压缩无读数——本版无压缩触发入口，压缩不得泄漏私有侧聊或扩大外传）';
+      publishRegion('run-monitor', state === 'read' ? { kind: 'read', slot } : { kind: 'unavailable' });
     }
 
     function runLogRefusalText(code) {
@@ -2066,25 +2028,6 @@ export function renderSageDocument(): string {
         'run-log-read-failed': '读取运行日志时出错。',
       };
       return notes[code] ?? ('日志读取被拒绝（' + String(code) + '）。');
-    }
-
-    function renderRunLogLines(lines, append) {
-      if (runLogRows === null) return;
-      if (!append) runLogRows.textContent = '';
-      for (const line of lines) {
-        if (line === null || typeof line !== 'object') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.logLineNo = String(line.no ?? '');
-        const no = document.createElement('span');
-        no.className = 'sage-roster-tag';
-        no.textContent = String(line.no ?? '?');
-        row.appendChild(no);
-        const text = document.createElement('span');
-        text.textContent = typeof line.text === 'string' ? line.text : '';
-        row.appendChild(text);
-        runLogRows.appendChild(row);
-      }
     }
 
     // 032：方案卡。行=方案（草稿/已接受回执）；步骤就绪按前提显示，未就绪/未知不给执行入口。
@@ -3987,97 +3930,14 @@ export function renderSageDocument(): string {
       }
     }
 
-    // 015：产物卡与侧面预览。卡片按"观察到变化→stat 核验"就绪；预览只有点击才存在。
-    // 016：失败分句——超限（实测上限）与解析失败是两句不同的话（不把解析失败说成空文档）。
-    const ARTIFACT_FAILURE_SENTENCE = {
-      'artifact-version-changed': '打开失败：文件在打开前已变化（不会切到新版本）。',
-      'artifact-source-absent': '打开失败：文件已不在。',
-      'artifact-too-large': '超出本版预览上限：文件超出实测处理上限，未解析显示（不把截断冒充完整内容）。',
-      'artifact-not-text': '无法预览：内容不是可解码文本。',
-      'artifact-csv-parse-failed': 'CSV 解析失败：结构无法解析，未显示表格（这不是"空文件"）。',
-      'artifact-load-failed': '预览容器加载失败（可重试同一版本）。',
-      'artifact-preview-window-unavailable': '预览容器暂不可用：无法创建预览窗口。',
-    };
-    const ARTIFACT_KIND_LABEL = { text: '纯文本', markdown: 'Markdown（源文本）', code: '代码', image: '图像', html: '离线 HTML', pdf: 'PDF', csv: 'CSV 表格', office: 'Office 原格式', binary: '二进制' };
-    function renderArtifacts(artifacts) {
-      if (artifactCards === null) return;
+    // 015 / 016 / Batch 17（ADR-0261 P3）：产物卡与预览面板归 React 区域；失败分句与
+    // 类型标签随组件走（视图文案），这里只发布 payload 槽。
+    function publishArtifactsSlice(payload) {
+      const artifacts = payload !== null && typeof payload === 'object' ? payload.artifacts : null;
       const known = artifacts !== null && artifacts !== undefined && typeof artifacts === 'object';
       const cards = known && Array.isArray(artifacts.cards) ? artifacts.cards : [];
       const preview = known && artifacts.preview !== null && typeof artifacts.preview === 'object' ? artifacts.preview : { state: 'closed' };
-      artifactCards.textContent = '';
-      for (const card of cards) {
-        if (card === null || typeof card !== 'object' || typeof card.artifactId !== 'string') continue;
-        const kind = typeof card.kind === 'string' ? card.kind : 'binary';
-        const state = typeof card.state === 'string' ? card.state : 'unconfirmed';
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.artifactCard = card.artifactId;
-        row.dataset.artifactState = state;
-        const tag = document.createElement('span');
-        tag.className = 'sage-roster-tag ' + (state === 'ready' ? 'is-ok' : 'is-blocked');
-        tag.textContent = state === 'ready' ? '就绪（版本已核验）'
-          : state === 'absent' ? '观察时不存在'
-            : '未能核验（保留上一次观察）';
-        row.appendChild(tag);
-        const name = document.createElement('span');
-        name.textContent = String(card.name ?? '') + '（' + ARTIFACT_KIND_LABEL[kind] + (typeof card.bytes === 'number' ? ' · ' + String(card.bytes) + ' 字节' : '') + '）';
-        row.appendChild(name);
-        if (kind === 'office') {
-          const office = document.createElement('span');
-          office.className = 'sage-roster-tag';
-          office.textContent = '本版无内置预览（不自动转换；不把可下载写成可预览）';
-          row.appendChild(office);
-        } else if (kind === 'binary') {
-          const unsupported = document.createElement('span');
-          unsupported.className = 'sage-roster-tag';
-          unsupported.textContent = '本版不支持该格式';
-          row.appendChild(unsupported);
-        } else if (state === 'ready') {
-          const open = document.createElement('button');
-          open.className = 'sage-row-button';
-          open.type = 'button';
-          open.dataset.artifactAction = 'open';
-          open.dataset.artifactId = card.artifactId;
-          open.textContent = '打开预览（该版本）';
-          row.appendChild(open);
-        }
-        artifactCards.appendChild(row);
-      }
-      const previewState = typeof preview.state === 'string' ? preview.state : 'closed';
-      const previewExpanded = previewState === 'ready' && preview.expanded === true;
-      if (artifactPreview !== null) artifactPreview.dataset.previewState = previewState;
-      if (artifactPreviewNote !== null && artifactLocalNotice === null) {
-        artifactPreviewNote.textContent = previewState === 'closed' ? '未打开：卡片出现不会创建或加载预览。'
-          : previewState === 'opening' ? '正在按卡片版本读取内容…'
-            : previewState === 'ready' ? '已在右侧容器打开：' + String(preview.name) + '（' + String(preview.version) + '）。'
-              + (previewExpanded ? '（全屏查看：同一文档，未重新加载、未重读版本）' : '')
-              + (preview.window === true ? '（独立窗口已打开：同一文档、同一版本引用；关闭独立窗口不改产物记录）' : '')
-              : previewState === 'failed' ? (ARTIFACT_FAILURE_SENTENCE[preview.code] ?? ('打开失败：' + String(preview.code))) + (preview.retryable === true ? '（可对同一版本重试）' : '（该失败不支持同版本重试）')
-                : '';
-      }
-      if (artifactRetry !== null) {
-        artifactRetry.hidden = previewState !== 'failed' || preview.retryable !== true;
-      }
-      if (artifactClose !== null) {
-        artifactClose.hidden = previewState !== 'ready' && previewState !== 'opening' && previewState !== 'failed';
-      }
-      if (artifactExpand !== null) {
-        // 033：全屏只在预览就绪时提供；退出时焦点回到这个触发器（US-172）。
-        artifactExpand.hidden = previewState !== 'ready';
-        artifactExpand.dataset.expanded = previewExpanded ? 'true' : 'false';
-        artifactExpand.textContent = previewExpanded ? '退出全屏（返回侧栏）' : '全屏查看（离线）';
-      }
-      if (artifactWindow !== null) {
-        // 044：独立窗口＝显式动作才出现；展示的是同一份已备文稿，不重读不重跑。
-        artifactWindow.hidden = previewState !== 'ready';
-        artifactWindow.dataset.windowOpen = previewState === 'ready' && preview.window === true ? 'true' : 'false';
-        artifactWindow.textContent = previewState === 'ready' && preview.window === true ? '关闭独立窗口' : '在独立窗口打开（同一版本）';
-      }
-      if (artifactNote !== null && artifactLocalNotice === null) {
-        artifactNote.textContent = !known ? '未核验：这一版还没有接上产物观察端口。'
-          : cards.length === 0 ? '还没有观察到产物；点"观察本次运行的文件变化"读取线索（线索经 stat 核验后才显示就绪）。'
-            : String(cards.length) + ' 张产物卡（来源：本会话的文件变化观察 + 一次 stat 核验；不是交付验收结论）。';
-      }
+      publishRegion('artifacts', known ? { kind: 'cards', cards, preview } : { kind: 'unavailable' });
     }
 
     // 033：工具结果（typed）与网页成果目录。结果按声明类型呈现；不支持的类型明确拒绝。
@@ -4570,7 +4430,7 @@ export function renderSageDocument(): string {
         renderProjects(payload);
         renderMatterAdmin(payload);
         renderMatterGroups(payload);
-        renderRunMonitor(payload);
+        publishRunMonitorSlice(payload);
         renderPlans(payload);
         renderExitCards(payload);
         renderDraft(payload);
@@ -4582,7 +4442,7 @@ export function renderSageDocument(): string {
         renderTerminal(payload);
         renderFeedback(payload);
         renderAttachments(payload.attachments ?? null);
-        renderArtifacts(payload.artifacts ?? null);
+        publishArtifactsSlice(payload);
         publishToolResultsSlice(payload);
         publishSitesSlice(payload);
         renderMatterList(payload);
@@ -5388,39 +5248,25 @@ export function renderSageDocument(): string {
     }
 
     // 031 的动作：收起/展开面板是本地状态（零请求）；日志读取走有界游标。
-    if (monitorToggle !== null) {
-      monitorToggle.addEventListener('click', () => {
-        monitorCollapsed = !monitorCollapsed;
-        if (monitorBody !== null) monitorBody.hidden = monitorCollapsed;
-        monitorToggle.textContent = monitorCollapsed ? '展开面板' : '收起面板';
-      });
-    }
-
-    if (runLogOpen !== null) {
-      runLogOpen.addEventListener('click', async () => {
+    // Batch 17：运行日志游标走查留在 wire 侧；React 只应用 append/替换并渲染返回行。
+    function runLogOpen(path) {
+      return (async () => {
+        const trimmed = typeof path === 'string' ? path.trim() : '';
         const context = currentSendContext();
-        const path = runLogPath !== null && typeof runLogPath.value === 'string' ? runLogPath.value.trim() : '';
         if (context === null) {
-          runLogLocalNotice = '先在「事项 ↔ 工作区关联」里选好事项与工作区：日志在工作区内读取。';
-          if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
-          return;
+          return { lines: [], append: false, notice: '先在「事项 ↔ 工作区关联」里选好事项与工作区：日志在工作区内读取。' };
         }
-        if (path === '') {
-          runLogLocalNotice = '先写日志文件在工作区内的相对路径。';
-          if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
-          return;
+        if (trimmed === '') {
+          return { lines: [], append: false, notice: '先写日志文件在工作区内的相对路径。' };
         }
-        runLogLocalNotice = null;
-        runLogOpen.disabled = true;
         try {
           const response = await fetchWithinDeadline('/.sage/run-log', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ workspaceRoot: context.workspaceRoot, path }),
+            body: JSON.stringify({ workspaceRoot: context.workspaceRoot, path: trimmed }),
           });
           const payload = await response.json();
           if (payload !== null && typeof payload === 'object' && payload.state === 'read') {
-            renderRunLogLines(Array.isArray(payload.lines) ? payload.lines : [], false);
             runLogCursor = {
               workspaceRoot: context.workspaceRoot,
               path,
@@ -5428,34 +5274,30 @@ export function renderSageDocument(): string {
               bytes: null,
               nextLine: typeof payload.nextLine === 'number' ? payload.nextLine : 1,
             };
-            if (runLogNote !== null) {
-              runLogNote.textContent = '已读到第 ' + String(Math.max(0, runLogCursor.nextLine - 1)) + ' 行'
+            return {
+              lines: Array.isArray(payload.lines) ? payload.lines : [],
+              append: false,
+              notice: '已读到第 ' + String(Math.max(0, runLogCursor.nextLine - 1)) + ' 行'
                 + (payload.eof === true ? '（已到文件末尾；继续读取会续上后续追加）' : '（有界分页：可继续读取）')
-                + (payload.truncatedLines > 0 ? '；' + String(payload.truncatedLines) + ' 行超长已截断（有标记）' : '');
-            }
-          } else {
-            runLogCursor = null;
-            const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
-            runLogLocalNotice = runLogRefusalText(code);
-            if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
+                + (payload.truncatedLines > 0 ? '；' + String(payload.truncatedLines) + ' 行超长已截断（有标记）' : ''),
+            };
           }
+          runLogCursor = null;
+          const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
+          return { lines: [], append: false, notice: runLogRefusalText(code) };
         } catch {
-          runLogLocalNotice = '读取运行日志失败：这次请求没有完成。';
-          if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
+          return { lines: [], append: false, notice: '读取运行日志失败：这次请求没有完成。' };
+        } finally {
+          queueMicrotask(() => { void refresh(); });
         }
-        runLogOpen.disabled = false;
-        queueMicrotask(() => { void refresh(); });
-      });
+      })();
     }
 
-    if (runLogContinue !== null) {
-      runLogContinue.addEventListener('click', async () => {
+    function runLogContinue() {
+      return (async () => {
         if (runLogCursor === null) {
-          runLogLocalNotice = '还没有游标：先「读取运行日志」。';
-          if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
-          return;
+          return { lines: [], append: false, notice: '还没有游标：先「读取运行日志」。' };
         }
-        runLogContinue.disabled = true;
         try {
           const response = await fetchWithinDeadline('/.sage/run-log', {
             method: 'POST',
@@ -5473,33 +5315,31 @@ export function renderSageDocument(): string {
             if (payload.rotation === 'file-rotated') {
               // 轮转/截断：游标失效，从头再来——不猜行、不重复也不漏标。
               runLogCursor = null;
-              if (runLogNote !== null) runLogNote.textContent = '日志已轮转或截断：原游标失效，已重置——点「读取运行日志」从头再读（不重复、不漏标）。';
-            } else {
-              renderRunLogLines(Array.isArray(payload.lines) ? payload.lines : [], true);
-              runLogCursor = {
-                workspaceRoot: runLogCursor.workspaceRoot,
-                path: runLogCursor.path,
-                version: typeof payload.version === 'string' ? payload.version : runLogCursor.version,
-                bytes: null,
-                nextLine: typeof payload.nextLine === 'number' ? payload.nextLine : runLogCursor.nextLine,
-              };
-              if (runLogNote !== null) {
-                runLogNote.textContent = '已读到第 ' + String(Math.max(0, runLogCursor.nextLine - 1)) + ' 行'
-                  + (payload.eof === true ? '（已到文件末尾）' : '')
-                  + (payload.truncatedLines > 0 ? '；' + String(payload.truncatedLines) + ' 行超长已截断（有标记）' : '');
-              }
+              return { lines: [], append: true, notice: '日志已轮转或截断：原游标失效，已重置——点「读取运行日志」从头再读（不重复、不漏标）。' };
             }
-          } else {
-            const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
-            runLogLocalNotice = runLogRefusalText(code);
-            if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
+            runLogCursor = {
+              workspaceRoot: runLogCursor.workspaceRoot,
+              path: runLogCursor.path,
+              version: typeof payload.version === 'string' ? payload.version : runLogCursor.version,
+              bytes: null,
+              nextLine: typeof payload.nextLine === 'number' ? payload.nextLine : runLogCursor.nextLine,
+            };
+            return {
+              lines: Array.isArray(payload.lines) ? payload.lines : [],
+              append: true,
+              notice: '已读到第 ' + String(Math.max(0, runLogCursor.nextLine - 1)) + ' 行'
+                + (payload.eof === true ? '（已到文件末尾）' : '')
+                + (payload.truncatedLines > 0 ? '；' + String(payload.truncatedLines) + ' 行超长已截断（有标记）' : ''),
+            };
           }
+          const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
+          return { lines: [], append: false, notice: runLogRefusalText(code) };
         } catch {
-          runLogLocalNotice = '续读失败：这次请求没有完成。';
-          if (runLogNote !== null) runLogNote.textContent = runLogLocalNotice;
+          return { lines: [], append: false, notice: '续读失败：这次请求没有完成。' };
+        } finally {
+          queueMicrotask(() => { void refresh(); });
         }
-        runLogContinue.disabled = false;
-      });
+      })();
     }
 
     if (matterAdminRename !== null) {
@@ -5998,107 +5838,61 @@ export function renderSageDocument(): string {
       queueMicrotask(() => { void refresh(); });
       return outcome;
     }
-    if (artifactObserve) {
-      artifactObserve.addEventListener('click', () => {
+    // Batch 17：观察/预览请求留在 wire 侧；React 拥有 DOM、pending 与 notice 显示时机。
+    function observeArtifacts() {
+      return (async () => {
         const context = currentSendContext();
-        if (context === null) {
-          artifactLocalNotice = '先在上面选好事项与工作区：观察不会自动替你挑一个。';
-          if (artifactNote !== null) artifactNote.textContent = artifactLocalNotice;
-          return;
-        }
-        artifactLocalNotice = null;
-        artifactObserve.disabled = true;
-        void postArtifact('/.sage/artifacts/observe', { matterRef: context.matterRef, workspaceRoot: context.workspaceRoot }).then((outcome) => {
-          const state = outcome !== null && typeof outcome === 'object' && typeof outcome.state === 'string' ? outcome.state : '';
-          if (state === 'refused') {
-            artifactLocalNotice = '观察没有完成：' + String(outcome.code ?? 'unknown') + '（卡片未更新）。';
-            if (artifactNote !== null) artifactNote.textContent = artifactLocalNotice;
-          } else if (state === 'observed') {
-            artifactLocalNotice = '已观察 ' + String(outcome.observed ?? 0) + ' 条文件变化线索，核验后现有 ' + String(outcome.cards ?? 0) + ' 张产物卡。';
-            if (artifactNote !== null) artifactNote.textContent = artifactLocalNotice;
-          }
-        }).finally(() => { if (artifactObserve !== null) artifactObserve.disabled = false; });
-      });
-    }
-    if (artifactCards) {
-      artifactCards.addEventListener('click', (event) => {
-        const button = event.target?.closest?.('[data-artifact-action]') ?? null;
-        if (button === null || button.disabled) return;
-        if (button.dataset.artifactAction !== 'open') return;
-        const artifactId = typeof button.dataset.artifactId === 'string' ? button.dataset.artifactId : '';
-        if (artifactId === '') return;
-        button.disabled = true;
-        void openArtifact(artifactId).finally(() => { if (button !== null) button.disabled = false; });
-      });
-    }
-    if (artifactRetry) {
-      artifactRetry.addEventListener('click', () => {
-        artifactLocalNotice = null;
-        artifactRetry.disabled = true;
-        void postArtifact('/.sage/artifacts/retry', {}).finally(() => { if (artifactRetry !== null) artifactRetry.disabled = false; });
-      });
-    }
-    if (artifactClose) {
-      artifactClose.addEventListener('click', () => {
-        artifactLocalNotice = null;
-        artifactClose.disabled = true;
-        void postArtifact('/.sage/artifacts/close', {}).finally(() => { if (artifactClose !== null) artifactClose.disabled = false; });
-      });
-    }
-    if (artifactExpand) {
-      artifactExpand.addEventListener('click', () => {
-        const wasExpanded = artifactExpand.dataset.expanded === 'true';
-        artifactLocalNotice = null;
-        artifactExpand.disabled = true;
-        void (async () => {
-          try {
-            await fetchWithinDeadline('/.sage/artifacts/fullscreen', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ on: !wasExpanded }),
-            });
-          } catch { /* state 轮询兜底 */ }
-          artifactExpand.disabled = false;
-          // 退出全屏：焦点回到触发器（US-172 的"全屏退出恢复焦点"）。
-          if (wasExpanded) artifactExpand.focus();
-          queueMicrotask(() => { void refresh(); });
-        })();
-      });
+        if (context === null) return '先在上面选好事项与工作区：观察不会自动替你挑一个。';
+        const outcome = await postArtifact('/.sage/artifacts/observe', { matterRef: context.matterRef, workspaceRoot: context.workspaceRoot });
+        const state = outcome !== null && typeof outcome === 'object' && typeof outcome.state === 'string' ? outcome.state : '';
+        if (state === 'refused') return '观察没有完成：' + String(outcome.code ?? 'unknown') + '（卡片未更新）。';
+        if (state === 'observed') return '已观察 ' + String(outcome.observed ?? 0) + ' 条文件变化线索，核验后现有 ' + String(outcome.cards ?? 0) + ' 张产物卡。';
+        return null;
+      })();
     }
 
-    if (artifactWindow) {
-      artifactWindow.addEventListener('click', () => {
-        const isOpen = artifactWindow.dataset.windowOpen === 'true';
-        artifactLocalNotice = null;
-        artifactWindow.disabled = true;
-        void (async () => {
-          let outcome = null;
-          try {
-            const response = await fetchWithinDeadline('/.sage/artifacts/window', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ action: isOpen ? 'close' : 'open' }),
-            });
-            outcome = await response.json();
-          } catch { /* 轮询兜底 */ }
-          const outcomeState = outcome !== null && typeof outcome === 'object' && typeof outcome.state === 'string' ? outcome.state : null;
-          const code = outcome !== null && typeof outcome === 'object' && typeof outcome.code === 'string' ? outcome.code : null;
-          if (outcomeState === 'opened') {
-            artifactLocalNotice = '已在独立窗口打开（同一版本引用；未重读、未重跑生成）。';
-          } else if (outcomeState === 'closed') {
-            artifactLocalNotice = '已关闭独立窗口（回到侧栏容器；未改产物记录，运行不受影响）。';
-          } else if (code === 'artifact-window-unavailable') {
-            artifactLocalNotice = '独立窗口未接线（本机不提供窗口能力）：未打开。';
-          } else if (code === 'artifact-preview-not-open') {
-            artifactLocalNotice = '先打开预览（按版本），独立窗口只对已打开的产物生效。';
-          } else {
-            artifactLocalNotice = '窗口操作未生效（' + String(code ?? '未知') + '）。';
-          }
-          artifactWindow.disabled = false;
-          await refresh();
-          if (artifactNote !== null && artifactLocalNotice !== null) artifactNote.textContent = artifactLocalNotice;
-        })();
-      });
+    function retryArtifactPreview() {
+      return postArtifact('/.sage/artifacts/retry', {});
+    }
+
+    function closeArtifactPreview() {
+      return postArtifact('/.sage/artifacts/close', {});
+    }
+
+    function setArtifactFullscreen(on) {
+      return (async () => {
+        try {
+          await fetchWithinDeadline('/.sage/artifacts/fullscreen', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ on }),
+          });
+        } catch { /* state 轮询兜底 */ }
+        queueMicrotask(() => { void refresh(); });
+      })();
+    }
+
+    function artifactWindow(action) {
+      return (async () => {
+        let outcome = null;
+        try {
+          const response = await fetchWithinDeadline('/.sage/artifacts/window', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ action }),
+          });
+          outcome = await response.json();
+        } catch { /* 轮询兜底 */ }
+        const outcomeState = outcome !== null && typeof outcome === 'object' && typeof outcome.state === 'string' ? outcome.state : null;
+        const code = outcome !== null && typeof outcome === 'object' && typeof outcome.code === 'string' ? outcome.code : null;
+        const notice = outcomeState === 'opened' ? '已在独立窗口打开（同一版本引用；未重读、未重跑生成）。'
+          : outcomeState === 'closed' ? '已关闭独立窗口（回到侧栏容器；未改产物记录，运行不受影响）。'
+            : code === 'artifact-window-unavailable' ? '独立窗口未接线（本机不提供窗口能力）：未打开。'
+              : code === 'artifact-preview-not-open' ? '先打开预览（按版本），独立窗口只对已打开的产物生效。'
+                : '窗口操作未生效（' + String(code ?? '未知') + '）。';
+        queueMicrotask(() => { void refresh(); });
+        return notice;
+      })();
     }
 
     // 033 / Batch 16：结果图与网页成果的预览入口都走同一个产物打开动作（按版本读取在 main
@@ -6106,7 +5900,6 @@ export function renderSageDocument(): string {
     // 供 React 的显式按钮调用；拒绝码到文案的映射仍是这一份。
     function openArtifact(artifactId) {
       if (typeof artifactId !== 'string' || artifactId === '') return Promise.resolve(null);
-      artifactLocalNotice = null;
       return postArtifact('/.sage/artifacts/open', { artifactId });
     }
 
@@ -6992,6 +6785,13 @@ export function renderSageDocument(): string {
     globalThis.__SAGE_LEGACY_ACTIONS__ = {
       openArtifact: (artifactId) => openArtifact(artifactId),
       openExternalLink: (url) => openExternalLink(url),
+      runLogOpen: (path) => runLogOpen(path),
+      runLogContinue: () => runLogContinue(),
+      observeArtifacts: () => observeArtifacts(),
+      retryArtifactPreview: () => retryArtifactPreview(),
+      closeArtifactPreview: () => closeArtifactPreview(),
+      setArtifactFullscreen: (on) => setArtifactFullscreen(on),
+      artifactWindow: (action) => artifactWindow(action),
     };
 
     if (userMenu && userMenuPanel) {

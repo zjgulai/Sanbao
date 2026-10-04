@@ -236,8 +236,12 @@ interface ProbeResult {
     readonly regionFacts?: {
       readonly expectedSitesState: string
       readonly expectedToolResultsState: string
+      readonly expectedRunMonitorState: string
+      readonly expectedArtifactsState: string
       readonly sites: string | null
       readonly toolResults: string | null
+      readonly runMonitor: string | null
+      readonly artifacts: string | null
     }
     readonly stageFacts?: {
       readonly trackCurrentStage: string | null
@@ -805,6 +809,8 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
     expect(result.evidence.regionFacts).toBeDefined()
     expect(result.evidence.regionFacts?.sites).toBe(result.evidence.regionFacts?.expectedSitesState)
     expect(result.evidence.regionFacts?.toolResults).toBe(result.evidence.regionFacts?.expectedToolResultsState)
+    expect(result.evidence.regionFacts?.runMonitor).toBe(result.evidence.regionFacts?.expectedRunMonitorState)
+    expect(result.evidence.regionFacts?.artifacts).toBe(result.evidence.regionFacts?.expectedArtifactsState)
 
     // The real wire carries the fixture matter slot; 0.2 service semantics are unchanged.
     expect(result.evidence.stateProbe).toMatchObject({
