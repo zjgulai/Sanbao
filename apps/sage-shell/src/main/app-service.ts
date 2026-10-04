@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
-import { createSageFixtureViewState } from '../product/view-state.js'
+import { createSageFixtureViewState, parseSageFixtureStage } from '../product/view-state.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../appservice/composition.js'
 import { serviceJson } from '../appservice/errors.js'
 import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner } from '../appservice/contracts.js'
@@ -37,7 +37,11 @@ import { projectionReadScope } from './projection-read-scope.js'
 /** WT-02D.1 fixture switch: read once from env. The fixture projection only fills the read-only
  * matter slot for local verification and can never satisfy production authority. */
 export function resolveFixtureProjection(env: NodeJS.ProcessEnv): (() => SageMatterViewState) | undefined {
-  return env.SAGE_FIXTURE_PROJECTION === '1' ? createSageFixtureViewState : undefined
+  if (env.SAGE_FIXTURE_PROJECTION !== '1') return undefined
+  const stage = env.SAGE_FIXTURE_STAGE === undefined
+    ? 'clarification'
+    : parseSageFixtureStage(env.SAGE_FIXTURE_STAGE)
+  return stage === undefined ? undefined : () => createSageFixtureViewState(stage)
 }
 
 /** WT-02D.2A: the module's own stable denial for an action type that is not registered for

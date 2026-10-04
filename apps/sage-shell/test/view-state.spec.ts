@@ -2,8 +2,17 @@ import { describe, expect, it } from 'vitest'
 import type { BusinessMatterProjection } from '../src/domain/business-matter.js'
 import {
   createSageFixtureViewState,
+  parseSageFixtureStage,
   projectSageMatterViewState,
+  SAGE_FIXTURE_STAGES,
+  type SageFixtureStage,
 } from '../src/product/view-state.js'
+
+function expectDeepFrozen(value: unknown): void {
+  if (typeof value !== 'object' || value === null) return
+  expect(Object.isFrozen(value)).toBe(true)
+  for (const item of Object.values(value)) expectDeepFrozen(item)
+}
 
 function projection(): BusinessMatterProjection {
   return {
@@ -171,5 +180,126 @@ describe('Sage ViewState adapter seam', () => {
         denialReason: undefined,
       }],
     })).toThrow(/action type/u)
+  })
+})
+
+describe('UI-FIXTURE-01 deterministic matter stages', () => {
+  const expected = [
+    {
+      stage: 'created', revisionCount: 0, evidenceCount: 0, unknownCount: 0,
+      dependencyCount: 0, clarification: false, decisions: 0, attempts: [], artifacts: [],
+    },
+    {
+      stage: 'evidence', revisionCount: 1, evidenceCount: 1, unknownCount: 1,
+      dependencyCount: 1, clarification: false, decisions: 0, attempts: [], artifacts: [],
+    },
+    {
+      stage: 'clarification', revisionCount: 1, evidenceCount: 1, unknownCount: 1,
+      dependencyCount: 1, clarification: true, decisions: 0, attempts: [], artifacts: [],
+    },
+    {
+      stage: 'running', revisionCount: 1, evidenceCount: 1, unknownCount: 0,
+      dependencyCount: 1, clarification: false, decisions: 1,
+      attempts: [['attempt:sage.shopify-abi.fixture.running', 'running']], artifacts: [],
+    },
+    {
+      stage: 'artifact-receipt', revisionCount: 1, evidenceCount: 1, unknownCount: 0,
+      dependencyCount: 1, clarification: false, decisions: 1,
+      attempts: [['attempt:sage.shopify-abi.fixture.artifact', 'succeeded']],
+      artifacts: ['artifact:sage.shopify-abi.fixture.report'],
+    },
+    {
+      stage: 'failed-retry', revisionCount: 1, evidenceCount: 1, unknownCount: 0,
+      dependencyCount: 1, clarification: false, decisions: 1,
+      attempts: [
+        ['attempt:sage.shopify-abi.fixture.failed', 'failed'],
+        ['attempt:sage.shopify-abi.fixture.retry', 'failed'],
+      ],
+      artifacts: [],
+    },
+  ] as const satisfies readonly {
+    readonly stage: SageFixtureStage
+    readonly revisionCount: number
+    readonly evidenceCount: number
+    readonly unknownCount: number
+    readonly dependencyCount: number
+    readonly clarification: boolean
+    readonly decisions: number
+    readonly attempts: readonly (readonly [string, string])[]
+    readonly artifacts: readonly string[]
+  }[]
+
+  it('publishes the exact six-stage vocabulary and rejects aliases or whitespace', () => {
+    expect(SAGE_FIXTURE_STAGES).toEqual([
+      'created',
+      'evidence',
+      'clarification',
+      'running',
+      'artifact-receipt',
+      'failed-retry',
+    ])
+    for (const stage of SAGE_FIXTURE_STAGES) expect(parseSageFixtureStage(stage)).toBe(stage)
+    for (const value of [undefined, null, '', ' running', 'running ', 'RUNNING', 'completed', 1]) {
+      expect(parseSageFixtureStage(value)).toBeUndefined()
+    }
+  })
+
+  it.each(expected)('creates the exact read-only $stage fixture facts', (item) => {
+    const view = createSageFixtureViewState(item.stage)
+
+    expect(view).toMatchObject({
+      schemaVersion: 'sage.matter-view.v1',
+      projectionSource: 'fixture',
+      compatibilityOutcome: 'unknown',
+      authorizationState: 'unknown',
+      availabilityState: 'unknown',
+      actionability: 'blocked',
+      denialReason: 'fixture-only',
+    })
+    expect(view.matter).toMatchObject({
+      matterId: 'matter:sage.shopify-abi.fixture',
+      stage: item.stage,
+      conclusion: undefined,
+      revisionCount: item.revisionCount,
+      evidenceCount: item.evidenceCount,
+      unknownCount: item.unknownCount,
+      dependencyCount: item.dependencyCount,
+    })
+    expect(view.matter.currentRevisionId).toBe(
+      item.revisionCount === 0 ? undefined : 'revision:sage.shopify-abi.fixture.1',
+    )
+    expect(view.matter.pendingClarification !== undefined).toBe(item.clarification)
+    expect(view.decisions).toHaveLength(item.decisions)
+    expect(view.attempts.map(({ attemptId, status }) => [attemptId, status])).toEqual(item.attempts)
+    expect(view.artifacts.map(({ artifactId }) => artifactId)).toEqual(item.artifacts)
+    expect(view.receipts).toEqual([])
+    expect(view.actions.length).toBeGreaterThan(0)
+    expect(view.actions.every((action) => (
+      action.actionability === 'blocked' && action.denialReason === 'fixture-only'
+    ))).toBe(true)
+    expectDeepFrozen(view)
+
+    const serialized = JSON.stringify(view)
+    for (const forbidden of [
+      'executionSnapshot', 'matrixId', 'digest', 'locator', '/Users/', '/secret/', 'file://',
+    ]) expect(serialized).not.toContain(forbidden)
+  })
+
+  it('keeps clarification as the backwards-compatible default fixture', () => {
+    expect(createSageFixtureViewState()).toEqual(createSageFixtureViewState('clarification'))
+  })
+
+  it('keeps artifact and retry history separate from a business conclusion', () => {
+    const artifact = createSageFixtureViewState('artifact-receipt')
+    expect(artifact.attempts).toHaveLength(1)
+    expect(artifact.attempts[0]).toMatchObject({ status: 'succeeded' })
+    expect(artifact.artifacts).toHaveLength(1)
+    expect(artifact.receipts).toEqual([])
+    expect(artifact.matter.conclusion).toBeUndefined()
+
+    const retry = createSageFixtureViewState('failed-retry')
+    expect(new Set(retry.attempts.map(({ attemptId }) => attemptId)).size).toBe(2)
+    expect(retry.attempts.every(({ status }) => status === 'failed')).toBe(true)
+    expect(retry.matter.conclusion).toBeUndefined()
   })
 })

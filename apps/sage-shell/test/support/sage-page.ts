@@ -106,7 +106,8 @@ export interface FakeSelect extends FakeElement {
   selected: string | null
 }
 
-export function createDocumentStub(): { document: Record<string, unknown>, node: (id: string) => FakeElement } {
+export function createDocumentStub(): { document: Record<string, unknown>, node: (id: string) => FakeElement, root: FakeElement } {
+  const root = new FakeElement('html')
   const byId = new Map<string, FakeElement>()
   const node = (id: string): FakeElement => {
     const existing = byId.get(id)
@@ -117,6 +118,7 @@ export function createDocumentStub(): { document: Record<string, unknown>, node:
     return created
   }
   const document = {
+    documentElement: root,
     querySelector(selector: string): FakeElement {
       if (selector.startsWith('#')) return node(selector.slice(1))
       if (selector.startsWith('.')) return new FakeElement('div')
@@ -129,10 +131,12 @@ export function createDocumentStub(): { document: Record<string, unknown>, node:
       return new FakeElement(tagName)
     },
   }
-  return { document, node }
+  return { document, node, root }
 }
 
 export interface SagePageHarness {
+  /** The document root carrying authoritative renderer state attributes. */
+  readonly root: FakeElement
   /** The element the script looked up by id (created on demand). */
   readonly node: (id: string) => FakeElement
   /** Every POST body the page sent, in order. */
@@ -151,7 +155,7 @@ export interface SagePageHarness {
 export async function bootSagePage(initial: unknown, postResponses: Record<string, unknown> = {}): Promise<SagePageHarness> {
   let payload = initial
   const requests: Array<{ path: string, body: unknown }> = []
-  const { document, node } = createDocumentStub()
+  const { document, node, root } = createDocumentStub()
   const script = renderSageDocument().match(/<script>([\s\S]*)<\/script>/u)?.[1]
   expect(script, 'embedded script must be extractable').toBeTruthy()
   const fetchStub = async (path: string, init?: { body?: string }): Promise<unknown> => {
@@ -169,6 +173,7 @@ export async function bootSagePage(initial: unknown, postResponses: Record<strin
   }
   await settle()
   return {
+    root,
     node,
     requests,
     settle,

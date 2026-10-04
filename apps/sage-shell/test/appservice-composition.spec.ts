@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
-import { createSageFixtureViewState } from '../src/product/view-state.js'
+import { createSageFixtureViewState, SAGE_FIXTURE_STAGES } from '../src/product/view-state.js'
 
 const runtime = { status: 'ready' as const, message: 'dsh 2.0.10', retryable: true }
 
@@ -92,6 +92,19 @@ describe('matter projection slot (WT-02D.1)', () => {
     const body = await (await service.readState()).json() as Record<string, unknown>
     expect(body.matter).toBeNull()
     expect(body.service).toMatchObject({ status: 'unavailable', reason: 'identity-unavailable' })
+  })
+
+  it.each(SAGE_FIXTURE_STAGES)('preserves the injected %s fixture through the public matter slot', async (stage) => {
+    const service = createUnavailableFirstService(null, {
+      fixtureProjection: () => createSageFixtureViewState(stage),
+    })
+    const body = await (await service.readState()).json() as {
+      matter: ReturnType<typeof createSageFixtureViewState>
+    }
+    expect(body.matter).toEqual(createSageFixtureViewState(stage))
+    expect(body.matter.matter.stage).toBe(stage)
+    expect(body.matter.projectionSource).toBe('fixture')
+    expect(body.matter.actionability).toBe('blocked')
   })
 
   it('keeps 0.2 service semantics unchanged while the fixture slot is on', async () => {

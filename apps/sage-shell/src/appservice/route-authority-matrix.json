@@ -618,13 +618,14 @@
       "policyProfile": "business-command",
       "operations": ["cancel"],
       "callerBinding": "CB1",
-      "activeContext": "caller attachment itemId",
+      "activeContext": "active session is resolved server-side; itemId is an opaque clue and not authority",
       "providers": ["cancelAttachment"],
-      "persistence": "run-local attachment candidate state",
-      "runtimeLevel": "L3 local attachment seam",
-      "runCommand": { "required": true, "actual": false },
+      "persistence": "none; production dispatch is withheld after admission",
+      "runtimeLevel": "L1 unavailable-first admission; attachment target resolver and production cancel authority remain absent",
+      "runCommand": { "required": false, "actual": false },
+      "protectedAdmission": { "required": true, "actual": true },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
     },
     {
       "sourceConstant": "SAGE_SEARCH_PATH",

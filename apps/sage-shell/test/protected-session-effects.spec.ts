@@ -144,6 +144,14 @@ const attachmentUploadCase = {
   payload: { itemId: 'attachment-1' },
 } as const
 
+const attachmentCancelCase = {
+  path: '/.sage/attachments/cancel',
+  body: { itemId: 'attachment-1' },
+  operation: 'session.attachment.cancel',
+  candidate: { kind: 'active-session' },
+  payload: { itemId: 'attachment-1' },
+} as const
+
 function rawSessionEffectSpies() {
   return {
     pendingUpdate: vi.fn(() => ({ ok: true as const })),
@@ -157,6 +165,7 @@ function rawSessionEffectSpies() {
     sessionApprovalWithdraw: vi.fn(async () => ({ state: 'refused' as const, code: 'raw-provider-called' })),
     correctionCreate: vi.fn(async () => ({ state: 'refused' as const, code: 'raw-provider-called' })),
     attachmentsUpload: vi.fn(async () => ({ state: 'refused' as const, code: 'raw-provider-called' })),
+    attachmentsCancel: vi.fn(async () => ({ state: 'refused' as const, code: 'raw-provider-called' })),
   }
 }
 
@@ -558,5 +567,79 @@ describe('AUTH-02D attachment upload admission', () => {
     expect(await (await post(providers, attachmentUploadCase.path, attachmentUploadCase.body)).json())
       .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(attachmentsUpload).not.toHaveBeenCalled()
+  })
+})
+
+describe('AUTH-02E attachment cancel admission', () => {
+  it('uses one stable operation, the active session candidate and only the opaque item clue', async () => {
+    const harness = assembleOperationRecorder()
+
+    expect(await (await post(harness.providers, attachmentCancelCase.path, attachmentCancelCase.body)).json())
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(harness.observed).toEqual([{
+      family: 'session-core',
+      requestId: 'correlation:recorded',
+      operation: attachmentCancelCase.operation,
+      candidate: attachmentCancelCase.candidate,
+      payload: attachmentCancelCase.payload,
+    }])
+    expect(Object.keys(harness.observed[0]?.payload ?? {})).toEqual(['itemId'])
+    expect(harness.rawEffects.attachmentsCancel).not.toHaveBeenCalled()
+  })
+
+  it('blocks missing context and later missing authority before the raw cancel provider', async () => {
+    for (const active of [false, true]) {
+      const harness = assemble({ active })
+
+      expect(await (await post(harness.providers, attachmentCancelCase.path, attachmentCancelCase.body)).json())
+        .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+      expect(harness.rawEffects.attachmentsCancel).not.toHaveBeenCalled()
+    }
+  })
+
+  it('reports revision and frame drift as stale without reaching the raw cancel provider', async () => {
+    const cases = [
+      assemble({ active: true, revision: 'stale' }),
+      assemble({ active: true, frameSequence: [7, 8] }),
+    ] as const
+
+    for (const harness of cases) {
+      expect(await (await post(harness.providers, attachmentCancelCase.path, attachmentCancelCase.body)).json())
+        .toEqual({ state: 'refused', code: 'protected-effect-stale' })
+      expect(harness.rawEffects.attachmentsCancel).not.toHaveBeenCalled()
+    }
+  })
+
+  it('still performs zero cancel dispatch when every pre-dispatch port is allowed', async () => {
+    const attachmentsCancel = vi.fn(async () => ({ state: 'refused' as const, code: 'raw-provider-called' }))
+    const providers = createUnavailableFirstService(null, {
+      attachmentsCancel,
+      protectedEffectCorrelation: () => 'correlation:attachment-cancel',
+      protectedEffectPorts: {
+        verifyCaller: async () => ({ state: 'allowed', value: { bindingRef: callerBinding.correlation } }),
+        resolveActiveContext: async () => ({
+          state: 'allowed',
+          value: {
+            scope: 'request',
+            callerBindingRef: callerBinding.correlation,
+            sessionRef: 'session:active',
+            matterRef: 'matter:active',
+            revisionRef: 'revision:active.1',
+            generation: '1',
+          },
+        }),
+        matchCandidate: async () => ({ state: 'allowed', value: { candidateRef: 'candidate:active' } }),
+        resolveIdentityPolicy: async () => ({ state: 'allowed', value: { decisionRef: 'decision:1', actorScopeRef: 'actor:1' } }),
+        resolveTarget: async () => ({ state: 'allowed', value: { targetRef: 'target:1' } }),
+        resolveCompatibility: async () => ({ state: 'allowed', value: { evaluationRef: 'evaluation:1', outcome: 'equivalent' } }),
+        resolveRegistry: async () => ({ state: 'allowed', value: { mappingRef: 'mapping:1' } }),
+        preflight: async () => ({ state: 'allowed', value: { preflightRef: 'preflight:1' } }),
+        persist: async () => ({ state: 'allowed', value: { operationRef: 'operation:1', dispatchRef: 'dispatch:1' } }),
+      },
+    })
+
+    expect(await (await post(providers, attachmentCancelCase.path, attachmentCancelCase.body)).json())
+      .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(attachmentsCancel).not.toHaveBeenCalled()
   })
 })

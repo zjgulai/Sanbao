@@ -39,6 +39,17 @@ export const SAGE_ACTION_TYPES = [
 
 export type SageActionType = (typeof SAGE_ACTION_TYPES)[number]
 
+export const SAGE_FIXTURE_STAGES = Object.freeze([
+  'created',
+  'evidence',
+  'clarification',
+  'running',
+  'artifact-receipt',
+  'failed-retry',
+] as const satisfies readonly BusinessMatterStage[])
+
+export type SageFixtureStage = (typeof SAGE_FIXTURE_STAGES)[number]
+
 export interface SageActionProjection {
   readonly type: SageActionType
   readonly revisionId: string | undefined
@@ -117,14 +128,8 @@ export interface SageViewStateContext {
 }
 
 const ACTION_TYPES = new Set<string>(SAGE_ACTION_TYPES)
-const STAGES = new Set<BusinessMatterStage>([
-  'created',
-  'evidence',
-  'running',
-  'clarification',
-  'artifact-receipt',
-  'failed-retry',
-])
+const STAGES = new Set<BusinessMatterStage>(SAGE_FIXTURE_STAGES)
+const FIXTURE_STAGES = new Set<unknown>(SAGE_FIXTURE_STAGES)
 const COMPATIBILITY_OUTCOMES = new Set<CompatibilityOutcome>([
   'equivalent',
   'requires-new-revision',
@@ -209,6 +214,11 @@ function projectActions(actions: readonly SageActionProjection[]): readonly Sage
   }))
 }
 
+/** Exact, non-coercing fixture token parser. URL and renderer state never enter this seam. */
+export function parseSageFixtureStage(value: unknown): SageFixtureStage | undefined {
+  return FIXTURE_STAGES.has(value) ? value as SageFixtureStage : undefined
+}
+
 /**
  * Convert a trusted domain projection into the renderer-facing shape without exposing events,
  * digests, locators, execution snapshots, resolver inputs, or authority records.
@@ -291,90 +301,219 @@ export function projectSageMatterViewState(
   return freezeDeep(viewState)
 }
 
-function fixtureProjection(): BusinessMatterProjection {
+const FIXTURE_MATTER_ID = 'matter:sage.shopify-abi.fixture'
+const FIXTURE_CREATED_EVENT_ID = 'event:sage.shopify-abi.fixture.created'
+const FIXTURE_REVISION_ID = 'revision:sage.shopify-abi.fixture.1'
+const FIXTURE_ACTION_SCOPE = 'shopify.orders.read'
+const FIXTURE_DECISION_ID = 'decision:sage.shopify-abi.fixture.approved'
+
+function fixtureRevision(stage: SageFixtureStage): BusinessMatterProjection['revisions'][number] {
+  const awaitingEvidence = stage === 'evidence' || stage === 'clarification'
   return {
-    matterId: 'matter:sage.shopify-abi.fixture',
-    creationEventId: 'event:sage.shopify-abi.fixture.created',
+    revisionId: FIXTURE_REVISION_ID,
+    predecessorRevisionId: undefined,
+    createdByEventId: 'event:sage.shopify-abi.fixture.revision',
+    matterCreatedByEventId: FIXTURE_CREATED_EVENT_ID,
+    changeReason: 'fixture projection',
+    scope: FIXTURE_ACTION_SCOPE,
+    permissionBoundary: 'fixture-only',
+    dataDestination: 'fixture-only',
+    evidence: [{
+      evidenceId: 'evidence:sage.shopify-abi.fixture.market',
+      source: 'fixture',
+      observedAt: '2026-09-30T00:00:00.000Z',
+      status: awaitingEvidence ? 'insufficient' : 'supported',
+    }],
+    unknowns: awaitingEvidence
+      ? [{
+          unknownId: 'unknown:sage.shopify-abi.fixture.cash',
+          description: '现金约束数据尚未接入。',
+        }]
+      : [],
+    options: awaitingEvidence ? ['补充证据'] : ['保持只读核对'],
+    dependencies: [{
+      dependencyId: 'dependency:shopify-abi',
+      status: awaitingEvidence ? 'unknown' : 'ready',
+    }],
+    experienceRefs: [],
+    actionPolicies: [{
+      actionScope: FIXTURE_ACTION_SCOPE,
+      effectClass: 'external-read',
+      requiresDecision: true,
+    }],
+  }
+}
+
+function fixtureDecision(): BusinessMatterProjection['decisions'][number] {
+  return {
+    decisionId: FIXTURE_DECISION_ID,
+    revisionId: FIXTURE_REVISION_ID,
+    actionScope: FIXTURE_ACTION_SCOPE,
+    status: 'approved',
+    actor: { kind: 'human', roleRef: 'fixture:approver' },
+    reason: 'Fixture-only approval fact.',
+    expiresAt: undefined,
+    recordedAt: '2026-09-30T00:02:00.000Z',
+    revokedAt: undefined,
+    revocationReason: undefined,
+  }
+}
+
+function fixtureAttempt(
+  attemptId: string,
+  status: 'running' | 'failed' | 'succeeded',
+  startedAt: string,
+  endedAt: string | undefined,
+): BusinessMatterProjection['attempts'][number] {
+  return {
+    attemptId,
+    revisionId: FIXTURE_REVISION_ID,
+    actionScopes: [FIXTURE_ACTION_SCOPE],
+    actionPolicies: [{
+      actionScope: FIXTURE_ACTION_SCOPE,
+      effectClass: 'external-read',
+      requiresDecision: true,
+    }],
+    decisionIds: [FIXTURE_DECISION_ID],
+    executionSnapshot: {
+      provider: { identity: 'fixture:provider', version: '1', digest: 'fixture:provider-digest' },
+      model: { identity: 'fixture:model', version: '1', digest: 'fixture:model-digest' },
+      agent: { identity: 'fixture:agent', version: '1', digest: 'fixture:agent-digest' },
+      preset: { identity: 'fixture:preset', version: '1', digest: 'fixture:preset-digest' },
+      capabilities: [],
+    },
+    compatibility: {
+      outcome: 'equivalent',
+      matrixId: 'fixture:matrix',
+      reason: 'Fixture-only compatibility fact.',
+    },
+    status,
+    startedAt,
+    endedAt,
+    terminationReason: status === 'failed' ? 'Fixture failure retained for review.' : undefined,
+  }
+}
+
+function fixtureProjection(stage: SageFixtureStage): BusinessMatterProjection {
+  const hasRevision = stage !== 'created'
+  const hasDecision = stage === 'running' || stage === 'artifact-receipt' || stage === 'failed-retry'
+  const attempts = stage === 'running'
+    ? [fixtureAttempt(
+        'attempt:sage.shopify-abi.fixture.running',
+        'running',
+        '2026-09-30T00:03:00.000Z',
+        undefined,
+      )]
+    : stage === 'artifact-receipt'
+      ? [fixtureAttempt(
+          'attempt:sage.shopify-abi.fixture.artifact',
+          'succeeded',
+          '2026-09-30T00:03:00.000Z',
+          '2026-09-30T00:04:00.000Z',
+        )]
+      : stage === 'failed-retry'
+        ? [
+            fixtureAttempt(
+              'attempt:sage.shopify-abi.fixture.failed',
+              'failed',
+              '2026-09-30T00:03:00.000Z',
+              '2026-09-30T00:04:00.000Z',
+            ),
+            fixtureAttempt(
+              'attempt:sage.shopify-abi.fixture.retry',
+              'failed',
+              '2026-09-30T00:05:00.000Z',
+              '2026-09-30T00:06:00.000Z',
+            ),
+          ]
+        : []
+
+  return {
+    matterId: FIXTURE_MATTER_ID,
+    creationEventId: FIXTURE_CREATED_EVENT_ID,
     goal: '在现金约束下稳定订单增长',
     responsibleParty: { kind: 'human', roleRef: 'fixture:operator' },
-    stage: 'clarification',
+    stage,
     conclusion: undefined,
-    currentRevisionId: 'revision:sage.shopify-abi.fixture.1',
-    activeAttemptId: undefined,
-    pendingClarification: {
-      eventId: 'event:sage.shopify-abi.fixture.clarification',
-      revisionId: 'revision:sage.shopify-abi.fixture.1',
-      attemptId: undefined,
-      actionScope: 'shopify.orders.read',
-      reason: '需要补充市场信号与现金约束证据。',
-      requestedAt: '2026-09-30T00:00:00.000Z',
-    },
-    revisions: [{
-      revisionId: 'revision:sage.shopify-abi.fixture.1',
-      predecessorRevisionId: undefined,
-      createdByEventId: 'event:sage.shopify-abi.fixture.revision',
-      matterCreatedByEventId: 'event:sage.shopify-abi.fixture.created',
-      changeReason: 'fixture projection',
-      scope: 'shopify.orders.read',
-      permissionBoundary: 'fixture-only',
-      dataDestination: 'fixture-only',
-      evidence: [{
-        evidenceId: 'evidence:sage.shopify-abi.fixture.market',
-        source: 'fixture',
-        observedAt: '2026-09-30T00:00:00.000Z',
-        status: 'insufficient',
-      }],
-      unknowns: [{
-        unknownId: 'unknown:sage.shopify-abi.fixture.cash',
-        description: '现金约束数据尚未接入。',
-      }],
-      options: ['补充证据'],
-      dependencies: [{ dependencyId: 'dependency:shopify-abi', status: 'unknown' }],
-      experienceRefs: [],
-      actionPolicies: [{
-        actionScope: 'shopify.orders.read',
-        effectClass: 'external-read',
-        requiresDecision: true,
-      }],
-    }],
-    decisions: [],
-    attempts: [],
-    artifacts: [],
+    currentRevisionId: hasRevision ? FIXTURE_REVISION_ID : undefined,
+    activeAttemptId: stage === 'running' ? 'attempt:sage.shopify-abi.fixture.running' : undefined,
+    pendingClarification: stage === 'clarification'
+      ? {
+          eventId: 'event:sage.shopify-abi.fixture.clarification',
+          revisionId: FIXTURE_REVISION_ID,
+          attemptId: undefined,
+          actionScope: FIXTURE_ACTION_SCOPE,
+          reason: '需要补充市场信号与现金约束证据。',
+          requestedAt: '2026-09-30T00:01:00.000Z',
+        }
+      : undefined,
+    revisions: hasRevision ? [fixtureRevision(stage)] : [],
+    decisions: hasDecision ? [fixtureDecision()] : [],
+    attempts,
+    artifacts: stage === 'artifact-receipt'
+      ? [{
+          artifactId: 'artifact:sage.shopify-abi.fixture.report',
+          revisionId: FIXTURE_REVISION_ID,
+          attemptId: 'attempt:sage.shopify-abi.fixture.artifact',
+          kind: 'report',
+          locator: 'fixture:artifact-report',
+          digest: 'fixture:artifact-digest',
+          recordedAt: '2026-09-30T00:05:00.000Z',
+        }]
+      : [],
     receipts: [],
   }
 }
 
+function blockedFixtureAction(
+  type: SageActionType,
+  boundToRevision: boolean,
+): SageActionProjection {
+  return {
+    type,
+    revisionId: boundToRevision ? FIXTURE_REVISION_ID : undefined,
+    actionScope: boundToRevision ? FIXTURE_ACTION_SCOPE : undefined,
+    actionability: 'blocked',
+    denialReason: 'fixture-only',
+  }
+}
+
+function fixtureActions(stage: SageFixtureStage): readonly SageActionProjection[] {
+  const stageActions: readonly SageActionProjection[] = stage === 'created'
+    ? [blockedFixtureAction('enter-evidence', false)]
+    : stage === 'evidence'
+      ? [
+          blockedFixtureAction('enter-evidence', true),
+          blockedFixtureAction('start-attempt', true),
+        ]
+      : stage === 'clarification'
+        ? [
+            blockedFixtureAction('answer-clarification', true),
+            blockedFixtureAction('start-attempt', true),
+          ]
+        : stage === 'running'
+          ? [blockedFixtureAction('stop-attempt', true)]
+          : stage === 'artifact-receipt'
+            ? [
+                blockedFixtureAction('open-artifact', true),
+                blockedFixtureAction('accept-receipt', true),
+                blockedFixtureAction('reject-receipt', true),
+              ]
+            : [blockedFixtureAction('retry-attempt', true)]
+  return [...stageActions, blockedFixtureAction('retry-capability', false)]
+}
+
 /** Explicitly local UI fixture; it can never advertise a writable action. */
-export function createSageFixtureViewState(): SageMatterViewState {
-  return projectSageMatterViewState(fixtureProjection(), {
+export function createSageFixtureViewState(
+  stage: SageFixtureStage = 'clarification',
+): SageMatterViewState {
+  return projectSageMatterViewState(fixtureProjection(stage), {
     projectionSource: 'fixture',
     compatibilityOutcome: 'unknown',
     authorizationState: 'unknown',
     availabilityState: 'unknown',
     actionability: 'blocked',
     denialReason: 'fixture-only',
-    actions: [
-      {
-        type: 'answer-clarification',
-        revisionId: 'revision:sage.shopify-abi.fixture.1',
-        actionScope: 'shopify.orders.read',
-        actionability: 'blocked',
-        denialReason: 'fixture-only',
-      },
-      {
-        type: 'start-attempt',
-        revisionId: 'revision:sage.shopify-abi.fixture.1',
-        actionScope: 'shopify.orders.read',
-        actionability: 'blocked',
-        denialReason: 'compatibility-unknown',
-      },
-      {
-        type: 'retry-capability',
-        revisionId: undefined,
-        actionScope: undefined,
-        actionability: 'blocked',
-        denialReason: 'fixture-only',
-      },
-    ],
+    actions: fixtureActions(stage),
   })
 }

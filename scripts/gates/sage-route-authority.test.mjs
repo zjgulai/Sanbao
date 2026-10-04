@@ -17,6 +17,45 @@ const baseline = Object.freeze({
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
+const cancelCompositionBlock = `async cancelAttachment(request: { readonly itemId: string }): Promise<Response> {
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.attachment.cancel',
+        { kind: 'active-session' },
+        { itemId: request.itemId },
+      )
+      const outcome: AttachmentControlOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
+      return serviceJson(outcome, 200)
+    },`
+const directCancelCompositionBlock = `async cancelAttachment(request: { readonly itemId: string }): Promise<Response> {
+      const cancel = options.attachmentsCancel
+      const outcome: AttachmentControlOutcome = cancel === undefined
+        ? { state: 'refused', code: 'attachment-store-unavailable' }
+        : await cancel(request).catch((): AttachmentControlOutcome => ({ state: 'refused', code: 'attachment-cancel-failed' }))
+      return serviceJson(outcome, 200)
+    },`
+const cancelCompositionText = baseline.compositionText.includes("'session.attachment.cancel'")
+  ? baseline.compositionText
+  : baseline.compositionText.replace(directCancelCompositionBlock, cancelCompositionBlock)
+if (!baseline.compositionText.includes("'session.attachment.cancel'")) {
+  assert.notEqual(cancelCompositionText, baseline.compositionText)
+}
+const cancelMatrix = JSON.parse(baseline.matrixText)
+const cancelMatrixRoute = cancelMatrix.routes.find((route) => route.path === '/.sage/attachments/cancel')
+cancelMatrixRoute.activeContext = 'active session is resolved server-side; itemId is an opaque clue and not authority'
+cancelMatrixRoute.runCommand = { required: false, actual: false }
+cancelMatrixRoute.protectedAdmission = { required: true, actual: true }
+cancelMatrixRoute.currentAuthority = { status: 'compliant', mode: 'protected-effect-admission-unavailable-first' }
+const cancelMatrixText = JSON.stringify(cancelMatrix)
+const cancelCheck = (patch = {}) => checkSageRouteAuthority({
+  ...baseline,
+  matrixText: cancelMatrixText,
+  compositionText: cancelCompositionText,
+  ...patch,
+})
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
   assert.equal(result.expected, 58)
@@ -32,8 +71,9 @@ test('current 58-route registry matches source without claiming product availabi
     { expected: 58, discovered: 58, checked: 58, skipped: 0, failed: 0 },
   )
   assert.match(result.note, /13 read-only routes enter projection-read admission/)
-  assert.match(result.note, /23 protected-effect bypasses remain registered as violations/)
-  assert.match(result.note, /18 direct-provider bypasses/)
+  assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
+  assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
+  assert.match(result.note, /17 direct-provider bypasses/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -178,6 +218,83 @@ test('attachment upload itemId payload deletion fails', () => {
   )
   assert.notEqual(compositionText, baseline.compositionText)
   expectNamedFailure(check({ compositionText }), 'uploadAttachment admission payload must contain only request itemId')
+})
+
+test('attachment cancel admission deletion fails by its own exact source contract', () => {
+  const compositionText = cancelCompositionText.replace(
+    "const admission = await admitSessionCoreProtectedEffect(\n        options,\n        'session.attachment.cancel',",
+    "const admission = await bypassProtectedEffect(\n        options,\n        'session.attachment.cancel',",
+  )
+  assert.notEqual(compositionText, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText }), 'cancelAttachment must call admitSessionCoreProtectedEffect')
+})
+
+test('attachment cancel raw-provider fallback fails even when admission remains present', () => {
+  const marker = 'async cancelAttachment(request: { readonly itemId: string }): Promise<Response> {'
+  const compositionText = cancelCompositionText.replace(
+    marker,
+    `${marker}\n      const rawFallback = options.attachmentsCancel\n      await rawFallback?.(request)`,
+  )
+  assert.notEqual(compositionText, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText }), 'cancelAttachment must not retain an options.attachmentsCancel raw-provider fallback')
+})
+
+test('attachment cancel operation drift fails even when it still calls the admission helper', () => {
+  const compositionText = cancelCompositionText.replace(
+    "        'session.attachment.cancel',\n        { kind: 'active-session' },",
+    "        'session.attachment.abort',\n        { kind: 'active-session' },",
+  )
+  assert.notEqual(compositionText, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText }), 'cancelAttachment admission operation must be session.attachment.cancel')
+})
+
+test('attachment cancel candidate drift fails', () => {
+  const compositionText = cancelCompositionText.replace(
+    "'session.attachment.cancel',\n        { kind: 'active-session' },",
+    "'session.attachment.cancel',\n        { kind: 'matter', matterRef: request.itemId },",
+  )
+  assert.notEqual(compositionText, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText }), 'cancelAttachment admission candidate must be active-session')
+})
+
+test('attachment cancel itemId payload deletion and expansion both fail', () => {
+  const exactCall = "        'session.attachment.cancel',\n        { kind: 'active-session' },\n        { itemId: request.itemId },"
+  const deleted = cancelCompositionText.replace(
+    exactCall,
+    "        'session.attachment.cancel',\n        { kind: 'active-session' },\n        {},",
+  )
+  assert.notEqual(deleted, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText: deleted }), 'cancelAttachment admission payload must contain only request itemId')
+
+  const expanded = cancelCompositionText.replace(
+    exactCall,
+    "        'session.attachment.cancel',\n        { kind: 'active-session' },\n        { itemId: request.itemId, matterRef: 'caller-claimed' },",
+  )
+  assert.notEqual(expanded, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText: expanded }), 'cancelAttachment admission payload must contain only request itemId')
+})
+
+test('attachment cancel matrix cannot claim compliance without its exact source fact', () => {
+  const compositionText = cancelCompositionText.replace(
+    "      const admission = await admitSessionCoreProtectedEffect(\n        options,\n        'session.attachment.cancel',\n        { kind: 'active-session' },\n        { itemId: request.itemId },\n      )",
+    "      const cancel = options.attachmentsCancel\n      const admission = cancel === undefined\n        ? { state: 'unavailable' }\n        : await cancel(request)",
+  )
+  assert.notEqual(compositionText, cancelCompositionText)
+  expectNamedFailure(cancelCheck({ compositionText }), 'cancelAttachment must call admitSessionCoreProtectedEffect')
+})
+
+test('attachment cancel matrix admission and active-context facts cannot drift', () => {
+  const missingAdmission = JSON.parse(cancelMatrixText)
+  delete missingAdmission.routes.find((route) => route.path === '/.sage/attachments/cancel').protectedAdmission
+  expectNamedFailure(cancelCheck({ matrixText: JSON.stringify(missingAdmission) }), '/.sage/attachments/cancel')
+
+  const falseAdmission = JSON.parse(cancelMatrixText)
+  falseAdmission.routes.find((route) => route.path === '/.sage/attachments/cancel').protectedAdmission.actual = false
+  expectNamedFailure(cancelCheck({ matrixText: JSON.stringify(falseAdmission) }), '/.sage/attachments/cancel')
+
+  const contextDrift = JSON.parse(cancelMatrixText)
+  contextDrift.routes.find((route) => route.path === '/.sage/attachments/cancel').activeContext = 'caller attachment itemId'
+  expectNamedFailure(cancelCheck({ matrixText: JSON.stringify(contextDrift) }), '/.sage/attachments/cancel')
 })
 
 test('the explicit context selection route cannot claim compliance without its source fact', () => {

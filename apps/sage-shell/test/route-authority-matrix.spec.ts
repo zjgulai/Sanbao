@@ -86,7 +86,7 @@ describe('route authority truth matrix', () => {
     ])
   })
 
-  it('records two runCommand routes, twelve admitted protected routes, one context selection route, and 23 remaining bypasses', () => {
+  it('records two runCommand routes, thirteen admitted protected routes, one context selection route, and 22 remaining bypasses', () => {
     const protectedRoutes = matrix.routes.filter((route) => route.classification === 'protected-effect')
     const throughRunCommand = protectedRoutes.filter((route) => route.runCommand.actual)
     const throughProtectedAdmission = protectedRoutes.filter((route) => route.protectedAdmission?.actual === true)
@@ -95,6 +95,7 @@ describe('route authority truth matrix', () => {
     expect(throughRunCommand.map((route) => route.path).sort()).toEqual(['/.sage/actions', '/.sage/draft/convert'])
     expect(throughRunCommand.every((route) => route.currentAuthority.status === 'compliant')).toBe(true)
     expect(throughProtectedAdmission.map((route) => route.path).sort()).toEqual([
+      '/.sage/attachments/cancel',
       '/.sage/attachments/upload',
       '/.sage/corrections',
       '/.sage/session/approval-answer',
@@ -117,9 +118,32 @@ describe('route authority truth matrix', () => {
       !route.runCommand.required
       && route.contextSelection?.required === true
       && route.currentAuthority.mode === 'active-context-selection-unavailable-first')).toBe(true)
-    expect(bypasses).toHaveLength(23)
+    expect(bypasses).toHaveLength(22)
     expect(bypasses.every((route) => route.runCommand.required && route.currentAuthority.status === 'violation')).toBe(true)
-    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(18)
+    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(17)
+  })
+
+  it('records attachment cancel as admitted while keeping pick on its distinct authority boundary', () => {
+    const byPath = new Map(matrix.routes.map((route) => [route.path, route]))
+    expect(byPath.get('/.sage/attachments/cancel')).toMatchObject({
+      classification: 'protected-effect',
+      policyProfile: 'business-command',
+      operations: ['cancel'],
+      providers: ['cancelAttachment'],
+      persistence: 'none; production dispatch is withheld after admission',
+      runCommand: { required: false, actual: false },
+      protectedAdmission: { required: true, actual: true },
+      currentAuthority: {
+        status: 'compliant',
+        mode: 'protected-effect-admission-unavailable-first',
+      },
+    })
+    expect(byPath.get('/.sage/attachments/cancel')?.activeContext).toContain('itemId is an opaque clue')
+    expect(byPath.get('/.sage/attachments/pick')).toMatchObject({
+      operations: ['pick'],
+      runCommand: { required: true, actual: false },
+      currentAuthority: { status: 'violation', mode: 'direct-provider-bypass' },
+    })
   })
 
   it('records attachment upload as admitted while keeping renderer scope fields non-authoritative', () => {

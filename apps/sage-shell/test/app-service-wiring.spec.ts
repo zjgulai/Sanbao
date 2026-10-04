@@ -91,13 +91,14 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(await (await service.fullscreenArtifact({ on: true })).json()).toMatchObject({ code: 'm-artifact-fullscreen' })
   })
 
-  it('attachments: status, pick and cancel remain wired while upload cannot bypass admission', async () => {
+  it('attachments: status and pick remain wired while upload and cancel cannot bypass admission', async () => {
     const upload = vi.fn(marker('m-attach-upload'))
+    const cancel = vi.fn(async () => ({ state: 'cancelled' as const, itemId: 'm-attach-cancel' }))
     const service = assemble({
       attachments: () => ({ state: 'read', items: [] }),
       attachmentsPick: async () => ({ state: 'picked', item: { itemId: 'm-attach-pick', name: 'f', path: '/p', bytes: 1 } }),
       attachmentsUpload: upload,
-      attachmentsCancel: async () => ({ state: 'cancelled', itemId: 'm-attach-cancel' }),
+      attachmentsCancel: cancel,
     })
     const state = await (await service.readState()).json() as { attachments: { state: string } }
     expect(state.attachments.state).toBe('read')
@@ -105,7 +106,9 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(await (await service.uploadAttachment({ itemId: 'i', matterRef: 'm', workspaceRoot: '/w' })).json())
       .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(upload).not.toHaveBeenCalled()
-    expect(await (await service.cancelAttachment({ itemId: 'i' })).json()).toMatchObject({ itemId: 'm-attach-cancel' })
+    expect(await (await service.cancelAttachment({ itemId: 'i' })).json())
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(cancel).not.toHaveBeenCalled()
   })
 
   it('search, matterList and side chats reach their ports (the other dropped families)', async () => {

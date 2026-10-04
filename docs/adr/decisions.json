@@ -7640,6 +7640,307 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0254",
+      "title": "ADR-0254 · UI-IA-01：BusinessMatter 默认只读工作台与三栏信息架构",
+      "status": "accepted（2026-10-03）",
+      "date": "2026-10-03",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "BusinessMatter 成为默认首屏；左侧当前事项语境、中间事项主体、右侧证据与执行脉络共同形成 Sage-owned 三栏工作台。",
+          "constraints": [
+            "Sanbao and Qoder are evidence only",
+            "Overview is secondary",
+            "current matter remains primary"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "责任、事实计数、澄清、决定、尝试、产物与回执只由 exact SageMatterViewState 驱动；空态不合成进度或完成结论。",
+          "constraints": [
+            "no canned trace",
+            "no completion inference",
+            "exact validated ViewState only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "null、malformed 与读取失败必须清空 sidebar context、中栏事实、右栏 rows/counts 和 ActionPreview，production 初始状态继续 unavailable-first。",
+          "constraints": [
+            "clear stale DOM",
+            "fixture provenance remains visible",
+            "no placeholder production matter"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "新 composer 保持无 form/input/textarea/业务按钮，drawer 只维护本地状态并支持 Escape 与焦点返回；不新增 ActionIntent、POST、provider 或 bridge 调用。",
+          "constraints": [
+            "zero new business writes",
+            "local drawer state only",
+            "all mutations remain behind authority"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "framework-free renderer 仅为 UI-IA-01 的有界交付选择；不改 dependency/package/lockfile，React 版本、bundler 与测试栈继续等待独立 UI-01 ADR。",
+          "constraints": [
+            "no dependency changes",
+            "not a permanent React rejection",
+            "UI-01 remains incomplete"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0255",
+      "title": "ADR-0255 · UI 接线第八批：attachment cancel admission 收口",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "第八批只关闭 POST /.sage/attachments/cancel bypass；稳定 operation 为 session.attachment.cancel，candidate 固定为 active-session。",
+          "constraints": [
+            "single-route tranche",
+            "active session is scope, not authority",
+            "pick/upload/workspace/UI remain out of scope"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "protected intent payload 只携带 itemId；itemId 是 opaque clue，不证明 object ownership、matter、workspace、frame、actor 或 authority。",
+          "constraints": [
+            "payload only itemId",
+            "no matter inference",
+            "main-owned exact object resolution remains required"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "production 缺 object resolver、authority、persistence 或 dispatch port 时保持 unavailable-first；raw cancel、record mutation 与 Host abort 均为零调用。",
+          "constraints": [
+            "fail closed",
+            "provider zero-call before allow",
+            "no cancel availability claim"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "真实 cancel 必须另票补 durable operation/idempotency、exact sealed target、dispatch freshness、receipt 与 outcome-unknown reconciliation。",
+          "constraints": [
+            "no raw-owner fallback",
+            "transport abort is not cancel receipt",
+            "unknown outcome must not auto-retry"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "protected admission 更新为 13 条、violation 留存 22 条、其中 direct-provider bypass 17 条；route 总数与 classification 分母不变。",
+          "constraints": [
+            "one numerator moves",
+            "remaining violations stay explicit",
+            "no dependency/package/lockfile or commit/push"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0256",
+      "title": "ADR-0256 · UI-FIXTURE-01：六阶段只读 fixture 与当前阶段轨道",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "冻结六个 exact local fixture token，全部使用同一 sage.matter-view.v1，并保持 fixture provenance、blocked/fixture-only、deep-freeze 与公开字段最小化。",
+          "constraints": [
+            "same public ViewState shape",
+            "all fixture actions blocked",
+            "no snapshot digest locator or machine path"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "只有 Electron main 在 SAGE_FIXTURE_PROJECTION=1 时可按 exact SAGE_FIXTURE_STAGE 选择 fixture；缺省 clarification，未知 token fail closed，URL 和 renderer 零 authority。",
+          "constraints": [
+            "main-owned selector",
+            "no coercion",
+            "query hash localStorage cannot select stage"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "六项阶段轨道只有 current 或 idle，不表达 completed；六态、null、malformed 与 live 重绘必须清除旧阶段、澄清、trace 与 action preview。",
+          "constraints": [
+            "single current marker",
+            "no completed inference",
+            "clear stale DOM"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "artifact-receipt 不产生 conclusion，failed-retry 保留两个不同 attempt ID；artifact、attempt 或回复结束不得推导事项 completed。",
+          "constraints": [
+            "artifact is not receipt",
+            "retry preserves prior attempt",
+            "matter completion remains independent"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "exact projection-read-unavailable/read-policy denial 显示 unavailable，真正 malformed 继续 invalid；可见验收必须穿过真实 Electron wire、响应式与零写负控。",
+          "constraints": [
+            "typed denial differs from malformed",
+            "real Electron acceptance",
+            "zero writes"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "本批不增加真实 mutation、provider、Host bridge、persistence、dependency/package/lockfile，也不声明真实事项流程或完整 Qoder UI/UX 复刻完成。",
+          "constraints": [
+            "fixture only",
+            "production remains fail closed",
+            "no release authority"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0257",
+      "title": "ADR-0257 · UI-TOKEN-01 / RUNTIME-03A / UI-A11Y-01：唯一 semantic token、真实主题与可访问性",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "product/theme-tokens.ts 是 Sage light/dark literal palette 与 semantic roles 的唯一 owner；renderer/component 只消费闭合的 --sage-*，禁止 owner 外 color literal、第二处声明、fallback 与 prototype namespace。",
+          "constraints": [
+            "normal text contrast at least 4.5:1",
+            "focus and non-text contrast at least 3:1",
+            "brand is not success warning or danger"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Electron main 在 BrowserWindow 创建前恢复 persisted requested theme；display preference 先持久化，成功后才精确应用 nativeTheme.themeSource，失败不留下假应用。",
+          "constraints": [
+            "system light dark exact mapping",
+            "save before apply",
+            "theme-tokens build artifact is materialized"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "renderer 只把权威 preference projection 写成 data-sage-theme-requested/effective；effective 缺失为 unknown，prefers-color-scheme 只作视觉 fallback与重新读取触发。",
+          "constraints": [
+            "renderer does not mint effective theme",
+            "unknown stays observable",
+            "system requested remains system"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Batch 10 只完成 theme 产品应用；language、density、font style、content width、terminal theme、file icons 与 icon appearance 继续仅保存，完整 RUNTIME-03 保持 open。",
+          "constraints": [
+            "theme only",
+            "no all-eight-live claim",
+            "no density or translation application"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "vertical tabs、稳定 accessible names、真实 user-menu Escape 与窄宽 modal trace drawer 必须按真实 focus/AX/event 路径工作，close/Escape 均恢复 focus。",
+          "constraints": [
+            "one roving tab stop",
+            "modal only while narrow and open",
+            "Tab and Shift+Tab contained"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "可见验收必须覆盖真实 Electron computed focus/motion、light/dark/system、第二进程 restart、1440/760 往返与约 320 CSS px reflow；Fake DOM、字符串或 PNG hash不能单独形成完成结论。",
+          "constraints": [
+            "real activeElement and AX tree",
+            "explicit overflow allowlist",
+            "manual screenshot review"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "本批不新增业务 ActionIntent、route、authority、provider、Host、domain persistence、dependency/package/lockfile 或最终 renderer 技术栈，也不声明 production E2E 或完整 Qoder UI/UX 复刻完成。",
+          "constraints": [
+            "zero new business writes",
+            "production remains fail closed",
+            "no release authority"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0258",
+      "title": "ADR-0258 · RUNTIME-03B：权威 density root、semantic geometry 与重启恢复",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "product/theme-tokens.ts 在唯一 token owner 内新增独立的 --sage-density-* geometry 轴，exact roles 为 nav item padding、main padding、card padding、row gap 与 control minimum height。",
+          "constraints": [
+            "theme and density namespaces stay separate",
+            "no second spacing owner",
+            "geometry only"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "comfortable 精确保留 Batch 10 基线；compact 只收缩列明 geometry，不改变字号、行高、文案、信息层级、focus 顺序、actionability 或 authority。",
+          "constraints": [
+            "comfortable baseline preserved",
+            "font size and line height unchanged",
+            "business facts unchanged"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "renderer 只把权威 preferences.requested.density 投成 data-sage-density=comfortable|compact；malformed、missing、null 或 unavailable 写 unknown，comfortable fallback 只作用于视觉。",
+          "constraints": [
+            "unknown remains observable",
+            "no effective density",
+            "stale density is cleared"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "保存成功后两个 preference 入口、root 与 computed layout 同步；保存失败重读存量 projection，theme 与 density 即时应用，其余六项继续只保存。",
+          "constraints": [
+            "save before visible success",
+            "failed save rolls back",
+            "no all-eight-live claim"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "density 完成证据必须覆盖真实 Electron 双主题 computed cycle、1440、760 drawer、约 320 CSS px reflow、真实键盘路径与第二进程 compact restart，并保持六态、blocked 与零业务写入。",
+          "constraints": [
+            "real computed geometry",
+            "real second process",
+            "manual screenshot review"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "本批不实现其余六项 display preference，不引入 React/Vite/dependency/package/lockfile，不新增业务 ActionIntent、route/provider/Host/persistence 或真实 mutation，也不声明完整 Qoder UI/UX 或 production 完成。",
+          "constraints": [
+            "density only",
+            "zero new business writes",
+            "UI-DECISION-01 remains open"
+          ]
+        }
+      ]
     }
   ]
 }

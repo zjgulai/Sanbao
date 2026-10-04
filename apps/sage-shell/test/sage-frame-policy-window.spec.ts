@@ -169,7 +169,7 @@ describe('Sage privileged window frame policy (production wiring)', () => {
     expect(result.harnessErrors).toEqual([])
 
     // The Sage document stays fully functional under the strict CSP.
-    expect(result.evidence.documentFacts.overviewVisible).toBe(true)
+    expect(result.evidence.documentFacts).toMatchObject({ overviewVisible: false, matterVisible: true })
     expect(result.evidence.documentFacts.bodyBackground).not.toBe('rgba(0, 0, 0, 0)')
     expect(result.evidence.connectStatus).toBe(404)
 

@@ -1784,3 +1784,19 @@
 - **已落地机制**：13 条 read-only route 统一进入 async projection-read admission；production 仍缺 matter/object-bound policy 时在 provider 前 unavailable/blocked。Electron main 用 `projectionReadScope.run/current` 的 `AsyncLocalStorage` 只在 admitted callback 内暴露 request-scoped ActiveContext，provider 不再 fallback newest converted draft；callback 结束后 scope 失效。`/.sage/state` 与 `/.sage/search` 因集合/全局 scope 保持 blocked，fixture 不参与 authority。authority matrix 与定向测试分别守 provider 零调用、scope 隔离、无 recency fallback 和两个特殊 blocked 面。
 - **下一版默认动作**：每接一条 read route 都同时回答：稳定 operation 是什么、candidate/object 从哪里来、哪个 fresh policy 明确允许、provider 如何只在当前 request scope 取 owner、unavailable/denied 时哪些 I/O 必须为 0。看到 `latest`/`newest`/全局变量/fixture/旧 projection 被用作 current object 时立即判红；集合查询必须另给逐对象裁剪、redaction、分页与 denied/not-found anti-oracle，不能复用单对象 allow。
 - **详见**：[ADR-0251](adr/ADR-0251.md) 与 [Note](notes/implemented/architecture/2026-10-03-projection-read-admission-and-owner-batch-4.md)。
+
+## P-65 · 默认视图换了，仪器仍量旧面：静态桩全绿，真实缩放才暴露长标识溢出
+
+- **症状**：UI-IA-01 把 Matter 设为默认首屏后，第一次全量回归出现 20 个失败：旧 window probe 仍断言 Overview 可见，deliverable test 仍用已移除的 `.sage-matter-layout` 当 slice 结束锚；更新仪器后，真实 200% Electron 又发现 `scrollWidth=414`、`clientWidth=380`，长 revision 与 card row 把页面撑宽。focused Fake DOM 的 4 files / 17 tests 全绿，却看不到 viewport、computed layout 或像素溢出。
+- **根因类**：这是 P-59 的同族问题。默认 surface 改变后，真实窗口暴露的 active panel、布局锚与断点也一起改变；继续量旧 surface 会把产品变更误报成失败，换成只读属性的静态桩又会漏掉真实 zoom 溢出。与目标结构无关的 CSS class 也不能作为 slice sentinel。
+- **已落地机制**：`gate:sage-shell-quality` 运行完整 Sage Shell suite；真实 Electron probe 断言 Matter 默认、1440px 三块区域顺序与 sticky 右栏、760px drawer 的 open / Escape / focus / no-overflow，以及 200% zoom 的 `scrollWidth === clientWidth`。两张 fixture 截图还要人工回看，避免把数字绿灯当成视觉成立。
+- **下一版默认动作**：任何默认 surface、IA 或 breakpoint 变化都必须同步重钉真实 probe 的语义锚，禁止借无关 class 截取源码片段；至少跑 1440px、760px、200% zoom 并回看截图。revision、digest、ID 等长标识默认允许 wrap，不能让单个标识决定页面最小宽度。
+- **详见**：[ADR-0254](adr/ADR-0254.md) 与 [Note](notes/implemented/architecture/2026-10-03-business-matter-readonly-workbench-batch-7.md)。
+
+## P-66 · 把键盘事件直接投到预期 handler：panel 测试会关，不等于真实 activeElement 能关
+
+- **症状**：user menu 的旧 Fake DOM 测试先打开 panel，再直接执行 `panel.dispatch('keydown', {key:'Escape'})`；测试全绿，但真实点击后 focus 仍停在 trigger，键盘 Escape 从 trigger 出发，事件根本不会经过 panel handler。窄宽 tab 的视觉文字又被 `display:none` 移出 accessibility tree，静态 DOM 仍“看得到”七个文字，真实 AX 只读到不完整名字。
+- **根因类**：测试把期望消费点当成事件源，跳过 activeElement、focus transfer、bubbling、viewport CSS 与 accessibility tree。这是 P-02/P-59 的交互分支：桩证明“某个函数收到理想事件会工作”，没有证明用户实际把事件送到那里。
+- **已落地机制**：`gate:sage-shell-quality` 运行 `ui-keyboard.spec.ts` 与真实 `sage-fixture-projection-window.spec.ts`。前者先让 trigger-origin Escape、vertical/roving tabs、modal containment 产生 7 个具名 Red；后者用 CDP 发送真实键盘事件并读取 activeElement 与完整 AX tree，同时覆盖 close/Escape focus return、1440↔760 modal 语义、computed focus/reduced-motion 与约 320 CSS px reflow。旧实现 Red、产品修复后同判据 Green；probe 还会在 200% 截图后恢复 zoom，避免同 origin 状态污染第二进程。
+- **下一版默认动作**：键盘/焦点验收先写清用户动作后的真实 activeElement，再从那个节点发送 key；至少一条真实浏览器/Electron 路径读取 focus return 与 AX/computed style。允许 Fake DOM 做快速回归，但禁止向“预期会处理”的节点直投事件后宣布用户路径完成；跨 viewport/zoom/restart 的探针必须在每段结束恢复自己改变的状态。
+- **详见**：[ADR-0257](adr/ADR-0257.md) 与 [Note](notes/implemented/surface/2026-10-04-semantic-theme-accessibility-batch-10.md)。

@@ -155,6 +155,36 @@ describe('the two entries share one value — eight items (US-108/220/221)', () 
     }
   })
 
+  it('applies compact and comfortable density at the root, then clears malformed, null, and unknown projections', async () => {
+    const densityAttribute = 'data-sage-density'
+    const harness = await bootSagePage(statePayload({ preferences: prefs() }))
+    expect(harness.root.attributes[densityAttribute]).toBe('compact')
+    expect(harness.node('pref-density').value).toBe('compact')
+    expect(harness.node('menu-density').value).toBe('compact')
+
+    harness.setPayload(statePayload({ preferences: prefs({ requested: { ...STORED, density: 'comfortable' } }) }))
+    await harness.refresh()
+    expect(harness.root.attributes[densityAttribute]).toBe('comfortable')
+    expect(harness.node('pref-density').value).toBe('comfortable')
+    expect(harness.node('menu-density').value).toBe('comfortable')
+
+    const withoutDensity: Record<string, unknown> = { ...STORED }
+    delete withoutDensity.density
+    const invalidProjections: Array<[string, unknown]> = [
+      ['malformed density', prefs({ requested: { ...STORED, density: 'spacious' } })],
+      ['null density', prefs({ requested: { ...STORED, density: null } })],
+      ['unknown density', prefs({ requested: withoutDensity })],
+      ['null preferences', null],
+    ]
+    for (const [label, preferences] of invalidProjections) {
+      // Seed a stale valid value so every invalid projection must actively clear it.
+      harness.root.setAttribute(densityAttribute, 'compact')
+      harness.setPayload(statePayload({ preferences }))
+      await harness.refresh()
+      expect(harness.root.attributes[densityAttribute], label).toBe('unknown')
+    }
+  })
+
   it('writes the eight items through the one route: the page patch and the per-item menu saves', async () => {
     const harness = await bootSagePage(statePayload({ preferences: prefs() }))
     for (const key of KEYS) {
@@ -199,12 +229,15 @@ describe('the two entries share one value — eight items (US-108/220/221)', () 
 
     const saved = await bootSagePage(statePayload({ preferences: prefs() }))
     expect(saved.node('pref-note').textContent).toContain('已保存到本设备')
-    expect(saved.node('pref-note').textContent).toContain('八项都即时生效，无需重启')
+    expect(saved.node('pref-note').textContent).toContain('主题与密度即时生效；其余六项仅保存，尚未接入产品显示。')
+    expect(saved.node('pref-note').textContent).not.toContain('八项都即时生效')
+    expect(saved.node('pref-note').textContent).not.toContain('无需重启')
   })
 
   it('falls back to the stored value when a save is refused — at either entry', async () => {
     const harness = await bootSagePage(statePayload({ preferences: prefs() }))
     // The service refuses (no provider): the page selects snap back to the stored value.
+    harness.root.setAttribute('data-sage-density', 'comfortable')
     harness.node('pref-theme').value = 'system'
     harness.node('pref-icon-appearance').value = 'system'
     harness.node('pref-save').dispatch('click')
@@ -213,14 +246,17 @@ describe('the two entries share one value — eight items (US-108/220/221)', () 
     expect(harness.node('pref-theme').value).toBe('dark')
     expect(harness.node('pref-icon-appearance').value).toBe('light')
     expect(harness.node('menu-theme').value).toBe('dark')
+    expect(harness.root.attributes['data-sage-density']).toBe('compact')
 
     // The quick menu has its own failure sentence and its own fallback — no entry claims a save.
+    harness.root.setAttribute('data-sage-density', 'comfortable')
     harness.node('menu-font-style').value = 'sans'
     harness.node('menu-font-style').dispatch('change')
     await harness.refresh()
     expect(harness.node('menu-note').textContent).toContain('保存失败：显示值已回退')
     expect(harness.node('menu-font-style').value).toBe('serif')
     expect(harness.node('pref-font-style').value).toBe('serif')
+    expect(harness.root.attributes['data-sage-density']).toBe('compact')
   })
 
   it('says 未核验 for a followed theme nobody observed', async () => {

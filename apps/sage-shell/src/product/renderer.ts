@@ -2,209 +2,264 @@
 
 import { renderSageWorkspace } from './component-renderer.js'
 import { SAGE_ACTIONS_PATH, SAGE_REQUEST_TIMEOUT_MS, SAGE_STATE_PATH } from './contracts.js'
+import { renderSageDensityTokenCss, renderSageThemeTokenCss } from './theme-tokens.js'
 
 /** Render the complete first Sage product surface without a client-side framework dependency. */
 export function renderSageDocument(): string {
   const statePath = JSON.stringify(SAGE_STATE_PATH)
   const actionsPath = JSON.stringify(SAGE_ACTIONS_PATH)
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-sage-theme-requested="unknown" data-sage-theme-effective="unknown" data-sage-density="unknown">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>Sage</title>
   <style>
+    ${renderSageThemeTokenCss()}
+    ${renderSageDensityTokenCss()}
     :root {
-      color-scheme: dark;
-      --sage-ink: #f2f4ef;
-      --sage-muted: #9ba8a2;
-      --sage-faint: #6e7b76;
-      --sage-line: rgb(160 185 173 / 18%);
-      --sage-line-strong: rgb(160 185 173 / 34%);
-      --sage-surface: #111a18;
-      --sage-surface-raised: #17231f;
-      --sage-surface-soft: #1c2b26;
-      --sage-accent: #9bd6b8;
-      --sage-accent-strong: #c2efd5;
-      --sage-warning: #e7c78d;
-      --sage-danger: #ee9c8d;
-      --sage-sidebar: #0d1513;
-      --sage-shadow: 0 1.5rem 4rem rgb(0 0 0 / 28%);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--sage-surface);
+      background: var(--sage-canvas);
       color: var(--sage-ink);
     }
     * { box-sizing: border-box; }
-    html { min-width: 320px; background: var(--sage-surface); }
-    body { min-height: 100vh; margin: 0; background: radial-gradient(circle at 72% 4%, #29483b 0, transparent 34rem), var(--sage-surface); }
+    html { min-width: 320px; background: var(--sage-canvas); }
+    body { min-height: 100vh; margin: 0; background: var(--sage-canvas); }
     button { font: inherit; }
-    :where(button, select, input, textarea):focus-visible { outline: 2px solid var(--sage-accent); outline-offset: 3px; }
+    :where(button, select, input, textarea):focus-visible { outline: 2px solid var(--sage-focus); outline-offset: 3px; }
     [hidden] { display: none !important; }
     .sage-app { min-height: 100vh; display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
-    .sage-sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 1.5rem 1rem; border-right: 1px solid var(--sage-line); background: rgb(8 15 13 / 78%); }
+    .sage-sidebar { display: flex; flex-direction: column; min-height: 100vh; padding: 1.5rem 1rem; border-right: 1px solid var(--sage-divider); background: var(--sage-sidebar); }
     .sage-brand { display: flex; align-items: center; gap: .7rem; padding: .25rem .75rem 2.5rem; color: var(--sage-ink); font-size: 1.15rem; font-weight: 680; letter-spacing: .06em; }
-    .sage-mark { width: 1.35rem; height: 1.35rem; display: grid; place-items: center; border: 1px solid var(--sage-accent); border-radius: 50%; transform: rotate(-25deg); }
-    .sage-mark span { width: .42rem; height: .42rem; border-radius: 50%; background: var(--sage-accent); }
+    .sage-mark { width: 1.35rem; height: 1.35rem; display: grid; place-items: center; border: 1px solid var(--sage-brand); border-radius: 50%; transform: rotate(-25deg); }
+    .sage-mark span { width: .42rem; height: .42rem; border-radius: 50%; background: var(--sage-brand); }
     .sage-nav-label, .sage-card-label, .sage-kicker, .sage-eyebrow { color: var(--sage-faint); font-size: .68rem; letter-spacing: .13em; text-transform: uppercase; }
     .sage-nav-label { margin: 0 .75rem .55rem; }
     .sage-nav { display: grid; gap: .25rem; }
-    .sage-nav-item { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .72rem .75rem; border: 1px solid transparent; border-radius: .7rem; background: transparent; color: var(--sage-muted); cursor: pointer; text-align: left; }
-    .sage-nav-item:hover { background: rgb(155 214 184 / 7%); color: var(--sage-ink); }
-    .sage-nav-count { margin-left: auto; min-width: 1.1rem; padding: .05rem .35rem; border: 1px solid var(--sage-line-strong); border-radius: 99rem; color: var(--sage-accent-strong); font-size: .64rem; text-align: center; }
-    .sage-nav-item.is-active { border-color: var(--sage-line); background: var(--sage-surface-soft); color: var(--sage-accent-strong); }
-    .sage-nav-icon { width: 1.2rem; color: var(--sage-accent); text-align: center; }
-    .sage-sidebar-foot { display: flex; align-items: center; gap: .55rem; margin-top: auto; padding: 1rem .75rem .25rem; border-top: 1px solid var(--sage-line); color: var(--sage-muted); font-size: .75rem; line-height: 1.35; }
-    .sage-status-dot { width: .55rem; height: .55rem; flex: 0 0 auto; border-radius: 50%; background: var(--sage-warning); box-shadow: 0 0 .8rem rgb(231 199 141 / 38%); }
-    .sage-status-dot.is-ready { background: var(--sage-accent); box-shadow: 0 0 .8rem rgb(155 214 184 / 46%); }
-    .sage-status-dot.is-unavailable { background: var(--sage-danger); box-shadow: 0 0 .8rem rgb(238 156 141 / 38%); }
-    .sage-main { min-width: 0; padding: 1.5rem clamp(1.25rem, 4vw, 4rem) 2rem; }
+    .sage-nav-item { display: flex; align-items: center; gap: .7rem; width: 100%; padding: var(--sage-density-nav-item-padding); border: 1px solid transparent; border-radius: var(--sage-radius); background: transparent; color: var(--sage-muted); cursor: pointer; text-align: left; }
+    .sage-nav-item:hover { background: var(--sage-overlay); color: var(--sage-ink); }
+    .sage-nav-count { margin-left: auto; min-width: 1.1rem; padding: .05rem .35rem; border: 1px solid var(--sage-border); border-radius: 99rem; color: var(--sage-brand); font-size: .64rem; text-align: center; }
+    .sage-nav-item.is-active { border-color: var(--sage-divider); background: var(--sage-overlay); color: var(--sage-brand); }
+    .sage-nav-icon { width: 1.2rem; color: var(--sage-brand); text-align: center; }
+    .sage-current-context { display: grid; gap: .45rem; margin: 1.25rem .25rem 0; padding: .9rem .75rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
+    .sage-current-context strong { overflow: hidden; color: var(--sage-ink); font-size: .82rem; font-weight: 580; line-height: 1.45; text-overflow: ellipsis; }
+    .sage-current-context > span:not(.sage-card-label) { overflow: hidden; color: var(--sage-faint); font-size: .66rem; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+    .sage-sidebar-foot { display: flex; align-items: center; gap: .55rem; margin-top: auto; padding: 1rem .75rem .25rem; border-top: 1px solid var(--sage-divider); color: var(--sage-muted); font-size: .75rem; line-height: 1.35; }
+    .sage-status-dot { width: .55rem; height: .55rem; flex: 0 0 auto; border-radius: 50%; background: var(--sage-warning); }
+    .sage-status-dot.is-ready { background: var(--sage-success); }
+    .sage-status-dot.is-unavailable { background: var(--sage-danger); }
+    .sage-main { min-width: 0; padding: var(--sage-density-main-padding); }
     .sage-topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; min-height: 4rem; }
-    .sage-kicker { margin: .25rem 0 .35rem; color: var(--sage-accent); }
+    .sage-kicker { margin: .25rem 0 .35rem; color: var(--sage-brand); }
     .sage-breadcrumb { margin: 0; color: var(--sage-muted); font-size: .82rem; }
     .sage-topbar-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
-    .sage-fixture-pill, .sage-runtime-pill { display: inline-flex; align-items: center; min-height: 1.85rem; padding: .25rem .65rem; border: 1px solid var(--sage-line); border-radius: 99rem; color: var(--sage-muted); font-size: .7rem; }
-    .sage-runtime-pill { border-color: var(--sage-line-strong); color: var(--sage-accent-strong); }
+    .sage-fixture-pill, .sage-runtime-pill { display: inline-flex; align-items: center; min-height: var(--sage-density-control-min-height); padding: .25rem .65rem; border: 1px solid var(--sage-divider); border-radius: 99rem; color: var(--sage-muted); font-size: .7rem; }
+    .sage-runtime-pill { border-color: var(--sage-border); color: var(--sage-brand); }
     .sage-user-menu { position: relative; }
-    .sage-user-menu-trigger { display: inline-flex; align-items: center; gap: .4rem; min-height: 1.85rem; padding: .25rem .65rem; border: 1px solid var(--sage-line-strong); border-radius: 99rem; background: none; color: var(--sage-accent-strong); font: inherit; font-size: .7rem; cursor: pointer; }
-    .sage-user-menu-panel { position: absolute; top: calc(100% + .4rem); right: 0; z-index: 3; display: grid; gap: .4rem; min-width: 13rem; padding: .7rem; border: 1px solid var(--sage-line-strong); border-radius: var(--sage-radius); background: var(--sage-surface); }
+    .sage-user-menu-trigger { display: inline-flex; align-items: center; gap: .4rem; min-height: var(--sage-density-control-min-height); padding: .25rem .65rem; border: 1px solid var(--sage-border); border-radius: 99rem; background: none; color: var(--sage-brand); font: inherit; font-size: .7rem; cursor: pointer; }
+    .sage-user-menu-panel { position: absolute; top: calc(100% + .4rem); right: 0; z-index: 3; display: grid; gap: .4rem; min-width: 13rem; padding: .7rem; border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); }
     .sage-user-menu-note { margin: 0; color: var(--sage-muted); font-size: .68rem; line-height: 1.5; }
     .sage-capability-roster { margin-top: 1rem; }
     .sage-roster-list { display: grid; gap: .45rem; margin: 1rem 0 .6rem; padding: 0; list-style: none; }
-    .sage-roster-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .5rem .65rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); }
+    .sage-roster-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sage-density-row-gap); padding: .5rem .65rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); }
     .sage-roster-row > strong { margin-right: .25rem; font-size: .82rem; }
-    .sage-roster-tag { padding: .2rem .5rem; border: 1px solid var(--sage-line); border-radius: 99rem; color: var(--sage-muted); font-size: .68rem; white-space: nowrap; }
-    .sage-roster-tag.is-ok { border-color: var(--sage-accent-strong); color: var(--sage-accent-strong); }
-    .sage-roster-tag.is-blocked { border-color: var(--sage-line-strong); color: var(--sage-warn, #d8a45f); }
-    .sage-row-input { flex: 1 1 10rem; min-width: 0; padding: .3rem .5rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
-    .sage-row-input:focus-visible { outline: 2px solid var(--sage-accent-strong); outline-offset: 1px; }
-    .sage-row-button { padding: .3rem .6rem; border: 1px solid var(--sage-line-strong); border-radius: var(--sage-radius); background: transparent; color: var(--sage-accent-strong); cursor: pointer; font-size: .72rem; }
+    .sage-roster-tag { padding: .2rem .5rem; border: 1px solid var(--sage-divider); border-radius: 99rem; color: var(--sage-muted); font-size: .68rem; white-space: nowrap; }
+    .sage-roster-tag.is-ok { border-color: var(--sage-success); color: var(--sage-success); }
+    .sage-roster-tag.is-blocked { border-color: var(--sage-border); color: var(--sage-warning); }
+    .sage-row-input { flex: 1 1 10rem; min-width: 0; padding: .3rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
+    .sage-row-input:focus-visible { outline: 2px solid var(--sage-focus); outline-offset: 1px; }
+    .sage-row-button { padding: .3rem .6rem; border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: transparent; color: var(--sage-brand); cursor: pointer; font-size: .72rem; }
     .sage-row-button:disabled { cursor: not-allowed; opacity: .45; }
-    .sage-file-preview { margin: .6rem 0 0; padding: .7rem .8rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); color: var(--sage-ink); font-size: .74rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow: auto; max-height: 16rem; }
+    .sage-file-preview { margin: .6rem 0 0; padding: .7rem .8rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); color: var(--sage-ink); font-size: .74rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; overflow: auto; max-height: 16rem; }
     .sage-draft-section, .sage-link-section, .sage-session-section { margin-top: 1.5rem; }
     .sage-settings-leaf .sage-state-tag { margin: .2rem 0 .5rem; }
     .sage-preferences-card .sage-state-row { gap: .6rem; }
-    .sage-preferences-card select, .sage-user-menu-row select { padding: .25rem .5rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
-    .sage-appearance-deferred { margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--sage-line); display: grid; gap: .35rem; }
+    .sage-preferences-card select, .sage-user-menu-row select { padding: .25rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
+    .sage-appearance-deferred { margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--sage-divider); display: grid; gap: .35rem; }
     .sage-appearance-deferred .sage-roster-row { display: flex; align-items: baseline; gap: .55rem; font-size: .74rem; }
     .sage-user-menu-row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; font-size: .74rem; color: var(--sage-muted); }
     .sage-link-card .sage-state-row { gap: .6rem; }
-    .sage-link-card select { max-width: 34rem; padding: .3rem .5rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
-    .sage-draft-input { width: 100%; box-sizing: border-box; margin: .4rem 0 .2rem; padding: .5rem .6rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .76rem; font-family: inherit; resize: vertical; }
+    .sage-link-card select { max-width: 34rem; padding: .3rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
+    .sage-draft-input { width: 100%; box-sizing: border-box; margin: .4rem 0 .2rem; padding: .5rem .6rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .76rem; font-family: inherit; resize: vertical; }
     .sage-mode-bar { display: flex; gap: .4rem; margin: .3rem 0 .2rem; }
     .sage-mode-bar [data-plan-mode-state="active"] { border-color: var(--sage-ink); font-weight: 600; }
-    .sage-plan-preview { max-height: 14rem; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: .3rem 0; padding: .5rem .6rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); font-size: .72rem; }
+    .sage-plan-preview { max-height: 14rem; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: .3rem 0; padding: .5rem .6rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); font-size: .72rem; }
     .sage-draft-card .sage-state-row { gap: .6rem; }
     .sage-draft-card .sage-state-row .sage-row-input { flex: 1 1 14rem; }
     .sage-history-toggle { margin-right: .5rem; }
-    .sage-draft-confirmation { margin: .6rem 0; padding: .55rem .7rem .65rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); }
+    .sage-draft-confirmation { margin: .6rem 0; padding: .55rem .7rem .65rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); }
     .sage-draft-confirmation-title { margin: 0 0 .35rem; font-size: .78rem; font-weight: 600; }
     .sage-draft-confirmation-facts { margin: 0 0 .4rem; padding-left: 1.1rem; font-size: .74rem; line-height: 1.55; }
     .sage-draft-confirmation-facts li { margin: .1rem 0; }
     .sage-draft-confirmation #draft-confirm-execute { margin-right: .4rem; }
     .sage-action-items-card .sage-state-row { gap: .6rem; }
-    .sage-action-correction-block, .sage-action-project-block, .sage-run-log-block { margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--sage-line); display: grid; gap: .4rem; }
-    .sage-file-references select { max-width: 32rem; padding: .3rem .5rem; border: 1px solid var(--sage-line); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
+    .sage-action-correction-block, .sage-action-project-block, .sage-run-log-block { margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--sage-divider); display: grid; gap: .4rem; }
+    .sage-file-references select { max-width: 32rem; padding: .3rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
     #profile-status-note { margin: .55rem 0 .9rem; color: var(--sage-muted); font-size: .74rem; line-height: 1.6; }
     .sage-panel { display: none; padding-top: 2.25rem; }
-    .sage-panel.is-visible { display: block; animation: sage-panel-in .24s ease-out both; }
+    .sage-panel.is-visible { display: block; animation: sage-panel-in var(--sage-motion) both; }
     .sage-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(18rem, .8fr); gap: clamp(1.5rem, 5vw, 5rem); align-items: center; padding: clamp(1rem, 3vw, 3rem) 0 3rem; }
-    .sage-eyebrow { margin: 0 0 1rem; color: var(--sage-accent); }
+    .sage-eyebrow { margin: 0 0 1rem; color: var(--sage-brand); }
     .sage-hero h1, .sage-section-heading h1 { margin: 0; color: var(--sage-ink); font-size: clamp(2rem, 5vw, 4.2rem); font-weight: 510; letter-spacing: -.06em; line-height: 1.05; }
-    .sage-hero h1 em { color: var(--sage-accent-strong); font-style: normal; }
+    .sage-hero h1 em { color: var(--sage-brand); font-style: normal; }
     .sage-lead { max-width: 39rem; margin: 1.35rem 0 0; color: var(--sage-muted); font-size: 1rem; line-height: 1.75; }
     .sage-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1.7rem; }
-    .sage-primary-button, .sage-secondary-button { border-radius: .65rem; cursor: pointer; font-weight: 650; }
-    .sage-primary-button { padding: .75rem 1rem; border: 1px solid var(--sage-accent); background: var(--sage-accent); color: #102019; }
-    .sage-secondary-button { padding: .58rem .85rem; border: 1px solid var(--sage-line-strong); background: transparent; color: var(--sage-accent-strong); }
+    .sage-primary-button, .sage-secondary-button { border-radius: var(--sage-radius); cursor: pointer; font-weight: 650; }
+    .sage-primary-button { padding: .75rem 1rem; border: 1px solid var(--sage-brand); background: var(--sage-brand); color: var(--sage-canvas); }
+    .sage-secondary-button { padding: .58rem .85rem; border: 1px solid var(--sage-border); background: transparent; color: var(--sage-brand); }
     .sage-primary-button:hover, .sage-secondary-button:hover { filter: brightness(1.08); }
     .sage-muted-copy, .sage-card-note { color: var(--sage-faint); font-size: .78rem; }
-    .sage-network-card { position: relative; min-height: 22rem; padding: 1rem; overflow: hidden; border: 1px solid var(--sage-line); border-radius: 1.3rem; background: linear-gradient(145deg, rgb(42 76 61 / 42%), rgb(14 25 21 / 68%)); box-shadow: var(--sage-shadow); }
+    .sage-network-card { position: relative; min-height: 22rem; padding: 1rem; overflow: hidden; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); box-shadow: var(--sage-shadow); }
     .sage-network-head { display: flex; justify-content: space-between; color: var(--sage-faint); font-size: .65rem; letter-spacing: .12em; }
-    .sage-network-signal { width: .48rem; height: .48rem; border-radius: 50%; background: var(--sage-accent); box-shadow: 0 0 .8rem var(--sage-accent); }
-    .sage-network-orbit { position: absolute; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border: 1px solid rgb(155 214 184 / 36%); border-radius: 50%; color: var(--sage-muted); font-size: .7rem; }
+    .sage-network-signal { width: .48rem; height: .48rem; border-radius: 50%; background: var(--sage-brand); }
+    .sage-network-orbit { position: absolute; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border: 1px solid var(--sage-divider); border-radius: 50%; color: var(--sage-muted); font-size: .7rem; }
     .orbit-one { top: 27%; left: 12%; }
     .orbit-two { top: 47%; right: 9%; }
     .orbit-three { bottom: 13%; left: 29%; }
-    .sage-network-card::before, .sage-network-card::after { position: absolute; content: ""; border: 1px dashed rgb(155 214 184 / 24%); border-radius: 50%; }
+    .sage-network-card::before, .sage-network-card::after { position: absolute; content: ""; border: 1px dashed var(--sage-divider); border-radius: 50%; }
     .sage-network-card::before { inset: 25% 12%; }
     .sage-network-card::after { inset: 12% 27%; }
-    .sage-network-core { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 8.4rem; height: 8.4rem; transform: translate(-50%, -50%); border: 1px solid var(--sage-accent); border-radius: 50%; background: rgb(14 30 24 / 88%); box-shadow: 0 0 2.5rem rgb(155 214 184 / 20%); text-align: center; }
-    .sage-network-core strong { color: var(--sage-accent-strong); font-size: 1.15rem; line-height: 1.2; }
+    .sage-network-core { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 8.4rem; height: 8.4rem; transform: translate(-50%, -50%); border: 1px solid var(--sage-brand); border-radius: 50%; background: var(--sage-overlay); text-align: center; }
+    .sage-network-core strong { color: var(--sage-brand); font-size: 1.15rem; line-height: 1.2; }
     .sage-network-core small { color: var(--sage-muted); font-size: .62rem; }
     .sage-network-caption { position: absolute; right: 1rem; bottom: 1rem; left: 1rem; color: var(--sage-muted); font-size: .72rem; text-align: center; }
     .sage-grid { display: grid; gap: 1rem; }
     .sage-grid-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .sage-card { min-width: 0; padding: 1.35rem; border: 1px solid var(--sage-line); border-radius: 1rem; background: rgb(19 31 26 / 74%); }
-    .sage-card-head { display: flex; justify-content: space-between; gap: 1rem; }
-    .sage-card-index { color: var(--sage-faint); font-size: .7rem; }
-    .sage-card-icon { margin-top: 1.6rem; color: var(--sage-accent); font-size: 1.35rem; }
+    .sage-card { min-width: 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
+    .sage-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; }
+    .sage-card-head > * { min-width: 0; overflow-wrap: anywhere; }
+    .sage-card-index { max-width: 100%; color: var(--sage-faint); font-size: .7rem; text-align: right; overflow-wrap: anywhere; }
+    .sage-card-icon { margin-top: 1.6rem; color: var(--sage-brand); font-size: 1.35rem; }
     .sage-card h2 { margin: .7rem 0 .55rem; color: var(--sage-ink); font-size: 1.15rem; font-weight: 580; letter-spacing: -.02em; }
     .sage-card p { margin: 0; color: var(--sage-muted); font-size: .86rem; line-height: 1.7; }
     .sage-runtime-card p#state-message { min-height: 2.9rem; }
     .sage-runtime-card .sage-secondary-button { margin-top: 1rem; }
     .sage-card-note { margin-top: 1.3rem !important; font-size: .72rem !important; }
-    .sage-matter-status, .sage-state-row { display: flex; align-items: center; gap: .55rem; color: var(--sage-warning); font-size: .75rem; }
+    .sage-matter-status, .sage-state-row { display: flex; align-items: center; gap: var(--sage-density-row-gap); color: var(--sage-warning); font-size: .75rem; }
     .sage-matter-card h2 { margin-top: 1.15rem; }
     .sage-matter-meta { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.25rem; color: var(--sage-faint); font-size: .68rem; }
-    .sage-matter-meta span { padding: .26rem .5rem; border: 1px solid var(--sage-line); border-radius: 99rem; }
-    .sage-link-button { display: inline-flex; gap: .45rem; margin-top: 1.35rem; padding: 0; border: 0; background: transparent; color: var(--sage-accent-strong); cursor: pointer; font-size: .78rem; }
-    .sage-evidence-strip { margin-top: 1rem; padding: 1rem 1.35rem; border: 1px solid var(--sage-line); border-radius: 1rem; background: rgb(11 20 17 / 58%); }
+    .sage-matter-meta span { padding: .26rem .5rem; border: 1px solid var(--sage-divider); border-radius: 99rem; }
+    .sage-link-button { display: inline-flex; gap: .45rem; margin-top: 1.35rem; padding: 0; border: 0; background: transparent; color: var(--sage-brand); cursor: pointer; font-size: .78rem; }
+    .sage-evidence-strip { margin-top: 1rem; padding: 1rem 1.35rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
     .sage-evidence-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .sage-evidence-heading strong { color: var(--sage-muted); font-size: .78rem; font-weight: 500; }
     .sage-trace-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
-    .sage-trace-list li { display: grid; gap: .25rem; padding: .7rem; border-top: 1px solid var(--sage-line); color: var(--sage-faint); }
-    .sage-trace-list li.is-current { border-color: var(--sage-accent); color: var(--sage-accent-strong); }
+    .sage-trace-list li { display: grid; gap: .25rem; padding: .7rem; border-top: 1px solid var(--sage-divider); color: var(--sage-faint); }
+    .sage-trace-list li.is-current { border-color: var(--sage-brand); color: var(--sage-brand); }
     .sage-trace-list span, .sage-trace-list small { font-size: .65rem; }
     .sage-trace-list b { font-size: .78rem; font-weight: 550; }
     .sage-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
     .sage-section-heading h1 { font-size: clamp(2rem, 5vw, 3.35rem); }
+    .sage-section-tools { display: flex; align-items: center; gap: .5rem; }
+    .sage-matter-trace-toggle, .sage-matter-trace-close { display: none; }
+    .sage-matter-workbench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem); gap: 1rem; min-height: calc(100vh - 10.5rem); align-items: start; }
+    .sage-matter-workbench-main { min-height: calc(100vh - 10.5rem); }
+    .sage-matter-workbench-main > h2 { margin-top: 1.25rem; font-size: clamp(1.55rem, 3vw, 2.6rem); }
+    .sage-matter-stage-track { margin-top: 1.4rem; padding: 1rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
+    .sage-matter-stage-track-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .45rem 1rem; }
+    .sage-matter-stage-track-head strong { color: var(--sage-faint); font-size: .66rem; font-weight: 500; }
+    .sage-matter-stage-track ol { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .45rem; margin: .8rem 0 0; padding: 0; list-style: none; }
+    .sage-matter-stage-item { display: grid; gap: .3rem; min-width: 0; padding: .65rem .55rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); color: var(--sage-faint); background: var(--sage-surface); }
+    .sage-matter-stage-item > span { font-size: .6rem; letter-spacing: .08em; }
+    .sage-matter-stage-item > strong { color: inherit; font-size: .68rem; font-weight: 550; line-height: 1.35; overflow-wrap: anywhere; }
+    .sage-matter-stage-item[data-stage-state="current"] { border-color: var(--sage-brand); color: var(--sage-brand); background: var(--sage-overlay); }
+    .sage-matter-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; }
+    .sage-matter-clarification { margin-top: 1.4rem; padding: 1rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
+    .sage-matter-clarification p { margin-top: .65rem; }
+    .sage-matter-composer { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--sage-divider); }
+    .sage-matter-composer .sage-card-note { margin-top: .65rem !important; }
+    .sage-matter-trace-rail { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; background: var(--sage-overlay); }
+    .sage-trace-rail-head, .sage-trace-group-head, .sage-trace-state { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .sage-trace-rail-head h2 { margin: .45rem 0 0; }
+    .sage-matter-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; margin-top: 1rem; }
+    .sage-matter-metrics > div { display: grid; gap: .2rem; padding: .65rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); text-align: center; }
+    .sage-matter-metrics strong { color: var(--sage-brand); font-size: 1.05rem; font-weight: 580; }
+    .sage-matter-metrics span { color: var(--sage-faint); font-size: .64rem; }
+    .sage-trace-state { margin-top: .75rem; padding: .65rem 0 0; border-top: 1px solid var(--sage-divider); color: var(--sage-muted); font-size: .7rem; }
+    .sage-trace-state strong { color: var(--sage-brand); font-size: .72rem; font-weight: 550; overflow-wrap: anywhere; text-align: right; }
+    .sage-trace-state strong.is-blocked { color: var(--sage-warning); }
+    .sage-matter-trace-group { margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--sage-divider); }
+    .sage-trace-group-head h3 { margin: 0; color: var(--sage-ink); font-size: .78rem; font-weight: 600; }
+    .sage-trace-group-head span { color: var(--sage-faint); font-size: .66rem; }
+    .sage-matter-trace-group ol { display: grid; gap: .45rem; margin: .65rem 0 0; padding: 0; list-style: none; }
+    .sage-trace-entry { display: grid; gap: .25rem; padding: .65rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
+    .sage-trace-entry strong { color: var(--sage-ink); font-size: .72rem; font-weight: 580; overflow-wrap: anywhere; }
+    .sage-trace-entry span { color: var(--sage-faint); font-size: .64rem; line-height: 1.45; overflow-wrap: anywhere; }
+    .sage-trace-entry.is-empty { border-style: dashed; color: var(--sage-faint); font-size: .68rem; }
+    .sage-support-heading { margin: 2rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--sage-divider); }
+    .sage-support-heading h2 { margin: .45rem 0; color: var(--sage-ink); font-size: 1.2rem; font-weight: 580; }
+    .sage-support-heading p { margin: 0; color: var(--sage-faint); font-size: .72rem; }
     .sage-matter-layout, .sage-governance-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(15rem, .75fr); gap: 1rem; }
     .sage-matter-main h2 { margin-top: 1.25rem; font-size: clamp(1.4rem, 3vw, 2.2rem); }
-    .sage-state-row { justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--sage-line); color: var(--sage-muted); }
-    .sage-state-row strong { color: var(--sage-accent-strong); font-size: .8rem; font-weight: 550; }
+    .sage-state-row { flex-wrap: wrap; justify-content: space-between; min-width: 0; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--sage-divider); color: var(--sage-muted); }
+    .sage-state-row strong { min-width: 0; color: var(--sage-brand); font-size: .8rem; font-weight: 550; overflow-wrap: anywhere; text-align: right; }
     .sage-state-row strong.is-blocked, .sage-state-tag.is-blocked { color: var(--sage-warning); }
     .sage-side-note { align-self: start; }
     .sage-side-note .sage-secondary-button { margin-top: 1.25rem; }
-    .sage-action-preview-section { margin-top: 1rem; padding: 1.35rem; border: 1px solid var(--sage-line); border-radius: 1rem; background: rgb(11 20 17 / 58%); }
+    .sage-action-preview-section { margin-top: 1rem; padding: 1.35rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
     .sage-action-preview-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .sage-action-preview-heading h2 { margin: .55rem 0 0; color: var(--sage-ink); font-size: 1.25rem; font-weight: 560; }
     .sage-preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
-    .sage-action-preview-card { min-width: 0; padding: 1rem; border: 1px solid var(--sage-line); border-radius: .8rem; background: rgb(19 31 26 / 74%); }
+    .sage-action-preview-card { min-width: 0; padding: 1rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
     .sage-action-preview-head { display: grid; gap: .45rem; }
     .sage-action-preview-head strong { color: var(--sage-ink); font-size: .9rem; font-weight: 580; }
-    .sage-action-preview-state { display: inline-flex; margin-top: .9rem; padding: .25rem .5rem; border: 1px solid rgb(155 214 184 / 28%); border-radius: 99rem; color: var(--sage-accent-strong); font-size: .7rem; }
-    .sage-action-preview-state.is-blocked { border-color: rgb(231 199 141 / 38%); color: var(--sage-warning); }
+    .sage-action-preview-state { display: inline-flex; margin-top: .9rem; padding: .25rem .5rem; border: 1px solid var(--sage-border); border-radius: 99rem; color: var(--sage-brand); font-size: .7rem; }
+    .sage-action-preview-state.is-blocked { border-color: var(--sage-warning); color: var(--sage-warning); }
     .sage-preview-meta { display: grid; gap: .25rem; margin: .85rem 0 0; color: var(--sage-faint); font-size: .68rem; line-height: 1.4; }
     .sage-preview-meta code, .sage-preview-denial code { overflow-wrap: anywhere; color: var(--sage-muted); font: inherit; }
-    .sage-preview-denial { margin: .85rem 0 0; padding-top: .75rem; border-top: 1px solid var(--sage-line); color: var(--sage-faint); font-size: .68rem; line-height: 1.45; }
+    .sage-preview-denial { margin: .85rem 0 0; padding-top: .75rem; border-top: 1px solid var(--sage-divider); color: var(--sage-faint); font-size: .68rem; line-height: 1.45; }
     .sage-preview-foot { display: flex; justify-content: space-between; align-items: end; gap: .5rem; margin-top: 1rem; color: var(--sage-faint); font-size: .65rem; line-height: 1.35; }
-    .sage-preview-not-submitted { color: var(--sage-accent); text-align: right; }
+    .sage-preview-not-submitted { color: var(--sage-brand); text-align: right; }
     .sage-capability-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-    .sage-capability-glyph { color: var(--sage-accent); font-size: .76rem; letter-spacing: .1em; }
-    .sage-state-tag { display: inline-block; margin-top: 1.2rem; color: var(--sage-accent-strong); font-size: .7rem; }
+    .sage-capability-glyph { color: var(--sage-brand); font-size: .76rem; letter-spacing: .1em; }
+    .sage-state-tag { display: inline-block; margin-top: 1.2rem; color: var(--sage-brand); font-size: .7rem; }
     .sage-governance-card h2 { margin-top: 1.25rem; }
     .sage-footer { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; color: var(--sage-faint); font-size: .68rem; }
     @keyframes sage-panel-in { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 900px) {
+      .sage-matter-workbench { grid-template-columns: minmax(0, 1fr); }
+      .sage-matter-workbench-main { min-height: calc(100vh - 10.5rem); }
+      .sage-matter-stage-track ol { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .sage-matter-trace-toggle { display: inline-flex; }
+      .sage-matter-trace-rail { position: fixed; inset: .5rem .5rem .5rem auto; z-index: 6; width: min(26rem, calc(100vw - 1rem)); max-height: none; opacity: 0; visibility: hidden; pointer-events: none; box-shadow: var(--sage-shadow); transition: opacity var(--sage-motion), visibility var(--sage-motion); }
+      .sage-matter-trace-rail[data-drawer-open="true"] { opacity: 1; visibility: visible; pointer-events: auto; }
+      .sage-matter-trace-close { display: inline-flex; }
+      .sage-hero { grid-template-columns: 1fr; }
+      .sage-network-card { min-height: 18rem; }
+    }
+    @media (max-width: 800px) {
       .sage-app { grid-template-columns: 5.2rem minmax(0, 1fr); }
       .sage-sidebar { padding-inline: .55rem; }
       .sage-brand { justify-content: center; padding-inline: 0; }
-      .sage-brand > span:last-child, .sage-nav-label, .sage-sidebar-foot > span:last-child,
+      .sage-brand > span:last-child, .sage-nav-label, .sage-current-context, .sage-sidebar-foot > span:last-child,
       .sage-nav-item > span:not(.sage-nav-icon):not(.sage-nav-count) { display: none; }
       .sage-nav-item { justify-content: center; padding-inline: .4rem; position: relative; }
       .sage-nav-item .sage-nav-count { position: absolute; top: .15rem; right: .4rem; margin-left: 0; }
       .sage-sidebar-foot { justify-content: center; padding-inline: 0; }
-      .sage-hero { grid-template-columns: 1fr; }
-      .sage-network-card { min-height: 18rem; }
     }
     @media (max-width: 680px) {
       .sage-main { padding-inline: 1rem; }
       .sage-topbar { display: block; }
       .sage-topbar-meta { justify-content: flex-start; margin-top: .8rem; }
-      .sage-grid-overview, .sage-matter-layout, .sage-governance-grid, .sage-capability-grid { grid-template-columns: 1fr; }
+      .sage-grid-overview, .sage-matter-layout, .sage-governance-grid, .sage-capability-grid, .sage-matter-facts { grid-template-columns: 1fr; }
+      .sage-matter-stage-track ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sage-preview-grid { grid-template-columns: 1fr; }
       .sage-trace-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sage-footer { display: block; line-height: 1.7; }
+    }
+    @media (max-width: 420px) {
+      .sage-app { grid-template-columns: 3.75rem minmax(0, 1fr); }
+      .sage-sidebar { padding-inline: .25rem; }
+      .sage-main { padding-inline: .6rem; }
+      .sage-card { padding: .9rem; }
+      .sage-section-heading { align-items: flex-start; flex-direction: column; }
+      .sage-section-tools, .sage-topbar-meta { max-width: 100%; flex-wrap: wrap; }
+      .sage-link-section, .sage-link-card, .sage-state-row { min-width: 0; max-width: 100%; }
+      .sage-state-row { align-items: stretch; flex-direction: column; }
+      .sage-state-row > *, .sage-link-card select, .sage-row-input { width: 100%; min-width: 0; max-width: 100%; }
+      .sage-state-row strong { text-align: left; }
+      .sage-card h2, .sage-section-heading h1 { overflow-wrap: anywhere; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -227,14 +282,43 @@ export function renderSageDocument(): string {
     const matterOverviewSource = document.querySelector('#matter-overview-source');
     const matterOverviewRevision = document.querySelector('#matter-overview-revision');
     const matterPanelSource = document.querySelector('#matter-panel-source');
+    const matterContextGoal = document.querySelector('#matter-context-goal');
+    const matterContextId = document.querySelector('#matter-context-id');
+    const matterContextStage = document.querySelector('#matter-context-stage');
+    const matterContextRevision = document.querySelector('#matter-context-revision');
     const matterDetailId = document.querySelector('#matter-detail-id');
     const matterDetailRevision = document.querySelector('#matter-detail-revision');
     const matterDetailGoal = document.querySelector('#matter-detail-goal');
+    const matterDetailRole = document.querySelector('#matter-detail-role');
     const matterDetailStage = document.querySelector('#matter-detail-stage');
+    const matterStageTrack = document.querySelector('#matter-stage-track');
+    const matterStageItems = [
+      ['created', document.querySelector('#matter-stage-created')],
+      ['evidence', document.querySelector('#matter-stage-evidence')],
+      ['clarification', document.querySelector('#matter-stage-clarification')],
+      ['running', document.querySelector('#matter-stage-running')],
+      ['artifact-receipt', document.querySelector('#matter-stage-artifact-receipt')],
+      ['failed-retry', document.querySelector('#matter-stage-failed-retry')],
+    ];
     const matterDetailActionability = document.querySelector('#matter-detail-actionability');
     const matterDetailDenial = document.querySelector('#matter-detail-denial');
+    const matterMetricEvidence = document.querySelector('#matter-metric-evidence');
+    const matterMetricUnknown = document.querySelector('#matter-metric-unknown');
+    const matterMetricDependency = document.querySelector('#matter-metric-dependency');
+    const matterClarification = document.querySelector('#matter-clarification');
+    const matterDecisionCount = document.querySelector('#matter-decision-count');
+    const matterDecisionRows = document.querySelector('#matter-decision-rows');
+    const matterAttemptCount = document.querySelector('#matter-attempt-count');
+    const matterAttemptRows = document.querySelector('#matter-attempt-rows');
+    const matterArtifactCount = document.querySelector('#matter-artifact-count');
+    const matterArtifactRows = document.querySelector('#matter-artifact-rows');
+    const matterReceiptCount = document.querySelector('#matter-receipt-count');
+    const matterReceiptRows = document.querySelector('#matter-receipt-rows');
     const matterActionSource = document.querySelector('#matter-action-source');
     const matterActionPreviews = document.querySelector('#matter-action-previews');
+    const matterTraceToggle = document.querySelector('#matter-trace-toggle');
+    const matterTraceRail = document.querySelector('#matter-trace-rail');
+    const matterTraceClose = document.querySelector('#matter-trace-close');
     const title = document.querySelector('#state-title');
     const message = document.querySelector('#state-message');
     const retry = document.querySelector('#retry');
@@ -748,8 +832,31 @@ export function renderSageDocument(): string {
       return value;
     }
 
+    function isProjectionReadUnavailableRouteDenial(value) {
+      return isRecord(value)
+        && value.code === 'projection-read-unavailable'
+        && value.stage === 'read-policy'
+        && value.retryable === true
+        && isNonEmptyString(value.correlation)
+        && !hasOwn(value, 'service')
+        && !hasOwn(value, 'runtime')
+        && !hasOwn(value, 'matter');
+    }
+
     function setMatterText(node, value) {
       if (node !== null) node.textContent = value;
+    }
+
+    function renderMatterStage(stage) {
+      const currentStage = hasOwn(matterStageLabels, stage) ? stage : null;
+      if (matterStageTrack !== null) matterStageTrack.dataset.currentStage = currentStage ?? 'unavailable';
+      for (const [candidate, item] of matterStageItems) {
+        if (item === null) continue;
+        const current = candidate === currentStage;
+        item.dataset.stageState = current ? 'current' : 'idle';
+        item.classList.toggle('is-current', current);
+        item.setAttribute('aria-current', current ? 'step' : 'false');
+      }
     }
 
     function renderMatterUnavailable(kind) {
@@ -770,15 +877,26 @@ export function renderSageDocument(): string {
       setMatterText(matterOverviewSource, label);
       setMatterText(matterOverviewRevision, '—');
       setMatterText(matterPanelSource, label);
+      setMatterText(matterContextGoal, '当前没有可用的事项投影');
+      setMatterText(matterContextId, '—');
+      setMatterText(matterContextStage, invalid ? '格式无效' : '未读取');
+      setMatterText(matterContextRevision, '—');
       setMatterText(matterDetailId, '—');
       setMatterText(matterDetailRevision, '—');
       setMatterText(matterDetailGoal, titleText);
+      setMatterText(matterDetailRole, '—');
       setMatterText(matterDetailStage, invalid ? '格式无效' : '未读取');
+      renderMatterStage(null);
       setMatterText(matterDetailActionability, '已阻断');
       setMatterText(matterDetailDenial, invalid ? '事项投影格式无效' : '事项投影不可用');
+      setMatterText(matterMetricEvidence, '—');
+      setMatterText(matterMetricUnknown, '—');
+      setMatterText(matterMetricDependency, '—');
+      setMatterText(matterClarification, '事项投影不可用，未读取澄清状态。');
       if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', true);
       setMatterText(matterActionSource, '不提交 · ' + label);
       if (matterActionPreviews !== null) matterActionPreviews.textContent = '';
+      renderMatterTraceUnavailable();
     }
 
     function appendMatterNode(parent, tagName, className, text) {
@@ -793,6 +911,81 @@ export function renderSageDocument(): string {
       const row = appendMatterNode(parent, 'p', 'sage-preview-meta', '');
       appendMatterNode(row, 'span', '', label);
       appendMatterNode(row, 'code', '', value);
+    }
+
+    function appendMatterTraceEntry(parent, title, lines) {
+      const row = appendMatterNode(parent, 'li', 'sage-trace-entry', '');
+      appendMatterNode(row, 'strong', '', title);
+      for (const line of lines) appendMatterNode(row, 'span', '', line);
+    }
+
+    function renderMatterTraceEmpty(rows, count, label) {
+      setMatterText(count, '—');
+      if (rows === null) return;
+      rows.textContent = '';
+      if (typeof document.createElement !== 'function') {
+        rows.textContent = label;
+        return;
+      }
+      appendMatterNode(rows, 'li', 'sage-trace-entry is-empty', label);
+    }
+
+    function renderMatterTraceUnavailable() {
+      renderMatterTraceEmpty(matterDecisionRows, matterDecisionCount, '事项投影不可用，未读取决定。');
+      renderMatterTraceEmpty(matterAttemptRows, matterAttemptCount, '事项投影不可用，未读取执行尝试。');
+      renderMatterTraceEmpty(matterArtifactRows, matterArtifactCount, '事项投影不可用，未读取产物。');
+      renderMatterTraceEmpty(matterReceiptRows, matterReceiptCount, '事项投影不可用，未读取回执。');
+    }
+
+    function renderMatterTrace(viewState) {
+      setMatterText(matterDecisionCount, String(viewState.decisions.length));
+      if (matterDecisionRows !== null) {
+        matterDecisionRows.textContent = '';
+        if (viewState.decisions.length === 0) appendMatterNode(matterDecisionRows, 'li', 'sage-trace-entry is-empty', '当前没有决定记录。');
+        for (const decision of viewState.decisions) {
+          appendMatterTraceEntry(matterDecisionRows, decision.decisionId, [
+            decision.status + ' · ' + decision.revisionId,
+            '范围 ' + decision.actionScope,
+            decision.expiresAt === undefined ? '未声明到期时间' : '到期 ' + decision.expiresAt,
+          ]);
+        }
+      }
+      setMatterText(matterAttemptCount, String(viewState.attempts.length));
+      if (matterAttemptRows !== null) {
+        matterAttemptRows.textContent = '';
+        if (viewState.attempts.length === 0) appendMatterNode(matterAttemptRows, 'li', 'sage-trace-entry is-empty', '当前没有执行尝试。');
+        for (const attempt of viewState.attempts) {
+          appendMatterTraceEntry(matterAttemptRows, attempt.attemptId, [
+            attempt.status + ' · ' + attempt.revisionId,
+            '开始 ' + attempt.startedAt,
+            attempt.endedAt === undefined ? '尚无结束事实' : '结束 ' + attempt.endedAt,
+          ]);
+        }
+      }
+      setMatterText(matterArtifactCount, String(viewState.artifacts.length));
+      if (matterArtifactRows !== null) {
+        matterArtifactRows.textContent = '';
+        if (viewState.artifacts.length === 0) appendMatterNode(matterArtifactRows, 'li', 'sage-trace-entry is-empty', '当前没有产物记录。');
+        for (const artifact of viewState.artifacts) {
+          appendMatterTraceEntry(matterArtifactRows, artifact.artifactId, [
+            artifact.kind + ' · ' + artifact.revisionId,
+            '尝试 ' + artifact.attemptId,
+            '记录 ' + artifact.recordedAt,
+          ]);
+        }
+      }
+      setMatterText(matterReceiptCount, String(viewState.receipts.length));
+      if (matterReceiptRows !== null) {
+        matterReceiptRows.textContent = '';
+        if (viewState.receipts.length === 0) appendMatterNode(matterReceiptRows, 'li', 'sage-trace-entry is-empty', '当前没有回执记录。');
+        for (const receipt of viewState.receipts) {
+          appendMatterTraceEntry(matterReceiptRows, receipt.receiptId, [
+            receipt.verdict + ' · ' + receipt.revisionId,
+            '产物 ' + receipt.artifactId,
+            '责任角色 ' + receipt.actorRoleRef + ' · ' + receipt.recordedAt,
+          ]);
+        }
+      }
     }
 
     function renderMatterActionPreviews(viewState) {
@@ -849,19 +1042,56 @@ export function renderSageDocument(): string {
       setMatterText(matterOverviewSource, projectionLabel);
       setMatterText(matterOverviewRevision, revisionId);
       setMatterText(matterPanelSource, projectionLabel);
+      setMatterText(matterContextGoal, value.matter.goal);
+      setMatterText(matterContextId, value.matter.matterId);
+      setMatterText(matterContextStage, matterStageLabels[value.matter.stage]);
+      setMatterText(matterContextRevision, revisionId);
       setMatterText(matterDetailId, value.matter.matterId);
       setMatterText(matterDetailRevision, revisionId);
       setMatterText(matterDetailGoal, value.matter.goal);
+      setMatterText(matterDetailRole, value.matter.responsiblePartyRoleRef);
       setMatterText(matterDetailStage, matterStageLabels[value.matter.stage]);
+      renderMatterStage(value.matter.stage);
       setMatterText(matterDetailActionability, matterActionabilityLabels[value.actionability]);
       setMatterText(matterDetailDenial, value.denialReason ?? 'none');
+      setMatterText(matterMetricEvidence, String(value.matter.evidenceCount));
+      setMatterText(matterMetricUnknown, String(value.matter.unknownCount));
+      setMatterText(matterMetricDependency, String(value.matter.dependencyCount));
+      setMatterText(
+        matterClarification,
+        value.matter.pendingClarification === undefined
+          ? '当前没有待回答澄清。'
+          : value.matter.pendingClarification.reason + ' · ' + value.matter.pendingClarification.requestedAt,
+      );
       if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', value.actionability === 'blocked');
       setMatterText(matterActionSource, '不提交 · ' + value.projectionSource);
       renderMatterActionPreviews(value);
+      renderMatterTrace(value);
+    }
+
+    function isMatterTraceDrawerMode() {
+      return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia('(max-width: 900px)').matches;
+    }
+
+    function setMatterTraceOpen(open, restoreFocus) {
+      if (matterTraceRail === null || matterTraceToggle === null) return;
+      const drawerMode = isMatterTraceDrawerMode();
+      const modal = drawerMode && open;
+      matterTraceRail.dataset.drawerOpen = String(open);
+      matterTraceRail.dataset.drawerModal = String(modal);
+      matterTraceRail.classList.toggle('is-open', open);
+      matterTraceToggle.setAttribute('aria-expanded', String(open));
+      matterTraceRail.setAttribute('role', modal ? 'dialog' : 'complementary');
+      matterTraceRail.setAttribute('aria-modal', String(modal));
+      matterTraceRail.setAttribute('aria-hidden', String(!open));
+      if (open && matterTraceClose !== null && typeof matterTraceClose.focus === 'function') matterTraceClose.focus();
+      if (!open && restoreFocus && typeof matterTraceToggle.focus === 'function') matterTraceToggle.focus();
     }
 
     function setView(view) {
-      const nextView = panels.some((panel) => panel.dataset.panel === view) ? view : 'overview';
+      const nextView = panels.some((panel) => panel.dataset.panel === view) ? view : 'matter';
+      if (nextView !== 'matter') setMatterTraceOpen(false, false);
+      if (nextView === 'matter' && !isMatterTraceDrawerMode()) setMatterTraceOpen(true, false);
       navItems.forEach((item) => {
         const active = item.dataset.view === nextView;
         item.classList.toggle('is-active', active);
@@ -4431,6 +4661,20 @@ export function renderSageDocument(): string {
       if (prefSelects.theme === null && menuSelects.theme === null) return;
       const known = preferences !== null && preferences !== undefined && typeof preferences === 'object';
       const requested = known && preferences.requested !== null && typeof preferences.requested === 'object' ? preferences.requested : null;
+      const requestedTheme = requested !== null && (requested.theme === 'system' || requested.theme === 'light' || requested.theme === 'dark')
+        ? requested.theme
+        : 'unknown';
+      const effectiveTheme = known && (preferences.effectiveTheme === 'light' || preferences.effectiveTheme === 'dark')
+        ? preferences.effectiveTheme
+        : 'unknown';
+      const density = requested !== null && (requested.density === 'comfortable' || requested.density === 'compact')
+        ? requested.density
+        : 'unknown';
+      if (document.documentElement !== null && typeof document.documentElement?.setAttribute === 'function') {
+        document.documentElement.setAttribute('data-sage-theme-requested', requestedTheme);
+        document.documentElement.setAttribute('data-sage-theme-effective', effectiveTheme);
+        document.documentElement.setAttribute('data-sage-density', density);
+      }
       const signature = known ? String(preferences.savedAt) + '|' + JSON.stringify(requested) : 'none';
       if (signature !== prefSignature || prefForceSync) {
         prefSignature = signature;
@@ -4448,14 +4692,14 @@ export function renderSageDocument(): string {
       }
       if (prefNote !== null && prefLocalNotice === null) {
         const anyTheme = requested !== null && typeof requested.theme === 'string' ? requested.theme : 'system';
-        const effective = known && typeof preferences.effectiveTheme === 'string' ? preferences.effectiveTheme : null;
+        const effective = effectiveTheme === 'unknown' ? null : effectiveTheme;
         const themeNote = anyTheme === 'system'
           ? (effective === null ? '主题：跟随系统——但主进程还没有系统明暗观察，当前按未核验显示。' : '主题：跟随系统（当前生效：' + effective + '）。')
           : '主题：' + anyTheme + '（立即生效）。';
         const savedNote = known && typeof preferences.savedAt === 'string' && preferences.savedAt !== ''
           ? '已保存到本设备：' + preferences.savedAt
           : '还没有成功保存过；下面的"保存这八项"才会写入本设备（立即生效不等于已持久化）。';
-        prefNote.textContent = themeNote + '　' + savedNote + (known && preferences.applies === 'restart' ? '　有项需重启后生效。' : '　八项都即时生效，无需重启。');
+        prefNote.textContent = themeNote + '　' + savedNote + '　主题与密度即时生效；其余六项仅保存，尚未接入产品显示。';
       }
       if (menuNote !== null && menuLocalNotice === null) {
         const savedAt = known && typeof preferences.savedAt === 'string' && preferences.savedAt !== '' ? preferences.savedAt : null;
@@ -4696,7 +4940,18 @@ export function renderSageDocument(): string {
       try {
         const response = await fetchWithinDeadline(statePath, { cache: 'no-store' });
         if (!response.ok) throw new Error('state request failed');
-        const payload = parseServiceStateEnvelope(await response.json());
+        const statePayload = await response.json();
+        if (isProjectionReadUnavailableRouteDenial(statePayload)) {
+          lastStatePayload = null;
+          renderMatterUnavailable('unavailable');
+          renderAuth(undefined);
+          render(fallback());
+          renderCommand(null);
+          renderCapability(undefined);
+          renderModelConfig(undefined);
+          return;
+        }
+        const payload = parseServiceStateEnvelope(statePayload);
         if (payload === null) {
           lastStatePayload = null;
           renderMatterUnavailable('invalid');
@@ -7161,22 +7416,66 @@ export function renderSageDocument(): string {
       });
     }
 
+    if (matterTraceToggle !== null && matterTraceRail !== null) {
+      matterTraceToggle.addEventListener('click', () => { setMatterTraceOpen(true, false); });
+      matterTraceRail.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          if (typeof event.stopPropagation === 'function') event.stopPropagation();
+          setMatterTraceOpen(false, true);
+          return;
+        }
+        if (event.key !== 'Tab' || matterTraceRail.dataset.drawerModal !== 'true' || matterTraceClose === null) return;
+        event.preventDefault();
+        matterTraceClose.focus();
+      });
+    }
+    if (matterTraceClose !== null) {
+      matterTraceClose.addEventListener('click', () => { setMatterTraceOpen(false, true); });
+    }
+    const matterTraceMedia = typeof globalThis.matchMedia === 'function'
+      ? globalThis.matchMedia('(max-width: 900px)')
+      : null;
+    if (matterTraceMedia !== null && typeof matterTraceMedia.addEventListener === 'function') {
+      matterTraceMedia.addEventListener('change', () => { setMatterTraceOpen(!matterTraceMedia.matches, false); });
+    }
+    if (typeof document.addEventListener === 'function') {
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || matterTraceRail?.dataset.drawerModal !== 'true') return;
+        event.preventDefault();
+        setMatterTraceOpen(false, true);
+      });
+    }
+
     if (userMenu && userMenuPanel) {
+      const closeUserMenu = () => {
+        userMenuPanel.hidden = true;
+        userMenu.setAttribute('aria-expanded', 'false');
+        userMenu.focus();
+      };
       userMenu.addEventListener('click', () => {
         const open = userMenuPanel.hidden;
         userMenuPanel.hidden = !open;
         userMenu.setAttribute('aria-expanded', String(open));
       });
-      userMenuPanel.addEventListener('keydown', (event) => {
+      const closeUserMenuOnEscape = (event) => {
         if (event.key !== 'Escape') return;
         event.preventDefault();
-        userMenuPanel.hidden = true;
-        userMenu.setAttribute('aria-expanded', 'false');
-        userMenu.focus();
-      });
+        closeUserMenu();
+      };
+      userMenu.addEventListener('keydown', closeUserMenuOnEscape);
+      userMenuPanel.addEventListener('keydown', closeUserMenuOnEscape);
     }
 
-    setView('overview');
+    const displayThemeMedia = typeof globalThis.matchMedia === 'function'
+      ? globalThis.matchMedia('(prefers-color-scheme: dark)')
+      : null;
+    if (displayThemeMedia !== null && typeof displayThemeMedia.addEventListener === 'function') {
+      displayThemeMedia.addEventListener('change', () => { queueMicrotask(() => { void refresh(); }); });
+    }
+
+    setMatterTraceOpen(!isMatterTraceDrawerMode(), false);
+    setView('matter');
     void refresh();
     // Convergence poll: a login flow outlives the 5s request deadline, so vault transitions
     // (pending → signed-in, logout, supersession) must land without relying on a click's fetch settling.

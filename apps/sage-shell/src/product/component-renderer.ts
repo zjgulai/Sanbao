@@ -15,6 +15,18 @@ const STAGE_LABELS: Readonly<Record<SageMatterViewState['matter']['stage'], stri
   'failed-retry': '失败待复核',
 }
 
+const STAGE_TRACK: ReadonlyArray<{
+  readonly stage: SageMatterViewState['matter']['stage']
+  readonly label: string
+}> = [
+  { stage: 'created', label: STAGE_LABELS.created },
+  { stage: 'evidence', label: STAGE_LABELS.evidence },
+  { stage: 'clarification', label: STAGE_LABELS.clarification },
+  { stage: 'running', label: STAGE_LABELS.running },
+  { stage: 'artifact-receipt', label: STAGE_LABELS['artifact-receipt'] },
+  { stage: 'failed-retry', label: STAGE_LABELS['failed-retry'] },
+]
+
 const ACTIONABILITY_LABELS: Readonly<Record<SageMatterViewState['actionability'], string>> = {
   allowed: '可提交',
   blocked: '已阻断',
@@ -68,6 +80,17 @@ function renderActionPreview(preview: SageActionPreview): string {
   `
 }
 
+function renderMatterStageTrack(currentStage: SageMatterViewState['matter']['stage'] | undefined): string {
+  return STAGE_TRACK.map(({ stage, label }, index) => {
+    const current = stage === currentStage
+    return `
+      <li class="sage-matter-stage-item${current ? ' is-current' : ''}" id="matter-stage-${stage}" data-matter-stage="${stage}" data-stage-state="${current ? 'current' : 'idle'}" aria-current="${current ? 'step' : 'false'}">
+        <span aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><strong>${label}</strong>
+      </li>
+    `
+  }).join('')
+}
+
 /**
  * Keep the first UI slice framework-free and deterministic. The surrounding document owns the
  * transport bridge; this module owns only the visible component tree and local navigation hooks.
@@ -82,6 +105,14 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
   const goal = escapeHtml(viewState?.matter.goal ?? '当前没有可用的事项投影')
   const matterId = escapeHtml(viewState?.matter.matterId ?? '—')
   const revisionId = escapeHtml(viewState?.matter.currentRevisionId ?? '—')
+  const responsibleRole = escapeHtml(viewState?.matter.responsiblePartyRoleRef ?? '—')
+  const evidenceCount = viewState === null ? '—' : String(viewState.matter.evidenceCount)
+  const unknownCount = viewState === null ? '—' : String(viewState.matter.unknownCount)
+  const dependencyCount = viewState === null ? '—' : String(viewState.matter.dependencyCount)
+  const clarification = escapeHtml(
+    viewState?.matter.pendingClarification?.reason
+      ?? (viewState === null ? '事项投影不可用，未读取澄清状态。' : '当前没有待回答澄清。'),
+  )
   const denialReason = escapeHtml(viewState?.denialReason ?? (viewState === null ? '事项投影不可用' : 'none'))
   const actionPreviews = viewState === null ? '' : viewState.actions
     .map((action) => createSageActionPreview(viewState, action.type))
@@ -95,29 +126,35 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           <span>Sage</span>
         </div>
         <p class="sage-nav-label">工作台</p>
-        <nav class="sage-nav" role="tablist" aria-label="工作台视图">
-          <button class="sage-nav-item is-active" type="button" id="view-overview" role="tab" aria-selected="true" aria-controls="panel-overview" data-view="overview">
-            <span class="sage-nav-icon" aria-hidden="true">⌂</span><span>总览</span>
-          </button>
-          <button class="sage-nav-item" type="button" id="view-matter" role="tab" aria-selected="false" aria-controls="panel-matter" data-view="matter">
+        <nav class="sage-nav" role="tablist" aria-label="工作台视图" aria-orientation="vertical">
+          <button class="sage-nav-item is-active" type="button" id="view-matter" role="tab" aria-label="经营事项" aria-selected="true" aria-controls="panel-matter" data-view="matter" tabindex="0">
             <span class="sage-nav-icon" aria-hidden="true">◌</span><span>经营事项</span><span class="sage-nav-count" id="nav-matter-count" data-nav-count="action" aria-label="待我处理" hidden></span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-capabilities" role="tab" aria-selected="false" aria-controls="panel-capabilities" data-view="capabilities">
+          <button class="sage-nav-item" type="button" id="view-overview" role="tab" aria-label="总览" aria-selected="false" aria-controls="panel-overview" data-view="overview" tabindex="-1">
+            <span class="sage-nav-icon" aria-hidden="true">⌂</span><span>总览</span>
+          </button>
+          <button class="sage-nav-item" type="button" id="view-capabilities" role="tab" aria-label="能力" aria-selected="false" aria-controls="panel-capabilities" data-view="capabilities" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">◇</span><span>能力</span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-governance" role="tab" aria-selected="false" aria-controls="panel-governance" data-view="governance">
+          <button class="sage-nav-item" type="button" id="view-governance" role="tab" aria-label="治理" aria-selected="false" aria-controls="panel-governance" data-view="governance" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">⊙</span><span>治理</span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-profile" role="tab" aria-selected="false" aria-controls="panel-profile" data-view="profile">
+          <button class="sage-nav-item" type="button" id="view-profile" role="tab" aria-label="个人资料" aria-selected="false" aria-controls="panel-profile" data-view="profile" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">◎</span><span>个人资料</span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-readout" role="tab" aria-selected="false" aria-controls="panel-readout" data-view="readout">
+          <button class="sage-nav-item" type="button" id="view-readout" role="tab" aria-label="只读呈现" aria-selected="false" aria-controls="panel-readout" data-view="readout" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">▤</span><span>只读呈现</span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-settings" role="tab" aria-selected="false" aria-controls="panel-settings" data-view="settings">
+          <button class="sage-nav-item" type="button" id="view-settings" role="tab" aria-label="设置" aria-selected="false" aria-controls="panel-settings" data-view="settings" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">⚙</span><span>设置</span>
           </button>
         </nav>
+        <section class="sage-current-context" id="matter-context" data-workbench-region="current-context" aria-labelledby="matter-context-title">
+          <span class="sage-card-label" id="matter-context-title">CURRENT MATTER</span>
+          <strong id="matter-context-goal">${goal}</strong>
+          <span id="matter-context-id">${matterId}</span>
+          <span><span id="matter-context-stage">${stageLabel}</span> · <span id="matter-context-revision">${revisionId}</span></span>
+        </section>
         <div class="sage-sidebar-foot">
           <span class="sage-status-dot" data-runtime-dot aria-hidden="true"></span>
           <span data-runtime-label>正在检查运行状态</span>
@@ -171,7 +208,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           </div>
         </header>
 
-        <section class="sage-panel is-visible" id="panel-overview" role="tabpanel" data-panel="overview" aria-labelledby="view-overview">
+        <section class="sage-panel" id="panel-overview" role="tabpanel" data-panel="overview" aria-labelledby="view-overview" hidden>
           <div class="sage-hero">
             <div class="sage-hero-copy">
               <p class="sage-eyebrow">SHARED OPERATING MATTER</p>
@@ -217,19 +254,53 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </section>
           </div>
 
-          <section class="sage-evidence-strip" aria-label="事项脉络">
-            <div class="sage-evidence-heading"><span class="sage-card-label">MATTER TRACE</span><strong>证据 → 决定 → 动作 → 产物 → 回执</strong></div>
-            <ol class="sage-trace-list">
-              <li class="is-current"><span>01</span><b>事实</b><small>待整理</small></li>
-              <li><span>02</span><b>判断</b><small>待确认</small></li>
-              <li><span>03</span><b>行动</b><small>已阻断</small></li>
-              <li><span>04</span><b>回执</b><small>未发生</small></li>
-            </ol>
+          <section class="sage-evidence-strip" aria-label="事项脉络说明">
+            <div class="sage-evidence-heading"><span class="sage-card-label">MATTER TRACE</span><strong>总览不合成事项进度</strong></div>
+            <p class="sage-card-note">证据、决定、尝试、产物与回执只在「经营事项」页按当前 ViewState 展开。</p>
           </section>
         </section>
 
-        <section class="sage-panel" id="panel-matter" role="tabpanel" data-panel="matter" aria-labelledby="view-matter" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><span class="sage-fixture-pill" id="matter-panel-source">${projectionLabel}</span></div>
+        <section class="sage-panel is-visible" id="panel-matter" role="tabpanel" data-panel="matter" aria-labelledby="view-matter">
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><div class="sage-section-tools"><span class="sage-fixture-pill" id="matter-panel-source">${projectionLabel}</span><button class="sage-secondary-button sage-matter-trace-toggle" id="matter-trace-toggle" type="button" aria-controls="matter-trace-rail" aria-expanded="false">查看事项脉络</button></div></div>
+          <div class="sage-matter-workbench" id="matter-workbench">
+            <section class="sage-card sage-matter-workbench-main" id="matter-current-work" data-workbench-region="matter-focus" aria-labelledby="matter-detail-goal">
+              <div class="sage-card-head"><span class="sage-card-label">MATTER / <span id="matter-detail-id">${matterId}</span></span><span class="sage-card-index" id="matter-detail-revision">${revisionId}</span></div>
+              <h2 id="matter-detail-goal">${goal}</h2>
+              <p>当前事项是工作台的主对象；这里仅投影身份、阶段、责任、澄清与下一步，不从 trace 反推“已完成”。</p>
+              <section class="sage-matter-stage-track" id="matter-stage-track" data-current-stage="${viewState?.matter.stage ?? 'unavailable'}" aria-labelledby="matter-stage-track-title">
+                <div class="sage-matter-stage-track-head"><span class="sage-card-label" id="matter-stage-track-title">MATTER STAGES</span><strong>只标记当前阶段，不表示左侧阶段已完成</strong></div>
+                <ol>${renderMatterStageTrack(viewState?.matter.stage)}</ol>
+              </section>
+              <div class="sage-matter-facts">
+                <div class="sage-state-row"><span>责任角色</span><strong id="matter-detail-role">${responsibleRole}</strong></div>
+                <div class="sage-state-row"><span>阶段</span><strong id="matter-detail-stage">${stageLabel}</strong></div>
+              </div>
+              <section class="sage-matter-clarification" aria-labelledby="matter-clarification-title">
+                <span class="sage-card-label" id="matter-clarification-title">CLARIFICATION</span>
+                <p id="matter-clarification">${clarification}</p>
+              </section>
+              <section class="sage-matter-composer" id="matter-readonly-composer" aria-label="只读下一步预览">
+                <div class="sage-action-preview-heading"><div><span class="sage-card-label">READ-ONLY ACTION SURFACE</span><h2>下一步动作预览</h2></div><span class="sage-fixture-pill" id="matter-action-source">不提交 · ${projectionSource}</span></div>
+                <p class="sage-card-note">只读 composer：没有输入、提交或执行入口；真实动作仍由 Application Service 与 authority 决定。</p>
+                <div class="sage-preview-grid" id="matter-action-previews">${actionPreviews}</div>
+              </section>
+            </section>
+            <aside class="sage-card sage-matter-trace-rail" id="matter-trace-rail" role="complementary" data-workbench-region="matter-trace" data-drawer-open="false" aria-labelledby="matter-trace-title" aria-hidden="false" aria-modal="false" tabindex="-1">
+              <div class="sage-trace-rail-head"><div><span class="sage-card-label">EVIDENCE &amp; EXECUTION TRACE</span><h2 id="matter-trace-title">事实脉络</h2></div><button class="sage-secondary-button sage-matter-trace-close" id="matter-trace-close" type="button">关闭</button></div>
+              <div class="sage-matter-metrics" aria-label="事项事实计数">
+                <div><strong id="matter-metric-evidence">${evidenceCount}</strong><span>证据</span></div>
+                <div><strong id="matter-metric-unknown">${unknownCount}</strong><span>未知</span></div>
+                <div><strong id="matter-metric-dependency">${dependencyCount}</strong><span>依赖</span></div>
+              </div>
+              <div class="sage-trace-state"><span>动作性</span><strong class="is-blocked" id="matter-detail-actionability">${actionabilityLabel}</strong></div>
+              <div class="sage-trace-state"><span>阻断原因</span><strong class="is-blocked" id="matter-detail-denial">${denialReason}</strong></div>
+              <section class="sage-matter-trace-group" aria-labelledby="matter-decision-title"><div class="sage-trace-group-head"><h3 id="matter-decision-title">决定</h3><span id="matter-decision-count">—</span></div><ol id="matter-decision-rows"></ol></section>
+              <section class="sage-matter-trace-group" aria-labelledby="matter-attempt-title"><div class="sage-trace-group-head"><h3 id="matter-attempt-title">执行尝试</h3><span id="matter-attempt-count">—</span></div><ol id="matter-attempt-rows"></ol></section>
+              <section class="sage-matter-trace-group" aria-labelledby="matter-artifact-title"><div class="sage-trace-group-head"><h3 id="matter-artifact-title">产物</h3><span id="matter-artifact-count">—</span></div><ol id="matter-artifact-rows"></ol></section>
+              <section class="sage-matter-trace-group" aria-labelledby="matter-receipt-title"><div class="sage-trace-group-head"><h3 id="matter-receipt-title">回执</h3><span id="matter-receipt-count">—</span></div><ol id="matter-receipt-rows"></ol></section>
+            </aside>
+          </div>
+          <div class="sage-support-heading"><span class="sage-card-label">CONNECTED SURFACES</span><h2>已接线操作面</h2><p>以下入口沿用既有 Application Service 合同；它们不属于上方只读 composer。</p></div>
                     <section class="sage-matter-list-section" aria-label="事项列表">
             <article class="sage-card sage-matter-list-card">
               <div class="sage-card-head"><span class="sage-card-label">MATTER LIST · ACTION NEED</span><span class="sage-card-index">D0</span></div>
@@ -594,14 +665,6 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <ul class="sage-roster-list" id="site-rows"></ul>
               <p id="site-note" class="sage-card-note" role="status" aria-live="polite"></p>
             </article>
-          </section>
-          <div class="sage-matter-layout">
-            <article class="sage-card sage-matter-main"><div class="sage-card-head"><span class="sage-card-label">MATTER / <span id="matter-detail-id">${matterId}</span></span><span class="sage-card-index" id="matter-detail-revision">${revisionId}</span></div><h2 id="matter-detail-goal">${goal}</h2><p>这是 ViewState 的只读投影，用来验证事项身份、阶段、证据、阻断和责任位置；不读取外部业务数据。</p><div class="sage-state-row"><span>阶段</span><strong id="matter-detail-stage">${stageLabel}</strong></div><div class="sage-state-row"><span>动作性</span><strong class="is-blocked" id="matter-detail-actionability">${actionabilityLabel}</strong></div><div class="sage-state-row"><span>阻断原因</span><strong class="is-blocked" id="matter-detail-denial">${denialReason}</strong></div></article>
-            <aside class="sage-card sage-side-note"><span class="sage-card-label">WHY BLOCKED</span><h2>先把事实说清楚</h2><p>真实创建、审批、运行、停止、重试和回执仍必须等待 Application Service、真实 authority 与能力预检；本页只展示只读预览，不产生提交。</p><button class="sage-secondary-button" type="button" data-view-target="governance">查看边界</button></aside>
-          </div>
-          <section class="sage-action-preview-section" aria-label="动作预览">
-            <div class="sage-action-preview-heading"><div><span class="sage-card-label">READ-ONLY ACTION SURFACE</span><h2>下一步动作预览</h2></div><span class="sage-fixture-pill" id="matter-action-source">不提交 · ${projectionSource}</span></div>
-            <div class="sage-preview-grid" id="matter-action-previews">${actionPreviews}</div>
           </section>
         </section>
 

@@ -116,7 +116,8 @@ describe('the web-deliverables catalog (ticket 033)', () => {
   it('pins the control roster: no publish/annotate verbs anywhere in the two sections', async () => {
     const document = renderSageDocument()
     const toolSlice = document.slice(document.indexOf('class="sage-card sage-tool-results-card"'), document.indexOf('class="sage-card sage-sites-card"'))
-    const siteSlice = document.slice(document.indexOf('class="sage-card sage-sites-card"'), document.indexOf('class="sage-matter-layout"'))
+    const siteSectionStart = document.indexOf('<section class="sage-sites-section"')
+    const siteSlice = document.slice(siteSectionStart, document.indexOf('</section>', siteSectionStart) + '</section>'.length)
     // Static markup carries no entries at all — every entry is a rendered row, and each row's
     // roster is pinned on the booted page below.
     expect(toolSlice).not.toContain('<button')

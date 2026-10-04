@@ -290,6 +290,7 @@ type SessionCoreProtectedEffectOperation =
   | 'session.approval.withdraw'
   | 'session.correction.submit'
   | 'session.attachment.upload'
+  | 'session.attachment.cancel'
 
 async function admitSessionCoreProtectedEffect(
   options: ServiceOptions,
@@ -885,10 +886,16 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async cancelAttachment(request: { readonly itemId: string }): Promise<Response> {
-      const cancel = options.attachmentsCancel
-      const outcome: AttachmentControlOutcome = cancel === undefined
-        ? { state: 'refused', code: 'attachment-store-unavailable' }
-        : await cancel(request).catch((): AttachmentControlOutcome => ({ state: 'refused', code: 'attachment-cancel-failed' }))
+      const admission = await admitSessionCoreProtectedEffect(
+        options,
+        'session.attachment.cancel',
+        { kind: 'active-session' },
+        { itemId: request.itemId },
+      )
+      const outcome: AttachmentControlOutcome = {
+        state: 'refused',
+        code: protectedEffectFailureCode(admission),
+      }
       return serviceJson(outcome, 200)
     },
     async observeArtifacts(request: { readonly matterRef: string, readonly workspaceRoot: string }): Promise<Response> {

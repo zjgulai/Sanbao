@@ -52,6 +52,7 @@ import { createFeedback } from './feedback.js'
 import { createPendingInputs } from './pending-inputs.js'
 import { createPreferences } from './preferences.js'
 import type { PreferenceValues } from './preferences.js'
+import { createDisplayThemeAdapter } from './display-theme.js'
 import { listSettingsLeaves } from './settings-leaves.js'
 import { createMatterLinkStore } from './matter-workspace-links.js'
 import { classifyDiagnostics, classifyPlugins, classifyVisibility } from './sage-readout.js'
@@ -263,9 +264,20 @@ async function main(paths: SagePaths): Promise<void> {
     randomKey: () => randomBytes(32),
   })
   const observedSystemDark = (): boolean | null => nativeTheme.shouldUseDarkColors === undefined ? null : nativeTheme.shouldUseDarkColors
+  const displayTheme = createDisplayThemeAdapter(nativeTheme)
+  const restoredTheme = displayTheme.apply(preferences.snapshot(observedSystemDark()).requested.theme)
+  if (restoredTheme.state !== 'applied') {
+    throw new Error(`sage shell: display theme unavailable (${restoredTheme.code})`)
+  }
   const preferenceWiring = {
     preferences: () => preferences.snapshot(observedSystemDark()),
-    preferencesSave: (request: Partial<PreferenceValues>) => preferences.save(request, observedSystemDark()),
+    preferencesSave: (request: Partial<PreferenceValues>) => {
+      const saved = preferences.save(request, observedSystemDark())
+      if (saved === undefined) return undefined
+      const applied = displayTheme.apply(saved.requested.theme)
+      if (applied.state !== 'applied') return undefined
+      return preferences.snapshot(observedSystemDark())
+    },
   }
 
   const pendingInputs = createPendingInputs({

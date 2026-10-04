@@ -26,7 +26,7 @@ export interface PreferencesSnapshot {
   /** The theme actually in effect; null when `system` was requested but nothing observed it. */
   readonly effectiveTheme: 'light' | 'dark' | null
   readonly systemDark: boolean | null
-  /** The first release applies all eight live; a restart-only item would say so here. */
+  /** Theme and density apply live; the remaining six values are persisted for later RUNTIME-03 slices. */
   readonly applies: 'live'
 }
 

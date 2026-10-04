@@ -49,6 +49,7 @@ const RUN_COMMAND_PATHS = new Set([
 ])
 
 const PROTECTED_ADMISSION_PATHS = new Set([
+  '/.sage/attachments/cancel',
   '/.sage/attachments/upload',
   '/.sage/session/send',
   '/.sage/session/stop',
@@ -67,6 +68,8 @@ const CORRECTION_PATH = '/.sage/corrections'
 const CORRECTION_ACTIVE_CONTEXT = 'request matterRef is a candidate only; renderer workspaceRoot is not authority'
 const ATTACHMENT_UPLOAD_PATH = '/.sage/attachments/upload'
 const ATTACHMENT_UPLOAD_ACTIVE_CONTEXT = 'request matterRef is a candidate only; itemId is an opaque clue and renderer workspaceRoot is not authority'
+const ATTACHMENT_CANCEL_PATH = '/.sage/attachments/cancel'
+const ATTACHMENT_CANCEL_ACTIVE_CONTEXT = 'active session is resolved server-side; itemId is an opaque clue and not authority'
 
 const CONTEXT_SELECTION_PATHS = new Set([
   '/.sage/context/select',
@@ -277,6 +280,45 @@ function attachmentUploadProtectedAdmissionViolations(compositionText) {
   return violations
 }
 
+function attachmentCancelProtectedAdmissionViolations(compositionText) {
+  const block = extractMethodBlock(compositionText, 'cancelAttachment')
+  if (block === null) return ['cancelAttachment method is missing']
+
+  const violations = []
+  const callMarker = 'const admission = await admitSessionCoreProtectedEffect('
+  const callStart = block.indexOf(callMarker)
+  if (callStart < 0) {
+    violations.push('cancelAttachment must call admitSessionCoreProtectedEffect')
+  } else {
+    const callEnd = block.indexOf('\n      )', callStart)
+    if (callEnd < 0) {
+      violations.push('cancelAttachment admission call boundary cannot be verified')
+    } else {
+      const call = block.slice(callStart, callEnd + '\n      )'.length)
+      if (!call.includes("'session.attachment.cancel'")) {
+        violations.push('cancelAttachment admission operation must be session.attachment.cancel')
+      }
+      if (!call.includes("{ kind: 'active-session' }")) {
+        violations.push('cancelAttachment admission candidate must be active-session')
+      }
+      if (!/\{\s*itemId:\s*request\.itemId\s*\}/u.test(call)) {
+        violations.push('cancelAttachment admission payload must contain only request itemId')
+      }
+      const exactBinding = /const admission = await admitSessionCoreProtectedEffect\(\s*options,\s*'session\.attachment\.cancel',\s*\{ kind: 'active-session' \},\s*\{ itemId: request\.itemId \},\s*\)/u
+      if (!exactBinding.test(call)) {
+        violations.push('cancelAttachment admission helper, operation, active-session candidate, and itemId payload must be one exact call')
+      }
+    }
+  }
+  if (block.includes('options.attachmentsCancel')) {
+    violations.push('cancelAttachment must not retain an options.attachmentsCancel raw-provider fallback')
+  }
+  if (!block.includes('protectedEffectFailureCode(admission)')) {
+    violations.push('cancelAttachment must derive its unavailable-first outcome from admission')
+  }
+  return violations
+}
+
 function providerUsesContextSelection(compositionText, providers) {
   return providers.some((provider) =>
     provider === 'selectActiveMatter'
@@ -419,6 +461,9 @@ export function checkSageRouteAuthority(input) {
     if (path === ATTACHMENT_UPLOAD_PATH && rawRoute.activeContext !== ATTACHMENT_UPLOAD_ACTIVE_CONTEXT) {
       failRoute(path, `activeContext must be ${ATTACHMENT_UPLOAD_ACTIVE_CONTEXT}`)
     }
+    if (path === ATTACHMENT_CANCEL_PATH && rawRoute.activeContext !== ATTACHMENT_CANCEL_ACTIVE_CONTEXT) {
+      failRoute(path, `activeContext must be ${ATTACHMENT_CANCEL_ACTIVE_CONTEXT}`)
+    }
     if (!stringArray(rawRoute.providers)) failRoute(path, 'providers must be a non-empty string array')
 
     const branch = typeof rawRoute.sourceConstant === 'string' ? branchByConstant.get(rawRoute.sourceConstant) : undefined
@@ -462,9 +507,11 @@ export function checkSageRouteAuthority(input) {
           ? correctionProtectedAdmissionViolations(input.compositionText)
           : path === ATTACHMENT_UPLOAD_PATH
             ? attachmentUploadProtectedAdmissionViolations(input.compositionText)
-            : []
+            : path === ATTACHMENT_CANCEL_PATH
+              ? attachmentCancelProtectedAdmissionViolations(input.compositionText)
+              : []
         for (const violation of exactAdmissionViolations) failRoute(path, violation)
-        const sourceActual = path === CORRECTION_PATH || path === ATTACHMENT_UPLOAD_PATH
+        const sourceActual = path === CORRECTION_PATH || path === ATTACHMENT_UPLOAD_PATH || path === ATTACHMENT_CANCEL_PATH
           ? exactAdmissionViolations.length === 0
           : Array.isArray(rawRoute.providers)
             && providerUsesProtectedAdmission(input.compositionText, rawRoute.providers)
@@ -579,13 +626,13 @@ export function checkSageRouteAuthority(input) {
     && route.runCommand.actual === false
     && isRecord(route.currentAuthority)
     && route.currentAuthority.status === 'violation')
-  if (protectedBypasses.length !== 23) {
-    failGlobal(`expected 23 protected-effect bypass violations, registered ${protectedBypasses.length}`)
+  if (protectedBypasses.length !== 22) {
+    failGlobal(`expected 22 protected-effect bypass violations, registered ${protectedBypasses.length}`)
   }
 
   const directProviderBypasses = protectedBypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')
-  if (directProviderBypasses.length !== 18) {
-    failGlobal(`expected 18 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
+  if (directProviderBypasses.length !== 17) {
+    failGlobal(`expected 17 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
   }
 
   const admittedProtectedRoutes = matrix.routes.filter((route) => isRecord(route)
@@ -594,8 +641,8 @@ export function checkSageRouteAuthority(input) {
     && route.protectedAdmission.actual === true
     && isRecord(route.currentAuthority)
     && route.currentAuthority.status === 'compliant')
-  if (admittedProtectedRoutes.length !== 12) {
-    failGlobal(`expected 12 protected-effect admitted routes, registered ${admittedProtectedRoutes.length}`)
+  if (admittedProtectedRoutes.length !== 13) {
+    failGlobal(`expected 13 protected-effect admitted routes, registered ${admittedProtectedRoutes.length}`)
   }
 
   if (violations.length === 0) {
@@ -608,7 +655,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '58 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission but remain unavailable without production matter/object read policy; state/search collections and opaque object reads remain blocked. 12 protected-effect routes enter unavailable-first admission; 23 protected-effect bypasses remain registered as violations, including 18 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission but remain unavailable without production matter/object read policy; state/search collections and opaque object reads remain blocked. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }
