@@ -4,7 +4,7 @@ import { renderSageDocument } from '../src/product/renderer.js'
 import { bootSagePage, statePayload } from './support/sage-page.js'
 import { createDocumentStub, FakeElement } from './support/sage-page.js'
 
-const VIEWS = ['matter', 'overview', 'capabilities', 'governance', 'profile', 'readout', 'settings'] as const
+const VIEWS = ['matter', 'search', 'automation', 'knowledge', 'capabilities', 'settings'] as const
 
 async function bootNavigationPage(): Promise<{
   readonly tabs: Readonly<Record<(typeof VIEWS)[number], FakeElement>>
@@ -161,13 +161,13 @@ describe('Sage shell keyboard behavior', () => {
     expect(downPrevented).toBe(true)
     expect(page.tabs.matter.tabIndex).toBe(-1)
     expect(page.tabs.matter.attributes['aria-selected']).toBe('false')
-    expect(page.tabs.overview.tabIndex).toBe(0)
-    expect(page.tabs.overview.attributes['aria-selected']).toBe('true')
-    expect(page.tabs.overview.focusCount).toBe(1)
+    expect(page.tabs.search.tabIndex).toBe(0)
+    expect(page.tabs.search.attributes['aria-selected']).toBe('true')
+    expect(page.tabs.search.focusCount).toBe(1)
     expect(page.panels.matter.hidden).toBe(true)
-    expect(page.panels.overview.hidden).toBe(false)
+    expect(page.panels.search.hidden).toBe(false)
 
-    page.tabs.overview.dispatch('keydown', {
+    page.tabs.search.dispatch('keydown', {
       key: 'ArrowUp',
       preventDefault: () => { upPrevented = true },
     } as unknown as { target?: unknown })
@@ -176,8 +176,8 @@ describe('Sage shell keyboard behavior', () => {
     expect(page.tabs.matter.tabIndex).toBe(0)
     expect(page.tabs.matter.attributes['aria-selected']).toBe('true')
     expect(page.tabs.matter.focusCount).toBe(1)
-    expect(page.tabs.overview.tabIndex).toBe(-1)
-    expect(page.tabs.overview.attributes['aria-selected']).toBe('false')
+    expect(page.tabs.search.tabIndex).toBe(-1)
+    expect(page.tabs.search.attributes['aria-selected']).toBe('false')
   })
 
   it('closes the user menu on Escape, synchronizes aria-expanded, and returns focus', async () => {

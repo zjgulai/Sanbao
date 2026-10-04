@@ -209,7 +209,7 @@ interface ProbeResult {
       readonly compactA11y: DensityEvidence | null
     }
     readonly documentFacts?: {
-      readonly overviewVisible: boolean
+      readonly activeTabId: string | null
       readonly matterVisible: boolean
       readonly title: string
       readonly workspaceProjectionSource: string | null
@@ -219,7 +219,8 @@ interface ProbeResult {
       readonly sectionHeadingFontPx: number | null
       readonly matterGoalFontPx: number | null
       readonly displayChromeNodeCount: number
-      readonly overviewHeadingCount: number
+      readonly navItemCount: number
+      readonly navItemIds: readonly string[]
     }
     readonly navigationFacts?: {
       readonly requestedStage: string
@@ -499,7 +500,7 @@ function expectFixtureStage(run: ProbeRun, stage: FixtureStage): void {
     : 'revision:sage.shopify-abi.fixture.1')
 
   expect(result.evidence.documentFacts).toMatchObject({
-    overviewVisible: false,
+    activeTabId: 'view-matter',
     matterVisible: true,
     workspaceProjectionSource: 'fixture',
     matterId: 'matter:sage.shopify-abi.fixture',
@@ -636,15 +637,15 @@ function expectBatch10ThemeAndA11y(run: ProbeRun, stage: FixtureStage, includeSy
   })
   expect(evidence.navKeyboardFacts).toMatchObject({
     startActiveElementId: 'view-matter',
-    activeElementId: 'view-overview',
-    selectedId: 'view-overview',
-    tabStops: ['view-overview'],
+    activeElementId: 'view-search',
+    selectedId: 'view-search',
+    tabStops: ['view-search'],
   })
   expect(evidence.navKeyboardFacts?.outlineStyle).not.toBe('none')
   expect(Number.parseFloat(evidence.navKeyboardFacts?.outlineWidth ?? '0')).toBeGreaterThanOrEqual(2)
   expect(evidence.axTabNames).toEqual({
-    expected: ['经营事项', '总览', '能力', '治理', '个人资料', '只读呈现', '设置'],
-    actual: ['经营事项', '总览', '能力', '治理', '个人资料', '只读呈现', '设置'],
+    expected: ['经营事项', '搜索', '自动化', '知识', '能力', '设置'],
+    actual: ['经营事项', '搜索', '自动化', '知识', '能力', '设置'],
   })
   expect(evidence.drawerKeyboardFacts).toMatchObject({
     before: { triggerVisible: true, activeElementId: 'matter-trace-toggle' },
@@ -788,12 +789,15 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
     expect(result.harnessErrors).toEqual([])
 
     // The fixture marker stays visible in the served workspace document.
-    expect(result.evidence.documentFacts).toMatchObject({ overviewVisible: false, matterVisible: true })
+    expect(result.evidence.documentFacts).toMatchObject({ matterVisible: true, activeTabId: 'view-matter' })
     expect(result.evidence.documentFacts?.workspaceProjectionSource).toBe('fixture')
 
     // Batch 12 / UI-01A: the real document keeps the dense operational scale and no display chrome.
     expect(result.evidence.documentFacts?.displayChromeNodeCount).toBe(0)
-    expect(result.evidence.documentFacts?.overviewHeadingCount).toBe(0)
+    // Batch 13 / UI-01B: the real navigation ships exactly the six target tabs in order.
+    expect(result.evidence.documentFacts?.navItemIds).toEqual([
+      'view-matter', 'view-search', 'view-automation', 'view-knowledge', 'view-capabilities', 'view-settings',
+    ])
     expect(result.evidence.documentFacts?.sectionHeadingFontPx).toBeGreaterThanOrEqual(16)
     expect(result.evidence.documentFacts?.sectionHeadingFontPx).toBeLessThanOrEqual(24)
     expect(result.evidence.documentFacts?.matterGoalFontPx).toBeGreaterThanOrEqual(16)

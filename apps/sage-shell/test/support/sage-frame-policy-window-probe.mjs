@@ -86,13 +86,13 @@ async function run() {
 
   // 2. The Sage document stays functional under the strict CSP.
   const documentFacts = await evaluate(window, `(() => ({
-    overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
+    activeTabId: document.querySelector('.sage-nav-item.is-active')?.id ?? null,
     matterVisible: !document.querySelector('[data-panel="matter"]').hidden,
     bodyBackground: getComputedStyle(document.body).backgroundColor,
     title: document.querySelector('#state-title').textContent,
   }))()`)
   evidence.documentFacts = documentFacts
-  requireCondition(documentFacts.matterVisible === true && documentFacts.overviewVisible === false, 'BusinessMatter did not become the default panel under the strict CSP')
+  requireCondition(documentFacts.matterVisible === true && documentFacts.activeTabId === 'view-matter', 'BusinessMatter did not become the default panel under the strict CSP')
   requireCondition(documentFacts.bodyBackground !== 'rgba(0, 0, 0, 0)', 'inline style did not apply under the strict CSP')
   const connectStatus = await evaluate(window, `fetch('/.sage/state').then((response) => response.status).catch((error) => 'rejected:' + error.name)`)
   evidence.connectStatus = connectStatus

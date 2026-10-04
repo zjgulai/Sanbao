@@ -30,7 +30,7 @@ const REQUESTED_THEMES = ['system', 'light', 'dark']
 const REQUESTED_DENSITIES = ['comfortable', 'compact']
 const BATCH10_THEME_SEQUENCE = ['light', 'dark']
 const BATCH11_DENSITY_SEQUENCE = ['comfortable', 'compact', 'comfortable']
-const TAB_ACCESSIBLE_NAMES = ['经营事项', '总览', '能力', '治理', '个人资料', '只读呈现', '设置']
+const TAB_ACCESSIBLE_NAMES = ['经营事项', '搜索', '自动化', '知识', '能力', '设置']
 const HORIZONTAL_OVERFLOW_ALLOWLIST = ['.sage-file-preview', '.sage-plan-preview']
 
 const probeRoot = process.env.SAGE_ELECTRON_FIXTURE_PROBE_ROOT
@@ -459,7 +459,7 @@ async function run() {
       const sectionHeading = document.querySelector('#panel-matter .sage-section-heading h1')
       const matterGoalHeading = document.querySelector('#matter-detail-goal')
       return {
-        overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
+        activeTabId: document.querySelector('.sage-nav-item.is-active')?.id ?? null,
         matterVisible: !document.querySelector('[data-panel="matter"]').hidden,
         title: document.querySelector('#state-title').textContent,
         workspaceProjectionSource: workspace?.getAttribute('data-projection-source') ?? null,
@@ -470,7 +470,8 @@ async function run() {
         sectionHeadingFontPx: sectionHeading === null ? null : Number.parseFloat(getComputedStyle(sectionHeading).fontSize),
         matterGoalFontPx: matterGoalHeading === null ? null : Number.parseFloat(getComputedStyle(matterGoalHeading).fontSize),
         displayChromeNodeCount: document.querySelectorAll('.sage-hero, .sage-network-card').length,
-        overviewHeadingCount: document.querySelectorAll('#panel-overview h1').length,
+        navItemCount: document.querySelectorAll('.sage-nav-item').length,
+        navItemIds: Array.from(document.querySelectorAll('.sage-nav-item')).map((item) => item.id),
       }
     }
     const deadline = Date.now() + 4000
@@ -482,7 +483,7 @@ async function run() {
     return snapshot()
   })()`)
   evidence.documentFacts = documentFacts
-  requireCondition(documentFacts.matterVisible === true && documentFacts.overviewVisible === false, 'BusinessMatter did not become the default panel under the strict CSP')
+  requireCondition(documentFacts.matterVisible === true && documentFacts.activeTabId === 'view-matter', 'BusinessMatter did not become the default panel under the strict CSP')
   requireCondition(documentFacts.workspaceProjectionSource === expectedProjection, `workspace projection source is not ${expectedProjection}`)
   requireCondition(documentFacts.matterRenderState === expectedProjection, `matter render state is not ${expectedProjection}`)
   if (expectedProjection === 'fixture') {
@@ -493,7 +494,7 @@ async function run() {
   }
   // Batch 12 / UI-01A: dense operational scale, no display-scale chrome in the real document.
   requireCondition(documentFacts.displayChromeNodeCount === 0, 'display-scale hero/network chrome is still present in the real document')
-  requireCondition(documentFacts.overviewHeadingCount === 0, 'overview panel still carries a display heading')
+  requireCondition(documentFacts.navItemCount === 6 && JSON.stringify(documentFacts.navItemIds) === JSON.stringify(['view-matter', 'view-search', 'view-automation', 'view-knowledge', 'view-capabilities', 'view-settings']), 'navigation is not the six-item target set')
   requireCondition(documentFacts.sectionHeadingFontPx !== null && documentFacts.sectionHeadingFontPx <= 24 && documentFacts.sectionHeadingFontPx >= 16, `matter section heading is not on the operational scale (${documentFacts.sectionHeadingFontPx}px)`)
   requireCondition(documentFacts.matterGoalFontPx !== null && documentFacts.matterGoalFontPx <= 24 && documentFacts.matterGoalFontPx >= 16, `matter goal heading is not on the operational scale (${documentFacts.matterGoalFontPx}px)`)
 
@@ -583,12 +584,11 @@ async function run() {
   // 1b. Exercise the semantic and keyboard contract in Chromium rather than only in the Fake DOM.
   const uiContractFacts = await evaluate(window, `(() => {
     const pairs = [
-      ['overview', 'view-overview', 'panel-overview'],
       ['matter', 'view-matter', 'panel-matter'],
+      ['search', 'view-search', 'panel-search'],
+      ['automation', 'view-automation', 'panel-automation'],
+      ['knowledge', 'view-knowledge', 'panel-knowledge'],
       ['capabilities', 'view-capabilities', 'panel-capabilities'],
-      ['governance', 'view-governance', 'panel-governance'],
-      ['profile', 'view-profile', 'panel-profile'],
-      ['readout', 'view-readout', 'panel-readout'],
       ['settings', 'view-settings', 'panel-settings'],
     ]
     const tabPairsValid = pairs.every(([view, tabId, panelId]) => {
@@ -612,14 +612,14 @@ async function run() {
     const css = document.querySelector('style')?.textContent ?? ''
     const matterTab = document.querySelector('[data-view="matter"]')
     const matterPanel = document.querySelector('[data-panel="matter"]')
-    const overviewTab = document.querySelector('[data-view="overview"]')
-    const overviewPanel = document.querySelector('[data-panel="overview"]')
+    const searchTab = document.querySelector('[data-view="search"]')
+    const searchPanel = document.querySelector('[data-panel="search"]')
     return {
       tabPairsValid,
       matterDefault: matterTab?.getAttribute('aria-selected') === 'true'
         && matterPanel?.hidden === false
-        && overviewTab?.getAttribute('aria-selected') === 'false'
-        && overviewPanel?.hidden === true,
+        && searchTab?.getAttribute('aria-selected') === 'false'
+        && searchPanel?.hidden === true,
       opened,
       escaped,
       reducedMotionRule: css.includes('@media (prefers-reduced-motion: reduce)'),
@@ -688,8 +688,8 @@ async function run() {
   evidence.navKeyboardFacts = navKeyboardFacts
   if (batch10Assertions) {
     requireCondition(navStart.activeElementId === 'view-matter', 'keyboard navigation did not start on the selected Matter tab')
-    requireCondition(navKeyboardFacts.activeElementId === 'view-overview' && navKeyboardFacts.selectedId === 'view-overview', 'ArrowDown did not move focus and selection to the next vertical tab')
-    requireCondition(JSON.stringify(navKeyboardFacts.tabStops) === JSON.stringify(['view-overview']), 'vertical tablist did not retain exactly one tab stop after ArrowDown')
+    requireCondition(navKeyboardFacts.activeElementId === 'view-search' && navKeyboardFacts.selectedId === 'view-search', 'ArrowDown did not move focus and selection to the next vertical tab')
+    requireCondition(JSON.stringify(navKeyboardFacts.tabStops) === JSON.stringify(['view-search']), 'vertical tablist did not retain exactly one tab stop after ArrowDown')
     requireCondition(navKeyboardFacts.outlineStyle !== 'none' && Number.parseFloat(navKeyboardFacts.outlineWidth) >= 2 && navKeyboardFacts.outlineColor !== 'rgba(0, 0, 0, 0)', 'keyboard focus did not expose a computed visible outline')
   }
   await evaluate(window, `document.querySelector('#view-matter').click()`)

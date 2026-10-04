@@ -79,7 +79,7 @@ describe('the read-only settings surface', () => {
     // a separate, clearly-marked writable block — before the read-only leaf group; the
     // zero-control claim belongs to the leaf group, whose write entries stay absent.)
     const document = renderSageDocument()
-    const leafSection = document.slice(document.indexOf('id="settings-leaf-section"'), document.indexOf('id="panel-readout"'))
+    const leafSection = document.slice(document.indexOf('id="settings-leaf-section"'), document.indexOf('class="sage-card sage-visibility-card"'))
     // A moved or renamed marker must not turn the claim vacuous — the slice has to exist.
     expect(leafSection.length, 'leaf section slice must be found').toBeGreaterThan(120)
     expect(leafSection).toContain('id="settings-leaf-grid"')

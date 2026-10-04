@@ -8002,6 +8002,84 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0260",
+      "title": "ADR-0260 · UI-01B：导航六项目标与支持卡文案收口",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "左侧一级导航收敛为固定六项：经营事项、搜索、自动化、知识、能力、设置。",
+          "constraints": [
+            "exactly six tabs",
+            "fixed order",
+            "ARIA pairing kept",
+            "single tab stop"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "搜索升为一级页面：原搜索卡（全部 id）从经营事项支持区迁入 panel-search，客户端零改动。",
+          "constraints": [
+            "ids preserved",
+            "no client change",
+            "card not duplicated"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "知识升为一级页面：原知识与引用卡从只读呈现迁入 panel-knowledge。",
+          "constraints": [
+            "ids preserved",
+            "read-only"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "自动化以诚实未接线呈现：明确本版没有定时、周期或事件触发的自动化入口，零控件。",
+          "constraints": [
+            "zero controls",
+            "not-wired wording",
+            "no disabled claim"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "被置换面板内容归并到设置并保留全部 wired id；总览事项卡与 trace 说明条退役；能力面板不变。",
+          "constraints": [
+            "no lost entry points",
+            "ids preserved",
+            "capabilities untouched"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "四张支持卡长文案压缩；fail-closed 断言逐字保留。",
+          "constraints": [
+            "claims verbatim",
+            "no semantic removal"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "新增导航源合同 spec；两套 Electron 探针以 activeTabId 与六项导航断言取代 overviewVisible，键盘遍历改为 view-search。",
+          "constraints": [
+            "named red before green",
+            "real Electron evidence",
+            "probe fields renamed"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "不引入 React 或依赖变更；不改路由、provider、authority、token 与卡行为。",
+          "constraints": [
+            "no dependency change",
+            "zero behavior change"
+          ]
+        }
+      ]
     }
   ]
 }

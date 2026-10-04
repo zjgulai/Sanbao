@@ -188,7 +188,7 @@ describe('the negative space the ticket names (US-142/144/145)', () => {
     const document = renderSageDocument()
     const card = document.slice(
       document.indexOf('class="sage-card sage-edit-draft-card"'),
-      document.indexOf('id="panel-governance"'),
+      document.indexOf('id="panel-settings"'),
     )
     expect(card).toContain('修改稿存在不等于共享文件已更新')
     expect(card).toContain('确认不等于已回写')

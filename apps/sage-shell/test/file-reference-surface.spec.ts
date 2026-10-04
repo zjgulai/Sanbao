@@ -39,7 +39,7 @@ describe('the local-reference card', () => {
     const document = renderSageDocument()
     const card = document.slice(
       document.indexOf('class="sage-card sage-file-references"'),
-      document.indexOf('id="panel-governance"'),
+      document.indexOf('class="sage-card sage-edit-draft-card"'),
     )
     expect(card).toContain('建立引用不读取文件内容')
     expect(card).toContain('版本变了就阻断')

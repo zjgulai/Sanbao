@@ -46,7 +46,7 @@ describe('workbench visual tone (dense + calm)', () => {
     expect(doc).toContain('不执行外部动作')
     expect(doc).toContain('只标记当前阶段，不表示左侧阶段已完成')
     expect(doc).toContain('只读 composer：没有输入、提交或执行入口')
-    expect(doc).toContain('总览不合成事项进度')
+    expect(doc).toContain('本版没有定时、周期或事件触发的自动化入口')
     expect(doc).toContain('不提交 ·')
   })
 

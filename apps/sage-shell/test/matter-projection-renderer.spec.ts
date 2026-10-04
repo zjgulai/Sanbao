@@ -152,7 +152,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'unavailable',
     })
-    expect(page.node('matter-card-title').textContent).toBe('当前没有可用的事项投影')
+    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
     expect(page.node('matter-detail-id').textContent).toBe('—')
     expect(page.node('matter-detail-revision').textContent).toBe('—')
     expect(page.node('matter-detail-role').textContent).toBe('—')
@@ -172,7 +172,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'fixture',
       matterRenderState: 'fixture',
     })
-    expect(page.node('matter-card-title').textContent).toBe(fixture.matter.goal)
+    expect(page.node('matter-detail-goal').textContent).toBe(fixture.matter.goal)
     expect(page.node('matter-detail-goal').textContent).toBe(fixture.matter.goal)
     expect(page.node('matter-detail-id').textContent).toBe(fixture.matter.matterId)
     expect(page.node('matter-detail-revision').textContent).toBe(fixture.matter.currentRevisionId)
@@ -194,7 +194,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'live',
       matterRenderState: 'live',
     })
-    expect(page.node('matter-card-title').textContent).toBe('Wire 真实目标 <只作文本>')
+    expect(page.node('matter-detail-goal').textContent).toBe('Wire 真实目标 <只作文本>')
     expect(page.node('matter-detail-goal').textContent).toBe('Wire 真实目标 <只作文本>')
     expect(page.node('matter-detail-id').textContent).toBe('matter:wire-live')
     expect(page.node('matter-detail-revision').textContent).toBe('revision:wire-live.7')
@@ -215,7 +215,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'unavailable',
     })
-    expect(page.node('matter-card-title').textContent).toBe('当前没有可用的事项投影')
+    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
     expect(page.node('matter-detail-goal').textContent).not.toContain('Wire 真实目标')
     expect(page.node('matter-detail-id').textContent).toBe('—')
     expect(page.node('matter-detail-role').textContent).toBe('—')
@@ -239,7 +239,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'unavailable',
     })
-    expect(page.node('matter-card-title').textContent).toBe('当前没有可用的事项投影')
+    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
     expect(page.node('matter-stage-track').dataset.currentStage).toBe('unavailable')
     expect(SAGE_FIXTURE_STAGES.every((stage) => page.node(`matter-stage-${stage}`).dataset.stageState === 'idle')).toBe(true)
     expect(page.node('matter-attempt-count').textContent).toBe('—')
@@ -259,7 +259,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'invalid',
     })
-    expect(page.node('matter-card-title').textContent).toBe('事项投影格式无效')
+    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
     expect(page.node('matter-detail-goal').textContent).not.toContain(fixture.matter.goal)
     expect(page.node('matter-action-previews').children).toHaveLength(0)
   })
@@ -276,7 +276,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'invalid',
     })
-    expect(page.node('matter-card-title').textContent).toBe('事项投影格式无效')
+    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
     expect(page.node('matter-detail-id').textContent).toBe('—')
     expect(page.node('matter-detail-goal').textContent).not.toContain('Wire 真实目标')
     expect(page.node('matter-action-previews').children).toHaveLength(0)
@@ -289,7 +289,7 @@ describe('matter projection renderer wire', () => {
       projectionSource: 'unavailable',
       matterRenderState: 'invalid',
     })
-    expect(page.node('matter-card-title').textContent).toBe('事项投影格式无效')
+    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
     expect(page.node('matter-detail-id').textContent).toBe('—')
     expect(page.node('matter-action-previews').children).toHaveLength(0)
   })

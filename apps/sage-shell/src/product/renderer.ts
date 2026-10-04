@@ -107,7 +107,6 @@ export function renderSageDocument(): string {
     .sage-primary-button:hover, .sage-secondary-button:hover { filter: brightness(1.08); }
     .sage-muted-copy, .sage-card-note { color: var(--sage-faint); font-size: .78rem; }
     .sage-grid { display: grid; gap: 1rem; }
-    .sage-grid-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .sage-card { min-width: 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
     .sage-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; }
     .sage-card-head > * { min-width: 0; overflow-wrap: anywhere; }
@@ -118,14 +117,8 @@ export function renderSageDocument(): string {
     .sage-runtime-card p#state-message { min-height: 2.9rem; }
     .sage-runtime-card .sage-secondary-button { margin-top: 1rem; }
     .sage-card-note { margin-top: 1.3rem !important; font-size: .72rem !important; }
-    .sage-matter-status, .sage-state-row { display: flex; align-items: center; gap: var(--sage-density-row-gap); color: var(--sage-warning); font-size: .75rem; }
-    .sage-matter-card h2 { margin-top: 1.15rem; }
-    .sage-matter-meta { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.25rem; color: var(--sage-faint); font-size: .68rem; }
-    .sage-matter-meta span { padding: .26rem .5rem; border: 1px solid var(--sage-divider); border-radius: 99rem; }
+    .sage-state-row { display: flex; align-items: center; gap: var(--sage-density-row-gap); color: var(--sage-warning); font-size: .75rem; }
     .sage-link-button { display: inline-flex; gap: .45rem; margin-top: 1.35rem; padding: 0; border: 0; background: transparent; color: var(--sage-brand); cursor: pointer; font-size: .78rem; }
-    .sage-evidence-strip { margin-top: 1rem; padding: 1rem 1.35rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
-    .sage-evidence-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .sage-evidence-heading strong { color: var(--sage-muted); font-size: .78rem; font-weight: 500; }
     .sage-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
     .sage-section-tools { display: flex; align-items: center; gap: .5rem; }
     .sage-matter-trace-toggle, .sage-matter-trace-close { display: none; }
@@ -215,7 +208,7 @@ export function renderSageDocument(): string {
       .sage-main { padding-inline: 1rem; }
       .sage-topbar { display: block; }
       .sage-topbar-meta { justify-content: flex-start; margin-top: .8rem; }
-      .sage-grid-overview, .sage-governance-grid, .sage-capability-grid, .sage-matter-facts { grid-template-columns: 1fr; }
+      .sage-governance-grid, .sage-capability-grid, .sage-matter-facts { grid-template-columns: 1fr; }
       .sage-matter-stage-track ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sage-preview-grid { grid-template-columns: 1fr; }
       .sage-footer { display: block; line-height: 1.7; }
@@ -248,11 +241,6 @@ export function renderSageDocument(): string {
     const requestTimeoutMs = ${SAGE_REQUEST_TIMEOUT_MS};
     const sageWorkspace = document.querySelector('#sage-workspace');
     const matterProjectionPill = document.querySelector('#matter-projection-pill');
-    const matterOverviewStage = document.querySelector('#matter-overview-stage');
-    const matterCardTitle = document.querySelector('#matter-card-title');
-    const matterOverviewSourceNote = document.querySelector('#matter-overview-source-note');
-    const matterOverviewSource = document.querySelector('#matter-overview-source');
-    const matterOverviewRevision = document.querySelector('#matter-overview-revision');
     const matterPanelSource = document.querySelector('#matter-panel-source');
     const matterContextGoal = document.querySelector('#matter-context-goal');
     const matterContextId = document.querySelector('#matter-context-id');
@@ -835,19 +823,11 @@ export function renderSageDocument(): string {
       const invalid = kind === 'invalid';
       const label = invalid ? 'projection invalid' : 'projection unavailable';
       const titleText = invalid ? '事项投影格式无效' : '当前没有可用的事项投影';
-      const note = invalid
-        ? '事项投影未通过 schema 校验，已拒绝显示；不会沿用上一次数据。'
-        : '当前没有可用的事项投影；不会用 fixture 或 placeholder 补齐。';
       if (sageWorkspace !== null) {
         sageWorkspace.dataset.projectionSource = 'unavailable';
         sageWorkspace.dataset.matterRenderState = kind;
       }
       setMatterText(matterProjectionPill, label + ' · 不执行外部动作');
-      setMatterText(matterOverviewStage, invalid ? '格式无效' : '未读取');
-      setMatterText(matterCardTitle, titleText);
-      setMatterText(matterOverviewSourceNote, note);
-      setMatterText(matterOverviewSource, label);
-      setMatterText(matterOverviewRevision, '—');
       setMatterText(matterPanelSource, label);
       setMatterText(matterContextGoal, '当前没有可用的事项投影');
       setMatterText(matterContextId, '—');
@@ -1008,11 +988,6 @@ export function renderSageDocument(): string {
         sageWorkspace.dataset.matterRenderState = value.projectionSource;
       }
       setMatterText(matterProjectionPill, projectionLabel + ' · 不执行外部动作');
-      setMatterText(matterOverviewStage, matterStageLabels[value.matter.stage]);
-      setMatterText(matterCardTitle, value.matter.goal);
-      setMatterText(matterOverviewSourceNote, '当前投影来自 ' + projectionLabel + '，用于验证事项身份、阶段、证据和阻断位置。');
-      setMatterText(matterOverviewSource, projectionLabel);
-      setMatterText(matterOverviewRevision, revisionId);
       setMatterText(matterPanelSource, projectionLabel);
       setMatterText(matterContextGoal, value.matter.goal);
       setMatterText(matterContextId, value.matter.matterId);

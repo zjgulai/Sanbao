@@ -130,20 +130,17 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           <button class="sage-nav-item is-active" type="button" id="view-matter" role="tab" aria-label="经营事项" aria-selected="true" aria-controls="panel-matter" data-view="matter" tabindex="0">
             <span class="sage-nav-icon" aria-hidden="true">◌</span><span>经营事项</span><span class="sage-nav-count" id="nav-matter-count" data-nav-count="action" aria-label="待我处理" hidden></span>
           </button>
-          <button class="sage-nav-item" type="button" id="view-overview" role="tab" aria-label="总览" aria-selected="false" aria-controls="panel-overview" data-view="overview" tabindex="-1">
-            <span class="sage-nav-icon" aria-hidden="true">⌂</span><span>总览</span>
+          <button class="sage-nav-item" type="button" id="view-search" role="tab" aria-label="搜索" aria-selected="false" aria-controls="panel-search" data-view="search" tabindex="-1">
+            <span class="sage-nav-icon" aria-hidden="true">⌕</span><span>搜索</span>
+          </button>
+          <button class="sage-nav-item" type="button" id="view-automation" role="tab" aria-label="自动化" aria-selected="false" aria-controls="panel-automation" data-view="automation" tabindex="-1">
+            <span class="sage-nav-icon" aria-hidden="true">⟳</span><span>自动化</span>
+          </button>
+          <button class="sage-nav-item" type="button" id="view-knowledge" role="tab" aria-label="知识" aria-selected="false" aria-controls="panel-knowledge" data-view="knowledge" tabindex="-1">
+            <span class="sage-nav-icon" aria-hidden="true">▤</span><span>知识</span>
           </button>
           <button class="sage-nav-item" type="button" id="view-capabilities" role="tab" aria-label="能力" aria-selected="false" aria-controls="panel-capabilities" data-view="capabilities" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">◇</span><span>能力</span>
-          </button>
-          <button class="sage-nav-item" type="button" id="view-governance" role="tab" aria-label="治理" aria-selected="false" aria-controls="panel-governance" data-view="governance" tabindex="-1">
-            <span class="sage-nav-icon" aria-hidden="true">⊙</span><span>治理</span>
-          </button>
-          <button class="sage-nav-item" type="button" id="view-profile" role="tab" aria-label="个人资料" aria-selected="false" aria-controls="panel-profile" data-view="profile" tabindex="-1">
-            <span class="sage-nav-icon" aria-hidden="true">◎</span><span>个人资料</span>
-          </button>
-          <button class="sage-nav-item" type="button" id="view-readout" role="tab" aria-label="只读呈现" aria-selected="false" aria-controls="panel-readout" data-view="readout" tabindex="-1">
-            <span class="sage-nav-icon" aria-hidden="true">▤</span><span>只读呈现</span>
           </button>
           <button class="sage-nav-item" type="button" id="view-settings" role="tab" aria-label="设置" aria-selected="false" aria-controls="panel-settings" data-view="settings" tabindex="-1">
             <span class="sage-nav-icon" aria-hidden="true">⚙</span><span>设置</span>
@@ -208,38 +205,6 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           </div>
         </header>
 
-        <section class="sage-panel" id="panel-overview" role="tabpanel" data-panel="overview" aria-labelledby="view-overview" hidden>
-          <div class="sage-grid sage-grid-overview">
-            <section class="sage-card sage-runtime-card" aria-labelledby="state-title">
-              <div class="sage-card-head"><span class="sage-card-label">RUNTIME</span><span class="sage-card-index">01</span></div>
-              <div class="sage-card-icon" aria-hidden="true">↗</div>
-              <h2 id="state-title">正在检查</h2>
-              <p id="state-message" role="status" aria-live="polite">正在读取 Sage 的受控状态。</p>
-              <button class="sage-secondary-button" id="retry" type="button" hidden>重新检查</button>
-              <p class="sage-card-note" id="command-note" role="status" aria-live="polite"></p>
-              <button class="sage-secondary-button" id="reconcile" type="button" hidden>核对同一操作</button>
-              <div class="sage-state-row"><span>当前身份</span><strong id="auth-name" data-identity-label></strong></div>
-              <button class="sage-secondary-button" id="login" type="button" hidden>登录</button>
-              <button class="sage-secondary-button" id="logout" type="button" data-logout-entry hidden>退出登录</button>
-              <p class="sage-card-note">这里只反映当前能力运行时状态，不等于业务授权或外部能力可用。</p>
-            </section>
-
-            <section class="sage-card sage-matter-card" aria-labelledby="matter-card-title">
-              <div class="sage-card-head"><span class="sage-card-label">CURRENT MATTER</span><span class="sage-card-index">02</span></div>
-              <div class="sage-matter-status"><span class="sage-status-dot is-muted" aria-hidden="true"></span><span id="matter-overview-stage">${stageLabel}</span></div>
-              <h2 id="matter-card-title">${goal}</h2>
-              <p id="matter-overview-source-note">当前投影来自 ${projectionLabel}，用于验证事项身份、阶段、证据和阻断位置。</p>
-              <div class="sage-matter-meta"><span id="matter-overview-source">${projectionLabel}</span><span id="matter-overview-revision">${revisionId}</span></div>
-              <button class="sage-link-button" type="button" data-view-target="matter">打开事项脉络 <span aria-hidden="true">→</span></button>
-            </section>
-          </div>
-
-          <section class="sage-evidence-strip" aria-label="事项脉络说明">
-            <div class="sage-evidence-heading"><span class="sage-card-label">MATTER TRACE</span><strong>总览不合成事项进度</strong></div>
-            <p class="sage-card-note">证据、决定、尝试、产物与回执只在「经营事项」页按当前 ViewState 展开。</p>
-          </section>
-        </section>
-
         <section class="sage-panel is-visible" id="panel-matter" role="tabpanel" data-panel="matter" aria-labelledby="view-matter">
           <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><div class="sage-section-tools"><span class="sage-fixture-pill" id="matter-panel-source">${projectionLabel}</span><button class="sage-secondary-button sage-matter-trace-toggle" id="matter-trace-toggle" type="button" aria-controls="matter-trace-rail" aria-expanded="false">查看事项脉络</button></div></div>
           <div class="sage-matter-workbench" id="matter-workbench">
@@ -284,7 +249,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             <article class="sage-card sage-matter-list-card">
               <div class="sage-card-head"><span class="sage-card-label">MATTER LIST · ACTION NEED</span><span class="sage-card-index">D0</span></div>
               <h2>事项列表（按行动需求分区）</h2>
-              <p class="sage-card-note">分区由 Application Service 从既有事实推导（建项尝试、待继续输入、观察到的产物候选），分区内按最近更新排序；renderer 不自判、不缓存——事实变一分区就跟着投影走。"待我处理"每一项都标出它为什么在这里。"待验收"只显示计数：分项验收与整体完成语义尚未收口，本版不定义。归档/完成不在默认展开。</p>
+              <p class="sage-card-note">分区由 Application Service 从既有事实推导、按最近更新排序（renderer 不自判、不缓存）。“待我处理”逐项标注原因；“待验收”只显示计数——验收与完成语义尚未收口，本版不定义。归档不在默认展开。</p>
               <label class="sage-user-menu-row"><span>筛选</span><input type="checkbox" id="matter-list-all"><span>显示归档（事实来源：本版归档记录；完成语义未收口）</span></label>
               <p id="matter-list-note" class="sage-card-note" role="status" aria-live="polite"></p>
               <div class="sage-state-row"><span>待我处理</span><strong id="matter-count-action" data-matter-count="action">—</strong></div>
@@ -299,7 +264,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             <article class="sage-card sage-draft-card">
               <div class="sage-card-head"><span class="sage-card-label">DRAFT · DEVICE-LOCAL</span><span class="sage-card-index">D1</span></div>
               <h2>首页输入 → 草案整理 → 建项确认</h2>
-              <p class="sage-card-note">草案只保存在当前设备（登出后加密锁定，登出期间不读取、不写入；不自动同步也不换机接续）。目标、交付、责任三项必填，缺一项就不能提交；项目可选且最多一个。整理只把输入作为前史保留，<strong>不会自动写入交付或责任</strong>。</p>
+              <p class="sage-card-note">草案只保存在当前设备：登出后加密锁定、期间不读不写，不自动同步、不换机接续。目标、交付、责任三项必填；项目可选且最多一个。整理只把输入留作前史，<strong>不会自动写入交付或责任</strong>。</p>
               <div class="sage-state-row"><span>草案状态</span><strong id="draft-lock" data-draft-fact>正在读取</strong></div>
               <span class="sage-card-label">站点起步模板（只读：名称与来源；选择只填入本次草案输入——不建站、不写配置、无远端效果）</span>
               <p id="site-template-note" class="sage-card-note" role="status" aria-live="polite"></p>
@@ -341,21 +306,6 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               </div>
             </article>
           </section>
-          <section class="sage-search-section" aria-label="搜索">
-            <article class="sage-card sage-search-card">
-              <div class="sage-card-head"><span class="sage-card-label">SEARCH · MATTERS LOCAL + SESSION CONTENT</span><span class="sage-card-index">D0</span></div>
-              <h2>搜索</h2>
-              <p class="sage-card-note">一次输入返回两区：<strong>事项</strong>按标题与关键属性在 Sage 本地记录里匹配；<strong>会话</strong>走运行时检索（只读、有界、只含可见会话，按 cursor 内部分页）。命中都是只读文本——<strong>不打开会话、不激活执行、不加载正文</strong>；事项正文全文检索与跨对象统一排序后置。运行时没有挂载检索引擎时，会话区如实显示"不可用"，事项区不受影响。</p>
-              <div class="sage-state-row"><span>关键词</span><input class="sage-row-input" id="search-input" type="text" aria-label="搜索关键词"></div>
-              <button class="sage-secondary-button" id="search-run" type="button">搜索</button>
-              <p id="search-note" class="sage-card-note" role="status" aria-live="polite"></p>
-              <span class="sage-card-label">事项（本地匹配）</span>
-              <ul class="sage-roster-list" id="search-matter-rows"></ul>
-              <span class="sage-card-label">会话（运行时检索）</span>
-              <p id="search-session-state" class="sage-card-note" role="status" aria-live="polite"></p>
-              <ul class="sage-roster-list" id="search-session-rows"></ul>
-            </article>
-          </section>
           <section class="sage-session-section" aria-label="事项主对话">
             <article class="sage-card sage-session-card">
               <div class="sage-card-head"><span class="sage-card-label">MAIN CONVERSATION · ACK ≠ EXECUTION</span><span class="sage-card-index">D3</span></div>
@@ -390,7 +340,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <p id="plan-mode-note" class="sage-card-note" role="status" aria-live="polite"></p>
               <div class="sage-attachment-block" aria-label="附件">
                 <span class="sage-card-label">ATTACHMENTS · PICK → UPLOAD → SEND</span>
-                <p class="sage-card-note">附件只随消息走：选择文件只产生候选（不读取、不上传）；确认上传后经运行时流式上传——回执的内容地址与本地封存摘要一致才算内容核验通过，<strong>上传成功不等于模型已读取</strong>。已上传未发送的附件随下一条消息发出；重开事项沿消息历史回看，不重跑上传。本版不设独立附件列表面板，也不支持跨消息复用。</p>
+                <p class="sage-card-note">附件只随消息走：选择文件只产生候选（不读取、不上传）；确认上传后走运行时流式上传——回执内容摘要与本地封存一致才算内容核验通过，<strong>上传成功不等于模型已读取</strong>。已上传未发送的附件随下一条消息发出；重开事项沿历史回看、不重跑上传；本版没有独立附件面板与跨消息复用。</p>
                 <button class="sage-secondary-button" id="attachment-pick" type="button">选择文件…</button>
                 <p id="attachment-note" class="sage-card-note" role="status" aria-live="polite"></p>
                 <ul class="sage-roster-list" id="attachment-items"></ul>
@@ -647,6 +597,49 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           </section>
         </section>
 
+        <section class="sage-panel" id="panel-search" role="tabpanel" data-panel="search" aria-labelledby="view-search" hidden>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">SEARCH</p><h1>搜索</h1></div><span class="sage-fixture-pill">只读命中</span></div>
+          <section class="sage-search-section" aria-label="搜索">
+            <article class="sage-card sage-search-card">
+              <div class="sage-card-head"><span class="sage-card-label">SEARCH · MATTERS LOCAL + SESSION CONTENT</span><span class="sage-card-index">D0</span></div>
+              <h2>搜索</h2>
+              <p class="sage-card-note">一次输入两区：<strong>事项</strong>在 Sage 本地记录按标题与属性匹配；<strong>会话</strong>走运行时检索（只读、有界、只含可见会话，内部分页）。命中都是只读文本——<strong>不打开会话、不激活执行、不加载正文</strong>；全文检索与统一排序后置；运行时没有检索引擎时会话区如实显示「不可用」。</p>
+              <div class="sage-state-row"><span>关键词</span><input class="sage-row-input" id="search-input" type="text" aria-label="搜索关键词"></div>
+              <button class="sage-secondary-button" id="search-run" type="button">搜索</button>
+              <p id="search-note" class="sage-card-note" role="status" aria-live="polite"></p>
+              <span class="sage-card-label">事项（本地匹配）</span>
+              <ul class="sage-roster-list" id="search-matter-rows"></ul>
+              <span class="sage-card-label">会话（运行时检索）</span>
+              <p id="search-session-state" class="sage-card-note" role="status" aria-live="polite"></p>
+              <ul class="sage-roster-list" id="search-session-rows"></ul>
+            </article>
+          </section>
+        </section>
+
+        <section class="sage-panel" id="panel-automation" role="tabpanel" data-panel="automation" aria-labelledby="view-automation" hidden>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">AUTOMATIONS</p><h1>自动化</h1></div><span class="sage-fixture-pill">未接线</span></div>
+          <article class="sage-card sage-automation-card">
+            <div class="sage-card-head"><span class="sage-card-label">AUTOMATIONS · NOT WIRED</span><span class="sage-card-index">01</span></div>
+            <h2>定时与触发式运行</h2>
+            <strong class="sage-state-tag is-blocked" id="automation-state">未接线</strong>
+            <p class="sage-card-note">本版没有定时、周期或事件触发的自动化入口；所有运行都由你在当前事项里显式发起。这里不提供创建、启停或运行记录——「没接线」不写成「已停用」。</p>
+          </article>
+        </section>
+
+        <section class="sage-panel" id="panel-knowledge" role="tabpanel" data-panel="knowledge" aria-labelledby="view-knowledge" hidden>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">KNOWLEDGE</p><h1>知识</h1></div><span class="sage-fixture-pill">只读呈现</span></div>
+          <div class="sage-governance-grid">
+            <article class="sage-card sage-knowledge-card">
+              <div class="sage-card-head"><span class="sage-card-label">KNOWLEDGE &amp; REFERENCES · READ-ONLY</span><span class="sage-card-index">01</span></div>
+              <h2>知识与引用</h2>
+              <p class="sage-card-note">知识条目与引用条目在这里只读呈现来源、版本与可达性；点开才按需读取并重核（取用在「能力」页的本地引用卡上进行）。本页没有创建、编辑、发布或退役知识条目的入口。</p>
+              <strong class="sage-state-tag is-blocked" id="knowledge-state">未接线</strong>
+              <p id="knowledge-note" class="sage-card-note"></p>
+              <ul class="sage-roster-list" id="knowledge-rows"></ul>
+            </article>
+          </div>
+        </section>
+
         <section class="sage-panel" id="panel-capabilities" role="tabpanel" data-panel="capabilities" aria-labelledby="view-capabilities" hidden>
           <div class="sage-section-heading"><div><p class="sage-eyebrow">CAPABILITY SURFACE</p><h1>能力与接线状态</h1></div><span class="sage-fixture-pill" id="capability-source">来源：等待运行时清单</span></div>
           <div class="sage-capability-grid">
@@ -726,16 +719,33 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           </article>
         </section>
 
-        <section class="sage-panel" id="panel-governance" role="tabpanel" data-panel="governance" aria-labelledby="view-governance" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">ACCOUNTABILITY &amp; GOVERNANCE</p><h1>行动边界</h1></div><span class="sage-fixture-pill">fail closed</span></div>
-          <div class="sage-governance-grid">
-            <article class="sage-card sage-governance-card"><span class="sage-card-label">当前规则</span><h2>事实、授权与可用性分开</h2><p>Host ready、工具可见、版本相同或 fixture equivalent 都不能单独变成业务授权。</p></article>
-            <article class="sage-card sage-governance-card"><span class="sage-card-label">下一道门</span><h2>Application Service</h2><p>真实业务动作必须经 ViewState / ActionIntent、权限、兼容性、可用性和 Adapter 预检的固定顺序。</p></article>
-          </div>
-        </section>
-
-        <section class="sage-panel" id="panel-profile" role="tabpanel" data-panel="profile" aria-labelledby="view-profile" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">PROFILE</p><h1>个人资料</h1></div><span class="sage-fixture-pill">只读投影</span></div>
+        <section class="sage-panel" id="panel-settings" role="tabpanel" data-panel="settings" aria-labelledby="view-settings" hidden>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">SETTINGS</p><h1>设置</h1></div><span class="sage-fixture-pill">外观可保存 · 系统只读</span></div>
+          <article class="sage-card sage-preferences-card" id="settings-appearance" data-settings-writable="appearance">
+            <div class="sage-card-head"><span class="sage-card-label">APPEARANCE · EIGHT ITEMS · ONE AUTHORITATIVE VALUE</span><span class="sage-card-index">01</span></div>
+            <h2>外观（可保存）</h2>
+            <p class="sage-card-note">八个可持久化外观项（主题／语言／密度缩放／字体风格／内容宽度／终端主题／文件图标／图标外观）由同一份设备偏好持有；本页与顶栏用户菜单读写同一份权威值，不各存一份。保存失败不会显示为已生效；本页不做主题 token 全量审计与视觉对比度验收。</p>
+            <div class="sage-state-row"><span>主题</span><select id="pref-theme" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
+            <div class="sage-state-row"><span>语言</span><select id="pref-language" aria-label="语言"><option value="zh">中文</option><option value="en">English</option></select></div>
+            <div class="sage-state-row"><span>密度/缩放</span><select id="pref-density" aria-label="密度与缩放"><option value="comfortable">宽松</option><option value="compact">紧凑</option></select></div>
+            <div class="sage-state-row"><span>字体风格</span><select id="pref-font-style" aria-label="字体风格"><option value="sans">无衬线</option><option value="serif">衬线</option></select></div>
+            <div class="sage-state-row"><span>内容宽度</span><select id="pref-content-width" aria-label="内容宽度"><option value="standard">标准</option><option value="wide">宽</option></select></div>
+            <div class="sage-state-row"><span>终端主题</span><select id="pref-terminal-theme" aria-label="终端主题"><option value="follow">跟随主题</option><option value="manual">手动调整</option></select></div>
+            <div class="sage-state-row"><span>文件图标</span><select id="pref-file-icons" aria-label="文件图标"><option value="product">产品图标</option><option value="material">Material File Icons</option></select></div>
+            <div class="sage-state-row"><span>图标外观</span><select id="pref-icon-appearance" aria-label="图标外观"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
+            <button class="sage-secondary-button" id="pref-save" type="button">保存这八项</button>
+            <p id="pref-note" class="sage-card-note" role="status" aria-live="polite"></p>
+            <div class="sage-appearance-deferred" id="appearance-deferred" data-deferred-appearance>
+              <span class="sage-card-label">不在本版清单 · 不可配置</span>
+              <ul class="sage-roster-list">
+                <li class="sage-roster-row" data-deferred-item="shortcuts"><strong>快捷键</strong><span class="sage-roster-tag">不可配置</span><span>自定义快捷键后置，本版不提供录制或编辑入口。</span></li>
+                <li class="sage-roster-row" data-deferred-item="voice"><strong>语音</strong><span class="sage-roster-tag">不可配置</span><span>语音转写与麦克风设置后置，本版不提供入口。</span></li>
+                <li class="sage-roster-row" data-deferred-item="task-monitor-layout"><strong>任务监控浮层布局</strong><span class="sage-roster-tag">不可配置</span><span>浮层与布局偏好后置，本版不提供入口，也不冒充已保存。</span></li>
+                <li class="sage-roster-row" data-deferred-item="terminal-links"><strong>终端链接使用内置浏览器</strong><span class="sage-roster-tag">不迁入</span><span>D-036 已定使用系统浏览器，本版不提供该类开关。</span></li>
+              </ul>
+            </div>
+          </article>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">IDENTITY</p><h2>身份</h2></div><span class="sage-fixture-pill">只读投影</span></div>
           <div class="sage-governance-grid">
             <article class="sage-card sage-governance-card">
               <span class="sage-card-label">当前登录身份</span>
@@ -745,7 +755,26 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <p id="profile-status-note" role="status" aria-live="polite"></p>
               <button class="sage-secondary-button" id="profile-logout" type="button" data-logout-entry hidden>退出登录</button>
             </article>
-            <article class="sage-card sage-governance-card"><span class="sage-card-label">不在本视图</span><h2>组织岗位与授权</h2><p>岗位、AuthoritySnapshot、可见范围与成员管理属于后置治理面，个人资料页不推断这些事实。外观八项在「设置」页与顶栏用户菜单读写同一份权威值，不在这里再存一份。</p></article>
+            <article class="sage-card sage-governance-card"><span class="sage-card-label">不在本视图</span><h2>组织岗位与授权</h2><p>岗位、AuthoritySnapshot、可见范围与成员管理属于后置治理面，设置页不推断这些事实；外观八项与顶栏用户菜单读写同一份权威值。</p></article>
+          </div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">RUNTIME STATE</p><h2>运行状态</h2></div><span class="sage-fixture-pill">只读</span></div>
+          <section class="sage-card sage-runtime-card" aria-labelledby="state-title">
+            <div class="sage-card-head"><span class="sage-card-label">RUNTIME</span><span class="sage-card-index">01</span></div>
+            <div class="sage-card-icon" aria-hidden="true">↗</div>
+            <h2 id="state-title">正在检查</h2>
+            <p id="state-message" role="status" aria-live="polite">正在读取 Sage 的受控状态。</p>
+            <button class="sage-secondary-button" id="retry" type="button" hidden>重新检查</button>
+            <p class="sage-card-note" id="command-note" role="status" aria-live="polite"></p>
+            <button class="sage-secondary-button" id="reconcile" type="button" hidden>核对同一操作</button>
+            <div class="sage-state-row"><span>当前身份</span><strong id="auth-name" data-identity-label></strong></div>
+            <button class="sage-secondary-button" id="login" type="button" hidden>登录</button>
+            <button class="sage-secondary-button" id="logout" type="button" data-logout-entry hidden>退出登录</button>
+            <p class="sage-card-note">这里只反映当前能力运行时状态，不等于业务授权或外部能力可用。</p>
+          </section>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">ACCOUNTABILITY &amp; GOVERNANCE</p><h2>行动边界</h2></div><span class="sage-fixture-pill">fail closed</span></div>
+          <div class="sage-governance-grid">
+            <article class="sage-card sage-governance-card"><span class="sage-card-label">当前规则</span><h2>事实、授权与可用性分开</h2><p>Host ready、工具可见、版本相同或 fixture equivalent 都不能单独变成业务授权。</p></article>
+            <article class="sage-card sage-governance-card"><span class="sage-card-label">下一道门</span><h2>Application Service</h2><p>真实业务动作必须经 ViewState / ActionIntent、权限、兼容性、可用性和 Adapter 预检的固定顺序。</p></article>
           </div>
           <section class="sage-exit-guide-env" aria-label="退出检查、引导与环境">
             <article class="sage-card sage-exit-card">
@@ -780,43 +809,12 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <div class="sage-state-row"><span>工作区折叠（环境存在性来源）</span><strong id="env-fold" data-env-fact>—</strong></div>
             </article>
           </section>
-        </section>
-
-        <section class="sage-panel" id="panel-settings" role="tabpanel" data-panel="settings" aria-labelledby="view-settings" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">SETTINGS</p><h1>设置</h1></div><span class="sage-fixture-pill">外观可保存 · 叶子页只读</span></div>
-          <article class="sage-card sage-preferences-card" id="settings-appearance" data-settings-writable="appearance">
-            <div class="sage-card-head"><span class="sage-card-label">APPEARANCE · EIGHT ITEMS · ONE AUTHORITATIVE VALUE</span><span class="sage-card-index">01</span></div>
-            <h2>外观（可保存）</h2>
-            <p class="sage-card-note">八个可持久化外观项（主题／语言／密度缩放／字体风格／内容宽度／终端主题／文件图标／图标外观）由同一份设备偏好持有；本页与顶栏用户菜单读写同一份权威值，不各存一份。保存失败不会显示为已生效；本页不做主题 token 全量审计与视觉对比度验收。</p>
-            <div class="sage-state-row"><span>主题</span><select id="pref-theme" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
-            <div class="sage-state-row"><span>语言</span><select id="pref-language" aria-label="语言"><option value="zh">中文</option><option value="en">English</option></select></div>
-            <div class="sage-state-row"><span>密度/缩放</span><select id="pref-density" aria-label="密度与缩放"><option value="comfortable">宽松</option><option value="compact">紧凑</option></select></div>
-            <div class="sage-state-row"><span>字体风格</span><select id="pref-font-style" aria-label="字体风格"><option value="sans">无衬线</option><option value="serif">衬线</option></select></div>
-            <div class="sage-state-row"><span>内容宽度</span><select id="pref-content-width" aria-label="内容宽度"><option value="standard">标准</option><option value="wide">宽</option></select></div>
-            <div class="sage-state-row"><span>终端主题</span><select id="pref-terminal-theme" aria-label="终端主题"><option value="follow">跟随主题</option><option value="manual">手动调整</option></select></div>
-            <div class="sage-state-row"><span>文件图标</span><select id="pref-file-icons" aria-label="文件图标"><option value="product">产品图标</option><option value="material">Material File Icons</option></select></div>
-            <div class="sage-state-row"><span>图标外观</span><select id="pref-icon-appearance" aria-label="图标外观"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div>
-            <button class="sage-secondary-button" id="pref-save" type="button">保存这八项</button>
-            <p id="pref-note" class="sage-card-note" role="status" aria-live="polite"></p>
-            <div class="sage-appearance-deferred" id="appearance-deferred" data-deferred-appearance>
-              <span class="sage-card-label">不在本版清单 · 不可配置</span>
-              <ul class="sage-roster-list">
-                <li class="sage-roster-row" data-deferred-item="shortcuts"><strong>快捷键</strong><span class="sage-roster-tag">不可配置</span><span>自定义快捷键后置，本版不提供录制或编辑入口。</span></li>
-                <li class="sage-roster-row" data-deferred-item="voice"><strong>语音</strong><span class="sage-roster-tag">不可配置</span><span>语音转写与麦克风设置后置，本版不提供入口。</span></li>
-                <li class="sage-roster-row" data-deferred-item="task-monitor-layout"><strong>任务监控浮层布局</strong><span class="sage-roster-tag">不可配置</span><span>浮层与布局偏好后置，本版不提供入口，也不冒充已保存。</span></li>
-                <li class="sage-roster-row" data-deferred-item="terminal-links"><strong>终端链接使用内置浏览器</strong><span class="sage-roster-tag">不迁入</span><span>D-036 已定使用系统浏览器，本版不提供该类开关。</span></li>
-              </ul>
-            </div>
-          </article>
           <section id="settings-leaf-section" aria-label="叶子页只读组">
             <div class="sage-section-heading"><div><p class="sage-eyebrow">LEAF PAGES · READ-ONLY</p><h2>叶子页（只读）</h2></div><span class="sage-fixture-pill">零写入口</span></div>
             <p class="sage-card-note">这一版把 11 张叶子设置页做成只读呈现：每页标出来源（观察／配置事实／无 provider）与不可用原因，<strong>没有任何启用、启停、导入、连接或重建的入口</strong>。"没接线"一律写成"没接线"，不写成"已停用"。</p>
             <div class="sage-governance-grid" id="settings-leaf-grid"></div>
           </section>
-        </section>
-
-        <section class="sage-panel" id="panel-readout" role="tabpanel" data-panel="readout" aria-labelledby="view-readout" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">REAR READ-ONLY SURFACES</p><h1>只读呈现</h1></div><span class="sage-fixture-pill">无写入入口</span></div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">VISIBLE SCOPE</p><h2>可见范围</h2></div><span class="sage-fixture-pill">只读</span></div>
           <div class="sage-governance-grid">
             <article class="sage-card sage-visibility-card">
               <div class="sage-card-head"><span class="sage-card-label">VISIBLE SCOPE · READ-ONLY</span><span class="sage-card-index">01</span></div>
@@ -826,24 +824,22 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <div class="sage-state-row"><span>获准主责</span><strong id="visibility-owner" data-visibility-fact>正在读取</strong></div>
               <p id="visibility-note" class="sage-card-note" role="status" aria-live="polite"></p>
             </article>
-            <article class="sage-card sage-knowledge-card">
-              <div class="sage-card-head"><span class="sage-card-label">KNOWLEDGE &amp; REFERENCES · READ-ONLY</span><span class="sage-card-index">02</span></div>
-              <h2>知识与引用</h2>
-              <p class="sage-card-note">知识条目与引用条目在这里只读呈现来源、版本与可达性；点开才按需读取并重核（取用在「能力」页的本地引用卡上进行）。本页没有创建、编辑、发布或退役知识条目的入口。</p>
-              <strong class="sage-state-tag is-blocked" id="knowledge-state">未接线</strong>
-              <p id="knowledge-note" class="sage-card-note"></p>
-              <ul class="sage-roster-list" id="knowledge-rows"></ul>
-            </article>
+          </div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">PLUGINS</p><h2>插件与扩展</h2></div><span class="sage-fixture-pill">只读观察</span></div>
+          <div class="sage-governance-grid">
             <article class="sage-card sage-plugins-card">
-              <div class="sage-card-head"><span class="sage-card-label">PLUGINS &amp; EXTENSIONS · READ-ONLY</span><span class="sage-card-index">03</span></div>
+              <div class="sage-card-head"><span class="sage-card-label">PLUGINS &amp; EXTENSIONS · READ-ONLY</span><span class="sage-card-index">02</span></div>
               <h2>插件与扩展</h2>
               <p class="sage-card-note">只显示实际存在的两份事实：安装时证据（名称、版本、来源摘要）与本次启动的一次观察。自报、进程存在、工具数量与连接成功都只是局部观察，不合成兼容或可用结论；未核验一律按未核验显示，不改写成停用结论。</p>
               <ul class="sage-roster-list" id="plugin-rows"></ul>
               <p id="plugin-observation" class="sage-card-note"></p>
               <p id="plugin-note" class="sage-card-note" role="status" aria-live="polite"></p>
             </article>
+          </div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">ABOUT &amp; DIAGNOSTICS</p><h2>关于与诊断</h2></div><span class="sage-fixture-pill">只读 + 反馈</span></div>
+          <div class="sage-governance-grid">
             <article class="sage-card sage-diagnostics-card">
-              <div class="sage-card-head"><span class="sage-card-label">ABOUT &amp; DIAGNOSTICS · READ-ONLY</span><span class="sage-card-index">04</span></div>
+              <div class="sage-card-head"><span class="sage-card-label">ABOUT &amp; DIAGNOSTICS · READ-ONLY</span><span class="sage-card-index">03</span></div>
               <h2>关于与诊断</h2>
               <p class="sage-card-note">版本与构建标识取自能力运行时的自报快照（启动时已按 pin 核对摘要），不由界面自报；本页不提供更新检查与一键更新的入口，也不以旧发布链的结果充当更新能力。</p>
               <div class="sage-state-row"><span>运行时版本</span><strong id="diagnostics-harness">正在读取</strong></div>

@@ -10,21 +10,22 @@ function openingTag(html: string, selector: { readonly attribute: string, readon
 }
 
 describe('Sage shell semantic contract', () => {
-  it('opens on the BusinessMatter workbench and keeps Overview secondary', () => {
+  it('opens on the BusinessMatter workbench with the six-item navigation', () => {
     const html = renderSageDocument()
     const matterTab = openingTag(html, { attribute: 'data-view', value: 'matter' })
     const matterPanel = openingTag(html, { attribute: 'data-panel', value: 'matter' })
-    const overviewTab = openingTag(html, { attribute: 'data-view', value: 'overview' })
-    const overviewPanel = openingTag(html, { attribute: 'data-panel', value: 'overview' })
+    const searchTab = openingTag(html, { attribute: 'data-view', value: 'search' })
+    const searchPanel = openingTag(html, { attribute: 'data-panel', value: 'search' })
 
     expect(matterTab).toContain('is-active')
     expect(matterTab).toContain('aria-selected="true"')
     expect(matterPanel).toContain('is-visible')
     expect(matterPanel).not.toContain(' hidden')
-    expect(overviewTab).not.toContain('is-active')
-    expect(overviewTab).toContain('aria-selected="false"')
-    expect(overviewPanel).toContain(' hidden')
+    expect(searchTab).not.toContain('is-active')
+    expect(searchTab).toContain('aria-selected="false"')
+    expect(searchPanel).toContain(' hidden')
     expect(html).toContain("setView('matter')")
+    expect(html).not.toContain('data-view="overview"')
   })
 
   it('ships the three spatial regions and a control-free read-only composer', () => {
@@ -45,12 +46,11 @@ describe('Sage shell semantic contract', () => {
   it('pairs every workbench tab with its labelled panel', () => {
     const html = renderSageDocument()
     const pairs = [
-      ['overview', 'view-overview', 'panel-overview'],
       ['matter', 'view-matter', 'panel-matter'],
+      ['search', 'view-search', 'panel-search'],
+      ['automation', 'view-automation', 'panel-automation'],
+      ['knowledge', 'view-knowledge', 'panel-knowledge'],
       ['capabilities', 'view-capabilities', 'panel-capabilities'],
-      ['governance', 'view-governance', 'panel-governance'],
-      ['profile', 'view-profile', 'panel-profile'],
-      ['readout', 'view-readout', 'panel-readout'],
       ['settings', 'view-settings', 'panel-settings'],
     ] as const
 
@@ -73,24 +73,23 @@ describe('Sage shell semantic contract', () => {
     expect(tablist).toContain('aria-orientation="vertical"')
   })
 
-  it('ships one initial tab stop and removes the other six tabs from the tab order', () => {
+  it('ships one initial tab stop and removes the other five tabs from the tab order', () => {
     const html = renderSageDocument()
-    const views = ['matter', 'overview', 'capabilities', 'governance', 'profile', 'readout', 'settings'] as const
+    const views = ['matter', 'search', 'automation', 'knowledge', 'capabilities', 'settings'] as const
     const tabs = views.map((view) => openingTag(html, { attribute: 'data-view', value: view }))
 
     expect(tabs.filter((tab) => tab.includes('tabindex="0"'))).toHaveLength(1)
-    expect(tabs.filter((tab) => tab.includes('tabindex="-1"'))).toHaveLength(6)
+    expect(tabs.filter((tab) => tab.includes('tabindex="-1"'))).toHaveLength(5)
   })
 
   it('keeps every tab name available when narrow-width CSS hides its visual label', () => {
     const html = renderSageDocument()
     const names = [
       ['matter', '经营事项'],
-      ['overview', '总览'],
+      ['search', '搜索'],
+      ['automation', '自动化'],
+      ['knowledge', '知识'],
       ['capabilities', '能力'],
-      ['governance', '治理'],
-      ['profile', '个人资料'],
-      ['readout', '只读呈现'],
       ['settings', '设置'],
     ] as const
 

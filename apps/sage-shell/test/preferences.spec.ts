@@ -267,7 +267,7 @@ describe('the two entries share one value — eight items (US-108/220/221)', () 
   it('marks the off-list appearance items non-configurable, and gives them no control (US-222)', () => {
     const document = renderSageDocument()
     const start = document.indexOf('id="appearance-deferred"')
-    const end = document.indexOf('id="settings-leaf-section"')
+    const end = document.indexOf('id="profile-identity"')
     expect(start).toBeGreaterThan(0)
     expect(end).toBeGreaterThan(start)
     const section = document.slice(start, end)

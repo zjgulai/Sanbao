@@ -59,13 +59,13 @@ describe('the read-only families ship no write entries', () => {
     }
   })
 
-  it('renders each of the four cards with zero controls — except the deliberate 048 feedback entry', async () => {
+  it('renders the moved read-only cards with zero controls — except the deliberate 048 feedback entry', async () => {
     const harness = await bootSagePage(statePayload({ readout, fileReferences: [reference] }))
     for (const id of ['visibility-note', 'knowledge-rows', 'plugin-rows', 'diagnostics-error']) {
       expect(harness.node(id), id).toBeDefined()
     }
     const panel = renderSageDocument().slice(
-      renderSageDocument().indexOf('id="panel-readout"'),
+      renderSageDocument().indexOf('class="sage-card sage-visibility-card"'),
       renderSageDocument().indexOf('<footer'),
     )
     // Ticket 048 deliberately adds ONE interactive entry to this panel (submit feedback: text +

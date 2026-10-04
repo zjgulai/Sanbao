@@ -186,7 +186,7 @@ describe('the exit checklist, guide and environment cards (ticket 032)', () => {
 
   it('the guide toggles locally with zero requests and the environment card stays read-only', async () => {
     const document = renderSageDocument()
-    const slice = document.slice(document.indexOf('class="sage-card sage-exit-card"'), document.indexOf('id="panel-settings"'))
+    const slice = document.slice(document.indexOf('class="sage-card sage-exit-card"'), document.indexOf('id="settings-leaf-section"'))
     const labels = (slice.match(/<button[^>]*>([^<]*)</gu) ?? []).map((tag) => tag.replace(/<button[^>]*>|</g, ''))
     expect(labels).toEqual(['退出 Sage…（先看影响清单）', '取消（保持后台运行）', '停止进行中的任务并标记可退出', '展开要点'])
     for (const word of ['装配', '远端执行', '接管']) expect(labels.join('|'), word).not.toContain(word)
