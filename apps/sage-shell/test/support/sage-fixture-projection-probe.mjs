@@ -453,6 +453,9 @@ async function run() {
   // 1. The strict-CSP document starts unavailable, then the real state read must drive the
   // expected projection state into the DOM. Waiting for the runtime title prevents the initial
   // unavailable shell from making either the fixture or fail-closed assertions pass early.
+  // ADR-0261 P2: the React matter region must have applied the same projection the legacy
+  // script published (fixture -> 'fixture'; unavailable runs -> 'unavailable').
+  const expectedMatterRegionState = expectedProjection
   const documentFacts = await evaluate(window, `(async () => {
     const snapshot = () => {
       const workspace = document.querySelector('[data-sage-workspace]')
@@ -473,12 +476,13 @@ async function run() {
         navItemCount: document.querySelectorAll('.sage-nav-item').length,
         navItemIds: Array.from(document.querySelectorAll('.sage-nav-item')).map((item) => item.id),
         reactAppMounted: window.__SAGE_APP_MOUNTED__ === true,
+        matterRegionState: document.querySelector('#sage-matter-region')?.getAttribute('data-matter-region-state') ?? null,
       }
     }
     const deadline = Date.now() + 4000
     while (Date.now() < deadline) {
       const facts = snapshot()
-      if (facts.title !== '正在检查' && facts.workspaceProjectionSource === ${JSON.stringify(expectedProjection)} && facts.reactAppMounted === true) return facts
+      if (facts.title !== '正在检查' && facts.workspaceProjectionSource === ${JSON.stringify(expectedProjection)} && facts.reactAppMounted === true && facts.matterRegionState === ${JSON.stringify(expectedMatterRegionState)}) return facts
       await new Promise((resolve) => { setTimeout(resolve, 10) })
     }
     return snapshot()
@@ -498,6 +502,7 @@ async function run() {
   requireCondition(documentFacts.navItemCount === 6 && JSON.stringify(documentFacts.navItemIds) === JSON.stringify(['view-matter', 'view-search', 'view-automation', 'view-knowledge', 'view-capabilities', 'view-settings']), 'navigation is not the six-item target set')
   // ADR-0261 P1: the React root must mount under the strict CSP document before any region moves over.
   requireCondition(documentFacts.reactAppMounted === true, 'React app did not mount under the strict CSP document')
+  requireCondition(documentFacts.matterRegionState === expectedMatterRegionState, `React matter region did not reach the expected state (${documentFacts.matterRegionState})`)
   requireCondition(documentFacts.sectionHeadingFontPx !== null && documentFacts.sectionHeadingFontPx <= 24 && documentFacts.sectionHeadingFontPx >= 16, `matter section heading is not on the operational scale (${documentFacts.sectionHeadingFontPx}px)`)
   requireCondition(documentFacts.matterGoalFontPx !== null && documentFacts.matterGoalFontPx <= 24 && documentFacts.matterGoalFontPx >= 16, `matter goal heading is not on the operational scale (${documentFacts.matterGoalFontPx}px)`)
 
@@ -818,6 +823,12 @@ async function run() {
         && trace.dataset.drawerOpen === 'false'
         && trace.getAttribute('aria-hidden') === 'true'
         && document.activeElement === trigger,
+      escapeParts: {
+        defaultPrevented: escape.defaultPrevented,
+        drawerOpen: trace.dataset.drawerOpen,
+        ariaHidden: trace.getAttribute('aria-hidden'),
+        activeElementId: document.activeElement?.id ?? null,
+      },
     }
   })()`)
   evidence.narrowLayout = narrowLayout

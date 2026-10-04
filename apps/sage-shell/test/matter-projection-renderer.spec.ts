@@ -1,13 +1,45 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { renderSageDocument } from '../src/product/renderer.js'
 import {
   createSageFixtureViewState,
   SAGE_FIXTURE_STAGES,
-  type SageFixtureStage,
   type SageMatterViewState,
 } from '../src/product/view-state.js'
 import { bootSagePage, statePayload } from './support/sage-page.js'
+
+/**
+ * UI-DECISION-01 / P2 (ADR-0261, strangler): the matter workbench region (heading + focus card
+ * + trace rail) is owned by the React app. The legacy inline script must NOT write that region
+ * anymore — it validates the wire and hands the result to the `__SAGE_APP_SET_MATTER__` bridge,
+ * which the React app subscribes to. These specs pin the wire → bridge contract and the
+ * "region nodes stay untouched" sentinel; the rendered region DOM itself is covered by the
+ * jsdom component spec (`test/product-app/matter-region.spec.ts`) and the real Electron probes.
+ */
+
+interface MatterBridgeMessage {
+  readonly kind: string
+  readonly projection?: unknown
+}
+
+interface BridgeSink {
+  readonly messages: MatterBridgeMessage[]
+  readonly restore: () => void
+}
+
+function installBridgeSink(): BridgeSink {
+  const messages: MatterBridgeMessage[] = []
+  const target = globalThis as { __SAGE_APP_SET_MATTER__?: unknown }
+  const previous = target.__SAGE_APP_SET_MATTER__
+  target.__SAGE_APP_SET_MATTER__ = (message: MatterBridgeMessage): void => { messages.push(message) }
+  return {
+    messages,
+    restore: () => {
+      if (previous === undefined) delete target.__SAGE_APP_SET_MATTER__
+      else target.__SAGE_APP_SET_MATTER__ = previous
+    },
+  }
+}
 
 function liveMatter(): SageMatterViewState {
   const fixture = createSageFixtureViewState()
@@ -39,6 +71,26 @@ function liveMatter(): SageMatterViewState {
   }
 }
 
+let sink: BridgeSink | undefined
+
+afterEach(() => {
+  sink?.restore()
+  sink = undefined
+})
+
+/** The P2 sentinel: the script must never write these region nodes again. */
+function expectRegionUntouched(page: Awaited<ReturnType<typeof bootSagePage>>): void {
+  expect(page.node('matter-detail-goal').textContent).toBe('')
+  expect(page.node('matter-detail-id').textContent).toBe('')
+  expect(page.node('matter-stage-track').dataset.currentStage).toBeUndefined()
+  expect(page.node('matter-metric-evidence').textContent).toBe('')
+  expect(page.node('matter-decision-rows').children).toHaveLength(0)
+  expect(page.node('matter-action-previews').children).toHaveLength(0)
+  expect(page.node('matter-trace-toggle').attributes['aria-expanded']).toBeUndefined()
+  expect(page.node('matter-trace-rail').dataset.drawerOpen).toBeUndefined()
+  expect(Object.keys(page.node('matter-trace-toggle').listeners)).toHaveLength(0)
+}
+
 describe('matter projection renderer wire', () => {
   it('ships one six-stage rail without inventing completed stages or a write control', () => {
     const html = renderSageDocument()
@@ -55,176 +107,59 @@ describe('matter projection renderer wire', () => {
     expect(html).not.toContain('data-stage-action')
   })
 
-  it('marks only the current stage across six consecutive states and clears it for unavailable or invalid input', async () => {
-    const fixtures = SAGE_FIXTURE_STAGES.map((stage) => createSageFixtureViewState(stage))
-    const allTraceIds = new Set(fixtures.flatMap((fixture) => [
-      ...fixture.decisions.map((entry) => entry.decisionId),
-      ...fixture.attempts.map((entry) => entry.attemptId),
-      ...fixture.artifacts.map((entry) => entry.artifactId),
-      ...fixture.receipts.map((entry) => entry.receiptId),
-    ]))
-    const page = await bootSagePage(statePayload({ matter: fixtures[0] }))
+  it('ships the fail-closed matter region wrapper the React app takes over at runtime', () => {
+    const html = renderSageDocument()
 
-    for (const fixture of fixtures) {
-      const stage = fixture.matter.stage as SageFixtureStage
-      page.setPayload(statePayload({ matter: fixture }))
-      await page.refresh()
-
-      expect(page.node('matter-stage-track').dataset.currentStage).toBe(stage)
-      expect(SAGE_FIXTURE_STAGES.filter((candidate) => page.node(`matter-stage-${candidate}`).dataset.stageState === 'current')).toEqual([stage])
-      for (const candidate of SAGE_FIXTURE_STAGES) {
-        const current = candidate === stage
-        expect(page.node(`matter-stage-${candidate}`).dataset.stageState).toBe(current ? 'current' : 'idle')
-        expect(page.node(`matter-stage-${candidate}`).attributes['aria-current']).toBe(current ? 'step' : 'false')
-      }
-      expect(page.node('matter-panel-source').textContent).toBe('fixture projection')
-      expect(page.node('matter-decision-count').textContent).toBe(String(fixture.decisions.length))
-      expect(page.node('matter-attempt-count').textContent).toBe(String(fixture.attempts.length))
-      expect(page.node('matter-artifact-count').textContent).toBe(String(fixture.artifacts.length))
-      expect(page.node('matter-receipt-count').textContent).toBe(String(fixture.receipts.length))
-      const traceText = [
-        page.node('matter-decision-rows').textContent,
-        page.node('matter-attempt-rows').textContent,
-        page.node('matter-artifact-rows').textContent,
-        page.node('matter-receipt-rows').textContent,
-      ].join('\n')
-      const expectedTraceIds = new Set([
-        ...fixture.decisions.map((entry) => entry.decisionId),
-        ...fixture.attempts.map((entry) => entry.attemptId),
-        ...fixture.artifacts.map((entry) => entry.artifactId),
-        ...fixture.receipts.map((entry) => entry.receiptId),
-      ])
-      for (const traceId of allTraceIds) {
-        expect(traceText.includes(traceId)).toBe(expectedTraceIds.has(traceId))
-      }
-      expect(page.node('matter-clarification').textContent).toBe(
-        fixture.matter.pendingClarification === undefined
-          ? '当前没有待回答澄清。'
-          : `${fixture.matter.pendingClarification.reason} · ${fixture.matter.pendingClarification.requestedAt}`,
-      )
-      expect(page.node('matter-action-previews').children.map((entry) => entry.dataset.actionPreview)).toEqual(
-        fixture.actions.map((entry) => entry.type),
-      )
-    }
-
-    page.setPayload(statePayload({ matter: null }))
-    await page.refresh()
-    expect(page.node('matter-stage-track').dataset.currentStage).toBe('unavailable')
-    expect(SAGE_FIXTURE_STAGES.every((stage) => page.node(`matter-stage-${stage}`).dataset.stageState === 'idle')).toBe(true)
-    expect(page.node('matter-attempt-count').textContent).toBe('—')
-    expect(page.node('matter-attempt-rows').textContent).not.toContain('attempt:sage.shopify-abi.fixture')
-    expect(page.node('matter-clarification').textContent).toContain('投影不可用')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
-
-    const malformed = { ...createSageFixtureViewState('failed-retry'), schemaVersion: 'sage.matter-view.v0' }
-    page.setPayload(statePayload({ matter: malformed }))
-    await page.refresh()
-    expect(page.node('matter-stage-track').dataset.currentStage).toBe('unavailable')
-    expect(SAGE_FIXTURE_STAGES.every((stage) => page.node(`matter-stage-${stage}`).attributes['aria-current'] === 'false')).toBe(true)
-    expect(page.node('matter-decision-count').textContent).toBe('—')
-    expect(page.node('matter-attempt-rows').textContent).not.toContain('attempt:sage.shopify-abi.fixture')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
-
-    page.setPayload(statePayload({ matter: liveMatter() }))
-    await page.refresh()
-    expect(page.node('matter-stage-track').dataset.currentStage).toBe('running')
-    expect(SAGE_FIXTURE_STAGES.filter((stage) => page.node(`matter-stage-${stage}`).dataset.stageState === 'current')).toEqual(['running'])
-    expect(page.node('matter-panel-source').textContent).toBe('live projection')
-    expect(page.node('matter-attempt-count').textContent).toBe('0')
-    expect(page.node('matter-attempt-rows').textContent).not.toContain('attempt:sage.shopify-abi.fixture')
-    expect(page.node('matter-clarification').textContent).toBe('当前没有待回答澄清。')
-    expect(page.node('matter-action-previews').children.map((entry) => entry.dataset.actionPreview)).toEqual(['open-artifact'])
+    expect(html).toContain('id="sage-matter-region"')
+    expect(html).toContain('data-matter-region-state="unavailable"')
+    expect(html.match(/id="sage-matter-region"/gu)).toHaveLength(1)
+    expect(html.indexOf('id="sage-matter-region"')).toBeLessThan(html.indexOf('class="sage-section-heading"'))
+    expect(html.indexOf('class="sage-section-heading"')).toBeLessThan(html.indexOf('id="matter-workbench"'))
   })
 
   it('ships an unavailable initial shell instead of baking the fixture instance into production HTML', () => {
     const fixture = createSageFixtureViewState()
     const html = renderSageDocument()
 
-    expect(html).toContain('data-matter-render-state="unavailable"')
     expect(html).not.toContain(fixture.matter.matterId)
     expect(html).not.toContain(fixture.matter.goal)
   })
 
-  it('renders a null matter slot as stable unavailable and leaves no action surface behind', async () => {
-    const page = await bootSagePage(statePayload({ matter: null }))
-
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'unavailable',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
-    expect(page.node('matter-detail-id').textContent).toBe('—')
-    expect(page.node('matter-detail-revision').textContent).toBe('—')
-    expect(page.node('matter-detail-role').textContent).toBe('—')
-    expect(page.node('matter-metric-evidence').textContent).toBe('—')
-    expect(page.node('matter-metric-unknown').textContent).toBe('—')
-    expect(page.node('matter-metric-dependency').textContent).toBe('—')
-    expect(page.node('matter-clarification').textContent).toContain('投影不可用')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
-    expect(page.requests).toEqual([])
-  })
-
-  it('renders the exact nested fixture matter values rather than the component default', async () => {
+  it('hands the validated fixture projection to the bridge and leaves the region DOM untouched', async () => {
+    sink = installBridgeSink()
     const fixture = createSageFixtureViewState()
     const page = await bootSagePage(statePayload({ matter: fixture }))
 
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'fixture',
-      matterRenderState: 'fixture',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe(fixture.matter.goal)
-    expect(page.node('matter-detail-goal').textContent).toBe(fixture.matter.goal)
-    expect(page.node('matter-detail-id').textContent).toBe(fixture.matter.matterId)
-    expect(page.node('matter-detail-revision').textContent).toBe(fixture.matter.currentRevisionId)
-    expect(page.node('matter-detail-role').textContent).toBe(fixture.matter.responsiblePartyRoleRef)
-    expect(page.node('matter-metric-evidence').textContent).toBe(String(fixture.matter.evidenceCount))
-    expect(page.node('matter-metric-unknown').textContent).toBe(String(fixture.matter.unknownCount))
-    expect(page.node('matter-metric-dependency').textContent).toBe(String(fixture.matter.dependencyCount))
-    expect(page.node('matter-clarification').textContent).toContain(fixture.matter.pendingClarification?.reason ?? '')
-    expect(page.node('matter-action-previews').children).toHaveLength(fixture.actions.length)
-    expect(page.node('matter-action-previews').descendants().some((node) => node.tagName === 'button')).toBe(false)
-    expect(page.requests).toEqual([])
-  })
-
-  it('renders distinct live wire values and keeps the read-only preview free of ActionIntent submission', async () => {
-    const live = liveMatter()
-    const page = await bootSagePage(statePayload({ matter: live }))
-
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'live',
-      matterRenderState: 'live',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('Wire 真实目标 <只作文本>')
-    expect(page.node('matter-detail-goal').textContent).toBe('Wire 真实目标 <只作文本>')
-    expect(page.node('matter-detail-id').textContent).toBe('matter:wire-live')
-    expect(page.node('matter-detail-revision').textContent).toBe('revision:wire-live.7')
-    expect(page.node('matter-detail-stage').textContent).toBe('执行中')
-    expect(page.node('matter-detail-actionability').textContent).toBe('可提交')
-    expect(page.node('matter-action-previews').children).toHaveLength(1)
-    expect(page.node('matter-action-previews').descendants().some((node) => node.tagName === 'button')).toBe(false)
-    expect(page.requests).toEqual([])
-  })
-
-  it('clears a prior live projection when the next exact envelope carries null', async () => {
-    const page = await bootSagePage(statePayload({ matter: liveMatter() }))
+    expect(sink.messages.at(-1)).toEqual({ kind: 'projection', projection: fixture })
+    expect(sink.messages.at(-1)?.projection).toBe(fixture)
+    // Non-region facts stay with the legacy script (sidebar context + status pill).
+    expect(page.node('matter-context-goal').textContent).toBe(fixture.matter.goal)
+    expect(page.node('matter-context-id').textContent).toBe(fixture.matter.matterId)
+    expect(page.node('matter-projection-pill').textContent).toBe('fixture projection · 不执行外部动作')
+    expectRegionUntouched(page)
 
     page.setPayload(statePayload({ matter: null }))
     await page.refresh()
+    expect(sink.messages.at(-1)).toEqual({ kind: 'unavailable' })
+    expect(page.node('matter-context-goal').textContent).toBe('当前没有可用的事项投影')
+    expectRegionUntouched(page)
 
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'unavailable',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
-    expect(page.node('matter-detail-goal').textContent).not.toContain('Wire 真实目标')
-    expect(page.node('matter-detail-id').textContent).toBe('—')
-    expect(page.node('matter-detail-role').textContent).toBe('—')
-    expect(page.node('matter-metric-evidence').textContent).toBe('—')
-    expect(page.node('matter-clarification').textContent).not.toContain('市场信号')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
+    page.setPayload(statePayload({ matter: { ...fixture, schemaVersion: 'sage.matter-view.v0' } }))
+    await page.refresh()
+    expect(sink.messages.at(-1)).toEqual({ kind: 'invalid' })
+    expectRegionUntouched(page)
+
+    page.setPayload(statePayload({ matter: liveMatter() }))
+    await page.refresh()
+    const last = sink.messages.at(-1)
+    expect(last?.kind).toBe('projection')
+    expect((last?.projection as SageMatterViewState).projectionSource).toBe('live')
+    expect(page.node('matter-projection-pill').textContent).toBe('live projection · 不执行外部动作')
+    expectRegionUntouched(page)
   })
 
-  it('renders the typed projection read-policy denial as unavailable and clears prior fixture facts', async () => {
+  it('maps the typed read-policy denial and a missing matter slot to the unavailable kind', async () => {
+    sink = installBridgeSink()
     const page = await bootSagePage(statePayload({ matter: createSageFixtureViewState('failed-retry') }))
 
     page.setPayload({
@@ -234,63 +169,23 @@ describe('matter projection renderer wire', () => {
       correlation: 'correlation:renderer-read-denial',
     })
     await page.refresh()
+    expect(sink.messages.at(-1)).toEqual({ kind: 'unavailable' })
+    expectRegionUntouched(page)
 
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'unavailable',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('当前没有可用的事项投影')
-    expect(page.node('matter-stage-track').dataset.currentStage).toBe('unavailable')
-    expect(SAGE_FIXTURE_STAGES.every((stage) => page.node(`matter-stage-${stage}`).dataset.stageState === 'idle')).toBe(true)
-    expect(page.node('matter-attempt-count').textContent).toBe('—')
-    expect(page.node('matter-attempt-rows').textContent).not.toContain('attempt:sage.shopify-abi.fixture')
-    expect(page.node('matter-clarification').textContent).toContain('投影不可用')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
-  })
-
-  it('fails closed and clears a prior fixture when the nested matter shape is malformed', async () => {
-    const fixture = createSageFixtureViewState()
-    const page = await bootSagePage(statePayload({ matter: fixture }))
-
-    page.setPayload(statePayload({ matter: { ...fixture, schemaVersion: 'sage.matter-view.v0' } }))
-    await page.refresh()
-
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'invalid',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
-    expect(page.node('matter-detail-goal').textContent).not.toContain(fixture.matter.goal)
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
-  })
-
-  it('fails closed and clears a prior live projection when the envelope omits matter', async () => {
-    const page = await bootSagePage(statePayload({ matter: liveMatter() }))
-
-    const invalid = statePayload({})
+    const invalid = statePayload({ matter: liveMatter() })
     delete invalid.matter
     page.setPayload(invalid)
     await page.refresh()
-
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'invalid',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
-    expect(page.node('matter-detail-id').textContent).toBe('—')
-    expect(page.node('matter-detail-goal').textContent).not.toContain('Wire 真实目标')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
+    expect(sink.messages.at(-1)).toEqual({ kind: 'invalid' })
+    expectRegionUntouched(page)
   })
 
   it('rejects the retired flat/off payload instead of treating it as a service-state envelope', async () => {
+    sink = installBridgeSink()
     const page = await bootSagePage(liveMatter())
 
-    expect(page.node('sage-workspace').dataset).toMatchObject({
-      projectionSource: 'unavailable',
-      matterRenderState: 'invalid',
-    })
-    expect(page.node('matter-detail-goal').textContent).toBe('事项投影格式无效')
-    expect(page.node('matter-detail-id').textContent).toBe('—')
-    expect(page.node('matter-action-previews').children).toHaveLength(0)
+    expect(sink.messages.at(-1)).toEqual({ kind: 'invalid' })
+    expect(page.node('matter-context-goal').textContent).toBe('当前没有可用的事项投影')
+    expectRegionUntouched(page)
   })
 })

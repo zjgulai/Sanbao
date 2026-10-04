@@ -245,44 +245,13 @@ export function renderSageDocument(): string {
     const requestTimeoutMs = ${SAGE_REQUEST_TIMEOUT_MS};
     const sageWorkspace = document.querySelector('#sage-workspace');
     const matterProjectionPill = document.querySelector('#matter-projection-pill');
-    const matterPanelSource = document.querySelector('#matter-panel-source');
     const matterContextGoal = document.querySelector('#matter-context-goal');
     const matterContextId = document.querySelector('#matter-context-id');
     const matterContextStage = document.querySelector('#matter-context-stage');
     const matterContextRevision = document.querySelector('#matter-context-revision');
-    const matterDetailId = document.querySelector('#matter-detail-id');
-    const matterDetailRevision = document.querySelector('#matter-detail-revision');
-    const matterDetailGoal = document.querySelector('#matter-detail-goal');
-    const matterDetailRole = document.querySelector('#matter-detail-role');
-    const matterDetailStage = document.querySelector('#matter-detail-stage');
-    const matterStageTrack = document.querySelector('#matter-stage-track');
-    const matterStageItems = [
-      ['created', document.querySelector('#matter-stage-created')],
-      ['evidence', document.querySelector('#matter-stage-evidence')],
-      ['clarification', document.querySelector('#matter-stage-clarification')],
-      ['running', document.querySelector('#matter-stage-running')],
-      ['artifact-receipt', document.querySelector('#matter-stage-artifact-receipt')],
-      ['failed-retry', document.querySelector('#matter-stage-failed-retry')],
-    ];
-    const matterDetailActionability = document.querySelector('#matter-detail-actionability');
-    const matterDetailDenial = document.querySelector('#matter-detail-denial');
-    const matterMetricEvidence = document.querySelector('#matter-metric-evidence');
-    const matterMetricUnknown = document.querySelector('#matter-metric-unknown');
-    const matterMetricDependency = document.querySelector('#matter-metric-dependency');
-    const matterClarification = document.querySelector('#matter-clarification');
-    const matterDecisionCount = document.querySelector('#matter-decision-count');
-    const matterDecisionRows = document.querySelector('#matter-decision-rows');
-    const matterAttemptCount = document.querySelector('#matter-attempt-count');
-    const matterAttemptRows = document.querySelector('#matter-attempt-rows');
-    const matterArtifactCount = document.querySelector('#matter-artifact-count');
-    const matterArtifactRows = document.querySelector('#matter-artifact-rows');
-    const matterReceiptCount = document.querySelector('#matter-receipt-count');
-    const matterReceiptRows = document.querySelector('#matter-receipt-rows');
-    const matterActionSource = document.querySelector('#matter-action-source');
-    const matterActionPreviews = document.querySelector('#matter-action-previews');
-    const matterTraceToggle = document.querySelector('#matter-trace-toggle');
-    const matterTraceRail = document.querySelector('#matter-trace-rail');
-    const matterTraceClose = document.querySelector('#matter-trace-close');
+    // ADR-0261 P2: the matter workbench region (heading + focus card + trace rail) is owned by
+    // the React app. This script validates the wire and publishes it through the bridge; it
+    // must not query or write any node inside #sage-matter-region.
     const title = document.querySelector('#state-title');
     const message = document.querySelector('#state-message');
     const retry = document.querySelector('#retry');
@@ -811,178 +780,40 @@ export function renderSageDocument(): string {
       if (node !== null) node.textContent = value;
     }
 
-    function renderMatterStage(stage) {
-      const currentStage = hasOwn(matterStageLabels, stage) ? stage : null;
-      if (matterStageTrack !== null) matterStageTrack.dataset.currentStage = currentStage ?? 'unavailable';
-      for (const [candidate, item] of matterStageItems) {
-        if (item === null) continue;
-        const current = candidate === currentStage;
-        item.dataset.stageState = current ? 'current' : 'idle';
-        item.classList.toggle('is-current', current);
-        item.setAttribute('aria-current', current ? 'step' : 'false');
-      }
+    function setMatterText(node, value) {
+      if (node !== null) node.textContent = value;
     }
 
-    function renderMatterUnavailable(kind) {
+    // ADR-0261 P2: the matter workbench region lives in the React app. This script keeps the
+    // non-region facts (workspace root attributes, sidebar context, status pill) and publishes
+    // the validated matter state through the bridge; it must not write inside #sage-matter-region.
+    function publishMatterRegion(message) {
+      const bridge = globalThis.__SAGE_APP_SET_MATTER__;
+      if (typeof bridge === 'function') bridge(message);
+    }
+
+    function publishMatterUnavailable(kind) {
       const invalid = kind === 'invalid';
       const label = invalid ? 'projection invalid' : 'projection unavailable';
-      const titleText = invalid ? '事项投影格式无效' : '当前没有可用的事项投影';
       if (sageWorkspace !== null) {
         sageWorkspace.dataset.projectionSource = 'unavailable';
         sageWorkspace.dataset.matterRenderState = kind;
       }
       setMatterText(matterProjectionPill, label + ' · 不执行外部动作');
-      setMatterText(matterPanelSource, label);
       setMatterText(matterContextGoal, '当前没有可用的事项投影');
       setMatterText(matterContextId, '—');
       setMatterText(matterContextStage, invalid ? '格式无效' : '未读取');
       setMatterText(matterContextRevision, '—');
-      setMatterText(matterDetailId, '—');
-      setMatterText(matterDetailRevision, '—');
-      setMatterText(matterDetailGoal, titleText);
-      setMatterText(matterDetailRole, '—');
-      setMatterText(matterDetailStage, invalid ? '格式无效' : '未读取');
-      renderMatterStage(null);
-      setMatterText(matterDetailActionability, '已阻断');
-      setMatterText(matterDetailDenial, invalid ? '事项投影格式无效' : '事项投影不可用');
-      setMatterText(matterMetricEvidence, '—');
-      setMatterText(matterMetricUnknown, '—');
-      setMatterText(matterMetricDependency, '—');
-      setMatterText(matterClarification, '事项投影不可用，未读取澄清状态。');
-      if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', true);
-      setMatterText(matterActionSource, '不提交 · ' + label);
-      if (matterActionPreviews !== null) matterActionPreviews.textContent = '';
-      renderMatterTraceUnavailable();
+      publishMatterRegion({ kind: invalid ? 'invalid' : 'unavailable' });
     }
 
-    function appendMatterNode(parent, tagName, className, text) {
-      const node = document.createElement(tagName);
-      if (className !== '') node.className = className;
-      node.textContent = text;
-      parent.appendChild(node);
-      return node;
-    }
-
-    function appendMatterMeta(parent, label, value) {
-      const row = appendMatterNode(parent, 'p', 'sage-preview-meta', '');
-      appendMatterNode(row, 'span', '', label);
-      appendMatterNode(row, 'code', '', value);
-    }
-
-    function appendMatterTraceEntry(parent, title, lines) {
-      const row = appendMatterNode(parent, 'li', 'sage-trace-entry', '');
-      appendMatterNode(row, 'strong', '', title);
-      for (const line of lines) appendMatterNode(row, 'span', '', line);
-    }
-
-    function renderMatterTraceEmpty(rows, count, label) {
-      setMatterText(count, '—');
-      if (rows === null) return;
-      rows.textContent = '';
-      if (typeof document.createElement !== 'function') {
-        rows.textContent = label;
-        return;
-      }
-      appendMatterNode(rows, 'li', 'sage-trace-entry is-empty', label);
-    }
-
-    function renderMatterTraceUnavailable() {
-      renderMatterTraceEmpty(matterDecisionRows, matterDecisionCount, '事项投影不可用，未读取决定。');
-      renderMatterTraceEmpty(matterAttemptRows, matterAttemptCount, '事项投影不可用，未读取执行尝试。');
-      renderMatterTraceEmpty(matterArtifactRows, matterArtifactCount, '事项投影不可用，未读取产物。');
-      renderMatterTraceEmpty(matterReceiptRows, matterReceiptCount, '事项投影不可用，未读取回执。');
-    }
-
-    function renderMatterTrace(viewState) {
-      setMatterText(matterDecisionCount, String(viewState.decisions.length));
-      if (matterDecisionRows !== null) {
-        matterDecisionRows.textContent = '';
-        if (viewState.decisions.length === 0) appendMatterNode(matterDecisionRows, 'li', 'sage-trace-entry is-empty', '当前没有决定记录。');
-        for (const decision of viewState.decisions) {
-          appendMatterTraceEntry(matterDecisionRows, decision.decisionId, [
-            decision.status + ' · ' + decision.revisionId,
-            '范围 ' + decision.actionScope,
-            decision.expiresAt === undefined ? '未声明到期时间' : '到期 ' + decision.expiresAt,
-          ]);
-        }
-      }
-      setMatterText(matterAttemptCount, String(viewState.attempts.length));
-      if (matterAttemptRows !== null) {
-        matterAttemptRows.textContent = '';
-        if (viewState.attempts.length === 0) appendMatterNode(matterAttemptRows, 'li', 'sage-trace-entry is-empty', '当前没有执行尝试。');
-        for (const attempt of viewState.attempts) {
-          appendMatterTraceEntry(matterAttemptRows, attempt.attemptId, [
-            attempt.status + ' · ' + attempt.revisionId,
-            '开始 ' + attempt.startedAt,
-            attempt.endedAt === undefined ? '尚无结束事实' : '结束 ' + attempt.endedAt,
-          ]);
-        }
-      }
-      setMatterText(matterArtifactCount, String(viewState.artifacts.length));
-      if (matterArtifactRows !== null) {
-        matterArtifactRows.textContent = '';
-        if (viewState.artifacts.length === 0) appendMatterNode(matterArtifactRows, 'li', 'sage-trace-entry is-empty', '当前没有产物记录。');
-        for (const artifact of viewState.artifacts) {
-          appendMatterTraceEntry(matterArtifactRows, artifact.artifactId, [
-            artifact.kind + ' · ' + artifact.revisionId,
-            '尝试 ' + artifact.attemptId,
-            '记录 ' + artifact.recordedAt,
-          ]);
-        }
-      }
-      setMatterText(matterReceiptCount, String(viewState.receipts.length));
-      if (matterReceiptRows !== null) {
-        matterReceiptRows.textContent = '';
-        if (viewState.receipts.length === 0) appendMatterNode(matterReceiptRows, 'li', 'sage-trace-entry is-empty', '当前没有回执记录。');
-        for (const receipt of viewState.receipts) {
-          appendMatterTraceEntry(matterReceiptRows, receipt.receiptId, [
-            receipt.verdict + ' · ' + receipt.revisionId,
-            '产物 ' + receipt.artifactId,
-            '责任角色 ' + receipt.actorRoleRef + ' · ' + receipt.recordedAt,
-          ]);
-        }
-      }
-    }
-
-    function renderMatterActionPreviews(viewState) {
-      if (matterActionPreviews === null) return;
-      matterActionPreviews.textContent = '';
-      for (const action of viewState.actions) {
-        const article = document.createElement('article');
-        article.className = 'sage-action-preview-card';
-        article.dataset.actionPreview = action.type;
-        article.dataset.submissionState = 'not-submitted';
-        const head = appendMatterNode(article, 'div', 'sage-action-preview-head', '');
-        appendMatterNode(head, 'span', 'sage-card-label', 'ACTION PREVIEW');
-        appendMatterNode(head, 'strong', '', matterActionLabels[action.type]);
-        appendMatterNode(
-          article,
-          'div',
-          'sage-action-preview-state' + (action.actionability === 'blocked' ? ' is-blocked' : ''),
-          matterActionabilityLabels[action.actionability],
-        );
-        appendMatterMeta(article, 'revision', action.revisionId ?? '服务接线后确定');
-        appendMatterMeta(article, 'scope', action.actionScope ?? '能力恢复检查');
-        appendMatterMeta(
-          article,
-          '权限 · 可用性 · 兼容性',
-          viewState.authorizationState + ' · ' + viewState.availabilityState + ' · ' + viewState.compatibilityOutcome,
-        );
-        appendMatterNode(article, 'p', 'sage-preview-denial', '阻断原因：' + (action.denialReason ?? 'none'));
-        const foot = appendMatterNode(article, 'div', 'sage-preview-foot', '');
-        appendMatterNode(foot, 'span', '', '幂等键：服务接线后生成');
-        appendMatterNode(foot, 'span', 'sage-preview-not-submitted', '预览，不提交');
-        matterActionPreviews.appendChild(article);
-      }
-    }
-
-    function renderMatterProjection(value) {
+    function publishMatterProjection(value) {
       if (value === null) {
-        renderMatterUnavailable('unavailable');
+        publishMatterUnavailable('unavailable');
         return;
       }
       if (!isMatterProjection(value)) {
-        renderMatterUnavailable('invalid');
+        publishMatterUnavailable('invalid');
         return;
       }
       const projectionLabel = value.projectionSource === 'fixture' ? 'fixture projection' : 'live projection';
@@ -992,57 +823,21 @@ export function renderSageDocument(): string {
         sageWorkspace.dataset.matterRenderState = value.projectionSource;
       }
       setMatterText(matterProjectionPill, projectionLabel + ' · 不执行外部动作');
-      setMatterText(matterPanelSource, projectionLabel);
       setMatterText(matterContextGoal, value.matter.goal);
       setMatterText(matterContextId, value.matter.matterId);
       setMatterText(matterContextStage, matterStageLabels[value.matter.stage]);
       setMatterText(matterContextRevision, revisionId);
-      setMatterText(matterDetailId, value.matter.matterId);
-      setMatterText(matterDetailRevision, revisionId);
-      setMatterText(matterDetailGoal, value.matter.goal);
-      setMatterText(matterDetailRole, value.matter.responsiblePartyRoleRef);
-      setMatterText(matterDetailStage, matterStageLabels[value.matter.stage]);
-      renderMatterStage(value.matter.stage);
-      setMatterText(matterDetailActionability, matterActionabilityLabels[value.actionability]);
-      setMatterText(matterDetailDenial, value.denialReason ?? 'none');
-      setMatterText(matterMetricEvidence, String(value.matter.evidenceCount));
-      setMatterText(matterMetricUnknown, String(value.matter.unknownCount));
-      setMatterText(matterMetricDependency, String(value.matter.dependencyCount));
-      setMatterText(
-        matterClarification,
-        value.matter.pendingClarification === undefined
-          ? '当前没有待回答澄清。'
-          : value.matter.pendingClarification.reason + ' · ' + value.matter.pendingClarification.requestedAt,
-      );
-      if (matterDetailActionability !== null) matterDetailActionability.classList.toggle('is-blocked', value.actionability === 'blocked');
-      setMatterText(matterActionSource, '不提交 · ' + value.projectionSource);
-      renderMatterActionPreviews(value);
-      renderMatterTrace(value);
+      publishMatterRegion({ kind: 'projection', projection: value });
     }
 
-    function isMatterTraceDrawerMode() {
-      return typeof globalThis.matchMedia === 'function' && globalThis.matchMedia('(max-width: 900px)').matches;
-    }
-
-    function setMatterTraceOpen(open, restoreFocus) {
-      if (matterTraceRail === null || matterTraceToggle === null) return;
-      const drawerMode = isMatterTraceDrawerMode();
-      const modal = drawerMode && open;
-      matterTraceRail.dataset.drawerOpen = String(open);
-      matterTraceRail.dataset.drawerModal = String(modal);
-      matterTraceRail.classList.toggle('is-open', open);
-      matterTraceToggle.setAttribute('aria-expanded', String(open));
-      matterTraceRail.setAttribute('role', modal ? 'dialog' : 'complementary');
-      matterTraceRail.setAttribute('aria-modal', String(modal));
-      matterTraceRail.setAttribute('aria-hidden', String(!open));
-      if (open && matterTraceClose !== null && typeof matterTraceClose.focus === 'function') matterTraceClose.focus();
-      if (!open && restoreFocus && typeof matterTraceToggle.focus === 'function') matterTraceToggle.focus();
+    function publishAppView(view) {
+      const bridge = globalThis.__SAGE_APP_SET_VIEW__;
+      if (typeof bridge === 'function') bridge(view);
     }
 
     function setView(view) {
       const nextView = panels.some((panel) => panel.dataset.panel === view) ? view : 'matter';
-      if (nextView !== 'matter') setMatterTraceOpen(false, false);
-      if (nextView === 'matter' && !isMatterTraceDrawerMode()) setMatterTraceOpen(true, false);
+      publishAppView(nextView);
       navItems.forEach((item) => {
         const active = item.dataset.view === nextView;
         item.classList.toggle('is-active', active);
@@ -4894,7 +4689,7 @@ export function renderSageDocument(): string {
         const statePayload = await response.json();
         if (isProjectionReadUnavailableRouteDenial(statePayload)) {
           lastStatePayload = null;
-          renderMatterUnavailable('unavailable');
+          publishMatterUnavailable('unavailable');
           renderAuth(undefined);
           render(fallback());
           renderCommand(null);
@@ -4905,7 +4700,7 @@ export function renderSageDocument(): string {
         const payload = parseServiceStateEnvelope(statePayload);
         if (payload === null) {
           lastStatePayload = null;
-          renderMatterUnavailable('invalid');
+          publishMatterUnavailable('invalid');
           renderAuth(undefined);
           render(fallback());
           renderCommand(null);
@@ -4914,7 +4709,7 @@ export function renderSageDocument(): string {
           return;
         }
         lastStatePayload = payload;
-        renderMatterProjection(payload.matter);
+        publishMatterProjection(payload.matter);
         renderAuth(payload.service.auth);
         render(payload.runtime);
         renderCommand(payload.service.command ?? null);
@@ -4958,7 +4753,7 @@ export function renderSageDocument(): string {
         renderDiagnostics(readout !== null && typeof readout === 'object' ? readout.diagnostics : null);
       } catch {
         lastStatePayload = null;
-        renderMatterUnavailable('unavailable');
+        publishMatterUnavailable('unavailable');
         render(fallback());
         renderCapability(undefined);
         renderModelConfig(undefined);
@@ -7367,36 +7162,8 @@ export function renderSageDocument(): string {
       });
     }
 
-    if (matterTraceToggle !== null && matterTraceRail !== null) {
-      matterTraceToggle.addEventListener('click', () => { setMatterTraceOpen(true, false); });
-      matterTraceRail.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          if (typeof event.stopPropagation === 'function') event.stopPropagation();
-          setMatterTraceOpen(false, true);
-          return;
-        }
-        if (event.key !== 'Tab' || matterTraceRail.dataset.drawerModal !== 'true' || matterTraceClose === null) return;
-        event.preventDefault();
-        matterTraceClose.focus();
-      });
-    }
-    if (matterTraceClose !== null) {
-      matterTraceClose.addEventListener('click', () => { setMatterTraceOpen(false, true); });
-    }
-    const matterTraceMedia = typeof globalThis.matchMedia === 'function'
-      ? globalThis.matchMedia('(max-width: 900px)')
-      : null;
-    if (matterTraceMedia !== null && typeof matterTraceMedia.addEventListener === 'function') {
-      matterTraceMedia.addEventListener('change', () => { setMatterTraceOpen(!matterTraceMedia.matches, false); });
-    }
-    if (typeof document.addEventListener === 'function') {
-      document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || matterTraceRail?.dataset.drawerModal !== 'true') return;
-        event.preventDefault();
-        setMatterTraceOpen(false, true);
-      });
-    }
+    // ADR-0261 P2: the trace drawer state machine (open/close, Escape/Tab containment, media
+    // breakpoint, focus restoration) now lives in the React matter region component.
 
     if (userMenu && userMenuPanel) {
       const closeUserMenu = () => {
@@ -7425,7 +7192,6 @@ export function renderSageDocument(): string {
       displayThemeMedia.addEventListener('change', () => { queueMicrotask(() => { void refresh(); }); });
     }
 
-    setMatterTraceOpen(!isMatterTraceDrawerMode(), false);
     setView('matter');
     void refresh();
     // Convergence poll: a login flow outlives the 5s request deadline, so vault transitions

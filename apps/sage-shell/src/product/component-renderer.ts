@@ -206,6 +206,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
         </header>
 
         <section class="sage-panel is-visible" id="panel-matter" role="tabpanel" data-panel="matter" aria-labelledby="view-matter">
+          <div id="sage-matter-region" data-sage-region="matter-workbench" data-matter-region-state="unavailable">
           <div class="sage-section-heading"><div><p class="sage-eyebrow">CURRENT OPERATING MATTER</p><h1>经营事项脉络</h1></div><div class="sage-section-tools"><span class="sage-fixture-pill" id="matter-panel-source">${projectionLabel}</span><button class="sage-secondary-button sage-matter-trace-toggle" id="matter-trace-toggle" type="button" aria-controls="matter-trace-rail" aria-expanded="false">查看事项脉络</button></div></div>
           <div class="sage-matter-workbench" id="matter-workbench">
             <section class="sage-card sage-matter-workbench-main" id="matter-current-work" data-workbench-region="matter-focus" aria-labelledby="matter-detail-goal">
@@ -243,6 +244,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
               <section class="sage-matter-trace-group" aria-labelledby="matter-artifact-title"><div class="sage-trace-group-head"><h3 id="matter-artifact-title">产物</h3><span id="matter-artifact-count">—</span></div><ol id="matter-artifact-rows"></ol></section>
               <section class="sage-matter-trace-group" aria-labelledby="matter-receipt-title"><div class="sage-trace-group-head"><h3 id="matter-receipt-title">回执</h3><span id="matter-receipt-count">—</span></div><ol id="matter-receipt-rows"></ol></section>
             </aside>
+          </div>
           </div>
           <div class="sage-support-heading"><span class="sage-card-label">CONNECTED SURFACES</span><h2>已接线操作面</h2><p>以下入口沿用既有 Application Service 合同；它们不属于上方只读 composer。</p></div>
                     <section class="sage-matter-list-section" aria-label="事项列表">

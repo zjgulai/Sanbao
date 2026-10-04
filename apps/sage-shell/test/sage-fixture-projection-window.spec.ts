@@ -223,6 +223,7 @@ interface ProbeResult {
       readonly navItemCount: number
       readonly navItemIds: readonly string[]
       readonly reactAppMounted: boolean
+      readonly matterRegionState: string | null
     }
     readonly navigationFacts?: {
       readonly requestedStage: string
@@ -491,6 +492,7 @@ function expectFixtureStage(run: ProbeRun, stage: FixtureStage): void {
     workspaceProjectionSource: 'fixture',
     matterId: 'matter:sage.shopify-abi.fixture',
     reactAppMounted: true,
+    matterRegionState: 'fixture',
   })
   expect(result.evidence.stageFacts).toMatchObject({
     trackCurrentStage: stage,
@@ -557,6 +559,7 @@ function expectUnavailableProjection(run: ProbeRun): void {
     matterId: '—',
     matterGoal: '当前没有可用的事项投影',
     reactAppMounted: true,
+    matterRegionState: 'unavailable',
   })
   expect(run.result.evidence.stageFacts).toMatchObject({
     trackCurrentStage: 'unavailable',
