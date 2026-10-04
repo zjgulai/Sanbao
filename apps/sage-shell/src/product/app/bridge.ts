@@ -103,6 +103,59 @@ export interface RunLogResult {
   readonly notice: string
 }
 
+/** One derived side-chat record; fields are read defensively by the view. */
+export interface SideChatItemView {
+  readonly sideChatId?: string
+  readonly execution?: string
+  readonly lastTurnEnd?: unknown
+  readonly createdAt?: unknown
+  readonly atSeq?: unknown
+}
+
+export type SideChatsRegionMessage =
+  | { readonly kind: 'unavailable', readonly code?: string }
+  | { readonly kind: 'read', readonly slot: { readonly state?: string, readonly items?: readonly SideChatItemView[], readonly code?: string } }
+
+export interface SideChatTranscriptResult {
+  readonly kind: 'read' | 'failed'
+  readonly transcript?: readonly { readonly role?: unknown, readonly text?: unknown }[]
+  readonly execution?: string
+  readonly notice?: string
+}
+
+export interface ActionItemView {
+  readonly actionId?: string
+  readonly title?: string
+  readonly state?: string
+  readonly revision?: unknown
+  readonly records?: readonly { readonly recordNo?: unknown, readonly at?: unknown, readonly basis?: { readonly revision?: unknown, readonly title?: unknown, readonly note?: unknown } }[]
+}
+
+export interface CorrectionView {
+  readonly correctionId?: string
+  readonly text?: string
+  readonly original?: { readonly text?: unknown, readonly at?: unknown }
+  readonly receipt?: { readonly state?: string, readonly reason?: unknown, readonly code?: unknown } | null
+}
+
+export interface ProjectView {
+  readonly projectRef?: string
+  readonly name?: string
+  readonly matterRefs?: readonly unknown[]
+}
+
+export interface ActionItemsSlotView {
+  readonly items?: readonly ActionItemView[]
+  readonly corrections?: readonly CorrectionView[]
+  readonly originals?: readonly { readonly text?: string, readonly at?: string | null }[]
+  readonly projectsState?: string
+  readonly projects?: readonly ProjectView[]
+}
+
+export type ActionItemsRegionMessage =
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'read', readonly slot: ActionItemsSlotView }
+
 export interface AppBridgeSnapshot {
   /** Last message per region key (`matter`, `sites`, `tool-results`, ...); absent = unavailable. */
   readonly regions: Readonly<Record<string, unknown>>
@@ -152,6 +205,16 @@ export interface LegacyActions {
   closeArtifactPreview?: () => Promise<unknown>
   setArtifactFullscreen?: (on: boolean) => Promise<void>
   artifactWindow?: (action: 'open' | 'close') => Promise<string>
+  createSideChat?: () => Promise<string>
+  readSideChat?: (sideChatId: string) => Promise<SideChatTranscriptResult>
+  sendSideChat?: (sideChatId: string, text: string) => Promise<{ readonly notice: string, readonly transcript: SideChatTranscriptResult | null }>
+  returnSideChat?: (sideChatId: string, text: string) => Promise<string>
+  createActionItem?: (title: string, note: string | null) => Promise<string | null>
+  actionItemRowAction?: (actionId: string, action: 'start' | 'complete') => Promise<void>
+  submitCorrection?: (original: { readonly text: string, readonly at: string | null } | null, text: string) => Promise<string | null>
+  createProject?: (name: string) => Promise<string | null>
+  assignProject?: (projectRef: string) => Promise<string | null>
+  unassignProject?: () => Promise<string | null>
 }
 
 /** Read one region slice off the store snapshot with a typed default. */

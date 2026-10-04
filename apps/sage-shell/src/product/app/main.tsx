@@ -14,9 +14,11 @@ import { createRoot } from 'react-dom/client'
 import type { JSX } from 'react'
 
 import { createAppBridgeStore } from './bridge.js'
+import { ActionItemsRegion } from './action-items-view.js'
 import { ArtifactRegion } from './artifact-view.js'
 import { MatterRegion } from './matter-view.js'
 import { MonitorRegion } from './monitor-view.js'
+import { SideChatsRegion } from './side-chats-view.js'
 import { SitesRegion } from './sites-view.js'
 import { ToolResultsRegion } from './tool-results-view.js'
 
@@ -66,6 +68,16 @@ if (runMonitorHost !== null) {
 const artifactHost = document.getElementById('sage-region-artifacts')
 if (artifactHost !== null) {
   createRoot(artifactHost).render(<ArtifactRegion store={store} container={artifactHost} />)
+}
+
+const sideChatsHost = document.getElementById('sage-region-side-chats')
+if (sideChatsHost !== null) {
+  createRoot(sideChatsHost).render(<SideChatsRegion store={store} container={sideChatsHost} />)
+}
+
+const actionItemsHost = document.getElementById('sage-region-action-items')
+if (actionItemsHost !== null) {
+  createRoot(actionItemsHost).render(<ActionItemsRegion store={store} container={actionItemsHost} />)
 }
 
 const markerHost = document.getElementById('sage-app-root')

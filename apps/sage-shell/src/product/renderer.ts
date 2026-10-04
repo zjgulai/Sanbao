@@ -349,25 +349,6 @@ export function renderSageDocument(): string {
     const editDraftWritebackNow = document.querySelector('#edit-draft-writeback-now');
     const editDraftWritebackCancel = document.querySelector('#edit-draft-writeback-cancel');
     const editDraftResult = document.querySelector('#edit-draft-result');
-    const actionItemNote = document.querySelector('#action-item-note');
-    const actionItemTitle = document.querySelector('#action-item-title');
-    const actionItemBody = document.querySelector('#action-item-body');
-    const actionItemCreate = document.querySelector('#action-item-create');
-    const actionItemRows = document.querySelector('#action-item-rows');
-    const actionRecordNote = document.querySelector('#action-record-note');
-    const actionRecordRows = document.querySelector('#action-record-rows');
-    const correctionOriginal = document.querySelector('#correction-original');
-    const correctionText = document.querySelector('#correction-text');
-    const correctionSubmit = document.querySelector('#correction-submit');
-    const correctionNote = document.querySelector('#correction-note');
-    const correctionRows = document.querySelector('#correction-rows');
-    const projectName = document.querySelector('#project-name');
-    const projectCreate = document.querySelector('#project-create');
-    const projectSelect = document.querySelector('#project-select');
-    const projectAssign = document.querySelector('#project-assign');
-    const projectUnassign = document.querySelector('#project-unassign');
-    const projectNote = document.querySelector('#project-note');
-    const projectRows = document.querySelector('#project-rows');
     const matterAdminGround = document.querySelector('#matter-admin-ground');
     const matterAdminArchive = document.querySelector('#matter-admin-archive');
     const matterAdminRestore = document.querySelector('#matter-admin-restore');
@@ -500,19 +481,6 @@ export function renderSageDocument(): string {
     const attachmentPick = document.querySelector('#attachment-pick');
     const attachmentNote = document.querySelector('#attachment-note');
     const attachmentItems = document.querySelector('#attachment-items');
-    const sideChatCreate = document.querySelector('#side-chat-create');
-    const sideChatNote = document.querySelector('#side-chat-note');
-    const sideChatRows = document.querySelector('#side-chat-rows');
-    const sideChatView = document.querySelector('#side-chat-view');
-    const sideChatViewLabel = document.querySelector('#side-chat-view-label');
-    const sideChatTranscript = document.querySelector('#side-chat-transcript');
-    const sideChatInput = document.querySelector('#side-chat-input');
-    const sideChatSend = document.querySelector('#side-chat-send');
-    const sideChatReturn = document.querySelector('#side-chat-return');
-    const sideChatViewClose = document.querySelector('#side-chat-view-close');
-    const sideChatViewNote = document.querySelector('#side-chat-view-note');
-    let sideChatLocalNotice = null;
-    let currentSideChatId = null;
     const navMatterCount = document.querySelector('#nav-matter-count');
     const matterListAll = document.querySelector('#matter-list-all');
     const matterListNote = document.querySelector('#matter-list-note');
@@ -1429,13 +1397,6 @@ export function renderSageDocument(): string {
     let currentWritebackConfirmationId = null;
     // 028：行动项/更正/项目面。更正的原要求候选来自会话投影（已发送的 user 条目）；
     // 它们的身份 = 当时文本+时间，选中的索引在本页保留（轮询重填时按签名守卫）。
-    let actionItemLocalNotice = null;
-    let currentActionItemId = null;
-    let correctionLocalNotice = null;
-    let correctionOriginals = [];
-    let correctionOriginalsSignature = '';
-    let selectedOriginalIndex = 0;
-    let projectLocalNotice = null;
     // 029：事项管理面。选择集是本页本地的（复选框），批量结果与重命名回读来自投影；
     // 拒绝提示走 local-notice 守卫。归档状态本身由 022 的列表生命周期消费。
     let matterAdminLocalNotice = null;
@@ -1555,205 +1516,24 @@ export function renderSageDocument(): string {
       };
     }
 
-    function correctionReceiptText(receipt) {
-      if (receipt === null || typeof receipt !== 'object') return '回执未知';
-      if (receipt.state === 'received') return '已接收（受理回执；受理不等于生效）';
-      if (receipt.state === 'pending-application') {
-        const reason = receipt.reason === 'queued' ? '在队列中' : receipt.reason === 'deferred' ? '在待继续中' : '尚未观察到消费读数';
-        return '待应用（' + reason + '，等一次安全派发）';
-      }
-      if (receipt.state === 'effective') return '已生效（队列消费读数；不撤销既有外部效果、不重放旧动作）';
-      if (receipt.state === 'refused') return '被拒绝（' + String(receipt.code) + '）';
-      return '回执未知';
-    }
-
-    function renderActionItems(payload) {
-      if (actionItemRows === null) return;
+    // Batch 18 / P3（ADR-0261）：行动项/更正/项目卡归 React 区域；原要求候选（会话投影里
+    // 已发送的 user 条目）仍在这里抽取后随槽发布。
+    function publishActionItemsSlice(payload) {
       const status = actionItemsOf(payload);
+      const projectsSlot = payload !== null && typeof payload === 'object' ? payload.projects : null;
+      const projectsState = projectsSlot !== null && typeof projectsSlot === 'object' && typeof projectsSlot.state === 'string' ? projectsSlot.state : 'unavailable';
+      const projects = projectsState === 'read' && Array.isArray(projectsSlot.projects) ? projectsSlot.projects : [];
+      const channel = payload !== null && typeof payload === 'object' && payload.sessionChannel !== null && typeof payload.sessionChannel === 'object'
+        ? payload.sessionChannel : null;
+      const transcript = channel !== null && Array.isArray(channel.transcript) ? channel.transcript : [];
+      const originals = transcript
+        .filter((entry) => entry !== null && typeof entry === 'object' && entry.role === 'user' && typeof entry.text === 'string' && entry.text !== '')
+        .map((entry) => ({ text: entry.text, at: typeof entry.at === 'string' ? entry.at : null }));
       if (status.state !== 'read') {
-        actionItemRows.textContent = '';
-        if (actionRecordRows !== null) actionRecordRows.textContent = '';
-        if (actionRecordNote !== null) actionRecordNote.textContent = '';
-        if (correctionRows !== null) correctionRows.textContent = '';
-        if (actionItemNote !== null && actionItemLocalNotice === null) actionItemNote.textContent = '未核验：这一版还没有接上行动项存储。';
+        publishRegion('action-items', { kind: 'unavailable' });
         return;
       }
-      actionItemRows.textContent = '';
-      const items = status.items;
-      const current = items.find((entry) => entry !== null && typeof entry === 'object' && entry.actionId === currentActionItemId)
-        ?? items[items.length - 1];
-      for (const entry of items) {
-        if (entry === null || typeof entry !== 'object' || typeof entry.actionId !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.actionItemId = entry.actionId;
-        const title = document.createElement('strong');
-        title.textContent = typeof entry.title === 'string' ? entry.title : entry.actionId;
-        row.appendChild(title);
-        const stateTag = document.createElement('span');
-        stateTag.className = 'sage-roster-tag ' + (entry.state === 'done' ? 'is-ok' : '');
-        stateTag.textContent = entry.state === 'done' ? '已完成（≠交付验收）' : entry.state === 'in-progress' ? '进行中' : '未开始';
-        row.appendChild(stateTag);
-        const revisionTag = document.createElement('span');
-        revisionTag.className = 'sage-roster-tag';
-        revisionTag.textContent = '第 ' + String(entry.revision) + ' 版 · 记录 ' + String(Array.isArray(entry.records) ? entry.records.length : 0) + ' 次';
-        row.appendChild(revisionTag);
-        if (entry.state !== 'done') {
-          const startButton = document.createElement('button');
-          startButton.className = 'sage-row-button';
-          startButton.type = 'button';
-          startButton.dataset.actionItemAction = 'start';
-          startButton.textContent = '登记一次执行';
-          row.appendChild(startButton);
-        }
-        const doneButton = document.createElement('button');
-        doneButton.className = 'sage-row-button';
-        doneButton.type = 'button';
-        doneButton.dataset.actionItemAction = 'complete';
-        doneButton.textContent = '标记完成';
-        row.appendChild(doneButton);
-        actionItemRows.appendChild(row);
-      }
-      if (current === undefined || current === null || typeof current !== 'object') {
-        currentActionItemId = null;
-        if (actionRecordRows !== null) actionRecordRows.textContent = '';
-        if (actionRecordNote !== null) actionRecordNote.textContent = '';
-      } else {
-        currentActionItemId = current.actionId;
-        if (actionRecordNote !== null) {
-          const records = Array.isArray(current.records) ? current.records : [];
-          actionRecordNote.textContent = records.length === 0
-            ? '「' + String(current.title) + '」还没有执行记录——完成只是状态变更，不代表执行成功。'
-            : '「' + String(current.title) + '」的执行记录（冻结登记当时的依据版本）：';
-        }
-        if (actionRecordRows !== null) {
-          actionRecordRows.textContent = '';
-          const records = Array.isArray(current.records) ? current.records : [];
-          for (const record of records) {
-            if (record === null || typeof record !== 'object') continue;
-            const basis = record.basis !== null && typeof record.basis === 'object' ? record.basis : {};
-            const row = document.createElement('li');
-            row.className = 'sage-roster-row';
-            row.dataset.recordNo = String(record.recordNo ?? '');
-            const no = document.createElement('span');
-            no.className = 'sage-roster-tag';
-            no.textContent = '第 ' + String(record.recordNo ?? '?') + ' 次';
-            row.appendChild(no);
-            const basisTag = document.createElement('span');
-            basisTag.textContent = '依据 第 ' + String(basis.revision ?? '?') + ' 版：「' + String(basis.title ?? '') + '」' + (typeof basis.note === 'string' && basis.note !== '' ? ' · ' + basis.note : '');
-            row.appendChild(basisTag);
-            const at = document.createElement('span');
-            at.className = 'sage-roster-tag';
-            at.textContent = typeof record.at === 'string' ? record.at : '';
-            row.appendChild(at);
-            actionRecordRows.appendChild(row);
-          }
-        }
-      }
-      if (correctionRows !== null) {
-        correctionRows.textContent = '';
-        for (const entry of status.corrections) {
-          if (entry === null || typeof entry !== 'object' || typeof entry.correctionId !== 'string') continue;
-          const row = document.createElement('li');
-          row.className = 'sage-roster-row';
-          row.dataset.correctionId = entry.correctionId;
-          const text = document.createElement('strong');
-          text.textContent = typeof entry.text === 'string' ? entry.text : entry.correctionId;
-          row.appendChild(text);
-          const original = entry.original !== null && typeof entry.original === 'object' ? entry.original : {};
-          const originalTag = document.createElement('span');
-          originalTag.className = 'sage-roster-tag';
-          originalTag.textContent = '关联原要求：「' + String(original.text ?? '') + '」' + (typeof original.at === 'string' ? ' · ' + original.at : '');
-          row.appendChild(originalTag);
-          const receiptTag = document.createElement('span');
-          receiptTag.className = 'sage-roster-tag ' + (entry.receipt !== null && typeof entry.receipt === 'object' && entry.receipt.state === 'effective' ? 'is-ok' : entry.receipt !== null && typeof entry.receipt === 'object' && entry.receipt.state === 'refused' ? 'is-blocked' : '');
-          receiptTag.textContent = correctionReceiptText(entry.receipt);
-          row.appendChild(receiptTag);
-          correctionRows.appendChild(row);
-        }
-      }
-      // 原要求候选＝会话投影里已发送的 user 条目。签名守卫：会话没变就不重填，别吞掉用户的选择。
-      if (correctionOriginal !== null) {
-        const channel = payload !== null && typeof payload === 'object' && payload.sessionChannel !== null && typeof payload.sessionChannel === 'object'
-          ? payload.sessionChannel : null;
-        const transcript = channel !== null && Array.isArray(channel.transcript) ? channel.transcript : [];
-        const originals = transcript
-          .filter((entry) => entry !== null && typeof entry === 'object' && entry.role === 'user' && typeof entry.text === 'string' && entry.text !== '')
-          .map((entry) => ({ text: entry.text, at: typeof entry.at === 'string' ? entry.at : null }));
-        const signature = originals.map((entry) => entry.at + '\\u0000' + entry.text).join('\\u0001');
-        if (signature !== correctionOriginalsSignature) {
-          correctionOriginalsSignature = signature;
-          correctionOriginals = originals;
-          correctionOriginal.textContent = '';
-          if (originals.length === 0) {
-            const option = document.createElement('option');
-            option.value = 'none';
-            option.textContent = '（还没有已发送的消息）';
-            correctionOriginal.appendChild(option);
-            selectedOriginalIndex = 0;
-          } else {
-            originals.forEach((entry, index) => {
-              const option = document.createElement('option');
-              option.value = String(index);
-              option.textContent = entry.text.length > 40 ? entry.text.slice(0, 40) + '…' : entry.text;
-              correctionOriginal.appendChild(option);
-            });
-            if (selectedOriginalIndex >= originals.length) selectedOriginalIndex = originals.length - 1;
-            correctionOriginal.value = String(selectedOriginalIndex);
-          }
-        }
-      }
-    }
-
-    function renderProjects(payload) {
-      if (projectRows === null) return;
-      const slot = payload !== null && typeof payload === 'object' ? payload.projects : null;
-      const state = slot !== null && typeof slot === 'object' && typeof slot.state === 'string' ? slot.state : 'unavailable';
-      if (state !== 'read') {
-        projectRows.textContent = '';
-        if (projectSelect !== null) projectSelect.textContent = '';
-        if (projectNote !== null && projectLocalNotice === null) projectNote.textContent = '未核验：这一版还没有接上项目存储。';
-        return;
-      }
-      const projects = Array.isArray(slot.projects) ? slot.projects : [];
-      const selected = projectSelect !== null && typeof projectSelect.value === 'string' ? projectSelect.value : '';
-      if (projectSelect !== null) {
-        projectSelect.textContent = '';
-        for (const entry of projects) {
-          if (entry === null || typeof entry !== 'object' || typeof entry.projectRef !== 'string') continue;
-          const option = document.createElement('option');
-          option.value = entry.projectRef;
-          option.textContent = (typeof entry.name === 'string' ? entry.name : entry.projectRef) + '（' + String(Array.isArray(entry.matterRefs) ? entry.matterRefs.length : 0) + ' 个事项）';
-          projectSelect.appendChild(option);
-        }
-        if (projects.length === 0) {
-          const option = document.createElement('option');
-          option.value = 'none';
-          option.textContent = '（还没有项目）';
-          projectSelect.appendChild(option);
-        } else if (selected !== '' && projects.some((entry) => entry !== null && typeof entry === 'object' && entry.projectRef === selected)) {
-          projectSelect.value = selected;
-        }
-      }
-      projectRows.textContent = '';
-      for (const entry of projects) {
-        if (entry === null || typeof entry !== 'object' || typeof entry.projectRef !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.projectRef = entry.projectRef;
-        const name = document.createElement('strong');
-        name.textContent = typeof entry.name === 'string' ? entry.name : entry.projectRef;
-        row.appendChild(name);
-        const count = document.createElement('span');
-        count.className = 'sage-roster-tag';
-        count.textContent = String(Array.isArray(entry.matterRefs) ? entry.matterRefs.length : 0) + ' 个事项（引用同一事项记录，复制不了事实）';
-        row.appendChild(count);
-        const refs = document.createElement('span');
-        refs.className = 'sage-roster-tag';
-        refs.textContent = Array.isArray(entry.matterRefs) && entry.matterRefs.length > 0 ? entry.matterRefs.join('、') : '（暂无归属事项）';
-        row.appendChild(refs);
-        projectRows.appendChild(row);
-      }
+      publishRegion('action-items', { kind: 'read', slot: { items: status.items, corrections: status.corrections, originals, projectsState, projects } });
     }
 
     // 029：事项管理卡。行来自 022 的列表事实（同一批 items，含归档行——筛选只影响 D0 的显示）。
@@ -3660,48 +3440,21 @@ export function renderSageDocument(): string {
     registerMatterContextSelection(matterRowsProgress);
 
     // 024：侧聊列表（派生记录）。打开/发送只动子会话；带回主对话是显式动作。
-    function renderSideChats(payload) {
-      if (sideChatRows === null) return;
+    // Batch 18 / P3（ADR-0261）：侧聊卡归 React 区域；这里只发布 payload 槽。
+    function publishSideChatsSlice(payload) {
       const status = payload !== null && typeof payload === 'object' && payload.sideChats !== null && typeof payload.sideChats === 'object'
         ? payload.sideChats
         : null;
       const known = status !== null && typeof status.state === 'string';
-      sideChatRows.textContent = '';
-      if (!known || status.state !== 'read') {
-        if (sideChatNote !== null && sideChatLocalNotice === null) {
-          sideChatNote.textContent = !known ? '侧聊未核验：这一版还没有接上侧聊记录。'
-            : '侧聊未核验：' + String(status.code ?? 'unknown') + '。';
-        }
+      if (!known) {
+        publishRegion('side-chats', { kind: 'unavailable' });
         return;
       }
-      const items = Array.isArray(status.items) ? status.items : [];
-      for (const item of items) {
-        if (item === null || typeof item !== 'object' || typeof item.sideChatId !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.sideChat = item.sideChatId;
-        const tag = document.createElement('span');
-        tag.className = 'sage-roster-tag';
-        tag.textContent = item.execution === 'executing' ? '侧聊 · 执行中'
-          : item.execution === 'not-read' ? '侧聊 · 未读'
-            : item.lastTurnEnd !== null ? '侧聊 · 本轮已结束（' + String(item.lastTurnEnd) + '）' : '侧聊 · 空闲';
-        row.appendChild(tag);
-        const id = document.createElement('span');
-        id.textContent = item.sideChatId + '（派生自 ' + String(item.createdAt ?? '') + (item.atSeq === null ? ' · 从最后一个完成轮' : ' · 锚点 ' + String(item.atSeq)) + '）';
-        row.appendChild(id);
-        const view = document.createElement('button');
-        view.className = 'sage-row-button';
-        view.type = 'button';
-        view.dataset.sideChatAction = 'view';
-        view.dataset.sideChat = item.sideChatId;
-        view.textContent = '单独回看';
-        row.appendChild(view);
-        sideChatRows.appendChild(row);
+      if (status.state !== 'read') {
+        publishRegion('side-chats', { kind: 'unavailable', code: typeof status.code === 'string' ? status.code : 'unknown' });
+        return;
       }
-      if (sideChatNote !== null && sideChatLocalNotice === null) {
-        sideChatNote.textContent = items.length === 0 ? '还没有侧聊；派生一条不会改动主对话历史。'
-          : String(items.length) + ' 条侧聊记录（独立投影，不混排进主对话）。';
-      }
+      publishRegion('side-chats', { kind: 'read', slot: status });
     }
 
     async function postSideChat(body) {
@@ -3718,121 +3471,74 @@ export function renderSageDocument(): string {
       return outcome;
     }
 
-    function renderSideTranscript(outcome) {
-      if (sideChatTranscript === null) return;
-      sideChatTranscript.textContent = '';
-      const channel = outcome !== null && typeof outcome === 'object' && outcome.channel !== null && typeof outcome.channel === 'object' ? outcome.channel : null;
-      const transcript = channel !== null && Array.isArray(channel.transcript) ? channel.transcript : [];
-      for (const entry of transcript) {
-        if (entry === null || typeof entry !== 'object' || typeof entry.text !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.sideChatEntry = String(entry.role);
-        const tag = document.createElement('span');
-        tag.className = 'sage-roster-tag';
-        tag.textContent = entry.role === 'user' ? '我（侧聊回显）' : '助手 · 历史';
-        row.appendChild(tag);
-        const body = document.createElement('span');
-        body.textContent = entry.text;
-        row.appendChild(body);
-        sideChatTranscript.appendChild(row);
-      }
-      if (sideChatViewNote !== null && sideChatLocalNotice === null) {
-        const execution = channel !== null && typeof channel.execution === 'string' ? channel.execution : 'idle';
-        sideChatViewNote.textContent = execution === 'executing' ? '子会话执行中（侧聊内容仍与主对话独立）。' : '';
-      }
+    // Batch 18：侧聊的四个具名动作留在 wire 侧（create 经 currentSendContext 读关联卡选择）；
+    // React 只应用视图态与返回的 notice/transcript。
+    function createSideChat() {
+      return (async () => {
+        const context = currentSendContext();
+        if (context === null) return '先在上面选好事项与工作区：派生不会自动替你挑一个。';
+        const outcome = await postSideChat({ action: 'create', matterRef: context.matterRef });
+        const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
+        if (state === 'created') {
+          return '已派生侧聊 ' + String(outcome.item && outcome.item.sideChatId) + '（子会话，独立上下文；主对话历史未改动）。';
+        }
+        return '派生没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '（会如实说明是"尚无已完成轮"还是其他原因）。';
+      })();
     }
 
-    if (sideChatCreate !== null) {
-      sideChatCreate.addEventListener('click', () => {
-        const context = currentSendContext();
-        if (context === null) {
-          sideChatLocalNotice = '先在上面选好事项与工作区：派生不会自动替你挑一个。';
-          if (sideChatNote !== null) sideChatNote.textContent = sideChatLocalNotice;
-          return;
+    function readSideChat(sideChatId) {
+      return (async () => {
+        const outcome = await postSideChat({ action: 'read', sideChatId });
+        if (outcome === null || typeof outcome !== 'object' || outcome.state !== 'read') {
+          return { kind: 'failed', notice: '回看失败：' + String((outcome && outcome.code) ?? 'unknown') + '。' };
         }
-        sideChatLocalNotice = null;
-        sideChatCreate.disabled = true;
-        void postSideChat({ action: 'create', matterRef: context.matterRef }).then((outcome) => {
-          const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
-          if (state === 'created') {
-            sideChatLocalNotice = '已派生侧聊 ' + String(outcome.item && outcome.item.sideChatId) + '（子会话，独立上下文；主对话历史未改动）。';
-          } else {
-            sideChatLocalNotice = '派生没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '（会如实说明是"尚无已完成轮"还是其他原因）。';
-          }
-          if (sideChatNote !== null) sideChatNote.textContent = sideChatLocalNotice;
-        }).finally(() => { if (sideChatCreate !== null) sideChatCreate.disabled = false; });
-      });
+        const channel = outcome.channel !== null && typeof outcome.channel === 'object' ? outcome.channel : null;
+        return {
+          kind: 'read',
+          transcript: channel !== null && Array.isArray(channel.transcript) ? channel.transcript : [],
+          execution: channel !== null && typeof channel.execution === 'string' ? channel.execution : 'idle',
+        };
+      })();
     }
-    if (sideChatRows !== null) {
-      sideChatRows.addEventListener('click', (event) => {
-        const button = event.target?.closest?.('[data-side-chat-action]') ?? null;
-        if (button === null || button.disabled) return;
-        const sideChatId = typeof button.dataset.sideChat === 'string' ? button.dataset.sideChat : '';
-        if (sideChatId === '') return;
-        sideChatLocalNotice = null;
-        button.disabled = true;
-        void postSideChat({ action: 'read', sideChatId }).then((outcome) => {
-          if (outcome === null || typeof outcome !== 'object' || outcome.state !== 'read') {
-            sideChatLocalNotice = '回看失败：' + String((outcome && outcome.code) ?? 'unknown') + '。';
-            if (sideChatNote !== null) sideChatNote.textContent = sideChatLocalNotice;
-            return;
-          }
-          currentSideChatId = sideChatId;
-          if (sideChatView !== null) sideChatView.hidden = false;
-          if (sideChatViewLabel !== null) sideChatViewLabel.textContent = '侧聊内容 · ' + sideChatId + '（独立于主对话）';
-          renderSideTranscript(outcome);
-        }).finally(() => { if (button !== null) button.disabled = false; });
-      });
-    }
-    if (sideChatSend !== null) {
-      sideChatSend.addEventListener('click', () => {
-        const text = sideChatInput !== null && typeof sideChatInput.value === 'string' ? sideChatInput.value.trim() : '';
-        if (currentSideChatId === null || text === '') {
-          sideChatLocalNotice = '先打开一条侧聊并写好输入。';
-          if (sideChatViewNote !== null) sideChatViewNote.textContent = sideChatLocalNotice;
-          return;
+
+    function sendSideChat(sideChatId, text) {
+      return (async () => {
+        const trimmed = typeof text === 'string' ? text.trim() : '';
+        if (typeof sideChatId !== 'string' || sideChatId === '' || trimmed === '') {
+          return { notice: '先打开一条侧聊并写好输入。', transcript: null };
         }
-        sideChatLocalNotice = null;
-        sideChatSend.disabled = true;
-        void postSideChat({ action: 'send', sideChatId: currentSideChatId, text }).then((outcome) => {
-          const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
-          if (state === 'accepted') {
-            sideChatLocalNotice = '已发送到侧聊（受理≠执行；这条只在子会话里）。';
-          } else {
-            sideChatLocalNotice = '发送没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '（主对话不受影响）。';
+        const outcome = await postSideChat({ action: 'send', sideChatId, text: trimmed });
+        const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
+        const notice = state === 'accepted' ? '已发送到侧聊（受理≠执行；这条只在子会话里）。'
+          : '发送没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '（主对话不受影响）。';
+        let transcript = null;
+        if (state === 'accepted') {
+          const fresh = await postSideChat({ action: 'read', sideChatId });
+          if (fresh !== null && typeof fresh === 'object' && fresh.state === 'read') {
+            const channel = fresh.channel !== null && typeof fresh.channel === 'object' ? fresh.channel : null;
+            transcript = {
+              kind: 'read',
+              transcript: channel !== null && Array.isArray(channel.transcript) ? channel.transcript : [],
+              execution: channel !== null && typeof channel.execution === 'string' ? channel.execution : 'idle',
+            };
           }
-          if (sideChatViewNote !== null) sideChatViewNote.textContent = sideChatLocalNotice;
-          return postSideChat({ action: 'read', sideChatId: currentSideChatId }).then((fresh) => {
-            if (fresh !== null && typeof fresh === 'object' && fresh.state === 'read') renderSideTranscript(fresh);
-          });
-        }).finally(() => { if (sideChatSend !== null) sideChatSend.disabled = false; });
-      });
-    }
-    if (sideChatReturn !== null) {
-      sideChatReturn.addEventListener('click', () => {
-        const text = sideChatInput !== null && typeof sideChatInput.value === 'string' ? sideChatInput.value.trim() : '';
-        if (currentSideChatId === null || text === '') {
-          sideChatLocalNotice = '先打开一条侧聊并写好要带回的文本。';
-          if (sideChatViewNote !== null) sideChatViewNote.textContent = sideChatLocalNotice;
-          return;
         }
-        sideChatLocalNotice = null;
-        sideChatReturn.disabled = true;
-        void postSideChat({ action: 'return', sideChatId: currentSideChatId, text }).then((outcome) => {
-          const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
-          sideChatLocalNotice = state === 'accepted'
-            ? '已把这段文本作为主对话输入发出（受理≠执行；侧聊历史未改动）。'
-            : '带回没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '。';
-          if (sideChatViewNote !== null) sideChatViewNote.textContent = sideChatLocalNotice;
-        }).finally(() => { if (sideChatReturn !== null) sideChatReturn.disabled = false; });
-      });
+        return { notice, transcript };
+      })();
     }
-    if (sideChatViewClose !== null) {
-      sideChatViewClose.addEventListener('click', () => {
-        currentSideChatId = null;
-        if (sideChatView !== null) sideChatView.hidden = true;
-      });
+
+    function returnSideChat(sideChatId, text) {
+      return (async () => {
+        const trimmed = typeof text === 'string' ? text.trim() : '';
+        if (typeof sideChatId !== 'string' || sideChatId === '' || trimmed === '') {
+          return '先打开一条侧聊并写好要带回的文本。';
+        }
+        const outcome = await postSideChat({ action: 'return', sideChatId, text: trimmed });
+        const state = outcome !== null && typeof outcome === 'object' ? outcome.state : '';
+        return state === 'accepted'
+          ? '已把这段文本作为主对话输入发出（受理≠执行；侧聊历史未改动）。'
+          : '带回没有完成：' + String((outcome && outcome.code) ?? 'unknown') + '。';
+      })();
     }
 
     // 021：搜索两区。事项=本地匹配；会话=运行时检索（不可用与"无结果"分开说）。命中只读。
@@ -4426,8 +4132,7 @@ export function renderSageDocument(): string {
         renderFileReferences(Array.isArray(payload.fileReferences) ? payload.fileReferences : []);
         renderFileUse(payload.fileReferenceUse ?? null);
         renderEditDrafts(payload);
-        renderActionItems(payload);
-        renderProjects(payload);
+        publishActionItemsSlice(payload);
         renderMatterAdmin(payload);
         renderMatterGroups(payload);
         publishRunMonitorSlice(payload);
@@ -4446,7 +4151,7 @@ export function renderSageDocument(): string {
         publishToolResultsSlice(payload);
         publishSitesSlice(payload);
         renderMatterList(payload);
-        renderSideChats(payload);
+        publishSideChatsSlice(payload);
         renderPreferences(payload.preferences ?? null);
         renderSettingsLeaves(Array.isArray(payload.settingsLeaves) ? payload.settingsLeaves : []);
         const readout = isRecord(payload.readout) ? payload.readout : null;
@@ -4771,142 +4476,70 @@ export function renderSageDocument(): string {
       queueMicrotask(() => { void refresh(); });
     }
 
-    if (actionItemCreate !== null) {
-      actionItemCreate.addEventListener('click', () => {
+    // Batch 18：行动项/更正/项目的具名动作留在 wire 侧（linkMatter 读取仍在这里完成）；
+    // React 把它的视图态（所选原要求、所选项目）作为参数传入。
+    function createActionItem(title, note) {
+      return (async () => {
         const matterRef = linkMatter !== null && typeof linkMatter.value === 'string' ? linkMatter.value : '';
-        const title = actionItemTitle !== null && typeof actionItemTitle.value === 'string' ? actionItemTitle.value.trim() : '';
-        if (matterRef === '') {
-          actionItemLocalNotice = '先在「事项 ↔ 工作区关联」里选好事项：行动项属于某个事项。';
-          if (actionItemNote !== null) actionItemNote.textContent = actionItemLocalNotice;
-          return;
-        }
-        if (title === '') {
-          actionItemLocalNotice = '先写一个行动项标题（≤200 字）。';
-          if (actionItemNote !== null) actionItemNote.textContent = actionItemLocalNotice;
-          return;
-        }
-        actionItemLocalNotice = null;
-        const body = actionItemBody !== null && typeof actionItemBody.value === 'string' && actionItemBody.value.trim() !== ''
-          ? actionItemBody.value.trim() : null;
-        actionItemCreate.disabled = true;
-        void postActionItem('/.sage/action-items', { action: 'create', matterRef, title, ...(body === null ? {} : { note: body }) })
-          .finally(() => { if (actionItemCreate !== null) actionItemCreate.disabled = false; });
-      });
+        const trimmedTitle = typeof title === 'string' ? title.trim() : '';
+        if (matterRef === '') return '先在「事项 ↔ 工作区关联」里选好事项：行动项属于某个事项。';
+        if (trimmedTitle === '') return '先写一个行动项标题（≤200 字）。';
+        await postActionItem('/.sage/action-items', { action: 'create', matterRef, title: trimmedTitle, ...(note === null || note === undefined ? {} : { note }) });
+        return null;
+      })();
     }
 
-    if (actionItemRows !== null) {
-      actionItemRows.addEventListener('click', (event) => {
-        const button = event.target?.closest?.('[data-action-item-action]') ?? null;
-        if (button !== null) {
-          if (button.disabled === true) return;
-          const row = button.closest('[data-action-item-id]');
-          const actionId = row === null ? null : row.dataset.actionItemId;
-          if (typeof actionId === 'string' && actionId !== '') {
-            button.disabled = true;
-            void postActionItem('/.sage/action-items', { action: button.dataset.actionItemAction, actionId });
-          }
-          return;
-        }
-        const row = event.target?.closest?.('[data-action-item-id]') ?? null;
-        if (row === null) return;
-        const actionId = row.dataset.actionItemId;
-        if (typeof actionId !== 'string' || actionId === '' || actionId === currentActionItemId) return;
-        currentActionItemId = actionId;
-        queueMicrotask(() => { void refresh(); });
-      });
+    function actionItemRowAction(actionId, action) {
+      return (async () => {
+        if (typeof actionId !== 'string' || actionId === '') return;
+        await postActionItem('/.sage/action-items', { action, actionId });
+      })();
     }
 
-    if (correctionOriginal !== null) {
-      correctionOriginal.addEventListener('change', () => {
-        const index = Number.parseInt(String(correctionOriginal.value), 10);
-        if (!Number.isSafeInteger(index) || index < 0 || index >= correctionOriginals.length) return;
-        selectedOriginalIndex = index;
-        // 「更正此要求」= 编辑副本（D-057）：把选中原要求填进更正框，原消息本身不动。
-        if (correctionText !== null) correctionText.value = correctionOriginals[index].text;
-      });
-    }
-
-    if (correctionSubmit !== null) {
-      correctionSubmit.addEventListener('click', () => {
+    function submitCorrection(original, text) {
+      return (async () => {
         const context = currentSendContext();
-        const entry = correctionOriginals[selectedOriginalIndex];
-        const text = correctionText !== null && typeof correctionText.value === 'string' ? correctionText.value.trim() : '';
-        if (context === null) {
-          correctionLocalNotice = '先选好事项与工作区：更正经主对话的同一发送路径发出。';
-          if (correctionNote !== null) correctionNote.textContent = correctionLocalNotice;
-          return;
-        }
-        if (entry === undefined) {
-          correctionLocalNotice = '先选一条原要求（已发送的消息）。';
-          if (correctionNote !== null) correctionNote.textContent = correctionLocalNotice;
-          return;
-        }
-        if (text === '') {
-          correctionLocalNotice = '更正副本还是空的——先写清要改什么。';
-          if (correctionNote !== null) correctionNote.textContent = correctionLocalNotice;
-          return;
-        }
-        correctionLocalNotice = null;
-        correctionSubmit.disabled = true;
-        void postActionItem('/.sage/corrections', {
+        const trimmed = typeof text === 'string' ? text.trim() : '';
+        if (context === null) return '先选好事项与工作区：更正经主对话的同一发送路径发出。';
+        if (original === null || original === undefined) return '先选一条原要求（已发送的消息）。';
+        if (trimmed === '') return '更正副本还是空的——先写清要改什么。';
+        await postActionItem('/.sage/corrections', {
           matterRef: context.matterRef,
           workspaceRoot: context.workspaceRoot,
-          originalText: entry.text,
-          ...(entry.at === null ? {} : { originalAt: entry.at }),
-          text,
-        }).finally(() => { if (correctionSubmit !== null) correctionSubmit.disabled = false; });
-      });
+          originalText: original.text,
+          ...(original.at === null || original.at === undefined ? {} : { originalAt: original.at }),
+          text: trimmed,
+        });
+        return null;
+      })();
     }
 
-    if (projectCreate !== null) {
-      projectCreate.addEventListener('click', () => {
-        const name = projectName !== null && typeof projectName.value === 'string' ? projectName.value.trim() : '';
-        if (name === '') {
-          projectLocalNotice = '先写一个项目名（≤100 字）。';
-          if (projectNote !== null) projectNote.textContent = projectLocalNotice;
-          return;
-        }
-        projectLocalNotice = null;
-        projectCreate.disabled = true;
-        void postActionItem('/.sage/projects', { action: 'create', name })
-          .finally(() => { if (projectCreate !== null) projectCreate.disabled = false; });
-      });
+    function createProject(name) {
+      return (async () => {
+        const trimmed = typeof name === 'string' ? name.trim() : '';
+        if (trimmed === '') return '先写一个项目名（≤100 字）。';
+        await postActionItem('/.sage/projects', { action: 'create', name: trimmed });
+        return null;
+      })();
     }
 
-    if (projectAssign !== null) {
-      projectAssign.addEventListener('click', () => {
+    function assignProject(projectRef) {
+      return (async () => {
         const matterRef = linkMatter !== null && typeof linkMatter.value === 'string' ? linkMatter.value : '';
-        const projectRef = projectSelect !== null && typeof projectSelect.value === 'string' ? projectSelect.value : '';
-        if (matterRef === '') {
-          projectLocalNotice = '先在「事项 ↔ 工作区关联」里选好事项。';
-          if (projectNote !== null) projectNote.textContent = projectLocalNotice;
-          return;
-        }
-        if (projectRef === '' || projectRef === 'none') {
-          projectLocalNotice = '先新建一个项目再归属。';
-          if (projectNote !== null) projectNote.textContent = projectLocalNotice;
-          return;
-        }
-        projectLocalNotice = null;
-        projectAssign.disabled = true;
-        void postActionItem('/.sage/projects', { action: 'assign', matterRef, projectRef })
-          .finally(() => { if (projectAssign !== null) projectAssign.disabled = false; });
-      });
+        if (matterRef === '') return '先在「事项 ↔ 工作区关联」里选好事项。';
+        if (typeof projectRef !== 'string' || projectRef === '' || projectRef === 'none') return '先新建一个项目再归属。';
+        await postActionItem('/.sage/projects', { action: 'assign', matterRef, projectRef });
+        return null;
+      })();
     }
 
-    if (projectUnassign !== null) {
-      projectUnassign.addEventListener('click', () => {
+    function unassignProject() {
+      return (async () => {
         const matterRef = linkMatter !== null && typeof linkMatter.value === 'string' ? linkMatter.value : '';
-        if (matterRef === '') {
-          projectLocalNotice = '先在「事项 ↔ 工作区关联」里选好事项。';
-          if (projectNote !== null) projectNote.textContent = projectLocalNotice;
-          return;
-        }
-        projectLocalNotice = null;
-        projectUnassign.disabled = true;
-        void postActionItem('/.sage/projects', { action: 'unassign', matterRef })
-          .finally(() => { if (projectUnassign !== null) projectUnassign.disabled = false; });
-      });
+        if (matterRef === '') return '先在「事项 ↔ 工作区关联」里选好事项。';
+        await postActionItem('/.sage/projects', { action: 'unassign', matterRef });
+        return null;
+      })();
     }
 
     // 029 的动作：选择集在行内切换；批量与重命名各走一条精确体路由。
@@ -6792,6 +6425,16 @@ export function renderSageDocument(): string {
       closeArtifactPreview: () => closeArtifactPreview(),
       setArtifactFullscreen: (on) => setArtifactFullscreen(on),
       artifactWindow: (action) => artifactWindow(action),
+      createSideChat: () => createSideChat(),
+      readSideChat: (sideChatId) => readSideChat(sideChatId),
+      sendSideChat: (sideChatId, text) => sendSideChat(sideChatId, text),
+      returnSideChat: (sideChatId, text) => returnSideChat(sideChatId, text),
+      createActionItem: (title, note) => createActionItem(title, note),
+      actionItemRowAction: (actionId, action) => actionItemRowAction(actionId, action),
+      submitCorrection: (original, text) => submitCorrection(original, text),
+      createProject: (name) => createProject(name),
+      assignProject: (projectRef) => assignProject(projectRef),
+      unassignProject: () => unassignProject(),
     };
 
     if (userMenu && userMenuPanel) {

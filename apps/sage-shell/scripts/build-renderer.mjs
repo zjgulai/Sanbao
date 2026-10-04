@@ -46,7 +46,9 @@ if (js.includes('<!--')) throw new Error('build-renderer output contains an HTML
 
 const payload = 'export const SAGE_APP_BUNDLE = ' + JSON.stringify(js) + '\n'
 mkdirSync(dirname(outFile), { recursive: true })
-const tmpFile = outFile + '.tmp'
+// Unique temp name: window specs can run in parallel workers and each invokes this script;
+// a shared temp path would race on the rename. Renames are atomic and the payload is identical.
+const tmpFile = `${outFile}.${process.pid}.${Date.now().toString(36)}.tmp`
 writeFileSync(tmpFile, payload)
 renameSync(tmpFile, outFile)
 process.stdout.write(`build-renderer: wrote ${outFile} (bundle ${Buffer.byteLength(js)} bytes)\n`)

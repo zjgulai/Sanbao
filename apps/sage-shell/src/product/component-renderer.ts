@@ -401,7 +401,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-side-chat-section" aria-label="侧聊">
-            <article class="sage-card sage-side-chat-card">
+            <article class="sage-card sage-side-chat-card" id="sage-region-side-chats" data-sage-region="side-chats" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">SIDE CHATS · FORKED CHILD SESSIONS</span><span class="sage-card-index">D5</span></div>
               <h2>侧聊（派生会话）</h2>
               <p class="sage-card-note">侧聊从该事项主对话的<strong>已完成轮</strong>派生一条独立子会话：有自己的上下文与历史，<strong>不写入主对话流</strong>；事项仍只关联主对话，这里只列出派生记录并可单独回看。内容不因同属一个事项就默认进入主对话或对他人开放；把结论带回主对话必须走显式动作（沿主对话同一发送路径，受理≠执行），没有自动合并。在途运行也可派生（截到最后一个完成轮）；无已完成轮或锚点落在未完成轮时如实拒绝。</p>
@@ -454,7 +454,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-action-items-section" aria-label="行动项与项目">
-            <article class="sage-card sage-action-items-card">
+            <article class="sage-card sage-action-items-card" id="sage-region-action-items" data-sage-region="action-items" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">ACTION ITEMS · CORRECTIONS · PROJECTS</span><span class="sage-card-index">D6</span></div>
               <h2>行动项、要求更正与项目汇总</h2>
               <p class="sage-card-note">行动项是事项内的可分派工作记录——<strong>不等同交付项、待办请求、工具调用或一次运行</strong>；「标记完成」只是状态变更，不构成交付验收、也不代表执行成功。执行记录冻结登记当时的依据版本。更正以<strong>关联原要求的新消息</strong>表达：原要求原样保留、不重放；回执分已接收／待应用／已生效三态，只有队列的消费读数才显示已生效。归属项目只做分组与汇总：<strong>不改变主责、可见范围或事项事实</strong>；记录只存在于本次运行。本版不做分派给他人、跨项目批量改属或项目级权限继承。</p>
