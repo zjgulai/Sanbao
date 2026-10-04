@@ -14,7 +14,7 @@ import { flushSync } from 'react-dom'
 
 import type { SageActionPreview } from '../action-preview.js'
 import type { SageMatterViewState } from '../view-state.js'
-import type { MatterRegionMessage, MatterRegionStore } from './matter-bridge.js'
+import { regionMessage, type AppBridgeStore, type MatterRegionMessage } from './bridge.js'
 
 const DRAWER_QUERY = '(max-width: 900px)'
 
@@ -280,13 +280,14 @@ function ActionPreviewCard({ preview }: { readonly preview: ActionPreviewView })
 }
 
 export interface MatterRegionProps {
-  readonly store: MatterRegionStore
+  readonly store: AppBridgeStore
   /** The `#sage-matter-region` container; the region publishes its machine state here. */
   readonly container: HTMLElement
 }
 
 export function MatterRegion({ store, container }: MatterRegionProps): JSX.Element {
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const message = regionMessage<MatterRegionMessage>(snapshot, 'matter', { kind: 'unavailable' })
   const [drawerMode, setDrawerMode] = useState(matchesDrawerQuery)
   const [traceOpen, setTraceOpen] = useState(() => !matchesDrawerQuery())
   const toggleRef = useRef<HTMLButtonElement | null>(null)
@@ -294,7 +295,7 @@ export function MatterRegion({ store, container }: MatterRegionProps): JSX.Eleme
   const drawerModeRef = useRef(drawerMode)
   drawerModeRef.current = drawerMode
   const lastViewRef = useRef(snapshot.view)
-  const view = regionViewOf(snapshot.message)
+  const view = regionViewOf(message)
   const modal = drawerMode && traceOpen
 
   // The media breakpoint moves the drawer exactly like the legacy listener did.

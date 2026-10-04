@@ -523,10 +523,6 @@ export function renderSageDocument(): string {
     const artifactClose = document.querySelector('#artifact-close');
     const artifactExpand = document.querySelector('#artifact-expand');
     const artifactWindow = document.querySelector('#artifact-window');
-    const toolResultRows = document.querySelector('#tool-result-rows');
-    const toolResultNote = document.querySelector('#tool-result-note');
-    const siteRows = document.querySelector('#site-rows');
-    const siteNote = document.querySelector('#site-note');
     const sideChatCreate = document.querySelector('#side-chat-create');
     const sideChatNote = document.querySelector('#side-chat-note');
     const sideChatRows = document.querySelector('#side-chat-rows');
@@ -787,9 +783,9 @@ export function renderSageDocument(): string {
     // ADR-0261 P2: the matter workbench region lives in the React app. This script keeps the
     // non-region facts (workspace root attributes, sidebar context, status pill) and publishes
     // the validated matter state through the bridge; it must not write inside #sage-matter-region.
-    function publishMatterRegion(message) {
-      const bridge = globalThis.__SAGE_APP_SET_MATTER__;
-      if (typeof bridge === 'function') bridge(message);
+    function publishRegion(region, message) {
+      const bridge = globalThis.__SAGE_APP_SET_REGION__;
+      if (typeof bridge === 'function') bridge(region, message);
     }
 
     function publishMatterUnavailable(kind) {
@@ -804,7 +800,7 @@ export function renderSageDocument(): string {
       setMatterText(matterContextId, '—');
       setMatterText(matterContextStage, invalid ? '格式无效' : '未读取');
       setMatterText(matterContextRevision, '—');
-      publishMatterRegion({ kind: invalid ? 'invalid' : 'unavailable' });
+      publishRegion('matter', { kind: invalid ? 'invalid' : 'unavailable' });
     }
 
     function publishMatterProjection(value) {
@@ -827,7 +823,7 @@ export function renderSageDocument(): string {
       setMatterText(matterContextId, value.matter.matterId);
       setMatterText(matterContextStage, matterStageLabels[value.matter.stage]);
       setMatterText(matterContextRevision, revisionId);
-      publishMatterRegion({ kind: 'projection', projection: value });
+      publishRegion('matter', { kind: 'projection', projection: value });
     }
 
     function publishAppView(view) {
@@ -1491,7 +1487,6 @@ export function renderSageDocument(): string {
     let sessionLocalNotice = null;
     let attachmentLocalNotice = null;
     let artifactLocalNotice = null;
-    let toolResultsLocalNotice = null;
     let queueLocalNotice = null;
     let historyLocalNotice = null;
     let clarificationLocalNotice = null;
@@ -4086,175 +4081,23 @@ export function renderSageDocument(): string {
     }
 
     // 033：工具结果（typed）与网页成果目录。结果按声明类型呈现；不支持的类型明确拒绝。
-    function toolFieldNodes(field) {
-      const nodes = [];
-      if (field === null || typeof field !== 'object' || typeof field.kind !== 'string') return nodes;
-      if (field.kind === 'text') {
-        const pre = document.createElement('pre');
-        pre.className = 'sage-tool-text';
-        pre.textContent = typeof field.text === 'string' ? field.text : '';
-        nodes.push(pre);
-        return nodes;
-      }
-      if (field.kind === 'key-values') {
-        const entries = Array.isArray(field.entries) ? field.entries : [];
-        for (const entry of entries) {
-          if (entry === null || typeof entry !== 'object') continue;
-          const row = document.createElement('span');
-          row.className = 'sage-tool-kv';
-          row.textContent = String(entry.name ?? '') + '：' + String(entry.value ?? '');
-          nodes.push(row);
-        }
-        return nodes;
-      }
-      if (field.kind === 'table') {
-        const table = document.createElement('table');
-        table.className = 'sage-tool-table';
-        const columns = Array.isArray(field.columns) ? field.columns : [];
-        const head = document.createElement('tbody');
-        const headRow = document.createElement('tr');
-        for (const column of columns) {
-          const th = document.createElement('th');
-          th.textContent = String(column);
-          headRow.appendChild(th);
-        }
-        head.appendChild(headRow);
-        table.appendChild(head);
-        const body = document.createElement('tbody');
-        const rows = Array.isArray(field.rows) ? field.rows : [];
-        for (const row of rows) {
-          if (!Array.isArray(row)) continue;
-          const tr = document.createElement('tr');
-          for (const cell of row) {
-            const td = document.createElement('td');
-            td.textContent = String(cell);
-            tr.appendChild(td);
-          }
-          body.appendChild(tr);
-        }
-        table.appendChild(body);
-        nodes.push(table);
-        return nodes;
-      }
-      if (field.kind === 'link') {
-        const row = document.createElement('span');
-        row.className = 'sage-tool-link';
-        row.textContent = String(field.label ?? '') + ' · ' + String(field.host ?? '');
-        nodes.push(row);
-        // 唯一的外链入口，只在这一次显式点击下发出（US-172）。
-        const open = document.createElement('button');
-        open.className = 'sage-row-button';
-        open.type = 'button';
-        open.dataset.toolAction = 'open-link';
-        open.dataset.linkUrl = typeof field.url === 'string' ? field.url : '';
-        open.textContent = '在系统浏览器打开（先校验）';
-        nodes.push(open);
-        return nodes;
-      }
-      if (field.kind === 'image') {
-        const row = document.createElement('span');
-        row.className = 'sage-tool-image';
-        row.textContent = String(field.name ?? '') + ' · 版本 ' + String(field.version ?? '');
-        nodes.push(row);
-        const open = document.createElement('button');
-        open.className = 'sage-row-button';
-        open.type = 'button';
-        open.dataset.artifactAction = 'open';
-        open.dataset.artifactId = typeof field.artifactId === 'string' ? field.artifactId : '';
-        open.textContent = '打开预览（按版本）';
-        nodes.push(open);
-        return nodes;
-      }
-      const refused = document.createElement('span');
-      refused.textContent = '该条目不提供入口（' + String(field.code ?? 'unknown') + '）——不用替代内容渲染。';
-      nodes.push(refused);
-      return nodes;
-    }
-
-    function renderToolResults(payload) {
-      if (toolResultRows === null) return;
-      const status = payload !== null && typeof payload === 'object' && payload.toolResults !== null && typeof payload.toolResults === 'object' ? payload.toolResults : null;
-      toolResultRows.textContent = '';
-      if (status === null || status.state !== 'read') {
-        if (toolResultNote !== null && toolResultsLocalNotice === null) toolResultNote.textContent = '未核验：这一版还没有接上工具结果来源（provider 未接线；不用空列表冒充结果）。';
-        return;
-      }
-      const results = Array.isArray(status.results) ? status.results : [];
-      if (toolResultNote !== null && toolResultsLocalNotice === null) {
-        toolResultNote.textContent = results.length === 0 ? '本次运行还没有 typed 工具结果。'
-          : '共 ' + String(results.length) + ' 条结果（只读；可交互的只有：显式链接打开与按版本预览）。';
-      }
-      for (const result of results) {
-        if (result === null || typeof result !== 'object' || typeof result.resultId !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        row.dataset.toolResultId = result.resultId;
-        const head = document.createElement('strong');
-        head.textContent = String(result.tool ?? '') + ' · ' + String(result.title ?? '');
-        row.appendChild(head);
-        if (result.state === 'unsupported') {
-          const tag = document.createElement('span');
-          tag.textContent = '不支持的类型：' + String(result.declaredType ?? '未知') + '（已明确拒绝——不用替代内容渲染）。';
-          row.appendChild(tag);
-          toolResultRows.appendChild(row);
-          continue;
-        }
-        const at = document.createElement('span');
-        at.textContent = String(result.at ?? '');
-        row.appendChild(at);
-        const fields = Array.isArray(result.fields) ? result.fields : [];
-        for (const field of fields) {
-          for (const node of toolFieldNodes(field)) row.appendChild(node);
-        }
-        toolResultRows.appendChild(row);
-      }
-    }
-
-    function renderSites(payload) {
-      if (siteRows === null) return;
+    // Batch 16 / P3 (ADR-0261): the typed tool-result rows and the web-deliverables catalog are
+    // owned by the React app; this script only maps the wire to region slices.
+    function publishSitesSlice(payload) {
       const artifacts = payload !== null && typeof payload === 'object' ? payload.artifacts : null;
       const known = artifacts !== null && artifacts !== undefined && typeof artifacts === 'object';
       const cards = known && Array.isArray(artifacts.cards) ? artifacts.cards : [];
-      siteRows.textContent = '';
-      if (siteNote !== null) {
-        if (!known) {
-          siteNote.textContent = '未核验：这一版还没有接上产物存储（目录不空报）。';
-        } else {
-          const web = cards.filter((card) => card !== null && typeof card === 'object' && card.kind === 'html');
-          siteNote.textContent = web.length === 0
-            ? '本机还没有网页型成果：目录只读，观察到 .html/.htm 文件变化后才会出现。'
-            : '共 ' + String(web.length) + ' 项网页型成果（同源版本；访问限制：仅本机离线预览）。';
-        }
+      publishRegion('sites', known ? { kind: 'cards', cards } : { kind: 'unavailable' });
+    }
+
+    function publishToolResultsSlice(payload) {
+      const status = payload !== null && typeof payload === 'object' && payload.toolResults !== null && typeof payload.toolResults === 'object' ? payload.toolResults : null;
+      if (status === null || status.state !== 'read') {
+        publishRegion('tool-results', { kind: 'unavailable' });
+        return;
       }
-      for (const card of cards) {
-        if (card === null || typeof card !== 'object' || card.kind !== 'html' || typeof card.artifactId !== 'string') continue;
-        const row = document.createElement('li');
-        row.className = 'sage-roster-row';
-        const name = document.createElement('strong');
-        name.textContent = typeof card.name === 'string' ? card.name : card.artifactId;
-        row.appendChild(name);
-        const version = document.createElement('span');
-        version.className = 'sage-roster-tag';
-        version.textContent = '版本 ' + String(card.version ?? '');
-        row.appendChild(version);
-        const state = document.createElement('span');
-        state.textContent = card.state === 'ready' ? '本机就绪（离线预览可用）'
-          : card.state === 'absent' ? '观察时不存在（保留上次版本标记）' : '未核验（重新观察后再试）';
-        row.appendChild(state);
-        const access = document.createElement('span');
-        access.textContent = '访问限制：仅本机离线预览（无发布/托管入口）';
-        row.appendChild(access);
-        if (card.state === 'ready') {
-          const open = document.createElement('button');
-          open.className = 'sage-row-button';
-          open.type = 'button';
-          open.dataset.artifactAction = 'open';
-          open.dataset.artifactId = card.artifactId;
-          open.textContent = '预览（离线）';
-          row.appendChild(open);
-        }
-        siteRows.appendChild(row);
-      }
+      const results = Array.isArray(status.results) ? status.results : [];
+      publishRegion('tool-results', { kind: 'results', results });
     }
 
     // 011：关联面。列表默认只显示已关联项；操作记录是只读的留痕（谁/何时/哪一步）。
@@ -4740,8 +4583,8 @@ export function renderSageDocument(): string {
         renderFeedback(payload);
         renderAttachments(payload.attachments ?? null);
         renderArtifacts(payload.artifacts ?? null);
-        renderToolResults(payload);
-        renderSites(payload);
+        publishToolResultsSlice(payload);
+        publishSitesSlice(payload);
         renderMatterList(payload);
         renderSideChats(payload);
         renderPreferences(payload.preferences ?? null);
@@ -6184,9 +6027,8 @@ export function renderSageDocument(): string {
         if (button.dataset.artifactAction !== 'open') return;
         const artifactId = typeof button.dataset.artifactId === 'string' ? button.dataset.artifactId : '';
         if (artifactId === '') return;
-        artifactLocalNotice = null;
         button.disabled = true;
-        void postArtifact('/.sage/artifacts/open', { artifactId }).finally(() => { if (button !== null) button.disabled = false; });
+        void openArtifact(artifactId).finally(() => { if (button !== null) button.disabled = false; });
       });
     }
     if (artifactRetry) {
@@ -6259,60 +6101,41 @@ export function renderSageDocument(): string {
       });
     }
 
-    // 033：结果图与网页成果的预览入口都走同一个产物打开动作（按版本读取在 main 完成）。
-    const openArtifactFromButton = (button) => {
-      if (button === null || button.disabled === true) return;
-      const artifactId = typeof button.dataset.artifactId === 'string' ? button.dataset.artifactId : '';
-      if (artifactId === '') return;
+    // 033 / Batch 16：结果图与网页成果的预览入口都走同一个产物打开动作（按版本读取在 main
+    // 完成）。两个卡的 DOM 归 React 之后，这里只保留数据动作，并经下行桥（__SAGE_LEGACY_ACTIONS__）
+    // 供 React 的显式按钮调用；拒绝码到文案的映射仍是这一份。
+    function openArtifact(artifactId) {
+      if (typeof artifactId !== 'string' || artifactId === '') return Promise.resolve(null);
       artifactLocalNotice = null;
-      button.disabled = true;
-      void postArtifact('/.sage/artifacts/open', { artifactId }).finally(() => { if (button !== null) button.disabled = false; });
-    };
-    if (toolResultRows !== null) {
-      toolResultRows.addEventListener('click', (event) => {
-        const link = event.target?.closest?.('[data-tool-action="open-link"]') ?? null;
-        if (link !== null) {
-          if (link.disabled === true) return;
-          const url = typeof link.dataset.linkUrl === 'string' ? link.dataset.linkUrl : '';
-          if (url === '') return;
-          link.disabled = true;
-          toolResultsLocalNotice = null;
-          void (async () => {
-            try {
-              const response = await fetchWithinDeadline('/.sage/external-link', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ url }),
-              });
-              const payload = await response.json();
-              const state = payload !== null && typeof payload === 'object' && typeof payload.state === 'string' ? payload.state : null;
-              const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
-              const host = payload !== null && typeof payload === 'object' && payload.target !== null && typeof payload.target === 'object' && typeof payload.target.host === 'string' ? payload.target.host : '';
-              toolResultsLocalNotice = state === 'opened' ? '已交给系统浏览器打开（目标已校验：' + host + '）；Sage 不读取浏览器内容、不跟踪操作。'
-                : code === 'link-scheme-refused' ? '该地址不被支持：只允许 http/https——未打开。'
-                  : code === 'link-credentials-refused' ? '该地址内嵌凭据——未打开。'
-                    : code === 'link-too-long' ? '地址超出长度上限——未打开。'
-                      : code === 'external-open-unavailable' ? '本版未接系统浏览器端口——未打开（不假装已打开）。'
-                        : code === 'external-open-failed' ? '交给系统浏览器失败——未证明已打开。'
-                          : '未打开（' + String(code ?? '响应无法识别') + '）。';
-            } catch {
-              toolResultsLocalNotice = '打开外部链接失败：这次请求没有完成（未证明已打开）。';
-            }
-            if (toolResultNote !== null) toolResultNote.textContent = toolResultsLocalNotice;
-            link.disabled = false;
-            queueMicrotask(() => { void refresh(); });
-          })();
-          return;
-        }
-        const open = event.target?.closest?.('[data-artifact-action="open"]') ?? null;
-        if (open !== null) openArtifactFromButton(open);
-      });
+      return postArtifact('/.sage/artifacts/open', { artifactId });
     }
-    if (siteRows !== null) {
-      siteRows.addEventListener('click', (event) => {
-        const open = event.target?.closest?.('[data-artifact-action="open"]') ?? null;
-        if (open !== null) openArtifactFromButton(open);
-      });
+
+    function openExternalLink(url) {
+      return (async () => {
+        let notice;
+        try {
+          const response = await fetchWithinDeadline('/.sage/external-link', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ url }),
+          });
+          const payload = await response.json();
+          const state = payload !== null && typeof payload === 'object' && typeof payload.state === 'string' ? payload.state : null;
+          const code = payload !== null && typeof payload === 'object' && typeof payload.code === 'string' ? payload.code : null;
+          const host = payload !== null && typeof payload === 'object' && payload.target !== null && typeof payload.target === 'object' && typeof payload.target.host === 'string' ? payload.target.host : '';
+          notice = state === 'opened' ? '已交给系统浏览器打开（目标已校验：' + host + '）；Sage 不读取浏览器内容、不跟踪操作。'
+            : code === 'link-scheme-refused' ? '该地址不被支持：只允许 http/https——未打开。'
+              : code === 'link-credentials-refused' ? '该地址内嵌凭据——未打开。'
+                : code === 'link-too-long' ? '地址超出长度上限——未打开。'
+                  : code === 'external-open-unavailable' ? '本版未接系统浏览器端口——未打开（不假装已打开）。'
+                    : code === 'external-open-failed' ? '交给系统浏览器失败——未证明已打开。'
+                      : '未打开（' + String(code ?? '响应无法识别') + '）。';
+        } catch {
+          notice = '打开外部链接失败：这次请求没有完成（未证明已打开）。';
+        }
+        queueMicrotask(() => { void refresh(); });
+        return notice;
+      })();
     }
 
     if (pendingRows) {
@@ -7164,6 +6987,12 @@ export function renderSageDocument(): string {
 
     // ADR-0261 P2: the trace drawer state machine (open/close, Escape/Tab containment, media
     // breakpoint, focus restoration) now lives in the React matter region component.
+    // Batch 16: the React support cards call their explicit entries back through this down-bridge;
+    // the request/refusal/text handling stays here (single home of the wire semantics).
+    globalThis.__SAGE_LEGACY_ACTIONS__ = {
+      openArtifact: (artifactId) => openArtifact(artifactId),
+      openExternalLink: (url) => openExternalLink(url),
+    };
 
     if (userMenu && userMenuPanel) {
       const closeUserMenu = () => {

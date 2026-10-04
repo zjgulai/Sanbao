@@ -580,7 +580,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-tool-results-section" aria-label="工具结果（typed 呈现）">
-            <article class="sage-card sage-tool-results-card">
+            <article class="sage-card sage-tool-results-card" id="sage-region-tool-results" data-sage-region="tool-results" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">TOOL RESULTS · SAGE-OWNED COMPONENTS</span><span class="sage-card-index">D10</span></div>
               <h2>工具结果（typed 数据，Sage 组件呈现）</h2>
               <p class="sage-card-note">结果按声明类型经严格解析后由 Sage 自有组件呈现——<strong>不支持的类型明确拒绝，不用替代内容渲染</strong>；结果内不执行脚本、不接受权威动作输入；敏感字段以已脱敏显示，原始载荷不透传。链接只在显式点击下经校验交给系统浏览器（不自动联网）；图片结果按权限解析到本运行的就绪产物，打开仍按版本读取；没有批注入口。</p>
@@ -589,7 +589,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-sites-section" aria-label="网页成果（本机目录）">
-            <article class="sage-card sage-sites-card">
+            <article class="sage-card sage-sites-card" id="sage-region-sites" data-sage-region="sites" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">WEB DELIVERABLES · LOCAL CATALOG</span><span class="sage-card-index">D11</span></div>
               <h2>网页成果目录（只读）</h2>
               <p class="sage-card-note">本目录只读浏览本次运行观察到的网页型成果，显示同源版本与访问限制——<strong>已托管/可预览不等于网站上线</strong>：本版没有发布、部署或托管入口；预览沿离线容器打开，外链沿系统浏览器显式入口。</p>

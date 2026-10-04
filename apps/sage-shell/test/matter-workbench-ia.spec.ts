@@ -67,12 +67,14 @@ afterEach(() => {
 })
 
 function installBridgeSink(messages: MatterBridgeMessage[]): void {
-  const target = globalThis as { __SAGE_APP_SET_MATTER__?: unknown }
-  const previous = target.__SAGE_APP_SET_MATTER__
-  target.__SAGE_APP_SET_MATTER__ = (message: MatterBridgeMessage): void => { messages.push(message) }
+  const target = globalThis as { __SAGE_APP_SET_REGION__?: unknown }
+  const previous = target.__SAGE_APP_SET_REGION__
+  target.__SAGE_APP_SET_REGION__ = (region: string, message: MatterBridgeMessage): void => {
+    if (region === 'matter') messages.push(message)
+  }
   restoreSink = () => {
-    if (previous === undefined) delete target.__SAGE_APP_SET_MATTER__
-    else target.__SAGE_APP_SET_MATTER__ = previous
+    if (previous === undefined) delete target.__SAGE_APP_SET_REGION__
+    else target.__SAGE_APP_SET_REGION__ = previous
   }
 }
 

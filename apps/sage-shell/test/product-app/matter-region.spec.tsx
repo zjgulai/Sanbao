@@ -7,7 +7,7 @@ import {
   createSageFixtureViewState,
   type SageMatterViewState,
 } from '../../src/product/view-state.js'
-import { createMatterRegionStore, type MatterRegionStore } from '../../src/product/app/matter-bridge.js'
+import { createAppBridgeStore, type AppBridgeStore } from '../../src/product/app/bridge.js'
 import { MatterRegion } from '../../src/product/app/matter-view.js'
 
 /**
@@ -47,7 +47,7 @@ function stubMatchMedia(initial: boolean): MediaStub {
 
 interface Mounted {
   readonly container: HTMLElement
-  readonly store: MatterRegionStore
+  readonly store: AppBridgeStore
   readonly unmount: () => void
 }
 
@@ -57,7 +57,7 @@ function mountRegion(): Mounted {
   const container = document.createElement('div')
   container.id = 'sage-matter-region'
   document.body.append(container)
-  const store = createMatterRegionStore()
+  const store = createAppBridgeStore()
   const root = createRoot(container)
   act(() => { root.render(createElement(MatterRegion, { store, container })) })
   const entry: Mounted = {
@@ -78,11 +78,11 @@ function node(container: HTMLElement, selector: string): Element {
   return found as Element
 }
 
-function setMessage(store: MatterRegionStore, projection: SageMatterViewState | null, kind?: 'invalid'): void {
+function setMessage(store: AppBridgeStore, projection: SageMatterViewState | null, kind?: 'invalid'): void {
   act(() => {
-    if (kind === 'invalid') store.setMessage({ kind: 'invalid' })
-    else if (projection === null) store.setMessage({ kind: 'unavailable' })
-    else store.setMessage({ kind: 'projection', projection })
+    if (kind === 'invalid') store.setRegion('matter', { kind: 'invalid' })
+    else if (projection === null) store.setRegion('matter', { kind: 'unavailable' })
+    else store.setRegion('matter', { kind: 'projection', projection })
   })
 }
 

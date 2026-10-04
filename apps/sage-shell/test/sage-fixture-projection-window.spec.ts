@@ -233,6 +233,12 @@ interface ProbeResult {
       readonly visibleSearch: string
       readonly visibleHash: string
     }
+    readonly regionFacts?: {
+      readonly expectedSitesState: string
+      readonly expectedToolResultsState: string
+      readonly sites: string | null
+      readonly toolResults: string | null
+    }
     readonly stageFacts?: {
       readonly trackCurrentStage: string | null
       readonly trackVisible: boolean
@@ -793,6 +799,12 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
     expect(result.evidence.documentFacts?.sectionHeadingFontPx).toBeLessThanOrEqual(24)
     expect(result.evidence.documentFacts?.matterGoalFontPx).toBeGreaterThanOrEqual(16)
     expect(result.evidence.documentFacts?.matterGoalFontPx).toBeLessThanOrEqual(24)
+
+    // Batch 16 / P3: both React support-card regions reflect the same payload mapping the
+    // legacy script would have applied.
+    expect(result.evidence.regionFacts).toBeDefined()
+    expect(result.evidence.regionFacts?.sites).toBe(result.evidence.regionFacts?.expectedSitesState)
+    expect(result.evidence.regionFacts?.toolResults).toBe(result.evidence.regionFacts?.expectedToolResultsState)
 
     // The real wire carries the fixture matter slot; 0.2 service semantics are unchanged.
     expect(result.evidence.stateProbe).toMatchObject({
