@@ -97,33 +97,15 @@ export function renderSageDocument(): string {
     .sage-action-correction-block, .sage-action-project-block, .sage-run-log-block { margin-top: .8rem; padding-top: .6rem; border-top: 1px dashed var(--sage-divider); display: grid; gap: .4rem; }
     .sage-file-references select { max-width: 32rem; padding: .3rem .5rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: transparent; color: var(--sage-ink); font-size: .74rem; }
     #profile-status-note { margin: .55rem 0 .9rem; color: var(--sage-muted); font-size: .74rem; line-height: 1.6; }
-    .sage-panel { display: none; padding-top: 2.25rem; }
+    .sage-panel { display: none; padding-top: 1.6rem; }
     .sage-panel.is-visible { display: block; animation: sage-panel-in var(--sage-motion) both; }
-    .sage-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(18rem, .8fr); gap: clamp(1.5rem, 5vw, 5rem); align-items: center; padding: clamp(1rem, 3vw, 3rem) 0 3rem; }
-    .sage-eyebrow { margin: 0 0 1rem; color: var(--sage-brand); }
-    .sage-hero h1, .sage-section-heading h1 { margin: 0; color: var(--sage-ink); font-size: clamp(2rem, 5vw, 4.2rem); font-weight: 510; letter-spacing: -.06em; line-height: 1.05; }
-    .sage-hero h1 em { color: var(--sage-brand); font-style: normal; }
-    .sage-lead { max-width: 39rem; margin: 1.35rem 0 0; color: var(--sage-muted); font-size: 1rem; line-height: 1.75; }
-    .sage-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1.7rem; }
+    .sage-eyebrow { margin: 0 0 .4rem; color: var(--sage-brand); }
+    .sage-section-heading h1 { margin: 0; color: var(--sage-ink); font-size: 1.35rem; font-weight: 620; letter-spacing: -.01em; line-height: 1.3; }
     .sage-primary-button, .sage-secondary-button { border-radius: var(--sage-radius); cursor: pointer; font-weight: 650; }
     .sage-primary-button { padding: .75rem 1rem; border: 1px solid var(--sage-brand); background: var(--sage-brand); color: var(--sage-canvas); }
     .sage-secondary-button { padding: .58rem .85rem; border: 1px solid var(--sage-border); background: transparent; color: var(--sage-brand); }
     .sage-primary-button:hover, .sage-secondary-button:hover { filter: brightness(1.08); }
     .sage-muted-copy, .sage-card-note { color: var(--sage-faint); font-size: .78rem; }
-    .sage-network-card { position: relative; min-height: 22rem; padding: 1rem; overflow: hidden; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); box-shadow: var(--sage-shadow); }
-    .sage-network-head { display: flex; justify-content: space-between; color: var(--sage-faint); font-size: .65rem; letter-spacing: .12em; }
-    .sage-network-signal { width: .48rem; height: .48rem; border-radius: 50%; background: var(--sage-brand); }
-    .sage-network-orbit { position: absolute; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border: 1px solid var(--sage-divider); border-radius: 50%; color: var(--sage-muted); font-size: .7rem; }
-    .orbit-one { top: 27%; left: 12%; }
-    .orbit-two { top: 47%; right: 9%; }
-    .orbit-three { bottom: 13%; left: 29%; }
-    .sage-network-card::before, .sage-network-card::after { position: absolute; content: ""; border: 1px dashed var(--sage-divider); border-radius: 50%; }
-    .sage-network-card::before { inset: 25% 12%; }
-    .sage-network-card::after { inset: 12% 27%; }
-    .sage-network-core { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 8.4rem; height: 8.4rem; transform: translate(-50%, -50%); border: 1px solid var(--sage-brand); border-radius: 50%; background: var(--sage-overlay); text-align: center; }
-    .sage-network-core strong { color: var(--sage-brand); font-size: 1.15rem; line-height: 1.2; }
-    .sage-network-core small { color: var(--sage-muted); font-size: .62rem; }
-    .sage-network-caption { position: absolute; right: 1rem; bottom: 1rem; left: 1rem; color: var(--sage-muted); font-size: .72rem; text-align: center; }
     .sage-grid { display: grid; gap: 1rem; }
     .sage-grid-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .sage-card { min-width: 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); }
@@ -144,18 +126,12 @@ export function renderSageDocument(): string {
     .sage-evidence-strip { margin-top: 1rem; padding: 1rem 1.35rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
     .sage-evidence-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .sage-evidence-heading strong { color: var(--sage-muted); font-size: .78rem; font-weight: 500; }
-    .sage-trace-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
-    .sage-trace-list li { display: grid; gap: .25rem; padding: .7rem; border-top: 1px solid var(--sage-divider); color: var(--sage-faint); }
-    .sage-trace-list li.is-current { border-color: var(--sage-brand); color: var(--sage-brand); }
-    .sage-trace-list span, .sage-trace-list small { font-size: .65rem; }
-    .sage-trace-list b { font-size: .78rem; font-weight: 550; }
-    .sage-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
-    .sage-section-heading h1 { font-size: clamp(2rem, 5vw, 3.35rem); }
+    .sage-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
     .sage-section-tools { display: flex; align-items: center; gap: .5rem; }
     .sage-matter-trace-toggle, .sage-matter-trace-close { display: none; }
     .sage-matter-workbench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem); gap: 1rem; min-height: calc(100vh - 10.5rem); align-items: start; }
     .sage-matter-workbench-main { min-height: calc(100vh - 10.5rem); }
-    .sage-matter-workbench-main > h2 { margin-top: 1.25rem; font-size: clamp(1.55rem, 3vw, 2.6rem); }
+    .sage-matter-workbench-main > h2 { margin-top: 1rem; font-size: 1.3rem; font-weight: 620; letter-spacing: -.01em; line-height: 1.35; }
     .sage-matter-stage-track { margin-top: 1.4rem; padding: 1rem; border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-raised); }
     .sage-matter-stage-track-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .45rem 1rem; }
     .sage-matter-stage-track-head strong { color: var(--sage-faint); font-size: .66rem; font-weight: 500; }
@@ -190,8 +166,7 @@ export function renderSageDocument(): string {
     .sage-support-heading { margin: 2rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--sage-divider); }
     .sage-support-heading h2 { margin: .45rem 0; color: var(--sage-ink); font-size: 1.2rem; font-weight: 580; }
     .sage-support-heading p { margin: 0; color: var(--sage-faint); font-size: .72rem; }
-    .sage-matter-layout, .sage-governance-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(15rem, .75fr); gap: 1rem; }
-    .sage-matter-main h2 { margin-top: 1.25rem; font-size: clamp(1.4rem, 3vw, 2.2rem); }
+    .sage-governance-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(15rem, .75fr); gap: 1rem; }
     .sage-state-row { flex-wrap: wrap; justify-content: space-between; min-width: 0; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--sage-divider); color: var(--sage-muted); }
     .sage-state-row strong { min-width: 0; color: var(--sage-brand); font-size: .8rem; font-weight: 550; overflow-wrap: anywhere; text-align: right; }
     .sage-state-row strong.is-blocked, .sage-state-tag.is-blocked { color: var(--sage-warning); }
@@ -225,8 +200,6 @@ export function renderSageDocument(): string {
       .sage-matter-trace-rail { position: fixed; inset: .5rem .5rem .5rem auto; z-index: 6; width: min(26rem, calc(100vw - 1rem)); max-height: none; opacity: 0; visibility: hidden; pointer-events: none; box-shadow: var(--sage-shadow); transition: opacity var(--sage-motion), visibility var(--sage-motion); }
       .sage-matter-trace-rail[data-drawer-open="true"] { opacity: 1; visibility: visible; pointer-events: auto; }
       .sage-matter-trace-close { display: inline-flex; }
-      .sage-hero { grid-template-columns: 1fr; }
-      .sage-network-card { min-height: 18rem; }
     }
     @media (max-width: 800px) {
       .sage-app { grid-template-columns: 5.2rem minmax(0, 1fr); }
@@ -242,10 +215,9 @@ export function renderSageDocument(): string {
       .sage-main { padding-inline: 1rem; }
       .sage-topbar { display: block; }
       .sage-topbar-meta { justify-content: flex-start; margin-top: .8rem; }
-      .sage-grid-overview, .sage-matter-layout, .sage-governance-grid, .sage-capability-grid, .sage-matter-facts { grid-template-columns: 1fr; }
+      .sage-grid-overview, .sage-governance-grid, .sage-capability-grid, .sage-matter-facts { grid-template-columns: 1fr; }
       .sage-matter-stage-track ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sage-preview-grid { grid-template-columns: 1fr; }
-      .sage-trace-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sage-footer { display: block; line-height: 1.7; }
     }
     @media (max-width: 420px) {

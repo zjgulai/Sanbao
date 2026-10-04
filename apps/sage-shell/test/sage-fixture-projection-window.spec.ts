@@ -216,6 +216,10 @@ interface ProbeResult {
       readonly matterId: string | null
       readonly matterGoal: string | null
       readonly matterRevision: string | null
+      readonly sectionHeadingFontPx: number | null
+      readonly matterGoalFontPx: number | null
+      readonly displayChromeNodeCount: number
+      readonly overviewHeadingCount: number
     }
     readonly navigationFacts?: {
       readonly requestedStage: string
@@ -786,6 +790,14 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
     // The fixture marker stays visible in the served workspace document.
     expect(result.evidence.documentFacts).toMatchObject({ overviewVisible: false, matterVisible: true })
     expect(result.evidence.documentFacts?.workspaceProjectionSource).toBe('fixture')
+
+    // Batch 12 / UI-01A: the real document keeps the dense operational scale and no display chrome.
+    expect(result.evidence.documentFacts?.displayChromeNodeCount).toBe(0)
+    expect(result.evidence.documentFacts?.overviewHeadingCount).toBe(0)
+    expect(result.evidence.documentFacts?.sectionHeadingFontPx).toBeGreaterThanOrEqual(16)
+    expect(result.evidence.documentFacts?.sectionHeadingFontPx).toBeLessThanOrEqual(24)
+    expect(result.evidence.documentFacts?.matterGoalFontPx).toBeGreaterThanOrEqual(16)
+    expect(result.evidence.documentFacts?.matterGoalFontPx).toBeLessThanOrEqual(24)
 
     // The real wire carries the fixture matter slot; 0.2 service semantics are unchanged.
     expect(result.evidence.stateProbe).toMatchObject({

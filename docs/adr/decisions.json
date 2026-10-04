@@ -7941,6 +7941,67 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0259",
+      "title": "ADR-0259 · UI-01A：工作台外壳视觉收口（dense + calm 首切片）",
+      "status": "accepted（2026-10-04）",
+      "date": "2026-10-04",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Overview 面板退役 hero 文案区与 sage-network-card 装饰卡，保留运行状态卡、当前事项卡与 trace 说明条。",
+          "constraints": [
+            "no hero copy",
+            "no decorative network card",
+            "matter entry link preserved"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "六个面板标题与事项目标改用运营级标度（1.35rem/1.3rem，weight 620），删除全部展示级 clamp。",
+          "constraints": [
+            "operational scale only",
+            "no display clamp",
+            "hierarchy via weight and color"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "工作台主卡移除解释性整句；fail-closed 诚实标记全部保留。",
+          "constraints": [
+            "honesty markers kept",
+            "no filler sentences"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "清理 sage-hero/sage-network/orbit/trace-list/matter-layout/matter-main 死 CSS，并小幅收紧面板节奏；零行为变更。",
+          "constraints": [
+            "no behavior change",
+            "no route or provider change",
+            "dead css removed"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "完成证据三层：源合同 spec、真实 Electron computed 标度与节点缺席断言、人工回看双视图截图；对旧构建先取具名红。",
+          "constraints": [
+            "named red before green",
+            "real computed evidence",
+            "manual screenshot review"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "不引入 React 或依赖变更；nav 六项目标、支持卡文案与 UI-DECISION-01 留后续；不声明完整 Qoder 复刻完成。",
+          "constraints": [
+            "no dependency change",
+            "UI-DECISION-01 open",
+            "no completion overclaim"
+          ]
+        }
+      ]
     }
   ]
 }

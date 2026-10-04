@@ -209,26 +209,6 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
         </header>
 
         <section class="sage-panel" id="panel-overview" role="tabpanel" data-panel="overview" aria-labelledby="view-overview" hidden>
-          <div class="sage-hero">
-            <div class="sage-hero-copy">
-              <p class="sage-eyebrow">SHARED OPERATING MATTER</p>
-              <h1>让经营目标，<br><em>在明确边界内持续推进。</em></h1>
-              <p class="sage-lead">Sage 把事实、判断、责任与回执组织在同一经营事项中。先看当前边界，再决定下一步是否值得推进。</p>
-              <div class="sage-hero-actions">
-                <button class="sage-primary-button" type="button" data-view-target="matter">查看经营事项</button>
-                <span class="sage-muted-copy">当前只展示安全投影与演示结构</span>
-              </div>
-            </div>
-            <div class="sage-network-card" aria-label="经营网络示意">
-              <div class="sage-network-head"><span>OPERATING NETWORK</span><span class="sage-network-signal" aria-hidden="true"></span></div>
-              <div class="sage-network-orbit orbit-one"><span>市场</span></div>
-              <div class="sage-network-orbit orbit-two"><span>渠道</span></div>
-              <div class="sage-network-orbit orbit-three"><span>供应</span></div>
-              <div class="sage-network-core"><strong>经营<br>事项</strong><small>事实 · 判断 · 回执</small></div>
-              <div class="sage-network-caption">一个事项连接目标、证据与责任。</div>
-            </div>
-          </div>
-
           <div class="sage-grid sage-grid-overview">
             <section class="sage-card sage-runtime-card" aria-labelledby="state-title">
               <div class="sage-card-head"><span class="sage-card-label">RUNTIME</span><span class="sage-card-index">01</span></div>
@@ -266,7 +246,6 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             <section class="sage-card sage-matter-workbench-main" id="matter-current-work" data-workbench-region="matter-focus" aria-labelledby="matter-detail-goal">
               <div class="sage-card-head"><span class="sage-card-label">MATTER / <span id="matter-detail-id">${matterId}</span></span><span class="sage-card-index" id="matter-detail-revision">${revisionId}</span></div>
               <h2 id="matter-detail-goal">${goal}</h2>
-              <p>当前事项是工作台的主对象；这里仅投影身份、阶段、责任、澄清与下一步，不从 trace 反推“已完成”。</p>
               <section class="sage-matter-stage-track" id="matter-stage-track" data-current-stage="${viewState?.matter.stage ?? 'unavailable'}" aria-labelledby="matter-stage-track-title">
                 <div class="sage-matter-stage-track-head"><span class="sage-card-label" id="matter-stage-track-title">MATTER STAGES</span><strong>只标记当前阶段，不表示左侧阶段已完成</strong></div>
                 <ol>${renderMatterStageTrack(viewState?.matter.stage)}</ol>

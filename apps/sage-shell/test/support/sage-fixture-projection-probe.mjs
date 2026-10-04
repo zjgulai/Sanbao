@@ -456,6 +456,8 @@ async function run() {
   const documentFacts = await evaluate(window, `(async () => {
     const snapshot = () => {
       const workspace = document.querySelector('[data-sage-workspace]')
+      const sectionHeading = document.querySelector('#panel-matter .sage-section-heading h1')
+      const matterGoalHeading = document.querySelector('#matter-detail-goal')
       return {
         overviewVisible: !document.querySelector('[data-panel="overview"]').hidden,
         matterVisible: !document.querySelector('[data-panel="matter"]').hidden,
@@ -465,6 +467,10 @@ async function run() {
         matterId: document.querySelector('#matter-detail-id')?.textContent ?? null,
         matterGoal: document.querySelector('#matter-detail-goal')?.textContent ?? null,
         matterRevision: document.querySelector('#matter-detail-revision')?.textContent ?? null,
+        sectionHeadingFontPx: sectionHeading === null ? null : Number.parseFloat(getComputedStyle(sectionHeading).fontSize),
+        matterGoalFontPx: matterGoalHeading === null ? null : Number.parseFloat(getComputedStyle(matterGoalHeading).fontSize),
+        displayChromeNodeCount: document.querySelectorAll('.sage-hero, .sage-network-card').length,
+        overviewHeadingCount: document.querySelectorAll('#panel-overview h1').length,
       }
     }
     const deadline = Date.now() + 4000
@@ -485,6 +491,11 @@ async function run() {
     requireCondition(documentFacts.matterId === '—', 'unavailable projection leaked a matter id')
     requireCondition(documentFacts.matterGoal === '当前没有可用的事项投影', 'unavailable projection leaked a matter goal')
   }
+  // Batch 12 / UI-01A: dense operational scale, no display-scale chrome in the real document.
+  requireCondition(documentFacts.displayChromeNodeCount === 0, 'display-scale hero/network chrome is still present in the real document')
+  requireCondition(documentFacts.overviewHeadingCount === 0, 'overview panel still carries a display heading')
+  requireCondition(documentFacts.sectionHeadingFontPx !== null && documentFacts.sectionHeadingFontPx <= 24 && documentFacts.sectionHeadingFontPx >= 16, `matter section heading is not on the operational scale (${documentFacts.sectionHeadingFontPx}px)`)
+  requireCondition(documentFacts.matterGoalFontPx !== null && documentFacts.matterGoalFontPx <= 24 && documentFacts.matterGoalFontPx >= 16, `matter goal heading is not on the operational scale (${documentFacts.matterGoalFontPx}px)`)
 
   await waitForThemeProjection(window, startupPreferences.requested.theme)
   const startupThemeFacts = await readThemeFacts(window, 'startup')
