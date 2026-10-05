@@ -18,7 +18,7 @@ describe('shell package skeleton', () => {
 
   it('exposes the local lifecycle scripts in the repo order', () => {
     expect(Object.keys(manifest.scripts)).toEqual([
-      'typecheck', 'build', 'test', 'materialize', 'preview', 'smoke', 'dev',
+      'typecheck', 'build', 'test', 'materialize', 'preview', 'smoke', 'dev', 'dev:debug',
     ])
   })
 

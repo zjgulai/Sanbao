@@ -8214,6 +8214,59 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0263",
+      "title": "ADR-0263 · 本地开发与调试环境：一键 `dev:debug`（隔离 dev 根＋inspector/CDP＋日志 tee）",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增 apps/sage-shell/scripts/dev-debug.mjs 与 pnpm dev:debug：构建（tsc＋renderer bundle）→ materialize → 启动 Electron 顺序固化；--no-build 供重启循环。",
+          "constraints": [
+            "materialize before restart",
+            "single command",
+            "no production root by default"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "dev 数据根默认 ~/Library/Application Support/Sage Dev；首次写 .sage-dev-root 标记；--reset 仅在标记存在时删除（否则 exit 2）；SAGE_DEV_ROOT/--root 可覆盖。",
+          "constraints": [
+            "isolated from production root",
+            "marker-gated reset",
+            "path guards unchanged"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "调试姿态：main inspector 9229＋renderer CDP 9222＋SAGE_DEVTOOLS=1 detached DevTools；端口可覆盖；stdout/stderr tee 至 <dev 根>/logs/dev-session.log。",
+          "constraints": [
+            "ports overridable",
+            "logs persisted",
+            "no CSP/route changes"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "投影默认 SAGE_FIXTURE_PROJECTION=1；--unavailable 切生产形态；本环境纯属开发工具，不构成发布、签名、DMG 或实机验收证据。",
+          "constraints": [
+            "development only",
+            "no release evidence",
+            "production assembly untouched"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首跑战果固化为纪律：registerSchemesAsPrivileged 全进程唯一一次调用（Electron 43 实测第二次调用清除先前 scheme 的 fetch 特权，曾令 dsh-app 路由全部失败）；dsh-app 与 SANBAO_SCHEME_REGISTRATION 同在 main/index.ts 的唯一调用点，守卫 test/scheme-registration-single-call.spec.ts。",
+          "constraints": [
+            "single-call registry",
+            "guard spec in tree",
+            "probe registers through the descriptor"
+          ]
+        }
+      ]
     }
   ]
 }

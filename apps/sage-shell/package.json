@@ -19,7 +19,8 @@
     "materialize": "node scripts/materialize.mjs",
     "preview": "node scripts/preview.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "dev": "tsc && node scripts/build-renderer.mjs && electron ."
+    "dev": "tsc && node scripts/build-renderer.mjs && electron .",
+    "dev:debug": "node scripts/dev-debug.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.4",
