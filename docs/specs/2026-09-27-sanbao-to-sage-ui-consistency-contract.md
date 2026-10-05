@@ -1,5 +1,7 @@
 # Sanbao → Sage UI 一致性合同
 
+> 2026-10-05 展示方向更正见 [ADR-0265](../adr/ADR-0265.md)：按用户明确要求受控复用 Sanbao 复刻桌面替换默认主界面；本文“只作证据、不复用组件”和旧首页选择保留为历史，业务 authority、数据治理与分层验收约束继续适用。
+
 - 日期：2026-09-27
 - 状态：UI-00 合同冻结；WT-02C.0 revision 11 已补充 Compatibility Authority 展示与输入边界；未进入 renderer、Application Service、Capability Adapter、Host 或 GUI 实施
 - 决策依据：[ADR-0159](../adr/ADR-0159.md)、[ADR-0165](../adr/ADR-0165.md)

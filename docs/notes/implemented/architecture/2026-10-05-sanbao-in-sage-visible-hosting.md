@@ -1,5 +1,7 @@
 # Sanbao-in-Sage 可见承载：dev 打开承载窗＋Sage 内 206 路由真机爬检（ADR-0264）
 
+> 历史承载实验，不是默认主界面或业务接通验收；默认启动方式已由 [ADR-0265](../../../adr/ADR-0265.md) 替代，现行实现与范围见 [T01 记录](2026-10-05-sanbao-default-desktop-t01.md)。
+
 ## Problem
 
 206 页接线此前完成 L1（sanbao_ui 原型侧 206/206 桥接＋部署）与 L2（Sage 承载面 `sage-sanbao://`＋

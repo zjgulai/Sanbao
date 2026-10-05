@@ -8317,6 +8317,75 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0265",
+      "title": "ADR-0265 · Sanbao 复刻桌面成为 Sage 默认主界面",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sanbao 复刻桌面在既有 dsh-app 默认主窗口中运行，由 main 提供文档；取消默认辅助窗，保留 FramePolicy 与 CSP。",
+          "constraints": [
+            "one default product window",
+            "main owns service routes",
+            "no sandbox or authority relaxation"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "受控复用现有原型完整桌面结构为 Sage 本地源码；不使用研究目录、模拟业务数据、外仓运行时依赖或第二套 palette。",
+          "constraints": [
+            "reuse reviewed source",
+            "no fixture success",
+            "single semantic token owner"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "新桌面独立打包到 lib/main；空 bundle 启动前拒绝，非精确资产路径在 main 终止，旧 renderer 未提交内容不覆盖。",
+          "constraints": [
+            "build required before Host startup",
+            "no old document fallback",
+            "preserve parked edits"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "T01 只消费现有状态读取的真实响应，区分 denial 与有效投影，损坏或超时不可用且不泄漏原始消息。",
+          "constraints": [
+            "same-origin GET only",
+            "no invented runtime facts",
+            "bounded read"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "输入草稿跨读取、拒绝和导航保留；成功任务发送仍需后续 custody 和权限接线，本片无业务 POST。",
+          "constraints": [
+            "no premature draft clear",
+            "no synthetic accepted receipt"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "dev 默认不注入 fixture/辅助窗变量，GUI 子进程不继承 ELECTRON_RUN_AS_NODE；测试与 Host 模式不变。",
+          "constraints": [
+            "isolated dev root",
+            "test and Host execution unchanged"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "默认桌面、单个服务结果和完整业务闭环分别验收；T01 与206挂载均不能关闭总集成目标。",
+          "constraints": [
+            "successful chat remains required",
+            "no release claim",
+            "no automatic commit or push"
+          ]
+        }
+      ]
     }
   ]
 }
