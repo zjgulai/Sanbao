@@ -26,3 +26,4 @@
 - live 探针（本票复跑）：桥 13/13、工作区真事实 `sanbao-e2e-workspace`＋「已接线」、会话消息 IPC 往返、路径卫士六向、真资产经 scheme 加载、导航/`window.open` 拦截、设置结构式读数（无值/密钥/路径）；honest 探针：fixture 文案保留＋如实 toast；负控 exit 2 具名红。spec 3/3、gate quick/full 27/27。
 - **未接线（登记）**：生产启动创建/打开承载面的产品接线（root 指向与时机、窗口归属）；FramePolicy 合同接入；写路径随各自 authority 批次真接线。
 - sanbao 页面的后续真事实扩展＝host.ts 与本端口镜像的加法同步；承载面不启动 Host、不装载 profile、零凭据。
+- **后续修正（2026-10-05，dev 环境首跑发现）**：本批的 `registerSanbaoSurfaceScheme()` 是 `registerSchemesAsPrivileged` 的第二次调用，在 Electron 43 下清除了 dsh-app 的 fetch 特权（真实应用全部区域 unavailable）。已改单次调用注册双 scheme＋源扫描守卫；过程与读数见 [本地开发与调试环境 Note](../process/2026-10-05-local-dev-debug-environment.md)「首批战果」。

@@ -279,30 +279,26 @@ export function createSanbaoHostPort(facts: SanbaoHostFacts = {}): SanbaoHostPor
 // scheme 注册与只读服务（root 注入 + 穿越防护）
 // ---------------------------------------------------------------------------
 
-let schemeRegistered = false
-
 /**
- * 注册 `sage-sanbao://` 特权 scheme。必须在 `app.whenReady()` 之前调用——
- * 与 `dsh-app` 的注册点同处（main/index.ts 模块顶层）。
+ * `sage-sanbao://` 的特权注册**描述符**。
+ *
+ * **单一调用纪律（2026-10-05 实测确立）**：Electron 43 下，
+ * `protocol.registerSchemesAsPrivileged` 的**第二次调用会清除此前 scheme 的 fetch 等特权**——
+ * 最小复刻：连续两次调用后，第一个 scheme 的 `fetch()` 立即报 “scheme is not supported”。
+ * 因此本模块**不得自行注册**；由 `main/index.ts` 在唯一一次调用里把 dsh-app 与本描述符
+ * 一起注册（回归守卫见 `test/scheme-registration-single-call.spec.ts`，发现过程见
+ * dev 环境 Note 2026-10-05 的「首批战果」）。
  */
-export function registerSanbaoSurfaceScheme(): void {
-  if (schemeRegistered) return
-  schemeRegistered = true
-  protocol.registerSchemesAsPrivileged([{
-    scheme: SANBAO_SCHEME,
-    privileges: {
-      standard: true,
-      secure: true,
-      supportFetchAPI: true,
-      corsEnabled: false,
-      stream: true,
-      codeCache: true,
-    },
-  }])
-}
-
-export function isSanbaoSchemeRegistered(): boolean {
-  return schemeRegistered
+export const SANBAO_SCHEME_REGISTRATION = {
+  scheme: SANBAO_SCHEME,
+  privileges: {
+    standard: true,
+    secure: true,
+    supportFetchAPI: true,
+    corsEnabled: false,
+    stream: true,
+    codeCache: true,
+  },
 }
 
 const MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
@@ -480,8 +476,12 @@ export interface SanbaoSurface {
   destroy(): void
 }
 
+/**
+ * 前置条件：调用方已在 app ready 前把 `SANBAO_SCHEME_REGISTRATION` 纳入**唯一一次**
+ * `registerSchemesAsPrivileged` 调用（见 main/index.ts / 探针；单一调用纪律见本文件顶部注释）。
+ * 未注册时 `load()` 会以导航失败暴露，本函数不做重复注册。
+ */
 export function createSanbaoSurface(options: SanbaoSurfaceOptions): SanbaoSurface | { readonly failed: string } {
-  if (!schemeRegistered) return { failed: 'sanbao-surface-scheme-not-registered' }
   let root: string
   try {
     root = realpathSync(options.root)

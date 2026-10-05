@@ -17,12 +17,12 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { app } from 'electron'
+import { app, protocol } from 'electron'
 import {
+  SANBAO_SCHEME_REGISTRATION,
   SANBAO_SURFACE_ENTRY,
   SANBAO_SURFACE_ORIGIN,
   createSanbaoSurface,
-  registerSanbaoSurfaceScheme,
   resolveServedAssetPath,
 } from '../../lib/main/sanbao-surface.js'
 import { resolveSanbaoSurfaceRoot } from './sanbao-surface-root.mjs'
@@ -59,8 +59,9 @@ app.setPath('sessionData', join(probeRoot, 'electron', 'session-data'))
 app.setPath('crashDumps', join(probeRoot, 'electron', 'crash-dumps'))
 app.setAppLogsPath(join(probeRoot, 'electron', 'logs'))
 
-// 特权 scheme 必须在 app ready 前注册（与 main/index.ts 同一注册点）。
-registerSanbaoSurfaceScheme()
+// 特权 scheme 必须在 app ready 前注册；**单次调用纪律**（2026-10-05 实测：第二次调用会
+// 清除先前 scheme 的 fetch 特权）——本探针只注册 sanbao 一个 scheme，仍走唯一一次调用。
+protocol.registerSchemesAsPrivileged([SANBAO_SCHEME_REGISTRATION])
 app.disableHardwareAcceleration()
 app.on('window-all-closed', () => {})
 
