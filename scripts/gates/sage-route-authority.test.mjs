@@ -58,19 +58,20 @@ const cancelCheck = (patch = {}) => checkSageRouteAuthority({
 })
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
-  assert.equal(result.expected, 58)
+  assert.equal(result.expected, 59)
   assert.equal(result.expected, result.checked + result.skipped + result.failed)
   assert.ok(result.violations.some((violation) => violation.includes(needle)), JSON.stringify(result.violations))
 }
 
-test('current 58-route registry matches source without claiming product availability', () => {
+test('current 59-route registry matches source without claiming product availability', () => {
   const result = check()
   assert.equal(result.status, 'pass', JSON.stringify(result))
   assert.deepEqual(
     { expected: result.expected, discovered: result.discovered, checked: result.checked, skipped: result.skipped, failed: result.failed },
-    { expected: 58, discovered: 58, checked: 58, skipped: 0, failed: 0 },
+    { expected: 59, discovered: 59, checked: 59, skipped: 0, failed: 0 },
   )
   assert.match(result.note, /13 read-only routes enter projection-read admission/)
+  assert.match(result.note, /1 local-system route enters device-local admission/)
   assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
   assert.match(result.note, /17 direct-provider bypasses/)
@@ -304,6 +305,89 @@ test('the explicit context selection route cannot claim compliance without its s
   )
   assert.notEqual(compositionText, baseline.compositionText)
   expectNamedFailure(check({ compositionText }), '/.sage/context/select')
+})
+
+test('a local-system route cannot claim compliance without its exact runner source fact', () => {
+  const bypassedKernel = baseline.mainAppServiceText.replace(
+    'admitLocalSystemRead<LocalSystemBootstrapState>({',
+    'bypassLocalSystemRead<LocalSystemBootstrapState>({',
+  )
+  assert.notEqual(bypassedKernel, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: bypassedKernel }), '/.sage/bootstrap')
+
+  const droppedAssembly = baseline.mainAppServiceText.replace(
+    'bootstrapRead: createLocalSystemBootstrapRunner(options),',
+    'bootstrapRead: droppedByAssembly(options),',
+  )
+  assert.notEqual(droppedAssembly, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: droppedAssembly }), '/.sage/bootstrap')
+
+  const readyBypass = baseline.mainAppServiceText.replace(
+    'return frame === undefined || !frame.ready || frame.contaminated',
+    'return frame === undefined',
+  )
+  assert.notEqual(readyBypass, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: readyBypass }), '/.sage/bootstrap')
+
+  const postReadyBypass = baseline.mainAppServiceText.replace(
+    "if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }",
+    "if (frame === undefined) return { state: 'unavailable' as const }",
+  )
+  assert.notEqual(postReadyBypass, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: postReadyBypass }), '/.sage/bootstrap')
+
+  const displayNameLeak = baseline.mainAppServiceText.replace(
+    'auth: { status: beforeStatus },',
+    'auth: { status: beforeStatus, displayName: options.vault.snapshot().displayName },',
+  )
+  assert.notEqual(displayNameLeak, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: displayNameLeak }), '/.sage/bootstrap')
+
+  // Review round 1 (Important): a literal-preserving early return in front of the kernel used to
+  // pass every substring check; the structural exit count now catches it.
+  const earlyReturnBypass = baseline.mainAppServiceText.replace(
+    'const correlation = options.callerBinding?.correlation ?? randomUUID()\n    const result = await admitLocalSystemRead<LocalSystemBootstrapState>({',
+    "const correlation = options.callerBinding?.correlation ?? randomUUID()\n      if (correlation === 'shortcut') return serviceJson({ runtime: { status: 'ready' }, auth: { status: 'signed-out' }, display: { theme: 'light', density: 'compact' } }, 200)\n    const result = await admitLocalSystemRead<LocalSystemBootstrapState>({",
+  )
+  assert.notEqual(earlyReturnBypass, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: earlyReturnBypass }), '/.sage/bootstrap')
+
+  const snapshotSpread = baseline.mainAppServiceText.replace(
+    'auth: { status: beforeStatus },',
+    'auth: { ...options.vault.snapshot(), status: beforeStatus },',
+  )
+  assert.notEqual(snapshotSpread, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: snapshotSpread }), '/.sage/bootstrap')
+})
+
+test('the projection-read owner cannot drift from the authorised read-policy wiring (T03)', () => {
+  const unwiredProjection = baseline.mainIndexText.replace(
+    'authorizeProjectionRead: (request) => readPolicyFor().authorizeProjectionRead(request),',
+    'authorizeProjectionRead: () => undefined,',
+  )
+  assert.notEqual(unwiredProjection, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwiredProjection }), 'production read-policy wiring drifted')
+
+  const unwiredMatterRead = baseline.mainIndexText.replace(
+    'authorizeMatterRead: (request) => readPolicyFor().authorizeMatterRead(request),',
+    'authorizeMatterRead: () => undefined,',
+  )
+  assert.notEqual(unwiredMatterRead, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwiredMatterRead }), 'production read-policy wiring drifted')
+
+  const droppedImport = baseline.mainIndexText.replace(
+    "import { createProjectionReadPolicy, type ProjectionReadPolicy } from './projection-read-policy.js'",
+    "import { createProjectionReadPolicy } from './somewhere-else.js'",
+  )
+  assert.notEqual(droppedImport, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: droppedImport }), 'production read-policy wiring drifted')
+
+  const perRequestRebuild = baseline.mainIndexText.replace(
+    'let readPolicy: ProjectionReadPolicy | null = null',
+    'let readPolicy: ProjectionReadPolicy | null = rebuiltEveryRequest',
+  )
+  assert.notEqual(perRequestRebuild, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: perRequestRebuild }), 'production read-policy wiring drifted')
 })
 
 test('a read route cannot claim projection admission without its route wrapper', () => {

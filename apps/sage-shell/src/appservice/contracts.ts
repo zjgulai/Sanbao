@@ -739,6 +739,15 @@ export type PreferencesSaveOutcome =
   | { readonly state: 'saved', readonly preferences: PreferencesStatus }
   | { readonly state: 'refused', readonly code: string }
 
+/** T02 local-system bootstrap: the device facts the default desktop may read before any login or
+ *  matter context exists. Exact closed shape — no name, credential, session ref, configuration
+ *  value, workspace or business content may enter this DTO. */
+export interface LocalSystemBootstrapState {
+  readonly runtime: { readonly status: 'ready' | 'unavailable' | 'recovering' }
+  readonly auth: { readonly status: 'signed-in' | 'signed-out' | 'pending' }
+  readonly display: { readonly theme: 'light' | 'dark' | 'system', readonly density: 'comfortable' | 'compact' }
+}
+
 /** Ticket 005 (US-012/013): one transcript entry. `echo` rows are this device's own accepted
  *  prompts; `history` rows are folded from the durable log — never from a live frame.
  *  Ticket 014: attachment-bearing messages carry the durable file references they were sent with. */
@@ -1656,6 +1665,9 @@ export interface ServiceProviders {
   readonly readState: () => Promise<Response>
   /** Stable state-route denial that performs no provider, store or Host read. */
   readonly readBlockedState: () => Promise<Response>
+  /** T02: the local-system bootstrap read — device facts only, behind its own admission
+   *  (caller + ready/uncontaminated frame + unmoved generation); never a business read. */
+  readonly bootstrapRead: () => Promise<Response>
   /** CTX-01B: explicit user selection; no GET, send or link route may call this implicitly. */
   readonly selectActiveMatter: (request: ActiveMatterSelectionRequest) => Promise<Response>
   /** Ticket 010: pick an existing directory and adopt it; never creates a directory. */

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-type Classification = 'read-only' | 'local-preference' | 'protected-effect' | 'unsupported'
+type Classification = 'read-only' | 'local-preference' | 'local-system' | 'protected-effect' | 'unsupported'
 
 interface RouteAuthorityRow {
   readonly sourceConstant: string
@@ -18,6 +18,7 @@ interface RouteAuthorityRow {
   readonly runCommand: { readonly required: boolean, readonly actual: boolean }
   readonly protectedAdmission?: { readonly required: boolean, readonly actual: boolean }
   readonly contextSelection?: { readonly required: boolean, readonly actual: boolean }
+  readonly localSystemAdmission?: { readonly required: boolean, readonly actual: boolean }
   readonly unsupportedOperations: readonly string[]
   readonly currentAuthority: { readonly status: 'compliant' | 'partial' | 'violation' | 'unsupported', readonly mode: string }
 }
@@ -35,21 +36,21 @@ interface RouteAuthorityMatrix {
 const matrix = JSON.parse(readFileSync(new URL('../src/appservice/route-authority-matrix.json', import.meta.url), 'utf8')) as RouteAuthorityMatrix
 
 describe('route authority truth matrix', () => {
-  it('pins the full 58-route denominator and four policy classes', () => {
+  it('pins the full 59-route denominator and five policy classes', () => {
     expect(matrix.schemaVersion).toBe(1)
     expect(matrix.sourceCommit).toBe('eeff8967190815c7b5018f7d11b748818d487d37')
     expect(matrix.denominator).toEqual({
-      expected: 58,
+      expected: 59,
       sourcePath: 'apps/sage-shell/src/appservice/route-skeleton.ts',
       constantPattern: '^const SAGE_.*_PATH',
     })
-    expect(matrix.routes).toHaveLength(58)
-    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(58)
-    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(58)
-    expect(Object.fromEntries(['read-only', 'local-preference', 'protected-effect', 'unsupported'].map((classification) => [
+    expect(matrix.routes).toHaveLength(59)
+    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(59)
+    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(59)
+    expect(Object.fromEntries(['read-only', 'local-preference', 'local-system', 'protected-effect', 'unsupported'].map((classification) => [
       classification,
       matrix.routes.filter((route) => route.classification === classification).length,
-    ]))).toEqual({ 'read-only': 13, 'local-preference': 5, 'protected-effect': 38, unsupported: 2 })
+    ]))).toEqual({ 'read-only': 13, 'local-preference': 5, 'local-system': 1, 'protected-effect': 38, unsupported: 2 })
   })
 
   it('records every authority dimension instead of treating route presence as authority', () => {
@@ -121,6 +122,22 @@ describe('route authority truth matrix', () => {
     expect(bypasses).toHaveLength(22)
     expect(bypasses.every((route) => route.runCommand.required && route.currentAuthority.status === 'violation')).toBe(true)
     expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(17)
+  })
+
+  it('records the local-system bootstrap route as admitted while keeping its facts device-local', () => {
+    const bootstrap = matrix.routes.find((route) => route.path === '/.sage/bootstrap')
+    expect(bootstrap).toMatchObject({
+      classification: 'local-system',
+      policyProfile: 'local-system',
+      operations: ['read'],
+      providers: ['bootstrapRead'],
+      runCommand: { required: false, actual: false },
+      localSystemAdmission: { required: true, actual: true },
+      currentAuthority: {
+        status: 'compliant',
+        mode: 'local-system-admission-unavailable-first',
+      },
+    })
   })
 
   it('records attachment cancel as admitted while keeping pick on its distinct authority boundary', () => {

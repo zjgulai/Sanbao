@@ -3,11 +3,12 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DesktopPage } from '../../src/product/app/desktop/page.js'
-import { classifyDesktopState, type DesktopRead } from '../../src/product/app/desktop/client.js'
+import { classifyDesktopState, type DesktopBootstrapRead, type DesktopRead } from '../../src/product/app/desktop/client.js'
 import { desktopSessionPayload } from '../support/desktop-session-fixture.js'
 
 const cleanups: Array<() => void> = []
 const blocked: DesktopRead = { kind: 'blocked', code: 'projection-read-unavailable' }
+const unavailableBootstrap = async (): Promise<DesktopBootstrapRead> => ({ kind: 'unavailable', code: null })
 const snapshot = () => classifyDesktopState(desktopSessionPayload())
 const ack = () => Response.json({ state: 'accepted', sessionId: 'session:one', requestId: 'request:one', mode: 'queue' })
 function deferred<T>() {
@@ -15,12 +16,12 @@ function deferred<T>() {
   const promise = new Promise<T>(yes => { resolve = yes })
   return { promise, resolve }
 }
-async function mount(readState: () => Promise<DesktopRead>) {
+async function mount(readState: () => Promise<DesktopRead>, readBootstrap: () => Promise<DesktopBootstrapRead> = unavailableBootstrap) {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
   const render = async (reader: () => Promise<DesktopRead>) => {
-    await act(async () => { root.render(createElement(DesktopPage, { readState: reader })) })
+    await act(async () => { root.render(createElement(DesktopPage, { readState: reader, readBootstrap })) })
   }
   await render(readState)
   cleanups.push(() => { act(() => root.unmount()); container.remove() })

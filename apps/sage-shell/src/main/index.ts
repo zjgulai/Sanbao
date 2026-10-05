@@ -1,6 +1,7 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
 import { readFileSync } from 'node:fs'
+import { createProjectionReadPolicy, type ProjectionReadPolicy } from './projection-read-policy.js'
 import { readdir, realpath, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -818,6 +819,21 @@ async function main(paths: SagePaths): Promise<void> {
   // WT-02B.2C: the identity registry mints runtime-only internal handles for verified
   // (issuer, subject); handles never persist and never reach renderer/Host/logs.
   const vault = createTokenVault({ mintSessionRef: () => randomBytes(32).toString('base64url') })
+  // T03: one read-policy object for selection-time and projection reads. The bound-scope ledger
+  // must outlive individual requests, so it is created once and memoized; `paths` is resolved
+  // synchronously below before the first request can arrive.
+  let readPolicy: ProjectionReadPolicy | null = null
+  const readPolicyFor = (): ProjectionReadPolicy => {
+    if (readPolicy === null) {
+      readPolicy = createProjectionReadPolicy({
+        vault,
+        policyPath: paths.organizationPolicyFile,
+        readFileBytes: readFileSync,
+        now: () => new Date().toISOString(),
+      })
+    }
+    return readPolicy
+  }
   const identityRegistry = createIdentityRegistry({ randomHandle: () => randomBytes(32).toString('base64url') })
   const { adapter } = createProductionAdapter(vault, {
     openExternal: (url) => shell.openExternal(url),
@@ -839,9 +855,8 @@ async function main(paths: SagePaths): Promise<void> {
         activeMatterContext,
         framePolicySnapshot: () => framePolicy.snapshot(),
         // CTX-01B: the route carries only a matter id plus CAS generation. Electron main re-reads
-        // every trusted fact in fixed order. Production intentionally has no independent matter
-        // read-policy port yet, so selection stops at `read-access-unavailable` and the public
-        // outcome stays honest rather than borrowing identity, list visibility or draft recency.
+        // every trusted fact in fixed order; the matter-read grant is evaluated by the T03
+        // read policy (identity session + instance policy, local-read only).
         selectActiveMatter: async (candidate) => {
           const result = await selectActiveMatterContext({
             candidate,
@@ -851,7 +866,7 @@ async function main(paths: SagePaths): Promise<void> {
                 const session = vault.identitySession()
                 return session === null ? undefined : { sessionRef: session.sessionRef }
               },
-              authorizeMatterRead: () => undefined,
+              authorizeMatterRead: (request) => readPolicyFor().authorizeMatterRead(request),
               resolveCurrentRevision: ({ matterId }) => {
                 const current = matterRehydrate.resolveCurrent(matterId)
                 return current === undefined || 'denied' in current
@@ -888,9 +903,10 @@ async function main(paths: SagePaths): Promise<void> {
           }
           return { state: 'refused' as const, code: 'active-context-unavailable' as const, retryable: true }
         },
-        // READ-01A: production has no matter/object-bound read-policy resolver yet. This explicit
-        // absent answer is a hard stop before revision, workspace, store or Host reads.
-        authorizeProjectionRead: () => undefined,
+        // T03: the projection read policy is the same main-owned evaluation as selection-time
+        // matter reads (identity session + instance-local policy, local-read, per-operation
+        // grants); absent grants keep the read-policy step unavailable, never permissive.
+        authorizeProjectionRead: (request) => readPolicyFor().authorizeProjectionRead(request),
         ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
         // WT-02C.2E.2: the composed inventory provider rides the same flow until the
         // C2E.2 resolver wiring lands; nothing consumes it yet.

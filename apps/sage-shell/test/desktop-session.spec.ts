@@ -92,16 +92,23 @@ describe('existing session routes from the desktop', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
-  it('never treats unknown refusals, wrong-session receipts or transport loss as a safe retry', async () => {
+  it('never treats wrong-session receipts or transport loss as a safe retry, but trusts the service refusal verdict', async () => {
+    // A refused receipt is the service asserting "not accepted": determinate, safe to retry. Only
+    // the outcome-unknown refusal and unclassifiable responses must block re-sending.
     for (const response of [
       { state: 'refused', code: 'protected-effect-outcome-unknown' },
-      { state: 'refused', code: 'unexpected-private-detail' },
       { state: 'accepted', sessionId: 'other', requestId: 'request:one', mode: 'queue' },
       { state: 'accepted' },
     ]) {
       vi.stubGlobal('fetch', async () => Response.json(response))
       expect(await submitDesktopSession(session(), { kind: 'send', text: '问题' })).toEqual({ kind: 'unknown' })
     }
+    for (const code of ['protected-effect-unavailable', 'bridge-host-not-ready', 'unexpected-private-detail']) {
+      vi.stubGlobal('fetch', async () => Response.json({ state: 'refused', code }))
+      expect(await submitDesktopSession(session(), { kind: 'send', text: '问题' })).toEqual({ kind: 'refused', code })
+    }
+    vi.stubGlobal('fetch', async () => Response.json({ state: 'refused' }))
+    expect(await submitDesktopSession(session(), { kind: 'send', text: '问题' })).toEqual({ kind: 'unknown' })
     vi.stubGlobal('fetch', async () => { throw new Error('private-timeout') })
     expect(await submitDesktopSession(session(), { kind: 'send', text: '问题' })).toEqual({ kind: 'unknown' })
   })

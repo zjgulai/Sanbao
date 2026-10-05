@@ -92,8 +92,19 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     const startedEpoch = epoch.current
     const submitted = draftRef.current
     try {
-      const freshRead = await refresh('background')
+      // The pre-submit freshness check must not race the 2s poll for the shared sequence guard: a
+      // poll whose read started later would discard this read (null) and turn a valid context into
+      // a false "context changed" refusal. Polling is suspended by busy, so read directly, guard
+      // only on epoch/mount, and publish the fresh projection (including a withdrawn context) —
+      // any read that completes later is at least as fresh, so last writer wins is safe here.
+      let freshRead: DesktopRead
+      try {
+        freshRead = await readState()
+      } catch {
+        freshRead = { kind: 'unavailable' }
+      }
       if (!mounted.current || startedEpoch !== epoch.current) return
+      publish(freshRead)
       const fresh = freshRead?.kind === 'read' ? freshRead.session : undefined
       if (fresh === undefined || !sameContext(current.context, fresh.context) || !fresh.canSubmit) {
         setNotice('上下文已失效或发生变化，本次未提交，草稿已保留。')
@@ -126,7 +137,17 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
   }
 
   const session = state.kind === 'read' ? state.session : undefined
-  const uncertain = uncertaintyRevision >= 0 && (session === undefined
-    ? uncertainMatters.current.size > 0 : uncertainMatters.current.has(session.context.matterRef))
-  return { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, retry, actOnSession }
+  // uncertainMatters is a ref, so re-rendering on it needs a state bump (setUncertaintyRevision);
+  // the bump itself carries no value.
+  const uncertain = session === undefined
+    ? uncertainMatters.current.size > 0 : uncertainMatters.current.has(session.context.matterRef)
+  // Logout withdraws immediately: supersede every in-flight read or submission (epoch and
+  // sequence bumps) and re-pull even while the surface is loading — the retry guard above must
+  // not swallow the withdrawal.
+  const withdraw = () => {
+    epoch.current += 1
+    sequence.current += 1
+    void refresh('foreground')
+  }
+  return { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, retry, withdraw, actOnSession }
 }

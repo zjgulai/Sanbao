@@ -85,10 +85,23 @@ try {
   assert.equal(evidence.reads.service.body.code, 'projection-read-unavailable')
   evidence.reads.csp = await evaluate("fetch('/index.html',{method:'HEAD'}).then(r=>r.headers.get('content-security-policy'))")
   assert.match(evidence.reads.csp, /frame-src 'none'/)
+  evidence.reads.bootstrap = await evaluate(`fetch('/.sage/bootstrap',{cache:'no-store'}).then(async r=>({status:r.status,body:await r.json()}))`)
+  assert.equal(evidence.reads.bootstrap.status, 200)
+  assert.deepEqual(Object.keys(evidence.reads.bootstrap.body).sort(), ['auth', 'display', 'runtime'])
+  assert.ok(['ready', 'recovering', 'unavailable'].includes(evidence.reads.bootstrap.body.runtime?.status))
+  assert.ok(['signed-in', 'signed-out', 'pending'].includes(evidence.reads.bootstrap.body.auth?.status))
+  assert.equal('displayName' in evidence.reads.bootstrap.body.auth, false)
+  assert.ok(['light', 'dark', 'system'].includes(evidence.reads.bootstrap.body.display?.theme))
+  assert.ok(['comfortable', 'compact'].includes(evidence.reads.bootstrap.body.display?.density))
+  assert.equal(await evaluate("document.querySelector('.account-row small')?.textContent"), '未登录')
   await viewport(1440)
   await screenshot('desktop-home-1440-light.png')
+  // Deterministic precondition: the tool may re-run against the same live page, so the draft
+  // flow starts from an explicitly emptied composer instead of assuming a fresh window.
+  await evaluate(`(() => { const t = document.querySelector('textarea[aria-label="任务输入"]'); const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set; set.call(t, ''); t.dispatchEvent(new Event('input', { bubbles: true })) })()`)
   await click('textarea[aria-label="任务输入"]')
   await send('Input.insertText', { text: '请保留这份未发送的草稿' })
+  await waitFor("document.querySelector('textarea').value === '请保留这份未发送的草稿'")
   // Both send triggers share one submit path; the notice text is unique to each trigger moment so
   // a silent no-op cannot pass: button first, then reset the notice through the context menu,
   // then Enter with focus back in the textarea.

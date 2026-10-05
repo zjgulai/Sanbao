@@ -11,6 +11,7 @@ import { MAX_SAGE_ACTION_BYTES, serviceJson } from './errors.js'
 import type { ProjectionReadOperation, ProjectionReadScope } from './projection-read-admission.js'
 
 const SAGE_STATE_PATH = '/.sage/state'
+const SAGE_BOOTSTRAP_PATH = '/.sage/bootstrap'
 /** CTX-01B: the only product route allowed to select/replace the main-owned active matter. */
 const SAGE_CONTEXT_SELECT_PATH = '/.sage/context/select'
 const SAGE_ACTIONS_PATH = '/.sage/actions'
@@ -153,6 +154,11 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
         correlation: deps.callerBinding?.correlation ?? 'projection-read-unavailable',
       }, 200),
     )
+  }
+
+  if (url.pathname === SAGE_BOOTSTRAP_PATH) {
+    if (request.method !== 'GET') return transportDenial(405, { allow: 'GET' })
+    return deps.providers.bootstrapRead()
   }
 
   if (url.pathname === SAGE_CONTEXT_SELECT_PATH) {

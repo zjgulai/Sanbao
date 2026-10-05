@@ -94,6 +94,7 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .composer-context-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sage-desktop .context-menu small { font-size: 11px; color: var(--sage-faint); }
 .sage-desktop .composer-local-note { font-size: 11px; line-height: 1.6; color: var(--sage-muted); border-top: 1px solid var(--sage-divider); padding: 7px 0; margin: 0; overflow-wrap: anywhere; }
+.sage-desktop .composer-byte-note { font-size: 11px; line-height: 1.6; color: var(--sage-muted); margin: 4px 0 0; overflow-wrap: anywhere; }
 .sage-desktop .desktop-read { width: min(740px, calc(100% - 80px)); margin: 0 auto 20px; padding: 8px 11px; border: 1px solid var(--sage-border); border-radius: 8px; display: flex; align-items: center; gap: 12px; background: var(--sage-raised); }
 .sage-desktop #desktop-read-status { min-width: 0; display: grid; gap: 3px; color: var(--sage-muted); font-size: 11px; overflow-wrap: anywhere; }
 .sage-desktop #desktop-read-status strong { color: var(--sage-ink); font-weight: 500; font-size: 12px; }
@@ -102,6 +103,12 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .outstanding-feature { padding: 32px 0; }
 .sage-desktop .outstanding-feature h1 { font-size: 28px; font-weight: 500; }
 .sage-desktop .outstanding-feature p { margin: 12px 0; color: var(--sage-muted); }
+.sage-desktop .workspace-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 9px; }
+.sage-desktop .workspace-entry { min-width: 0; display: grid; gap: 3px; padding: 11px 12px; border: 1px solid var(--sage-border); border-radius: 8px; background: var(--sage-raised); }
+.sage-desktop .workspace-entry strong { min-width: 0; font-size: 12px; font-weight: 500; color: var(--sage-ink); overflow-wrap: anywhere; }
+.sage-desktop .workspace-entry span { min-width: 0; font-size: 11px; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .workspace-entry small { font-size: 11px; color: var(--sage-faint); }
+.sage-desktop .workspace-note { margin: 18px 0 0; color: var(--sage-muted); overflow-wrap: anywhere; }
 @media (max-width: 950px) {
   .sage-desktop .product-sidebar { width: 195px; }
   .sage-desktop .welcome-content { margin-bottom: 25px; }
@@ -161,6 +168,9 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .reply-body { font-size: 13px; line-height: 1.95; color: var(--sage-ink); }
 .sage-desktop .user-message > span, .sage-desktop .reply-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .sage-desktop .session-empty { color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .account-root { position: relative; }
+.sage-desktop .small-menu.account-menu { width: 100%; }
+.sage-desktop .account-menu-status { margin: 2px 8px 6px; font-size: 11px; color: var(--sage-muted); overflow-wrap: anywhere; }
 @media (max-width: 950px) {
   .sage-desktop .message-scroll { padding: 20px; }
 }

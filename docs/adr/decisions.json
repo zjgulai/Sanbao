@@ -8386,6 +8386,103 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0266",
+      "title": "ADR-0266 · 本机系统入口：GET /.sage/bootstrap 与 local-system 类别",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增 GET /.sage/bootstrap 作为唯一 local-system 路由（59 条中的 1 条），响应为封闭 DTO：runtime 状态枚举、auth.status、requested theme/density。",
+          "constraints": [
+            "no name, credential, session ref, config value, workspace or business content",
+            "matrix registers localSystemAdmission fact"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "main 组装专属 runner：caller → ready/未污染 frame（锁 generation）→ 读取 → 读后 generation 不变 → 读中身份状态不变；任一步失败回单一稳定拒码 bootstrap-unavailable。",
+          "constraints": [
+            "same code for every denial (no oracle)",
+            "no runner keeps the same stable denial"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "门禁以逐行事实登记新类别：EXPECTED_ROUTES 58→59、local-system 分类与 policy/authority 模式、runner 源码精确针与负向针、自测四个具名突变。",
+          "constraints": [
+            "no exemptions added",
+            "existing read/write policies unchanged"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "renderer 以 exactKeys 封闭解析，不显示未分类字段；账号菜单登录仅显式点击触发，logout 确认后立即重读 state 与 bootstrap 撤回旧状态。",
+          "constraints": [
+            "no auto login",
+            "logout withdraws immediately"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "bootstrap 不是业务读取通行证：state/search 等路由 admission 不变，未登录仍拒绝。",
+          "constraints": [
+            "no policy relaxation",
+            "no route reuse"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0267",
+      "title": "ADR-0267 · 读策略接线：选择时读授权与投影读取策略（T03 授权）",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "index.ts 以唯一 memoised readPolicyFor() 组装读策略，并把 authorizeMatterRead / authorizeProjectionRead 双钉点接为 policy 调用（T03 授权）。",
+          "constraints": [
+            "ledger survives across requests (no per-request rebuild)",
+            "old explicit-absent pins must not return"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "读策略只授予 local-read 且无需 decision 的授予；选择时 matter.read、读取时逐 operation projection.read；无会话/文件不可读→unavailable，负答/越界/无绑定/跨策略版本→denied。",
+          "constraints": [
+            "no write authority",
+            "no default-true path",
+            "high-entropy actor scope minted at selection only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "route-authority 门禁把该接线登记为逐行事实（导入/单例/双接线精确针＋旧钉死与每请求重建负向针），成功 note 与矩阵 runtimeLevel 同步改述。",
+          "constraints": [
+            "no exemptions added",
+            "no fail-closed relaxation"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "自测新增 4 条具名突变（unwire projection / unwire matter / drop import / per-request rebuild），每条必须具名红。",
+          "constraints": [
+            "mutations isolate to the owner check",
+            "named failure, not crash"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "collection/opaque-object 读取与写面、local-system 面均不改：仍按既有 unavailable/denied 语义。",
+          "constraints": [
+            "no route reuse",
+            "no admission relaxation"
+          ]
+        }
+      ]
     }
   ]
 }

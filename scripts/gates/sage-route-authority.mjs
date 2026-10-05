@@ -6,10 +6,11 @@
  * are safe, accepted, or exempted.
  */
 
-const EXPECTED_ROUTES = 58
+const EXPECTED_ROUTES = 59
 const CLASSIFICATION_COUNTS = Object.freeze({
   'read-only': 13,
   'local-preference': 5,
+  'local-system': 1,
   'protected-effect': 38,
   unsupported: 2,
 })
@@ -41,6 +42,10 @@ const LOCAL_PREFERENCE_PATHS = new Set([
 const UNSUPPORTED_PATHS = new Set([
   '/.sage/feedback',
   '/.sage/edit-drafts/writeback',
+])
+
+const LOCAL_SYSTEM_PATHS = new Set([
+  '/.sage/bootstrap',
 ])
 
 const RUN_COMMAND_PATHS = new Set([
@@ -127,6 +132,7 @@ function unique(values) {
 function classificationFor(path) {
   if (READ_ONLY_PATHS.has(path)) return 'read-only'
   if (LOCAL_PREFERENCE_PATHS.has(path)) return 'local-preference'
+  if (LOCAL_SYSTEM_PATHS.has(path)) return 'local-system'
   if (UNSUPPORTED_PATHS.has(path)) return 'unsupported'
   return 'protected-effect'
 }
@@ -137,6 +143,7 @@ function policyProfileFor(path, classification) {
   if (CONTEXT_SELECTION_PATHS.has(path)) return 'context-selection'
   if (PREPARE_ONLY_PATHS.has(path)) return 'prepare-only'
   if (AUTH_LIFECYCLE_PATHS.has(path)) return 'auth-lifecycle'
+  if (classification === 'local-system') return 'local-system'
   if (classification === 'read-only') return 'projection-read'
   if (classification === 'local-preference') return 'local-preference'
   return 'business-command'
@@ -144,6 +151,7 @@ function policyProfileFor(path, classification) {
 
 function authorityFor(path, classification) {
   if (classification === 'unsupported') return { status: 'unsupported', mode: 'named-unavailable' }
+  if (classification === 'local-system') return { status: 'compliant', mode: 'local-system-admission-unavailable-first' }
   if (classification === 'read-only') return { status: 'compliant', mode: 'projection-read-admission-unavailable-first' }
   if (classification === 'local-preference') return { status: 'partial', mode: 'local-main-with-partial-caller-binding' }
   if (RUN_COMMAND_PATHS.has(path)) return { status: 'compliant', mode: 'runCommand' }
@@ -323,6 +331,69 @@ function providerUsesContextSelection(compositionText, providers) {
   return providers.some((provider) =>
     provider === 'selectActiveMatter'
     && extractMethodBlock(compositionText, provider)?.includes('options.selectActiveMatter') === true)
+}
+
+function extractFunctionBlock(text, functionName) {
+  if (typeof text !== 'string') return null
+  const marker = `function ${functionName}(`
+  const start = text.indexOf(marker)
+  if (start < 0) return null
+  const next = text.indexOf('\nfunction ', start + marker.length)
+  const end = next < 0 ? text.length : next
+  return text.slice(start, end)
+}
+
+function localSystemAdmissionViolations(mainAppServiceText) {
+  const violations = []
+  if (!mainAppServiceText.includes("import { admitLocalSystemRead } from '../appservice/local-system-admission.js'")) {
+    violations.push('the local-system runner must import the admitted kernel from appservice/local-system-admission.ts')
+  }
+  if (!mainAppServiceText.includes('bootstrapRead: createLocalSystemBootstrapRunner(options)')) {
+    violations.push('the service assembly must forward bootstrapRead: createLocalSystemBootstrapRunner(options)')
+  }
+  const block = extractFunctionBlock(mainAppServiceText, 'createLocalSystemBootstrapRunner')
+  if (block === null) return [...violations, 'createLocalSystemBootstrapRunner is missing from the main app-service assembly']
+  if (!block.includes('admitLocalSystemRead<LocalSystemBootstrapState>({')) {
+    violations.push('the local-system runner must enter admitLocalSystemRead with the closed bootstrap DTO type')
+  }
+  const serviceJsonCalls = [...block.matchAll(/serviceJson\(/gu)].length
+  if (serviceJsonCalls !== 2) {
+    violations.push('the local-system runner must answer with exactly two serviceJson exits (the kernel value or the stable denial)')
+  }
+  if (!block.includes('serviceJson(result.value, 200)')) {
+    violations.push('the local-system success exit must be the admitted kernel value')
+  }
+  if (!block.includes('serviceJson({ code: result.code, stage: result.stage, retryable: result.retryable, correlation: result.correlation }, 200)')) {
+    violations.push('the local-system denial exit must derive every field from the kernel result')
+  }
+  if (block.includes('new Response(')) {
+    violations.push('the local-system runner must answer only through serviceJson')
+  }
+  if (block.includes('options.vault.snapshot') || block.includes('...options.vault') || block.includes('identitySession')) {
+    violations.push('the local-system runner must not read the vault snapshot, identity session, or spread vault state')
+  }
+  if (!block.includes('options.callerBinding')) {
+    violations.push('the local-system runner must derive its caller fact from the request-scoped binding')
+  }
+  if (!block.includes('return frame === undefined || !frame.ready || frame.contaminated')) {
+    violations.push('the local-system runner must verify a ready, uncontaminated frame before the read')
+  }
+  if (!block.includes("if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }")) {
+    violations.push('the local-system runner must re-verify a ready, uncontaminated frame after the read')
+  }
+  if (!block.includes('frame.generation === frameGeneration')) {
+    violations.push('the local-system runner must re-check the frame generation after the read')
+  }
+  if (!block.includes('options.vault.status() !== beforeStatus')) {
+    violations.push('the local-system runner must discard a read that raced an identity change')
+  }
+  if (!block.includes('options.viewState?.status')) {
+    violations.push('the local-system runtime status must come from the assembled view state')
+  }
+  if (block.includes('displayName') || /\bmatterRef\b/u.test(block) || /\bworkspaceRoot\b/u.test(block)) {
+    violations.push('the local-system runner must not carry names, matter or workspace authority')
+  }
+  return violations
 }
 
 function failAll(discovered, violations) {
@@ -537,6 +608,23 @@ export function checkSageRouteAuthority(input) {
     } else if (rawRoute.contextSelection !== undefined) {
       failRoute(path, 'contextSelection is only valid for the explicit context selection route')
     }
+    const expectedLocalSystem = LOCAL_SYSTEM_PATHS.has(path)
+    if (expectedLocalSystem) {
+      if (!isRecord(rawRoute.localSystemAdmission)) {
+        failRoute(path, 'localSystemAdmission object is required')
+      } else {
+        if (rawRoute.localSystemAdmission.required !== true) failRoute(path, 'localSystemAdmission.required must be true')
+        if (rawRoute.localSystemAdmission.actual !== true) failRoute(path, 'localSystemAdmission.actual must be true')
+        const sourceViolations = localSystemAdmissionViolations(input.mainAppServiceText)
+        for (const violation of sourceViolations) failRoute(path, violation)
+        const sourceActual = sourceViolations.length === 0
+        if (sourceActual !== rawRoute.localSystemAdmission.actual) {
+          failRoute(path, `localSystemAdmission source fact is ${sourceActual}, matrix says ${String(rawRoute.localSystemAdmission.actual)}`)
+        }
+      }
+    } else if (rawRoute.localSystemAdmission !== undefined) {
+      failRoute(path, 'localSystemAdmission is only valid for the registered local-system route')
+    }
     const expectedProjectionRead = expectedClassification === 'read-only'
     if (expectedProjectionRead) {
       if (!isRecord(rawRoute.projectionReadAdmission)) {
@@ -615,10 +703,19 @@ export function checkSageRouteAuthority(input) {
 
   const projectionReadOwnerMatches = input.mainIndexText.includes("import { projectionReadScope } from './projection-read-scope.js'")
     && input.mainIndexText.includes('const scope = projectionReadScope.current()')
-    && input.mainIndexText.includes('authorizeProjectionRead: () => undefined')
+    // T03 (authorised wiring): the read-policy ports are bound to one memoised main-owned policy —
+    // selection-time matter.read grants and per-operation projection.read grants over the
+    // instance-local organization policy (local-read only). The previous explicit-absent pins
+    // must not return, and the per-request rebuild (which would drop the bound-scope ledger) is a drift.
+    && input.mainIndexText.includes("import { createProjectionReadPolicy, type ProjectionReadPolicy } from './projection-read-policy.js'")
+    && input.mainIndexText.includes('let readPolicy: ProjectionReadPolicy | null = null')
+    && input.mainIndexText.includes('authorizeMatterRead: (request) => readPolicyFor().authorizeMatterRead(request)')
+    && input.mainIndexText.includes('authorizeProjectionRead: (request) => readPolicyFor().authorizeProjectionRead(request)')
+    && !input.mainIndexText.includes('authorizeMatterRead: () => undefined')
+    && !input.mainIndexText.includes('authorizeProjectionRead: () => undefined')
     && !input.mainIndexText.includes('currentMatterRef')
     && !input.mainIndexText.includes('newest converted draft')
-  if (!projectionReadOwnerMatches) failGlobal('projection-read request owner or production unavailable-first policy drifted')
+  if (!projectionReadOwnerMatches) failGlobal('projection-read request owner or production read-policy wiring drifted')
 
   const protectedBypasses = matrix.routes.filter((route) => isRecord(route)
     && route.classification === 'protected-effect'
@@ -654,8 +751,8 @@ export function checkSageRouteAuthority(input) {
       skipped: 0,
       failed: 0,
       typedSkips: [],
-      reason: '58 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission but remain unavailable without production matter/object read policy; state/search collections and opaque object reads remain blocked. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
+      reason: '59 Sage routes match the checked-in authority truth matrix',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; collection and opaque-object reads still need main-owned object resolvers. 1 local-system route enters device-local admission (runtime status enum, auth status, requested theme/density only) and stays unavailable-first without its main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

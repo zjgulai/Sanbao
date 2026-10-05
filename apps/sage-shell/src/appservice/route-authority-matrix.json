@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "sourceCommit": "eeff8967190815c7b5018f7d11b748818d487d37",
   "denominator": {
-    "expected": 58,
+    "expected": 59,
     "sourcePath": "apps/sage-shell/src/appservice/route-skeleton.ts",
     "constantPattern": "^const SAGE_.*_PATH"
   },
@@ -26,11 +26,28 @@
       "activeContext": "request-scoped ActiveContext plus device-wide service aggregate; aggregate remains blocked without collection policy",
       "providers": ["readState", "readBlockedState"],
       "persistence": "none; reads assembled snapshots",
-      "runtimeLevel": "L3/L4 aggregate behind unified admission; production collection read policy unavailable-first",
+      "runtimeLevel": "L3/L4 aggregate behind unified admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only), absent session/grants stay unavailable-first, collection and opaque-object reads still need main-owned object resolvers",
       "runCommand": { "required": false, "actual": false },
       "projectionReadAdmission": { "required": true, "actual": true },
       "unsupportedOperations": [],
       "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+    },
+    {
+      "sourceConstant": "SAGE_BOOTSTRAP_PATH",
+      "path": "/.sage/bootstrap",
+      "method": "GET",
+      "classification": "local-system",
+      "policyProfile": "local-system",
+      "operations": ["read"],
+      "callerBinding": "CB1",
+      "activeContext": "device runtime/auth/display facts only; no matter, session, workspace or business object",
+      "providers": ["bootstrapRead"],
+      "persistence": "none; reads assembled snapshots only",
+      "runtimeLevel": "L3 device-local entry facts behind local-system admission; unavailable-first without its main-owned runner",
+      "runCommand": { "required": false, "actual": false },
+      "localSystemAdmission": { "required": true, "actual": true },
+      "unsupportedOperations": [],
+      "currentAuthority": { "status": "compliant", "mode": "local-system-admission-unavailable-first" }
     },
     {
       "sourceConstant": "SAGE_CONTEXT_SELECT_PATH",
@@ -43,7 +60,7 @@
       "activeContext": "renderer submits only matterId plus observed CAS generation; main re-resolves session, read access, current revision, default link, fresh workspace and frame",
       "providers": ["selectActiveMatter"],
       "persistence": "none; Electron-main in-memory generation-bound context",
-      "runtimeLevel": "L1 explicit selection contract; production read-access provider remains unavailable-first",
+      "runtimeLevel": "L1 explicit selection contract; the read-access grant is evaluated by the main-owned read policy (identity session + instance-local policy, local-read only); absent session/grants stay unavailable-first",
       "runCommand": { "required": false, "actual": false },
       "contextSelection": { "required": true, "actual": true },
       "unsupportedOperations": [],

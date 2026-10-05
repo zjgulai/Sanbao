@@ -4,14 +4,15 @@
  * (intent assembly + Authority Runtime) and retry's availability probe merged over the
  * fail-closed defaults — steps 3-10 stay fail closed. */
 import { randomUUID } from 'node:crypto'
-import type { SageViewState } from '../product/contracts.js'
+import { SAGE_RUNTIME_STATUSES, type SageRuntimeStatus, type SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
 import { createSageFixtureViewState, parseSageFixtureStage } from '../product/view-state.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../appservice/composition.js'
 import { serviceJson } from '../appservice/errors.js'
-import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner } from '../appservice/contracts.js'
+import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner, LocalSystemBootstrapState } from '../appservice/contracts.js'
 import { admitProjectionRead } from '../appservice/projection-read-admission.js'
 import type { ProjectionReadOperation, ProjectionReadScope } from '../appservice/projection-read-admission.js'
+import { admitLocalSystemRead } from '../appservice/local-system-admission.js'
 import type { CommandPipelinePorts, SageDispatchIntent } from '../appservice/command-contracts.js'
 import type { ActionConfirmationsWiring } from '../appservice/action-confirmations.js'
 import type { RuntimeEffectiveObservation } from '../protocol.js'
@@ -516,6 +517,83 @@ function createProjectionReadRunner(options: SageAppServiceOptions): ProjectionR
   }
 }
 
+/** T02: the device-local bootstrap read (runtime enum, auth status, requested theme/density).
+ *  No matter or session authority exists here: the request-scoped caller plus a ready,
+ *  uncontaminated frame with an unmoved generation are the whole admission, and a read that
+ *  races an identity or frame change is discarded instead of presented. */
+function createLocalSystemBootstrapRunner(options: SageAppServiceOptions): () => Promise<Response> {
+  return async () => {
+    const correlation = options.callerBinding?.correlation ?? randomUUID()
+    const result = await admitLocalSystemRead<LocalSystemBootstrapState>({
+      correlation,
+      validatesReadValue: isLocalSystemBootstrapState,
+      ports: {
+        verifyCaller: async () => {
+          const binding = options.callerBinding
+          return binding === undefined || binding === null
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { bindingRef: binding.correlation } }
+        },
+        verifyFrame: async () => {
+          const frame = options.framePolicySnapshot?.()
+          return frame === undefined || !frame.ready || frame.contaminated
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { frameGeneration: frame.generation } }
+        },
+        read: async () => {
+          const beforeStatus = options.vault.status()
+          const preferences = options.preferences?.()
+          if (preferences === undefined) return { state: 'unavailable' as const }
+          // Identity may not flip between the two observations; a torn read stays unavailable.
+          if (options.vault.status() !== beforeStatus) return { state: 'unavailable' as const }
+          return {
+            state: 'allowed' as const,
+            value: {
+              runtime: { status: options.viewState?.status ?? 'unavailable' },
+              auth: { status: beforeStatus },
+              display: { theme: preferences.requested.theme, density: preferences.requested.density },
+            },
+          }
+        },
+        checkPostReadFreshness: async (frameGeneration) => {
+          const frame = options.framePolicySnapshot?.()
+          if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }
+          return frame.generation === frameGeneration ? { state: 'allowed' as const } : { state: 'stale' as const }
+        },
+      },
+    })
+    return result.state === 'read'
+      ? serviceJson(result.value, 200)
+      : serviceJson({ code: result.code, stage: result.stage, retryable: result.retryable, correlation: result.correlation }, 200)
+  }
+}
+
+/** The DTO is closed: three exact sub-objects, no name, credential, session, configuration,
+ *  workspace or business field can slip through validation. */
+function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const keys = Object.keys(value).sort()
+  return keys.length === expected.length && keys.every((key, index) => key === expected[index])
+}
+
+function isLocalSystemBootstrapState(value: unknown): value is LocalSystemBootstrapState {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const record = value as Record<string, unknown>
+  if (!hasExactKeys(record, ['auth', 'display', 'runtime'])) return false
+  const runtime = record.runtime as { readonly status?: unknown } | null | undefined
+  const auth = record.auth as { readonly status?: unknown } | null | undefined
+  const display = record.display as { readonly theme?: unknown, readonly density?: unknown } | null | undefined
+  return typeof runtime === 'object' && runtime !== null
+    && hasExactKeys(runtime as Record<string, unknown>, ['status'])
+    && SAGE_RUNTIME_STATUSES.includes(runtime.status as SageRuntimeStatus)
+    && typeof auth === 'object' && auth !== null
+    && hasExactKeys(auth as Record<string, unknown>, ['status'])
+    && (auth.status === 'signed-in' || auth.status === 'signed-out' || auth.status === 'pending')
+    && typeof display === 'object' && display !== null
+    && hasExactKeys(display as Record<string, unknown>, ['density', 'theme'])
+    && (display.theme === 'light' || display.theme === 'dark' || display.theme === 'system')
+    && (display.density === 'comfortable' || display.density === 'compact')
+}
+
 /** AUTH-02A/02B assemble caller/context/candidate checks for the admitted session family. Later
  * authority ports remain absent, and composition withholds dispatch, so production stays
  * unavailable-first. Every request rechecks the identity session, current revision, default link,
@@ -639,6 +717,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     },
     ...(options.selectActiveMatter === undefined ? {} : { selectActiveMatter: options.selectActiveMatter }),
     runProjectionRead: createProjectionReadRunner(options),
+    bootstrapRead: createLocalSystemBootstrapRunner(options),
     protectedEffectPorts: createSessionCoreProtectedEffectPorts(options),
     protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),

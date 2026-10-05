@@ -92,10 +92,11 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
   }
 }
 
-const PRE_DISPATCH_REFUSALS = new Set([
-  'protected-effect-unavailable', 'protected-effect-denied', 'protected-effect-stale',
-  'invalid-session-request', 'session-text-invalid', 'session-paused-attachments', 'session-request-id-invalid',
-])
+// A refused receipt is the service asserting "not accepted" — a determinate verdict the caller may
+// retry safely, whatever the specific code says. Only one code is genuinely indeterminate: when the
+// service itself could not confirm the protected effect's outcome it refuses with
+// protected-effect-outcome-unknown, and re-sending could duplicate the effect.
+const OUTCOME_UNKNOWN_REFUSAL = 'protected-effect-outcome-unknown'
 const TRANSPORT_REFUSALS: Readonly<Record<number, string>> = {
   400: 'invalid-session-request', 403: 'caller-denied', 405: 'method-not-allowed',
   413: 'request-too-large', 415: 'content-type-rejected',
@@ -128,7 +129,8 @@ export async function submitDesktopSession(session: DesktopSession | null, actio
     const result: unknown = await response.json()
     if (!isRecord(result)) return { kind: 'unknown' }
     if (result.state === 'refused') {
-      return typeof result.code === 'string' && PRE_DISPATCH_REFUSALS.has(result.code)
+      if (result.code === OUTCOME_UNKNOWN_REFUSAL) return { kind: 'unknown' }
+      return typeof result.code === 'string'
         ? { kind: 'refused', code: result.code } : { kind: 'unknown' }
     }
     if (action.kind === 'send') {

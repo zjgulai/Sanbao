@@ -47,6 +47,8 @@ export interface ServiceOptions {
   readonly selectActiveMatter?: (request: ActiveMatterSelectionRequest) => Promise<ActiveMatterSelectionOutcome>
   /** READ-01A: route-level projection reads use one request-scoped main runner. */
   readonly runProjectionRead?: ProjectionReadRouteRunner
+  /** T02: the local-system bootstrap read; assembled by main, absent keeps the stable denial. */
+  readonly bootstrapRead?: () => Promise<Response>
   /** Explicit fixture-mode matter projection (WT-02D.1): injected by main only under its fixture switch; absent keeps the slot null. */
   readonly fixtureProjection?: () => SageMatterViewState
   /** WT-02D.2A: composed command ports (real step-2 over fail-closed defaults); absent keeps every port fail-closed. */
@@ -353,6 +355,14 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
   }
   return {
     ...(options.runProjectionRead === undefined ? {} : { runProjectionRead: options.runProjectionRead }),
+    // T02: without the main-assembled runner the local-system route answers its stable denial —
+    // never a synthesized runtime/auth/display fact.
+    bootstrapRead: options.bootstrapRead ?? (async (): Promise<Response> => serviceJson({
+      code: 'bootstrap-unavailable',
+      stage: 'local-system',
+      retryable: true,
+      correlation: randomUUID(),
+    }, 200)),
     async readBlockedState(): Promise<Response> {
       return serviceJson({
         code: 'projection-read-unavailable',
