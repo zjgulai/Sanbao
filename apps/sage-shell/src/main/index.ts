@@ -74,6 +74,7 @@ import { createActiveMatterContext } from './active-matter-context.js'
 import { selectActiveMatter as selectActiveMatterContext } from './active-matter-selection.js'
 import { projectionReadScope } from './projection-read-scope.js'
 import { SANBAO_SCHEME_REGISTRATION } from './sanbao-surface.js'
+import { launchSanbaoSurfaceFromEnv } from './sanbao-surface-launch.js'
 
 const SCHEME = 'dsh-app'
 
@@ -1027,6 +1028,10 @@ async function main(paths: SagePaths): Promise<void> {
   sageWindow = window
   await loadTrustedUrl(window, framePolicy, `${SCHEME}://app/index.html`)
   if (process.env.SAGE_DEVTOOLS === '1') window.webContents.openDevTools({ mode: 'detach' })
+
+  // dev 可见承载面（ADR-0264）：SAGE_SANBAO_SURFACE=1 时才打开；失败只打一行诊断，不阻启动。
+  const sanbaoSurface = await launchSanbaoSurfaceFromEnv()
+  if (sanbaoSurface !== null) window.once('closed', () => { sanbaoSurface.destroy() })
 
   // Without the guard, a second before-quit during teardown preventDefaults again and the app never exits.
   let quitting = false

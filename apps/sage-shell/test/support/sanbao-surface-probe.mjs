@@ -25,7 +25,7 @@ import {
   createSanbaoSurface,
   resolveServedAssetPath,
 } from '../../lib/main/sanbao-surface.js'
-import { resolveSanbaoSurfaceRoot } from './sanbao-surface-root.mjs'
+import { resolveSanbaoSurfaceRoot } from '../../lib/main/sanbao-surface-root.js'
 
 const RESULT_PREFIX = 'SAGE_SANBAO_SURFACE_RESULT '
 const READ_PREFIX = 'SAGE_SANBAO_SURFACE_READ '

@@ -8,7 +8,7 @@
  * - honest 组：空 facts 下页面如实显示「未接线」，fixture 文案不被冒充替换；
  * - 负控：把 live 组期望工作区名突变后，具名断言必须红（exit 2），其余读数不受累。
  *
- * 承载面 root 由 test/support/sanbao-surface-root.mjs 动态发现（SAGE_SANBAO_SURFACE_ROOT 或
+ * 承载面 root 由 src/main/sanbao-surface-root.ts（唯一家）动态发现（SAGE_SANBAO_SURFACE_ROOT 或
  * Sage 仓同级快照仓）；找不到产物时显式跳过（第三态），不伪装通过。
  */
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { buildProductionLibrary } from './support/build-production-library.js'
-import { resolveSanbaoSurfaceRoot } from './support/sanbao-surface-root.mjs'
+import { resolveSanbaoSurfaceRoot } from '../src/main/sanbao-surface-root.js'
 
 const PROBE_PATH = fileURLToPath(new URL('./support/sanbao-surface-probe.mjs', import.meta.url))
 const RESULT_PREFIX = 'SAGE_SANBAO_SURFACE_RESULT '

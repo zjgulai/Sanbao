@@ -8267,6 +8267,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0264",
+      "title": "ADR-0264 · dev 可见承载面：`SAGE_SANBAO_SURFACE=1` 打开 sanbao 承载窗（honest 壳桥）",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "SAGE_SANBAO_SURFACE=1 时 main 在 ready、主窗加载后打开独立承载窗并 load()；未设置一律不打开（生产默认零变化；时机/窗口归属留决策包）。",
+          "constraints": [
+            "env-gated",
+            "independent window",
+            "no production default change"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "打开时不注入 facts——页面按协议如实显示未提供能力、fixture 文案保留；绝不 fixture 冒充成功。",
+          "constraints": [
+            "honest bridge",
+            "no fabricated facts"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "root 缺失/创建/加载失败只打一行诊断并继续启动；主窗关闭联动 destroy()。",
+          "constraints": [
+            "non-fatal",
+            "lifecycle-tied"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "root 解析唯一家迁入 src/main/sanbao-surface-root.ts（env 覆盖→同级快照仓→dist/_site 完整性门）；探针/spec 分别经 lib/src 引用，删除 test/support 薄层。",
+          "constraints": [
+            "single home",
+            "no machine absolute paths",
+            "probe and spec reference one implementation"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "dev:debug 默认打开承载面（--no-sanbao 关、--sanbao-root 覆盖）；纯开发面，不构成发布/DMG 证据。",
+          "constraints": [
+            "dev-only",
+            "no release evidence"
+          ]
+        }
+      ]
     }
   ]
 }

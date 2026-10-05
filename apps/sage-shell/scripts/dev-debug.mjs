@@ -9,6 +9,9 @@
  * - **调试姿态**：main 进程 Node inspector（默认 9229）＋ renderer CDP（默认 9222）＋
  *   `SAGE_DEVTOOLS=1` 自动打开 detached DevTools；全部可 env/flag 覆盖。
  * - **投影**：默认 `SAGE_FIXTURE_PROJECTION=1`（可见 UI）；`--unavailable` 切到诚实 unavailable 路径。
+ * - **sanbao 承载面**：默认打开（`SAGE_SANBAO_SURFACE=1`）——dev 以独立窗口承载最新构建的 sanbao_ui
+ *   （壳桥 honest：未提供的能力如实标注，不伪造业务事实）；`--no-sanbao` 关、`--sanbao-root` 指定产物根；
+ *   根解析唯一家在 `src/main/sanbao-surface-root.ts`。
  * - **日志**：stdout/stderr 全量 tee 到 `<dev 根>/logs/dev-session.log`，终端同时可见。
  *
  * 用法：
@@ -17,6 +20,8 @@
  *   node scripts/dev-debug.mjs --unavailable   # 不注入 fixture 投影
  *   node scripts/dev-debug.mjs --root <dir>    # 覆盖 dev 根（或 SAGE_DEV_ROOT）
  *   node scripts/dev-debug.mjs --reset         # 删除 dev 根（须带标记）后重建再启动
+ *   node scripts/dev-debug.mjs --no-sanbao     # 不打开 sanbao 承载面（默认开）
+ *   node scripts/dev-debug.mjs --sanbao-root <dir>  # 指定 sanbao 产物根（或 SAGE_SANBAO_SURFACE_ROOT）
  *   node scripts/dev-debug.mjs --print         # 只打印解析后的根/端口/日志路径并退出
  */
 import { spawn } from 'node:child_process'
@@ -39,12 +44,18 @@ const inspectPort = value('--inspect-port', process.env.SAGE_DEV_INSPECT_PORT ??
 const cdpPort = value('--cdp-port', process.env.SAGE_DEV_CDP_PORT ?? '9222')
 const logPath = join(devRoot, 'logs', 'dev-session.log')
 const fixture = !flag('--unavailable')
+const sanbao = !flag('--no-sanbao')
+const sanbaoRoot = value('--sanbao-root', process.env.SAGE_SANBAO_SURFACE_ROOT)
 
 console.log(`[dev-debug] dev 根：${devRoot}`)
 console.log(`[dev-debug] main inspector：http://127.0.0.1:${inspectPort}（chrome://inspect）`)
 console.log(`[dev-debug] renderer CDP：http://127.0.0.1:${cdpPort}/json/list`)
 console.log(`[dev-debug] 会话日志：${logPath}`)
 console.log(`[dev-debug] 投影：${fixture ? 'SAGE_FIXTURE_PROJECTION=1（fixture UI）' : '生产形态（unavailable-first）'}`)
+console.log(`[dev-debug] sanbao 承载面：${sanbao ? '开（SAGE_SANBAO_SURFACE=1）' : '关（--no-sanbao）'}`)
+if (sanbao && typeof sanbaoRoot === 'string' && sanbaoRoot.length > 0) {
+  console.log(`[dev-debug] sanbao 根（显式）：${sanbaoRoot}`)
+}
 if (flag('--print')) process.exit(0)
 
 if (flag('--reset')) {
@@ -89,15 +100,22 @@ const electronArgs = [
   `--remote-debugging-port=${cdpPort}`,
   '.',
 ]
+const electronEnv = {
+  ...process.env,
+  SAGE_ROOT: devRoot,
+  SAGE_DEVTOOLS: '1',
+  ELECTRON_ENABLE_LOGGING: '1',
+  ...(fixture ? { SAGE_FIXTURE_PROJECTION: '1' } : {}),
+}
+if (sanbao) {
+  electronEnv.SAGE_SANBAO_SURFACE = '1'
+  if (typeof sanbaoRoot === 'string' && sanbaoRoot.length > 0) electronEnv.SAGE_SANBAO_SURFACE_ROOT = sanbaoRoot
+} else {
+  delete electronEnv.SAGE_SANBAO_SURFACE
+}
 const child = spawn(electron, electronArgs, {
   cwd: shellRoot,
-  env: {
-    ...process.env,
-    SAGE_ROOT: devRoot,
-    SAGE_DEVTOOLS: '1',
-    ELECTRON_ENABLE_LOGGING: '1',
-    ...(fixture ? { SAGE_FIXTURE_PROJECTION: '1' } : {}),
-  },
+  env: electronEnv,
   stdio: ['inherit', 'pipe', 'pipe'],
 })
 child.stdout.on('data', tee)
