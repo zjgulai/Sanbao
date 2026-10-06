@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { renderSageDocument } from '../src/product/renderer.js'
-import { bootSagePage, statePayload } from './support/sage-page.js'
+import { bootSagePage, statePayload, setLinkSelection } from './support/sage-page.js'
 
 /**
  * Batch 17 / P3 (ADR-0261 strangler): the run-monitor card (`#monitor-*`, `#run-log-*`) and the
@@ -131,8 +131,7 @@ describe('run-monitor region bridge (batch 17)', () => {
       matterLinks: { state: 'read', links: [{ matterRef: 'matter:1', workspaceRef: 'ws-1', workspacePath: '/Users/someone/project', linkedAt: 'x', isDefault: true }], trail: [] },
       runMonitor: runMonitorRead,
     }), { '/.sage/run-log': route })
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     const actions = legacyActions()
 
     const open = await actions.runLogOpen!('logs/run.log')
@@ -177,8 +176,7 @@ describe('run-monitor region bridge (batch 17)', () => {
     expect(noContext.notice).toContain('先在「事项 ↔ 工作区关联」里选好事项与工作区')
     expect(page.requests).toHaveLength(0)
 
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     const noPath = await actions.runLogOpen!('   ')
     expect(noPath.notice).toContain('先写日志文件在工作区内的相对路径')
     expect(page.requests).toHaveLength(0)
@@ -221,8 +219,7 @@ describe('artifact region bridge (batch 17)', () => {
     expect(refused).toContain('先在上面选好事项与工作区')
     expect(page.requests).toHaveLength(0)
 
-    page.node('link-matter').value = 'receipt:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('receipt:1', 'ws-1')
     const observed = await actions.observeArtifacts!()
     await page.settle()
     expect(page.requests[0]).toEqual({ path: '/.sage/artifacts/observe', body: { matterRef: 'receipt:1', workspaceRoot: '/Users/someone/project' } })

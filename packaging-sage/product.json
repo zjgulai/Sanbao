@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "productName": "Sage",
+  "bundleId": "com.lute.sage",
+  "version": "0.1.0",
+  "build": "1",
+  "arch": "arm64",
+  "distribution": "internal",
+  "electronVersion": "43.3.0",
+  "icon": "assets/sage/Sage.icns",
+  "signing": {
+    "mode": "local-self-signed",
+    "identityCommonName": "Sage Local Code Signing",
+    "hardenedRuntime": false,
+    "appSandbox": false,
+    "notarized": false
+  },
+  "dmg": {
+    "format": "UDZO",
+    "volumeName": "Sage 0.1.0 Internal",
+    "fileName": "Sage-0.1.0-internal-arm64.dmg"
+  }
+}
+

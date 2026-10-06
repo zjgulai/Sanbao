@@ -36,8 +36,18 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { cardBrief } from '../../packages/surfaces/dsh-role-matrix-local/src/client/card-brief.ts'
-import { collectRoleMatrix } from '../../packages/surfaces/dsh-role-matrix-local/src/collect.ts'
+// legacy 判据的源住在 quarantine 区 packages/surfaces/dsh-role-matrix-local/。
+// 加载改为**容错 TLA**：packages 缺失时本模块仍可加载（Sage 域零依赖），运行期
+// fail-closed 并点名恢复路径（ADR-0273）。
+let cardBrief = null
+let collectRoleMatrix = null
+try {
+  ;({ cardBrief } = await import('../../packages/surfaces/dsh-role-matrix-local/src/client/card-brief.ts'))
+  ;({ collectRoleMatrix } = await import('../../packages/surfaces/dsh-role-matrix-local/src/collect.ts'))
+} catch {
+  // 缺源时静默为 null：判定函数在真正需要时报具名错误，不在加载期炸掉整条 gate。
+}
+const ROLE_MATRIX_SOURCE_HINT = 'legacy 源在 packages/surfaces/dsh-role-matrix-local/ 不可用——恢复：git checkout HEAD -- packages/（ADR-0273）'
 
 /** 违规描述里回显的样本长度：够认出是哪张卡、不把整句抄进读数。 */
 const ECHO_LENGTH = 46
@@ -73,6 +83,7 @@ export function judgeRoleBriefShape({ cards = [] } = {}) {
     // 空射程不是合格：一张都没量到时说「通过」，正是最便宜的那种假绿（P-02）。
     return { violations: ['没有读到任何带 description 的岗位卡——空射程不是合格（P-02）'], checked: 0 }
   }
+  if (typeof cardBrief !== 'function') throw new Error(ROLE_MATRIX_SOURCE_HINT)
 
   const violations = withDescription
     .filter((card) => {
@@ -104,6 +115,7 @@ export function checkRoleBriefShape({ root = join(homedir(), '.dsh', '.agent-pre
     }
   }
 
+  if (typeof collectRoleMatrix !== 'function') throw new Error(ROLE_MATRIX_SOURCE_HINT)
   const payload = collectRoleMatrix(root)
   const cards = payload.planes.flatMap((plane) => plane.domains.flatMap((domain) => domain.roles))
   const { violations, checked } = judgeRoleBriefShape({ cards })
@@ -115,7 +127,13 @@ export function checkRoleBriefShape({ root = join(homedir(), '.dsh', '.agent-pre
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const result = checkRoleBriefShape({})
+  let result
+  try {
+    result = checkRoleBriefShape({})
+  } catch (error) {
+    console.error(`✗ ${error instanceof Error ? error.message : String(error)}`)
+    process.exit(1)
+  }
   for (const violation of result.violations) console.log(`✗ ${violation}`)
   console.log(result.skipped ? `跳过：${result.note}` : result.note)
   if (result.passed && !result.skipped) console.log('✓ role-brief-shape 通过')

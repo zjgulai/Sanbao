@@ -30,6 +30,14 @@
  * - 本工具是**读数工具不是门禁**：它不判红、不删除，只把三步读数摆出来；
  *   把候选写进删除批次之前，读数必须齐（P-49 的下一版默认动作）。
  *
+ * ## 读不到 ≠ 没有（2026-10-06 加固）
+ *
+ * `git grep` 无命中是退出码 1；仓库不可用 / 越权 / 超时是其它非零。此前两者都返回空数组，
+ * 「扫描失败」在下游与「无引用」同形——对不可读对象照样给出删除建议（P-02 族：读不到被读成没问题；
+ * 负控实测：不存在的仓库 verdict=`suggested`）。现在 `searchTracked` 返回 `{ ok, hits }` 或
+ * `{ ok: false, error }`，扫描失败在 `judgeCandidate` 里落成 `unknown`（未核清，不得进入删除建议）。
+ * 扫描同时纳入 `--untracked`（索引之外的活引用）与 `packaging-sage/` 代码域。
+ *
  * @module
  */
 import { execFileSync } from 'node:child_process'
@@ -49,7 +57,7 @@ const GATE_SCOPE_RE = /^scripts\/(?:gate\.mjs$|gates\/)/
 const ADR_RE = /^docs\/adr\//
 
 /** 代码目录（②「谁引用它」的射程）；ADR 与门禁射程属①，不在这里重复计。 */
-const CODE_RE = /^(?:scripts|packaging|packages|apps|shared)\//
+const CODE_RE = /^(?:scripts|packaging|packaging-sage|packages|apps|shared)\//
 
 /**
  * 扫一个候选目录里（顶层）的发布清单文件。
@@ -103,15 +111,21 @@ export function dirSizeBytes(absPath) {
 }
 
 /**
- * 纯判：把三步读数变成结论。①②任一命中 → `protected`；都否 → `suggested`。
- * @param {{commitments: Array<{kind: string, detail: string}>, references: Array<{file: string, line: number}>, sizeBytes: number}} input
- * @returns {{verdict: 'protected'|'suggested', reason: string}}
+ * 纯判：把三步读数变成结论。①承诺 →（引用扫描失败则 `unknown`）→ ②引用 → ③体积。
+ * @param {{commitments: Array<{kind: string, detail: string}>, references: Array<{file: string, line: number}>, sizeBytes: number, referenceScanOk?: boolean, referenceScanError?: string|null}} input
+ * @returns {{verdict: 'protected'|'unknown'|'suggested', reason: string}}
  */
-export function judgeCandidate({ commitments, references, sizeBytes }) {
+export function judgeCandidate({ commitments, references, sizeBytes, referenceScanOk = true, referenceScanError = null }) {
   if (commitments.length > 0) {
     return {
       verdict: 'protected',
       reason: `被承诺（${commitments.map((entry) => entry.kind).join('、')}）——证据面，不进入删除建议`,
+    }
+  }
+  if (referenceScanOk === false) {
+    return {
+      verdict: 'unknown',
+      reason: `引用扫描未完成（${referenceScanError ?? '原因未记录'}）——读不到不等于没有，先修复仪器再重跑（P-49 反向）`,
     }
   }
   if (references.length > 0) {
@@ -145,7 +159,10 @@ export function inspectCandidate({ candidate, repoRoot, deps }) {
   const absPath = join(repoRoot, candidate)
   const manifests = d.listReleaseManifests(absPath)
   const flags = d.readImmutableFlags(absPath)
-  const hits = d.searchTracked(candidate)
+  const scan = d.searchTracked(candidate)
+  const referenceScanOk = Array.isArray(scan) ? true : scan.ok === true
+  const referenceScanError = Array.isArray(scan) ? null : (scan.error ?? '原因未记录')
+  const hits = Array.isArray(scan) ? scan : (scan.ok ? scan.hits : [])
   const gateHits = hits.filter((hit) => GATE_SCOPE_RE.test(hit.file))
   const adrHits = hits.filter((hit) => ADR_RE.test(hit.file))
   const codeHits = hits.filter((hit) => CODE_RE.test(hit.file) && !GATE_SCOPE_RE.test(hit.file))
@@ -181,8 +198,14 @@ export function inspectCandidate({ candidate, repoRoot, deps }) {
   }
 
   const sizeBytes = d.dirSizeBytes(absPath)
-  const { verdict, reason } = judgeCandidate({ commitments, references: codeHits, sizeBytes })
-  return { candidate, commitments, references: codeHits, sizeBytes, verdict, reason }
+  const { verdict, reason } = judgeCandidate({
+    commitments,
+    references: codeHits,
+    sizeBytes,
+    referenceScanOk,
+    referenceScanError,
+  })
+  return { candidate, commitments, references: codeHits, sizeBytes, verdict, reason, referenceScanOk, referenceScanError }
 }
 
 /**
@@ -203,13 +226,25 @@ export function createRealDeps({ repoRoot }) {
       }
     },
     searchTracked(needle) {
+      let stdout
       try {
-        const out = execFileSync('git', ['-C', repoRoot, 'grep', '-n', '-F', '-e', needle], {
+        stdout = execFileSync('git', ['-C', repoRoot, 'grep', '-n', '-F', '--untracked', '-e', needle], {
           encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'ignore'],
-          maxBuffer: 32 * 1024 * 1024,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          maxBuffer: 64 * 1024 * 1024,
+          timeout: 120_000,
         })
-        return out
+      } catch (error) {
+        // 退出码 1 = 无命中（合法读数）；其它非零（128 非仓库等）或 spawn 失败 / 超时
+        // = 扫描没跑完——绝不能降级成「无引用」（P-02 族仪器假绿）。
+        if (error && error.status === 1) return { ok: true, hits: [] }
+        const code = error && error.status != null ? error.status : (error && error.code) || 'spawn-failure'
+        const detail = error && error.stderr ? String(error.stderr) : String((error && error.message) || error)
+        return { ok: false, error: `git grep unavailable (${code}): ${detail.trim().slice(0, 200)}` }
+      }
+      return {
+        ok: true,
+        hits: stdout
           .split('\n')
           .filter((line) => line !== '')
           .map((line) => {
@@ -220,11 +255,7 @@ export function createRealDeps({ repoRoot }) {
               line: Number.parseInt(line.slice(first + 1, second), 10),
               text: line.slice(second + 1).slice(0, 160),
             }
-          })
-      } catch {
-        // git grep 无命中时退出码 1；仓库不可用时也走这里——两种都返回空，
-        // 因为「没有引用」是最保守的**读数为空**，不会把候选误判成证据面。
-        return []
+          }),
       }
     },
     dirSizeBytes: (absPath) => dirSizeBytes(absPath),

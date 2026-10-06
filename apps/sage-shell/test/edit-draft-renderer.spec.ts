@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { bootSagePage, statePayload, type FakeElement } from './support/sage-page.js'
+import { bootSagePage, statePayload, type FakeElement, setLinkSelection } from './support/sage-page.js'
 
 /**
  * Ticket 027 on the shipped page (US-140~145).
@@ -62,7 +62,7 @@ describe('opening an edit draft from a reference (US-140)', () => {
     expect(harness.requests).toEqual([])
     expect(harness.node('edit-draft-note').textContent).toContain('选好事项')
 
-    harness.node('link-matter').value = 'matter:1'
+    setLinkSelection('matter:1', '')
     harness.node('file-references').dispatch('click', { target: draftButton })
     await harness.settle()
     expect(harness.requests).toEqual([{ path: '/.sage/edit-drafts/create', body: { referenceId: 'ref-1', matterRef: 'matter:1' } }])

@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { app, dialog, nativeTheme, protocol, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
+import { installBundledProfileTemplate } from '../profile/bundled-profile.js'
 import type { SageViewState } from '../product/contracts.js'
 import type { DraftRecord } from './draft-store.js'
 import type { DraftStatus, WorkspaceListStatus } from '../appservice/contracts.js'
@@ -1070,6 +1071,16 @@ async function bootstrap(): Promise<void> {
   // safe synchronous setup is deliberately before the first await in bootstrap().
   ensureSageDirectoriesSync(paths)
   configureElectronPaths(paths)
+  // A packaged first launch cannot depend on pnpm or the network. The build-time materialized,
+  // app-signature-covered template is admitted only into a completely pristine Sage root; an
+  // existing valid profile wins and any partial/corrupt state fails closed without replacement.
+  if (app.isPackaged) {
+    const profile = await installBundledProfileTemplate({
+      paths,
+      templateRoot: join(process.resourcesPath, 'sage-profile-template'),
+    })
+    process.stdout.write(`sage shell: bundled profile ${profile.state}\n`)
+  }
   await app.whenReady()
   await main(paths)
 }

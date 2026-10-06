@@ -735,6 +735,15 @@ export interface PreferencesStatus {
   readonly applies: 'live' | 'restart'
 }
 
+/** Device-local display settings returned by GET /.sage/device-preferences.
+ *  This is deliberately narrower than the matter state slot: main projects only the eight
+ *  requested values, the confirmed persistence timestamp, and the observed effective theme. */
+export interface DevicePreferencesState {
+  readonly requested: DisplayPreferenceValues
+  readonly savedAt: string | null
+  readonly effectiveTheme: 'light' | 'dark' | null
+}
+
 export type PreferencesSaveOutcome =
   | { readonly state: 'saved', readonly preferences: PreferencesStatus }
   | { readonly state: 'refused', readonly code: string }
@@ -1668,6 +1677,9 @@ export interface ServiceProviders {
   /** T02: the local-system bootstrap read — device facts only, behind its own admission
    *  (caller + ready/uncontaminated frame + unmoved generation); never a business read. */
   readonly bootstrapRead: () => Promise<Response>
+  /** Device-local preferences use the same local-system admission family, but keep their own
+   *  exact DTO and route-specific unavailable code. */
+  readonly devicePreferencesRead: () => Promise<Response>
   /** CTX-01B: explicit user selection; no GET, send or link route may call this implicitly. */
   readonly selectActiveMatter: (request: ActiveMatterSelectionRequest) => Promise<Response>
   /** Ticket 010: pick an existing directory and adopt it; never creates a directory. */
@@ -1705,8 +1717,8 @@ export interface ServiceProviders {
   /** Ticket 006: stop (cancel + drain into 待继续) and resume (dispatch in order). */
   readonly stopSession: (request: { readonly matterRef: string }) => Promise<Response>
   readonly resumeSession: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => Promise<Response>
-  /** Ticket 020: save one patch of the three display preferences. */
-  readonly savePreferences: (request: Partial<{ readonly theme: 'light' | 'dark' | 'system', readonly language: 'zh' | 'en', readonly density: 'comfortable' | 'compact' }>) => Promise<Response>
+  /** Ticket 020/047: save one patch of the eight display preferences. */
+  readonly savePreferences: (request: Partial<DisplayPreferenceValues>) => Promise<Response>
   /** Ticket 006: edit or remove one still-pending item (a consumed one is frozen). */
   readonly updatePendingInput: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
   /** Ticket 014: pick (candidate only), upload the sealed version, or cancel/remove one item. */

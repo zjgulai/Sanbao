@@ -4,6 +4,9 @@ import { SAGE_LOGIN_PATH, SAGE_LOGOUT_PATH, SAGE_REQUEST_TIMEOUT_MS } from '../.
 import { readDesktopBootstrapState, readDesktopState, type DesktopBootstrapRead, type DesktopRead } from './client.js'
 import { adoptDesktopWorkspace } from './adopt.js'
 import { Icon, TreeStamp, type DesktopIconName } from './icons.js'
+import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, type DesktopSearchSessions } from './search.js'
+import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
+import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import { DesktopSessionView } from './session-view.js'
 
@@ -19,14 +22,12 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
-  搜索: '搜索尚未接通；等待独立读取授权与真实检索结果。',
   知识中心: '知识中心尚未接通；不会展示虚构知识条目。',
   站点: '站点尚未接通；没有创建、发布或打开站点。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
   扩展: '扩展尚未接通；安装、启用与授权需要分别核验。',
-  '账号与设置': '账号与设置尚未接通；身份状态未知，不从服务读取拒绝推断登录状态。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
   模型: '模型选择尚未接通；配置与可用状态未知。',
   运行模式: '运行模式尚未接通；不从运行时连接状态推断任务执行权限。',
@@ -108,6 +109,95 @@ function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopRead
     <button className="text-button" aria-label="接入工作区" disabled={adoptBusy} onClick={startAdopt}>接入工作区</button>
     {body}
     {adoptNotice !== '' && <p className="workspace-note workspace-adopt-note" role="status">{adoptNotice}</p>}
+    <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>
+  </section>
+}
+
+/** T03-D: an opaque base session id shown as a short, bounds-safe摘录 — never a substitute for the
+ *  real snippet beside it. */
+function shortSessionId(value: string): string {
+  return value.length > 16 ? `${value.slice(0, 16)}…` : value
+}
+
+// T03-D: the sessions section keeps the base's own three states distinct. An unmounted query
+// engine (`unavailable`) or a failed call (`failed`) is never rendered as "no hits"; only an
+// `available` engine that returned zero items may say so.
+function SearchSessions({ sessions }: { readonly sessions: DesktopSearchSessions }): ReactNode {
+  if (sessions.state === 'unavailable') return <p className="search-note" role="status">{`会话搜索不可用（${sessions.code}）`}</p>
+  if (sessions.state === 'failed') return <p className="search-note" role="status">{`会话搜索失败（${sessions.code}）`}</p>
+  if (sessions.items.length === 0) return <p className="search-note" role="status">没有会话命中。</p>
+  return <>
+    <ul className="search-sessions" aria-label="会话命中列表">
+      {sessions.items.map((item, index) => <li key={`${item.sessionId}:${index}`} className="search-session">
+        <code>{shortSessionId(item.sessionId)}</code><span>{item.snippet}</span>
+      </li>)}
+    </ul>
+    {sessions.hasMore && <p className="search-note" role="status">还有更多会话命中；当前只显示本次返回的部分。</p>}
+  </>
+}
+
+// T03-D: every rendered line comes from one real response. Unknown and refused show no rows at
+// all; the two sections are rendered from the same validated read and never borrow each other's
+// wording.
+function SearchResult({ outcome }: { readonly outcome: DesktopSearchOutcome }): ReactNode {
+  if (outcome.kind === 'unknown') {
+    return <p className="search-note" role="status">结果未知：未能确认搜索是否执行，可以重新尝试；没有显示任何结果。</p>
+  }
+  if (outcome.kind === 'refused') {
+    return <p className="search-note" role="status">搜索不可用（<code>{outcome.code}</code>）；没有返回任何结果。</p>
+  }
+  return <>
+    <section className="search-section" aria-label="事项命中">
+      <h2>事项命中</h2>
+      {outcome.matters.length === 0
+        ? <p className="search-note" role="status">没有事项命中。</p>
+        : <ul className="search-hits" aria-label="事项命中列表">
+          {outcome.matters.map((hit, index) => <li key={`${hit.matterRef}:${index}`} className="search-hit">
+            <strong>{hit.title}</strong>
+            <small>{`命中字段：${SEARCH_MATCHED_FIELD_LABELS[hit.matchedField]}`}</small>
+            <code>{hit.matterRef}</code>
+          </li>)}
+        </ul>}
+    </section>
+    <section className="search-section" aria-label="会话">
+      <h2>会话</h2>
+      <SearchSessions sessions={outcome.sessions} />
+    </section>
+  </>
+}
+
+// T03-D: the search page consumes the real `POST /.sage/search` route. A blank query is answered
+// locally without a request; every submit replaces the previous result so no stale rows survive
+// under a new query.
+function SearchPage({ navigate }: { readonly navigate: (page: Page) => void }): ReactNode {
+  const [query, setQuery] = useState('')
+  const [outcome, setOutcome] = useState<DesktopSearchOutcome | undefined>(undefined)
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+  const composing = useRef(false)
+  const submit = () => {
+    if (busy) return
+    if (query.trim() === '') { setOutcome(undefined); setNotice('请输入查询内容。'); return }
+    setOutcome(undefined)
+    setNotice('')
+    setBusy(true)
+    void searchDesktop(query).then(result => { setOutcome(result); setBusy(false) })
+  }
+  return <section className="welcome-content search-page" aria-label="搜索">
+    <h1>搜索</h1>
+    <div className="search-form">
+      <textarea aria-label="搜索查询" placeholder="输入查询内容…" rows={2} value={query}
+        onChange={event => setQuery(event.target.value)}
+        onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
+        onKeyDown={event => {
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !composing.current && event.keyCode !== 229) {
+            event.preventDefault(); submit()
+          }
+        }} />
+      <button className="text-button" aria-label="执行搜索" disabled={busy} onClick={submit}>执行搜索</button>
+    </div>
+    {notice !== '' && <p className="search-note" role="status">{notice}</p>}
+    {outcome !== undefined && <SearchResult outcome={outcome} />}
     <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>
   </section>
 }
@@ -333,11 +423,17 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
   </div>
 }
 
-export function DesktopPage({ readState = readDesktopState, readBootstrap = readDesktopBootstrapState }: {
+export function DesktopPage({
+  readState = readDesktopState,
+  readBootstrap = readDesktopBootstrapState,
+  preferencesController: suppliedPreferencesController,
+}: {
   readonly readState?: () => Promise<DesktopRead>
   readonly readBootstrap?: () => Promise<DesktopBootstrapRead>
+  readonly preferencesController?: DevicePreferencesController
 }): ReactNode {
   const [page, setPage] = useState<Page>('新任务')
+  const [preferencesController] = useState(() => suppliedPreferencesController ?? createDevicePreferencesController())
   const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, retry, withdraw, actOnSession } = useDesktopSession(readState)
   const [accountRead, setAccountRead] = useState<DesktopBootstrapRead | { readonly kind: 'loading' }>({ kind: 'loading' })
   const [accountBusy, setAccountBusy] = useState(false)
@@ -347,6 +443,9 @@ export function DesktopPage({ readState = readDesktopState, readBootstrap = read
     setAccountRead(next)
   }
   useEffect(() => { void refreshAccount() }, [readBootstrap])
+  // Display facts apply to the whole desktop, not only the Settings route. Reading at mount keeps
+  // root theme/density tokens authoritative even when Settings has not been opened yet.
+  useEffect(() => { void preferencesController.refresh() }, [preferencesController])
   // The two auth acts fire only from an explicit menu click. Login never changes what the
   // desktop already shows until the bootstrap re-read says so; logout withdraws immediately.
   const actOnAccount = async (action: 'login' | 'logout') => {
@@ -399,8 +498,12 @@ export function DesktopPage({ readState = readDesktopState, readBootstrap = read
               paused={session.paused} streamBroken={session.streamBroken} messages={session.messages} />)
           : page === '工作区'
             ? <WorkspacePage state={state} retry={retry} navigate={navigate} />
-            : <section className="welcome-content outstanding-feature"><h1>{page}</h1><p>{outstanding[page]}</p>
-              <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
+            : page === '搜索'
+              ? <SearchPage navigate={navigate} />
+              : page === '账号与设置'
+                ? <DesktopSettingsView controller={preferencesController} />
+                : <section className="welcome-content outstanding-feature"><h1>{page}</h1><p>{outstanding[page]}</p>
+                  <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
         <Composer draft={draft} changeDraft={changeDraft} notice={notice} setNotice={setNotice} navigate={navigate}
           busy={busy} uncertain={uncertain} hasSession={session !== undefined}
           executing={session?.execution === 'executing'} paused={session?.paused === true} onAction={actOnSession} />

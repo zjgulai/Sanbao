@@ -19,6 +19,7 @@
 ## 活动仓与续作边界
 
 - **先读本机活动仓基线**：开工前阅读 [本机活动仓基线](docs/notes/implemented/process/2026-09-27-local-active-repository-baseline.md)、[ADR-0160](docs/adr/ADR-0160.md) 与任务相关 ADR。恢复集不是活动依赖；不得整包回灌旧施工内容。
+- **异机交接边界**：surface、矩阵再生成、crawl 与判者一律走仓内副本（`vendor/sanbao-prototype/`＋pin、`docs/design-loop/`、`scripts/design-loop/verify_ticket.mjs`）；不得依赖 Sage 同级 Sanbao / 设计仓目录、旧 worktree、仓外恢复集或本机用户配置；未在新机重跑的验证一律标注「待新机验证」。
 - **UI 工作先读一致性合同**：任何 Sage renderer、工作台、设计 token、Application Service 投影或 Sanbao 交互迁移任务，先读取 [Sanbao → Sage UI 一致性合同](docs/specs/2026-09-27-sanbao-to-sage-ui-consistency-contract.md) 及其[机器可读状态映射](docs/specs/2026-09-27-sanbao-to-sage-ui-state-map.json)；涉及 route authority、service envelope 或 matter→DOM 时还要读取 [UI 接线收敛第一批记录](docs/notes/implemented/architecture/2026-10-03-ui-wiring-convergence-batch-1.md)，涉及 active matter context、session protected effect 或异步 dispatch 时继续读取[第二批记录](docs/notes/implemented/architecture/2026-10-03-active-context-and-session-admission-batch-2.md)，涉及显式事项选择、read-authorization 分权、fresh context/root 复核或 session-family admission 时再读[第三批记录](docs/notes/implemented/architecture/2026-10-03-active-matter-selection-and-session-family-admission-batch-3.md)，涉及 projection-read admission、read-only route authority、request-scoped read owner 或 current matter 推断时还要读[第四批记录](docs/notes/implemented/architecture/2026-10-03-projection-read-admission-and-owner-batch-4.md)，涉及 correction submit、protected-effect deny-before-provider、`workspaceRoot` 非 authority 或 correction durable dispatch 时还要读[第五批记录](docs/notes/implemented/architecture/2026-10-03-correction-submit-admission-batch-5.md)，涉及 attachment upload、opaque `itemId`、sealed target resolution、Host/file I/O deny-before-provider 或 upload durable dispatch 时继续读[第六批记录](docs/notes/implemented/architecture/2026-10-03-attachment-upload-admission-batch-6.md)，涉及 BusinessMatter 三栏工作台、只读 composer、右栏脉络、drawer / Escape / focus 或 UI-IA-01 时读取[第七批记录](docs/notes/implemented/architecture/2026-10-03-business-matter-readonly-workbench-batch-7.md)。外部原型只作证据输入，不是运行时依赖或完成声明。
 - **Sage theme、density 与可访问性只有一个产品事实家**：涉及 palette、semantic token、display theme/density、tab/focus、modal drawer、reduced-motion、responsive/reflow 或 RUNTIME-03 时，先读 [Batch 10 记录](docs/notes/implemented/surface/2026-10-04-semantic-theme-accessibility-batch-10.md)、[ADR-0257](docs/adr/ADR-0257.md)、[Batch 11 density 记录](docs/notes/implemented/surface/2026-10-04-display-density-application-batch-11.md)与 [ADR-0258](docs/adr/ADR-0258.md)。literal palette 与 `--sage-density-*` geometry 只允许在 `apps/sage-shell/src/product/theme-tokens.ts`；renderer/component 只能消费闭合 token，不得用 fallback 隐藏断链。requested/effective theme 与 requested density 由 main-owned preference projection 投到 root；unknown density 只能用 comfortable 作视觉 fallback，不能改写权威事实。Fake DOM 向预期 handler 直投事件、CSS 字符串或 PNG/hash 不能替代真实 activeElement、AX、computed geometry/focus/motion、第二进程 restart 与约 320 CSS px reflow。
 - **身份、授权与数据治理工作先读安全边界**：任何 identity provider、组织岗位授权、Application Service、`BusinessMatter` actor / decision / receipt、`AuthoritySnapshot`、retention 或删除传播工作，先读取 [Identity / Policy Resolver 架构记录](docs/notes/proposed/architecture/2026-09-28-identity-policy-resolver.md)、[ADR-0163](docs/adr/ADR-0163.md)、[真实身份与 Authority 数据治理记录](docs/notes/proposed/architecture/2026-09-28-real-identity-and-authority-data-governance.md)与 [ADR-0164](docs/adr/ADR-0164.md)；结构相同的 `HumanRoleRef`、UI / 插件自报身份和测试 provider 都不是真实身份依据。
@@ -31,6 +32,7 @@
 - **Application Service 是唯一产品编排入口**：任何 `/.sage/*` route、`ViewState` / `ActionIntent`、projection read policy、Identity / Policy + Compatibility + Registry + BusinessMatter 编排、idempotency / cancel / retry / receipt / `outcome-unknown` 工作，先读取 [WT-02D Application Service 边界](docs/notes/proposed/architecture/2026-09-30-application-service-boundary.md) 与 [ADR-0174](docs/adr/ADR-0174.md)。目标形态由 Electron main 精确终止业务 route，只经窄 port 访问 Host / Capability Adapter；renderer、Host、插件与模型不得成为平行 command / projection owner。production 缺任一真实 authority 时必须 unavailable-first，不得用 fixture、placeholder、Host ready 或历史绿灯补齐。revision 37 只落治理文档；WT-02D.0.1 已由 Electron main 拦截 `/.sage/*`（[ADR-0179](docs/adr/ADR-0179.md)：unavailable-first；command 2–10 属 0.2），[ADR-0184](docs/adr/ADR-0184.md) 后 `/.sage/*` **恒由 main 终止**——`SAGE_APP_SERVICE=off` 回退与 Host 旧 `/.sage` 面已退场（main 唯一 owner），matter 投影槽经 `SAGE_FIXTURE_PROJECTION=1` 显式 fixture 开关填充、production 恒 `null` 且禁止 placeholder；renderer / Host 不再是这条 route 的 owner。
 - **仓根必须动态发现**：代码、测试和维护命令使用 `git rev-parse --show-toplevel`、`import.meta.url` 或脚本自身位置；禁止新增用户机器绝对仓路径。历史证据和故意验证绝对路径会判红的 fixture 除外。
 - **历史能力默认隔离**：受控浏览器、legacy 门禁、Laya、旧插件与旧 DMG 发布链只有在单独任务明确启用时才进入改动和验证射程；`pnpm run gate` 不运行这些检查，需用 `pnpm run gate:legacy*` 显式进入；accepted ADR 不等于实现已进入当前基线。
+- **Sage 内测打包与 legacy 发布分家**：任何 Sage.app production input、bundle identity、本机签名、DMG 或安装后验收工作，先读 [Sage 内测 DMG 记录](docs/notes/implemented/packaging/2026-10-05-sage-internal-dmg.md) 与 [ADR-0271](docs/adr/ADR-0271.md)，只走 `packaging-sage/`；本机自签/未公证产物仅用于受控内测，不是公开发布证据，也不能提升 Sanbao 206 状态。
 - **不明改动不擅自归属**：继续旧任务前核对 branch / status / diff / untracked 和任务记录；不以 reset、清理或放宽判据换取绿灯。
 
 ## 决策与文档
@@ -43,7 +45,7 @@
 
 - 插件按能力归入 5 组：`capabilities/` `surfaces/` `platform/` `contract/` `infra/`（[ADR-0011](docs/adr/ADR-0011.md)）。
 - 包的治理性质写在 `package.json` 的 `luteOrigin` / `luteOwner` / `lutePublish` 三字段里，`npm-pinned` 的包不在本仓库内（[ADR-0010](docs/adr/ADR-0010.md)、[ADR-0012](docs/adr/ADR-0012.md)）。
-- 当前重构分期与本次范围见 [.scratch/lute-refactor/spec.md](.scratch/lute-refactor/spec.md)。
+- 当前任务入口：[Sanbao → Sage 集成票据](docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md)（范围与依赖）与 [tracked 矩阵](docs/specs/2026-09-27-sanbao-to-sage-ui-state-map.json)（逐行进度）；异机交接与本轮清理的恢复 / 续作步骤见 [交接记录](docs/notes/implemented/process/2026-10-06-portable-cleanup-and-handoff.md)。
 
 ## Legacy 产品矩阵与外部产品（仅显式旧平台任务适用）
 
@@ -54,5 +56,5 @@
 
 ## Legacy 发布与 SOP（仅显式旧 DMG 任务适用）
 
-- Sage.app 的装配、签名、公证与发布链尚未建立；不得把旧 DMG 通过当作 Sage 发布证据。
+- Sage.app 已有独立的本机自签内测链，但 Developer ID、公证、自动更新与公开发布链尚未建立；不得把本机内测 DMG 或旧 DMG 通过当作公开发布证据。
 - **旧 DMG 打包发布按 legacy SOP 执行**：仅在用户明确进入旧发布任务时使用 [docs/sop/dmg-release.md](docs/sop/dmg-release.md)；关键红线（原子就位、清单入库、同号归档、机器路径只减不增）来自 [ADR-0056](docs/adr/ADR-0056.md) / [ADR-0057](docs/adr/ADR-0057.md) / [ADR-0058](docs/adr/ADR-0058.md)。

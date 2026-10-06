@@ -182,6 +182,23 @@ export async function bootSagePage(initial: unknown, postResponses: Record<strin
   }
 }
 
+/** Batch 20 / P3 (ADR-0261): the link card belongs to React; the legacy script reads every wire
+ *  action's matter/workspace context from the selection React pushes through the up-bridge. Fake-
+ *  DOM specs set the context through the same bridge instead of writing the (now unrelated) select. */
+export function setLinkSelection(matterRef: string, workspaceRef: string): void {
+  const bridge = (globalThis as unknown as { __SAGE_APP_SET_LINK_SELECTION__?: (matter: string, workspace: string) => void }).__SAGE_APP_SET_LINK_SELECTION__
+  expect(bridge, 'legacy link-selection up-bridge must be installed at boot').toBeDefined()
+  bridge!(matterRef, workspaceRef)
+}
+
+/** Batch 23 / P3 (ADR-0261): the draft card belongs to React; the exit-check's unsaved chain
+ *  reads the field values React pushes through the up-bridge. Fake-DOM specs set them here. */
+export function setDraftFields(fields: { goal?: string, deliverable?: string, responsibility?: string, projectRef?: string, clarification?: string }): void {
+  const bridge = (globalThis as unknown as { __SAGE_APP_SET_DRAFT_FIELDS__?: (values: unknown) => void }).__SAGE_APP_SET_DRAFT_FIELDS__
+  expect(bridge, 'legacy draft field up-bridge must be installed at boot').toBeDefined()
+  bridge!({ goal: '', deliverable: '', responsibility: '', projectRef: '', clarification: '', ...fields })
+}
+
 /** The state payload shape main serves, with per-test overrides. */
 export function statePayload(overrides: Record<string, unknown>): Record<string, unknown> {
   return {

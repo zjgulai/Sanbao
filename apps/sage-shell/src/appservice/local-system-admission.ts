@@ -24,13 +24,15 @@ export interface LocalSystemReadPorts {
   >
 }
 
+export type LocalSystemUnavailableCode = 'bootstrap-unavailable' | 'device-preferences-unavailable'
+
 export type LocalSystemReadResult<T> =
   | { readonly state: 'read', readonly correlation: string, readonly value: T }
   | {
       readonly state: 'unavailable'
-      readonly code: string
-      readonly stage: string
-      readonly retryable: boolean
+      readonly code: LocalSystemUnavailableCode
+      readonly stage: 'local-system'
+      readonly retryable: true
       readonly correlation: string
     }
 
@@ -38,10 +40,11 @@ export async function admitLocalSystemRead<T>(input: {
   readonly correlation: string
   readonly ports: LocalSystemReadPorts
   readonly validatesReadValue: (value: unknown) => value is T
+  readonly unavailableCode?: LocalSystemUnavailableCode
 }): Promise<LocalSystemReadResult<T>> {
   const unavailable = (): LocalSystemReadResult<T> => ({
     state: 'unavailable',
-    code: 'bootstrap-unavailable',
+    code: input.unavailableCode ?? 'bootstrap-unavailable',
     stage: 'local-system',
     retryable: true,
     correlation: input.correlation,

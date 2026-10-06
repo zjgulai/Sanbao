@@ -6,11 +6,11 @@
  * are safe, accepted, or exempted.
  */
 
-const EXPECTED_ROUTES = 59
+const EXPECTED_ROUTES = 60
 const CLASSIFICATION_COUNTS = Object.freeze({
   'read-only': 13,
   'local-preference': 5,
-  'local-system': 1,
+  'local-system': 2,
   'protected-effect': 38,
   unsupported: 2,
 })
@@ -46,6 +46,12 @@ const UNSUPPORTED_PATHS = new Set([
 
 const LOCAL_SYSTEM_PATHS = new Set([
   '/.sage/bootstrap',
+  '/.sage/device-preferences',
+])
+
+const LOCAL_SYSTEM_ROUTE_FACTS = new Map([
+  ['/.sage/bootstrap', { method: 'GET', operations: ['read'], providers: ['bootstrapRead'] }],
+  ['/.sage/device-preferences', { method: 'GET', operations: ['read'], providers: ['devicePreferencesRead'] }],
 ])
 
 const RUN_COMMAND_PATHS = new Set([
@@ -343,7 +349,7 @@ function extractFunctionBlock(text, functionName) {
   return text.slice(start, end)
 }
 
-function localSystemAdmissionViolations(mainAppServiceText) {
+function bootstrapLocalSystemAdmissionViolations(mainAppServiceText) {
   const violations = []
   if (!mainAppServiceText.includes("import { admitLocalSystemRead } from '../appservice/local-system-admission.js'")) {
     violations.push('the local-system runner must import the admitted kernel from appservice/local-system-admission.ts')
@@ -394,6 +400,85 @@ function localSystemAdmissionViolations(mainAppServiceText) {
     violations.push('the local-system runner must not carry names, matter or workspace authority')
   }
   return violations
+}
+
+function devicePreferencesAdmissionViolations(mainAppServiceText) {
+  const violations = []
+  if (!mainAppServiceText.includes("import { admitLocalSystemRead } from '../appservice/local-system-admission.js'")) {
+    violations.push('the device-preferences runner must import the admitted local-system kernel')
+  }
+  if (!mainAppServiceText.includes('devicePreferencesRead: createDevicePreferencesRunner(options)')) {
+    violations.push('the service assembly must forward devicePreferencesRead: createDevicePreferencesRunner(options)')
+  }
+  const block = extractFunctionBlock(mainAppServiceText, 'createDevicePreferencesRunner')
+  if (block === null) return [...violations, 'createDevicePreferencesRunner is missing from the main app-service assembly']
+  if (!block.includes('admitLocalSystemRead<DevicePreferencesState>({')) {
+    violations.push('the device-preferences runner must enter admitLocalSystemRead with its exact DTO type')
+  }
+  if (!block.includes("unavailableCode: 'device-preferences-unavailable'")) {
+    violations.push('the device-preferences runner must use its route-specific unavailable code')
+  }
+  if (!block.includes('validatesReadValue: isDevicePreferencesState')) {
+    violations.push('the device-preferences runner must validate the exact device DTO')
+  }
+  const serviceJsonCalls = [...block.matchAll(/serviceJson\(/gu)].length
+  if (serviceJsonCalls !== 2) {
+    violations.push('the device-preferences runner must answer with exactly two serviceJson exits')
+  }
+  if (!block.includes('serviceJson(result.value, 200)')) {
+    violations.push('the device-preferences success exit must be the admitted kernel value')
+  }
+  if (!block.includes('serviceJson({ code: result.code, stage: result.stage, retryable: result.retryable, correlation: result.correlation }, 200)')) {
+    violations.push('the device-preferences denial exit must derive every field from the kernel result')
+  }
+  if (block.includes('new Response(')) {
+    violations.push('the device-preferences runner must answer only through serviceJson')
+  }
+  if (!block.includes('options.callerBinding')) {
+    violations.push('the device-preferences runner must derive its caller fact from the request-scoped binding')
+  }
+  if (!block.includes('return frame === undefined || !frame.ready || frame.contaminated')) {
+    violations.push('the device-preferences runner must verify a ready, uncontaminated frame before the read')
+  }
+  if (!block.includes("if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }")) {
+    violations.push('the device-preferences runner must re-verify a ready, uncontaminated frame after the read')
+  }
+  if (!block.includes('frame.generation === frameGeneration')) {
+    violations.push('the device-preferences runner must re-check the frame generation after the read')
+  }
+  if (!block.includes('options.vault.status() !== beforeStatus')) {
+    violations.push('the device-preferences runner must discard a read that raced an identity change')
+  }
+  if (!block.includes('const preferences = options.preferences?.()')) {
+    violations.push('the device-preferences runner must read the main-owned preference projection')
+  }
+  for (const projection of [
+    'requested: preferences.requested',
+    'savedAt: preferences.savedAt',
+    'effectiveTheme: preferences.effectiveTheme',
+  ]) {
+    if (!block.includes(projection)) violations.push(`the device-preferences DTO must project ${projection}`)
+  }
+  if (block.includes('options.preferencesSave') || block.includes('preferences.save(')) {
+    violations.push('the device-preferences GET runner must not call a preference mutation port')
+  }
+  if (/\bsystemDark\b|\bapplies\b|\bdisplayName\b|\bidentitySession\b|\bmatterRef\b|\bworkspaceRoot\b/u.test(block)) {
+    violations.push('the device-preferences runner must not widen its exact device-only DTO or authority')
+  }
+  if (!mainAppServiceText.includes("hasExactKeys(record, ['effectiveTheme', 'requested', 'savedAt'])")
+    || !mainAppServiceText.includes("hasExactKeys(fields, ['contentWidth', 'density', 'fileIcons', 'fontStyle', 'iconAppearance', 'language', 'terminalTheme', 'theme'])")) {
+    violations.push('the device-preferences validator must keep both DTO levels exact')
+  }
+  if (!mainAppServiceText.includes('record.savedAt === null || isCanonicalIsoTimestamp(record.savedAt)')) {
+    violations.push('the device-preferences validator must require canonical ISO savedAt values')
+  }
+  return violations
+}
+
+function localSystemAdmissionViolations(path, mainAppServiceText) {
+  if (path === '/.sage/bootstrap') return bootstrapLocalSystemAdmissionViolations(mainAppServiceText)
+  if (path === '/.sage/device-preferences') return devicePreferencesAdmissionViolations(mainAppServiceText)
+  return ['registered local-system route has no exact source contract']
 }
 
 function failAll(discovered, violations) {
@@ -610,12 +695,24 @@ export function checkSageRouteAuthority(input) {
     }
     const expectedLocalSystem = LOCAL_SYSTEM_PATHS.has(path)
     if (expectedLocalSystem) {
+      const fact = LOCAL_SYSTEM_ROUTE_FACTS.get(path)
+      if (fact === undefined) {
+        failRoute(path, 'registered local-system route has no immutable method/operation/provider fact')
+      } else {
+        if (rawRoute.method !== fact.method) failRoute(path, 'local-system route method must remain GET')
+        if (!sameStrings(rawRoute.operations, fact.operations)) {
+          failRoute(path, 'local-system route operations must remain [read]')
+        }
+        if (!sameStrings(rawRoute.providers, fact.providers)) {
+          failRoute(path, `local-system route providers must remain [${fact.providers.join(', ')}]`)
+        }
+      }
       if (!isRecord(rawRoute.localSystemAdmission)) {
         failRoute(path, 'localSystemAdmission object is required')
       } else {
         if (rawRoute.localSystemAdmission.required !== true) failRoute(path, 'localSystemAdmission.required must be true')
         if (rawRoute.localSystemAdmission.actual !== true) failRoute(path, 'localSystemAdmission.actual must be true')
-        const sourceViolations = localSystemAdmissionViolations(input.mainAppServiceText)
+        const sourceViolations = localSystemAdmissionViolations(path, input.mainAppServiceText)
         for (const violation of sourceViolations) failRoute(path, violation)
         const sourceActual = sourceViolations.length === 0
         if (sourceActual !== rawRoute.localSystemAdmission.actual) {
@@ -699,6 +796,11 @@ export function checkSageRouteAuthority(input) {
   const projectionReadAssemblyMatches = input.mainAppServiceText.includes('function createProjectionReadRunner(')
     && input.mainAppServiceText.includes('return admitProjectionRead<ProjectionReadCandidate, Response>({')
     && input.mainAppServiceText.includes('runProjectionRead: createProjectionReadRunner(options)')
+    // T03/A (user-authorised): the device state collection rides the active-matter grant; the
+    // blanket "every collection unavailable" pin must not return, and no other collection is
+    // resolved without its own main-owned object resolver.
+    && input.mainAppServiceText.includes("return candidate.collection === 'state'")
+    && !input.mainAppServiceText.includes("if (candidate.kind === 'collection') return { state: 'unavailable' as const }")
   if (!projectionReadAssemblyMatches) failGlobal('projection-read main assembly is missing or bypassed')
 
   const projectionReadOwnerMatches = input.mainIndexText.includes("import { projectionReadScope } from './projection-read-scope.js'")
@@ -751,8 +853,8 @@ export function checkSageRouteAuthority(input) {
       skipped: 0,
       failed: 0,
       typedSkips: [],
-      reason: '59 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; collection and opaque-object reads still need main-owned object resolvers. 1 local-system route enters device-local admission (runtime status enum, auth status, requested theme/density only) and stays unavailable-first without its main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
+      reason: '60 Sage routes match the checked-in authority truth matrix',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A) while search and opaque-object reads still need main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

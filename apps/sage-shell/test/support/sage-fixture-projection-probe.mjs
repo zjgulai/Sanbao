@@ -1087,6 +1087,26 @@ async function run() {
   const expectedRunMonitorState = stateProbe.status === 200 && stateProbe.body?.runMonitor !== null && stateProbe.body?.runMonitor !== undefined && typeof stateProbe.body?.runMonitor === 'object' && stateProbe.body.runMonitor.state === 'read' ? 'read' : 'unavailable'
   const expectedSideChatsState = stateProbe.status === 200 && stateProbe.body?.sideChats !== null && stateProbe.body?.sideChats !== undefined && typeof stateProbe.body?.sideChats === 'object' && stateProbe.body.sideChats.state === 'read' ? 'read' : 'unavailable'
   const expectedActionItemsState = stateProbe.status === 200 && stateProbe.body?.actionItems !== null && stateProbe.body?.actionItems !== undefined && typeof stateProbe.body?.actionItems === 'object' && stateProbe.body.actionItems.state === 'read' ? 'read' : 'unavailable'
+  // Batch 19 / P3 (ADR-0261): the plan card publishes its slice only when the projection reads.
+  const expectedPlansState = stateProbe.status === 200 && stateProbe.body?.plans !== null && stateProbe.body?.plans !== undefined && typeof stateProbe.body?.plans === 'object' && stateProbe.body.plans.state === 'read' ? 'read' : 'unavailable'
+  // Batch 20 / P3 (ADR-0261): the link card (selector cluster) publishes read only when matterLinks reads.
+  const expectedLinkState = stateProbe.status === 200 && stateProbe.body?.matterLinks !== null && stateProbe.body?.matterLinks !== undefined && typeof stateProbe.body?.matterLinks === 'object' && stateProbe.body.matterLinks.state === 'read' ? 'read' : 'unavailable'
+  // Batch 21 / P3 (ADR-0261): the admin and groups cards publish read only when their slots read.
+  const expectedMatterAdminState = stateProbe.status === 200 && stateProbe.body?.matterAdmin !== null && stateProbe.body?.matterAdmin !== undefined && typeof stateProbe.body?.matterAdmin === 'object' && stateProbe.body.matterAdmin.state === 'read' ? 'read' : 'unavailable'
+  const expectedMatterGroupsState = stateProbe.status === 200 && stateProbe.body?.matterGroups !== null && stateProbe.body?.matterGroups !== undefined && typeof stateProbe.body?.matterGroups === 'object' && stateProbe.body.matterGroups.state === 'read' ? 'read' : 'unavailable'
+  // Batch 23 / P3 (ADR-0261): the draft card publishes read only when the draft store is unlocked.
+  const draftSlot = stateProbe.status === 200 ? stateProbe.body?.draft : null
+  const expectedDraftState = draftSlot !== null && typeof draftSlot === 'object' && draftSlot.state === 'unlocked' ? 'read' : draftSlot !== null && typeof draftSlot === 'object' && draftSlot.state === 'locked' ? 'locked' : 'unavailable'
+  // Batch 22 / P3 (ADR-0261): the matter list card publishes read only when matterList reads.
+  const expectedMatterListState = stateProbe.status === 200 && stateProbe.body?.matterList !== null && stateProbe.body?.matterList !== undefined && typeof stateProbe.body?.matterList === 'object' && stateProbe.body.matterList.state === 'read' ? 'read' : 'unavailable'
+  // Batch 24 / P3 (ADR-0261): the session card publishes read whenever the session channel slice is present.
+  const expectedSessionState = stateProbe.status === 200 && stateProbe.body?.sessionChannel !== null && stateProbe.body?.sessionChannel !== undefined && typeof stateProbe.body?.sessionChannel === 'object' ? 'read' : 'unavailable'
+  // Batch 25 / P4 (ADR-0261): the search card is client-local (no projection slice); it is ready
+  // once the legacy wire published the readiness fact and React applied it.
+  const expectedSearchState = 'read'
+  // Batch 26 / P4 (ADR-0261): both read-only cards publish read exactly when their slice is present.
+  const expectedCapabilityState = stateProbe.status === 200 && stateProbe.body?.capability !== null && stateProbe.body?.capability !== undefined && typeof stateProbe.body?.capability === 'object' ? 'read' : 'unavailable'
+  const expectedModelConfigState = stateProbe.status === 200 && stateProbe.body?.modelConfig !== null && stateProbe.body?.modelConfig !== undefined && typeof stateProbe.body?.modelConfig === 'object' ? 'read' : 'unavailable'
   const expectedToolResultsState = stateProbe.status === 200 && stateProbe.body?.toolResults !== null && stateProbe.body?.toolResults !== undefined && typeof stateProbe.body?.toolResults === 'object' && stateProbe.body.toolResults.state === 'read' ? 'results' : 'unavailable'
   const regionFacts = await evaluate(window, `(async () => {
     const snapshot = () => ({
@@ -1096,22 +1116,42 @@ async function run() {
       artifacts: document.querySelector('#sage-region-artifacts')?.getAttribute('data-region-state') ?? null,
       sideChats: document.querySelector('#sage-region-side-chats')?.getAttribute('data-region-state') ?? null,
       actionItems: document.querySelector('#sage-region-action-items')?.getAttribute('data-region-state') ?? null,
+      plans: document.querySelector('#sage-region-plans')?.getAttribute('data-region-state') ?? null,
+      link: document.querySelector('#sage-region-link')?.getAttribute('data-region-state') ?? null,
+      matterAdmin: document.querySelector('#sage-region-matter-admin')?.getAttribute('data-region-state') ?? null,
+      matterGroups: document.querySelector('#sage-region-matter-groups')?.getAttribute('data-region-state') ?? null,
+      matterList: document.querySelector('#sage-region-matter-list')?.getAttribute('data-region-state') ?? null,
+      draft: document.querySelector('#sage-region-draft')?.getAttribute('data-region-state') ?? null,
+      session: document.querySelector('#sage-region-session')?.getAttribute('data-region-state') ?? null,
+      search: document.querySelector('#sage-region-search')?.getAttribute('data-region-state') ?? null,
+      capability: document.querySelector('#sage-region-capability')?.getAttribute('data-region-state') ?? null,
+      modelConfig: document.querySelector('#sage-region-model-config')?.getAttribute('data-region-state') ?? null,
     })
     const deadline = Date.now() + 4000
     while (Date.now() < deadline) {
       const facts = snapshot()
-      if (facts.sites !== null && facts.toolResults !== null && facts.runMonitor !== null && facts.artifacts !== null && facts.sideChats !== null && facts.actionItems !== null) return facts
+      if (facts.sites !== null && facts.toolResults !== null && facts.runMonitor !== null && facts.artifacts !== null && facts.sideChats !== null && facts.actionItems !== null && facts.plans !== null && facts.link !== null && facts.matterAdmin !== null && facts.matterGroups !== null && facts.matterList !== null && facts.draft !== null && facts.session !== null && facts.search !== null && facts.capability !== null && facts.modelConfig !== null) return facts
       await new Promise((resolve) => { setTimeout(resolve, 10) })
     }
     return snapshot()
   })()`)
-  evidence.regionFacts = { expectedSitesState, expectedToolResultsState, expectedRunMonitorState, expectedArtifactsState, expectedSideChatsState, expectedActionItemsState, ...regionFacts }
+  evidence.regionFacts = { expectedSitesState, expectedToolResultsState, expectedRunMonitorState, expectedArtifactsState, expectedSideChatsState, expectedActionItemsState, expectedPlansState, expectedLinkState, expectedMatterAdminState, expectedMatterGroupsState, expectedMatterListState, expectedDraftState, expectedSessionState, expectedSearchState, expectedCapabilityState, expectedModelConfigState, ...regionFacts }
   requireCondition(regionFacts.sites === expectedSitesState, `sites region state is ${regionFacts.sites}, expected ${expectedSitesState}`)
   requireCondition(regionFacts.toolResults === expectedToolResultsState, `tool-results region state is ${regionFacts.toolResults}, expected ${expectedToolResultsState}`)
   requireCondition(regionFacts.runMonitor === expectedRunMonitorState, `run-monitor region state is ${regionFacts.runMonitor}, expected ${expectedRunMonitorState}`)
   requireCondition(regionFacts.artifacts === expectedArtifactsState, `artifacts region state is ${regionFacts.artifacts}, expected ${expectedArtifactsState}`)
   requireCondition(regionFacts.sideChats === expectedSideChatsState, `side-chats region state is ${regionFacts.sideChats}, expected ${expectedSideChatsState}`)
   requireCondition(regionFacts.actionItems === expectedActionItemsState, `action-items region state is ${regionFacts.actionItems}, expected ${expectedActionItemsState}`)
+  requireCondition(regionFacts.plans === expectedPlansState, `plans region state is ${regionFacts.plans}, expected ${expectedPlansState}`)
+  requireCondition(regionFacts.link === expectedLinkState, `link region state is ${regionFacts.link}, expected ${expectedLinkState}`)
+  requireCondition(regionFacts.matterAdmin === expectedMatterAdminState, `matter-admin region state is ${regionFacts.matterAdmin}, expected ${expectedMatterAdminState}`)
+  requireCondition(regionFacts.matterGroups === expectedMatterGroupsState, `matter-groups region state is ${regionFacts.matterGroups}, expected ${expectedMatterGroupsState}`)
+  requireCondition(regionFacts.matterList === expectedMatterListState, `matter-list region state is ${regionFacts.matterList}, expected ${expectedMatterListState}`)
+  requireCondition(regionFacts.draft === expectedDraftState, `draft region state is ${regionFacts.draft}, expected ${expectedDraftState}`)
+  requireCondition(regionFacts.session === expectedSessionState, `session region state is ${regionFacts.session}, expected ${expectedSessionState}`)
+  requireCondition(regionFacts.search === expectedSearchState, `search region state is ${regionFacts.search}, expected ${expectedSearchState}`)
+  requireCondition(regionFacts.capability === expectedCapabilityState, `capability region state is ${regionFacts.capability}, expected ${expectedCapabilityState}`)
+  requireCondition(regionFacts.modelConfig === expectedModelConfigState, `model-config region state is ${regionFacts.modelConfig}, expected ${expectedModelConfigState}`)
   const wire = evidence.stateProbe
   if (expectedProjection === 'fixture') {
     requireCondition(wire.matterPresent === true, 'fixture matter is absent on the wire')

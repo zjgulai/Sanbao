@@ -8483,6 +8483,314 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0268",
+      "title": "ADR-0268 · 设备聚合读的 collection 授权（T03/A）",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "candidate-match 对 collection 'state' 放行（active-matter 授权覆盖设备聚合读），其余 collection 与 opaque 资源维持 unavailable。",
+          "constraints": [
+            "no other collection resolved",
+            "opaque object reads unchanged"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "放行前提全部沿用既有准入链：caller、initial-context、main-owned 读策略（local-read）、fresh scope 全字段匹配、读前后新鲜度；任一不成立仍是 unavailable/denied/stale。",
+          "constraints": [
+            "no fail-closed relaxation",
+            "no new authority source"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "route-authority 门禁登记放行事实与负向针，并新增两条具名突变（state→他值、放行一切）。",
+          "constraints": [
+            "no exemptions added"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "projection-read-production 护栏按决策拆分：state 放行（raw 恰一次）、search 维持 candidate-match unavailable；批-4 的全封禁默认被本条决策取代。",
+          "constraints": [
+            "superseding record kept in ADR"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "聚合响应只含 main-owned 投影；设备级槽位随授权对已签入会话可见（A 的已知暴露面，用户接受），窄化（B）如需要另开票。",
+          "constraints": [
+            "no renderer/Host passthrough",
+            "B remains available as a future ticket"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0269",
+      "title": "ADR-0269 · Sanbao 206 状态采用逐行五维交付矩阵，不以页面目录代替集成",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "206 状态的唯一 tracked 进度事实家是 state map；source pin、catalog/ledger digest、206 distinct IDs 与 59 groups 必须可重算。",
+          "constraints": [
+            "one progress authority",
+            "source pin required"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "每行按 UI、Application Service、Host、Electron acceptance、visual acceptance 五维验收；required 全 verified 且证据 tracked/non-fixture/non-ignored 才能 integrated。",
+          "constraints": [
+            "no plan-as-delivery",
+            "N/A requires decision and rationale"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "prototype observation、Pages、旧 renderer、旧 DSH DMG、ignored candidate 与截图存在都不能提升 Sage 集成状态。",
+          "constraints": [
+            "prototype is evidence input only",
+            "legacy is not Sage acceptance"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "generator check、独立 matrix gate/test 进入 Sage global gate；summary 只能派生，手工篡改必须失败。",
+          "constraints": [
+            "no exemptions added",
+            "summary derived only"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "内部 DMG 与 206 功能收敛并行但正交；任何 DMG 都要报告当时真实矩阵计数，不能把可安装冒充 206/206。",
+          "constraints": [
+            "DMG is not integration proof",
+            "initial integrated count is zero"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0270",
+      "title": "ADR-0270 · 设备偏好独立 GET、权威回读与默认桌面设置主链",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "GET /.sage/device-preferences 是独立 local-system read：verified caller、ready/uncontaminated frame、同代 freshness 与 identity-stable read，失败统一 device-preferences-unavailable。",
+          "constraints": [
+            "no matter/session admission reuse",
+            "signed-out read allowed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "成功 DTO 只含 requested 八项、canonical savedAt 与 effectiveTheme；main 以 exact keys/enum 验证，身份、路径、business facts、systemDark/applies 禁止外流。",
+          "constraints": [
+            "closed DTO",
+            "no secret or identity detail"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "GET runner 只读 sealed preference projection，禁止调用 mutation port；保存无论结果都以随后权威 GET 更新 UI/root，不做 optimistic projection。",
+          "constraints": [
+            "POST receipt is not read authority",
+            "one in-flight save"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "默认桌面 root mount 即读偏好；theme/density 权威回读后 live apply，其余六项只保存并明示未应用。",
+          "constraints": [
+            "unknown on unavailable",
+            "no invented defaults"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "route authority 为 60 routes/2 local-system，两个 local-system route 分别提供 exact source proof，并以 coordinated-drift mutation tests 防假绿。",
+          "constraints": [
+            "GET/read/provider immutable",
+            "no exemptions added"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0271",
+      "title": "ADR-0271 · Sage 0.1.0 采用独立本机自签内测 DMG 链",
+      "status": "accepted（2026-10-05）",
+      "date": "2026-10-05",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Sage 内测打包只走 packaging-sage；产品事实固定为 com.lute.sage、0.1.0、build 1、arm64、internal，不调用 legacy packaging。",
+          "constraints": [
+            "one packaging namespace",
+            "no legacy completion evidence"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "输入必须由已构建 production graph 与隔离 materializeProfile 产生；第三方发布包默认保留，仅允许 exact package/version/path 平台投影。",
+          "constraints": [
+            "no source tree input",
+            "no current user profile",
+            "fail closed native projection"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "签名只接受 Sage Local Code Signing 当次短期本机自签身份，经 SecurityAgent 人工 trust 门，叶到根且无 timestamp，并由 receipt v2 逐 target 证明同一 signer。",
+          "constraints": [
+            "internal only",
+            "no other local identity",
+            "manual trust approval"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "signing/DMG mutation 需 --execute；DMG 创建后必须 verify/mount/copy/seal/relocatability/tree-digest，覆盖 owned output 需 --replace。",
+          "constraints": [
+            "plan is non-mutating",
+            "relative manifests only"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "DMG-06 以 fresh root 首启和同根重启验证设置读写及持久化，只有 packaged acceptance v1 passed evidence 才算通过，且不冒充 T05/T06 或 206 状态完成。",
+          "constraints": [
+            "artifact is not feature completion",
+            "packaged Electron evidence required"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "metadata v4 分开 raw input 与 signing-normalized assembly digest；HEAD 只是上下文，dirty worktree 不得冒充 commit 可重建来源。",
+          "constraints": [
+            "honest dirty provenance",
+            "byte digests are authoritative"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0272",
+      "title": "ADR-0272 · 可回退清理、跨仓资源收纳与异机交接基线",
+      "status": "accepted（2026-10-06）",
+      "date": "2026-10-06",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "删除前必须完成逐 worktree 只读保全（差异补丁、untracked/ignored tar、唯一提交判定），恢复集固定在仓外 Sage-recovery-20261006-cleanup。",
+          "constraints": [
+            "no delete without preservation receipt",
+            "recovery set is not a runtime dependency"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "保全核验通过后注销 Sage 侧 worktree 注册并删除对应目录；Magpie-Horch 侧注册状态只读不动。",
+          "constraints": [
+            "external repo read-only",
+            "no force flags on shared state"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Sanbao 原型以 vendor/sanbao-prototype（含 .git）+ pin 收纳；surface 与 crawl 发现新增仓内候选，env 覆盖最先、兄弟仓降为历史回退。",
+          "constraints": [
+            "pin records HEAD and digests",
+            "generator --check-source must pass from vendored root"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "设计回路资料收纳到 docs/design-loop，判者收纳到 scripts/design-loop 且默认宿主仓相对入口；历史读数不得冒充现行验收。",
+          "constraints": [
+            "tracked matrix and tickets remain authoritative",
+            "no machine-absolute defaults"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "品牌源 SVG 收纳到 assets/sanbao-logo-kit（assets/sage 只允许 manifest 列出的条目，任何多余条目会被精确对账判红），SHA-256 必须与生成器 expectedSourceSha256 一致；资产批准状态不变。",
+          "constraints": [
+            "byte-identical source",
+            "unapproved stays unapproved"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "cleanup-inventory 将引用扫描失败落为 unknown（阻断删除建议），射程纳入 --untracked 与 packaging-sage，并有负控与单元测试。",
+          "constraints": [
+            "unavailable scan must never read as no references",
+            "negative control flips suggested to unknown"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "清理不触碰 LUTE 签名私钥与活跃打包锁；不自动 commit/push；未在新机重跑的验证标注待新机验证。",
+          "constraints": [
+            "keys retained",
+            "stale lock only registered",
+            "no commit or push"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0273",
+      "title": "ADR-0273 · legacy packages 解耦与减重（加载期脱离 quarantine 区）",
+      "status": "accepted（2026-10-07）",
+      "date": "2026-10-07",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "gate.mjs 与 role-brief-shape.mjs 对 packages/ 的静态 import 改为容错 TLA（缺源为 null），受影响的 legacy 检查运行期 fail-closed 并给出 git checkout 恢复提示；Sage 域行为零变化。",
+          "constraints": [
+            "no async runner change",
+            "sage checks unchanged",
+            "fail closed with recovery hint"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "整目录缺席消融必须证明两域 --list 正常与缺源 fail-closed，随后原样恢复且工作区零差异。",
+          "constraints": [
+            "reversible rename only",
+            "no partial state"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "减重只删 packages/**/node_modules 与 eval/out 等 ignored 重物；跟踪源码、锁与 lib 构建物保留；重装走逐包 pnpm install --frozen-lockfile。",
+          "constraints": [
+            "no tracked file deleted",
+            "locks retained",
+            "reinstall documented"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "legacy 源码的整体退役须另批完成：撤白名单条目、退役或迁移 legacy 检查、审查 acceptance 引用面，三者同批。",
+          "constraints": [
+            "no directory-only deletion",
+            "gitignore ghosts handled",
+            "checks retired with subjects"
+          ]
+        }
+      ]
     }
   ]
 }

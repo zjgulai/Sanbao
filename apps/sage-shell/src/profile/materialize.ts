@@ -314,7 +314,8 @@ async function pointerExists(path: string): Promise<boolean> {
   }
 }
 
-async function writeActivePointer(paths: SagePaths, input: {
+/** Atomically activate one already-validated immutable profile generation. */
+export async function writeActivePointer(paths: SagePaths, input: {
   generation: string
   manifestSha256: string
   activatedAt: string

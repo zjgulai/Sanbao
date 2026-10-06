@@ -2,6 +2,11 @@
 
 /** The only state endpoint exposed to the Sage renderer in P0-2. */
 export const SAGE_STATE_PATH = '/.sage/state' as const
+export const SAGE_BOOTSTRAP_PATH = '/.sage/bootstrap' as const
+export const SAGE_DEVICE_PREFERENCES_PATH = '/.sage/device-preferences' as const
+export const SAGE_PREFERENCES_PATH = '/.sage/preferences' as const
+export const SAGE_LOGIN_PATH = '/.sage/login' as const
+export const SAGE_LOGOUT_PATH = '/.sage/logout' as const
 
 /** The only action endpoint exposed to the Sage renderer in P0-2. */
 export const SAGE_ACTIONS_PATH = '/.sage/actions' as const

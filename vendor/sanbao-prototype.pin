@@ -1,0 +1,17 @@
+# Sage vendor pin —— sanbao surface 原型（嵌套仓库，源码不入库）
+#
+# 角色：Sanbao 承载面（_site/ 为可服务产物）与 206 状态矩阵的只读输入。
+#   运行时/验收：apps/sage-shell/src/main/sanbao-surface-root.ts 在 env 覆盖之后优先本目录；
+#     apps/sage-shell/scripts/crawl-sanbao-in-sage.mjs 的 ledger 发现同序。
+#   再生成：node scripts/gen-sage-sanbao-state-matrix.mjs --source-root vendor/sanbao-prototype --check-source
+#     （生成器要求本目录是 Git 仓库并记录 rev-parse HEAD；catalog/ledger 摘要被生成器内 PIN 断言钉住）
+# 本目录是异机交接的唯一本地权威副本；Sage 同级快照仓布局仅作本机历史回退，不再是唯一入口。
+upstream-url: https://github.com/zjgulai/sanbao_ui
+upstream-branch: main
+upstream-sha: b861d046013fb8bee9a1f3224ed0965efcf42111
+catalog-sha256: 9eaf593a5bdc214ec0d938951e7aaa6859111823c361a2719c736210276398d3
+ledger-sha256: 0244bd8b25cd2d9323b0f22e54123515cfa37ea8b08b45b4a24dc692e3a3a63e
+site-main-sha256: 7364bd11b0d2e1aa5769fed6881d85e52f065531d5a5413bd9822c80c236fa23
+site-index-sha256: be08c10a352960ca81528016c05d4bd51c9b78cc554ff0cb83b8d876744f987e
+copy-date: 2026-10-06
+copy-excludes: node_modules、.playwright-cli、output、.DS_Store（可重建物；缓存不入库）

@@ -11,6 +11,8 @@
 | 运行时来源 | `vendor/dsh-desktop/dsh-plugin-desktop/node_modules`（0.1.5-rc.2 物化，270/270 tgz） | 打包与 profile 实际使用的运行时产物；`vendor/dsh-runtime/0.1.2-rc.1/*.tgz` **仅作 2.0.5 回滚对照**保留，不再被构建消费（见 pin 注释与 [research/13](research/13-upgrade-2.0.10-execution-plan.md) §7-§8） |
 | 二开插件 | `packages/<能力组>/<包>/` | 28 个受管包（`package-files-coverage` 门禁读数）按能力归入 5 组（[ADR-0011](adr/ADR-0011.md)）。**二期迁移已完成且兼容分支已退役**：`package-layout.mjs` 只认 `packages/<组>/<包>` 一种布局（2026-09-11 G7，此前「历史平铺」分支已无对象） |
 | 自有产品壳 | `apps/sage-shell/` | Sage 自有 Electron 壳，通过 Capability Adapter 消费 harness runtime；产品 renderer 不直接复用上游网页、Composer 或 Cordis 私有 DOM。该目录**不在 package collector 射程内**，版本、产品边界和数据隔离分别由独立门禁守，详见 [ADR-0159](adr/ADR-0159.md) |
+| Sage 内测打包 | `packaging-sage/` | 只消费显式 production runtime 与 first-run profile template，固定 `com.lute.sage` / `0.1.0` / arm64；本机自签、未公证、仅内测，与 legacy `packaging/` 分家，见 [ADR-0271](adr/ADR-0271.md) |
+| Sanbao 承载面来源 | `vendor/sanbao-prototype/` | 收纳副本（含 `.git`；pin 见 `vendor/sanbao-prototype.pin`：HEAD、catalog/ledger/_site 摘要）；`sanbao-surface-root.ts` 与 crawl 的默认解析在 env 覆盖之后优先本目录，兄弟快照仓仅为历史回退（[ADR-0272](adr/ADR-0272.md)） |
 | 出海技能创作源 | `~/project/81-Skills/`（**仓库外**） | 81 个中文名原文，经 `dsh-overseas-skills/scripts/import-81skills.mjs` 转换后安装进 `~/.dsh/skills/`。2026-09-11 迁出仓库，与同包其余 3 个 importer（accio / marketing / fullstack）的「源在仓库外」设计一致 |
 | 门禁 | `scripts/gate.mjs` | 同一 runner、两个显式 scope：默认产品命令使用 `sage` allowlist；历史平台、旧插件与发布链使用 `legacy` 全量注册表。退出码即契约（[ADR-0014](adr/ADR-0014.md)、[ADR-0160](adr/ADR-0160.md)） |
 
@@ -18,7 +20,7 @@
 
 门禁契约分为两个不互相冒充的射程：
 
-- `pnpm run gate` / `pnpm run gate:full`：Sage BASE。固定 allowlist 覆盖 runner 自检、Node 解释器、pin、Sage Shell `typecheck → build → test`、三类 Sage 边界、动态仓根与 legacy packaging 路径卫生、候选资产一致性、gitignore、ADR、文档链接和服务消费对账。它不运行 live profile、旧插件、JEV、历史 UI、release / DMG、object store 或 `repo-attest`。
+- `pnpm run gate` / `pnpm run gate:full`：Sage BASE。固定 allowlist 覆盖 runner 自检、Node 解释器、pin、Sage Shell `typecheck → build → test`、三类 Sage 边界、60-route authority、Sanbao 206 逐行矩阵、动态仓根与 legacy packaging 路径卫生、候选资产一致性、gitignore、ADR、文档链接和服务消费对账。它不运行 live profile、旧插件、JEV、历史 UI、真实签名/DMG、object store 或 `repo-attest`。
 - `pnpm run gate:legacy` / `pnpm run gate:legacy:full`：历史全量注册表。只在任务明确进入旧平台或发布链时运行；通过不代表 Sage.app 已完成 DMG、签名、公证或发布。
 - `pnpm run gate:list` 与 `pnpm run gate:legacy:list` 分别列出两套真实射程；JSON 报告携带 `scope`，不得混用证据。
 
@@ -31,6 +33,8 @@
 | `sage-shell-pin` | 是 | 产品壳（`apps/sage-shell/`）的版本与治理事实：壳 devDeps 与 seed deps 两侧的 `@deepseek-ai/*` 都必须非空、精确、同名包同版本；Electron pin、帧协议、治理字段和测试 fixture 必须保持可核验（[ADR-0139](adr/ADR-0139.md)） |
 | `sage-product-boundary` | 是 | Sage renderer 只消费固定 `/.sage/*` 合同；Capability Adapter 是唯一允许访问 host connection 的产品接缝（[ADR-0159](adr/ADR-0159.md)） |
 | `sage-data-isolation` | 是 | Sage 资料根、Electron 数据目录、host `DSH_HOME` 与 active profile generation 必须与旧 DSH 数据隔离，真实旧资料不得被原地改写（[ADR-0159](adr/ADR-0159.md)） |
+| `sage-route-authority` | 是 | 60 条 `/.sage/*` route 与 checked-in authority matrix 对钉；method/classification/provider/准入 source fact 和 mutation 负控共同防止 read/effect 或 local-system route 协调漂移（[ADR-0270](adr/ADR-0270.md)） |
+| `sage-sanbao-state-matrix` | 是 | Sanbao pin 下 59 组/206 状态逐行校验 UI、Application Service、Host、Electron、视觉五维；Pages、prototype observation、fixture、ignored candidate 与 DMG 都不能把行伪升为 integrated（[ADR-0269](adr/ADR-0269.md)） |
 | `gitignore-whitelist` | 是 | 白名单条目必须指向真实路径，禁止幽灵条目（ADR-0013） |
 | `adr-index` | 是 | ADR 编号连续、索引与文件一致（ADR-0015） |
 | `adr-note-links` | 是 | ADR 的「决策记录」链接可达，且 Note 正文回引该 ADR 编号（ADR-0015） |

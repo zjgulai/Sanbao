@@ -10,7 +10,9 @@ vi.mock('react-dom/client', async importOriginal => {
 })
 
 import type { DesktopBootstrapRead, DesktopRead, DesktopWorkspaceList } from '../../src/product/app/desktop/client.js'
+import { createDevicePreferencesController, type DevicePreferencesController } from '../../src/product/app/desktop/device-preferences.js'
 import { DesktopPage } from '../../src/product/app/desktop/page.js'
+import { SAGE_DESKTOP_CSS } from '../../src/product/app/desktop/styles.js'
 
 const originalActEnvironment = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT
 const cleanups: Array<() => void> = []
@@ -18,6 +20,13 @@ const blocked: DesktopRead = { kind: 'blocked', code: 'projection-read-unavailab
 const ready: DesktopRead = { kind: 'read', runtime: { status: 'ready', message: '运行时已连接', retryable: false } }
 const requests = vi.fn()
 const unavailableBootstrap = async (): Promise<DesktopBootstrapRead> => ({ kind: 'unavailable', code: null })
+const unavailablePreferences = { kind: 'unavailable' as const, code: null }
+const inertPreferencesController: DevicePreferencesController = {
+  snapshot: () => ({ read: unavailablePreferences, saving: false, lastSave: 'idle' }),
+  subscribe: () => () => undefined,
+  refresh: async () => unavailablePreferences,
+  save: async () => ({ outcome: 'refused', read: unavailablePreferences }),
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -26,12 +35,16 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-function mount(readState: () => Promise<DesktopRead>, readBootstrap: () => Promise<DesktopBootstrapRead> = unavailableBootstrap) {
+function mount(
+  readState: () => Promise<DesktopRead>,
+  readBootstrap: () => Promise<DesktopBootstrapRead> = unavailableBootstrap,
+  preferencesController: DevicePreferencesController = inertPreferencesController,
+) {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
   const render = (read: () => Promise<DesktopRead>) => {
-    act(() => { root.render(createElement(DesktopPage, { readState: read, readBootstrap })) })
+    act(() => { root.render(createElement(DesktopPage, { readState: read, readBootstrap, preferencesController })) })
   }
   render(readState)
   const unmount = () => { act(() => { root.unmount() }); container.remove() }
@@ -85,7 +98,9 @@ afterEach(() => {
   cleanups.splice(0).reverse().forEach(cleanup => cleanup())
   vi.unstubAllGlobals()
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
+  delete document.documentElement.dataset.sageThemeRequested
   delete document.documentElement.dataset.sageThemeEffective
+  delete document.documentElement.dataset.sageDensity
 })
 
 describe('T01 complete desktop visual structure and honest read states', () => {
@@ -101,14 +116,17 @@ describe('T01 complete desktop visual structure and honest read states', () => {
     write(container, '保持本地')
     click(button(container, '发送任务'))
     expect(node<HTMLTextAreaElement>(container, 'textarea').value).toBe('保持本地')
-    // T02: both default production readers run at mount — the state read and the bootstrap read.
-    expect(requests).toHaveBeenCalledTimes(2)
+    // The two T02 readers plus the independent device-preferences controller run at mount.
+    expect(requests).toHaveBeenCalledTimes(3)
     const stateCalls = requests.mock.calls.filter((call) => call[0] === '/.sage/state')
     expect(stateCalls).toHaveLength(1)
     expect(stateCalls[0]?.[1]?.method).toBe('GET')
     const bootstrapCalls = requests.mock.calls.filter((call) => call[0] === '/.sage/bootstrap')
     expect(bootstrapCalls).toHaveLength(1)
     expect(bootstrapCalls[0]?.[1]?.method).toBe('GET')
+    const preferenceCalls = requests.mock.calls.filter((call) => call[0] === '/.sage/device-preferences')
+    expect(preferenceCalls).toHaveLength(1)
+    expect(preferenceCalls[0]?.[1]?.method).toBe('GET')
   })
 
   it('collapses and expands the sidebar without hiding the draft or losing named navigation', async () => {
@@ -283,7 +301,8 @@ describe('T01 composer has no business write authority', () => {
     await settle()
     write(container, '未提交的原文')
     // 工作区 no longer shows the outstanding placeholder; it is covered by the T03 describes below.
-    for (const label of ['搜索', '知识中心', '站点', '自动化', '扩展']) {
+    // 搜索 likewise left this loop: T03-D wires it to the real search route (desktop-search.spec.tsx).
+    for (const label of ['知识中心', '站点', '自动化', '扩展']) {
       click(button(container, label))
       expect(node(container, 'h1').textContent).toBe(label)
       expect(node(container, '.outstanding-feature').textContent).toContain('尚未接通')
@@ -296,8 +315,9 @@ describe('T01 composer has no business write authority', () => {
     // T02: the account row opens the account menu; the settings page is entered from its item.
     click(button(container, '账号与设置'))
     click(button(container, '账号与设置页'))
-    expect(node(container, 'h1').textContent).toBe('账号与设置')
-    expect(node(container, '.outstanding-feature').textContent).toContain('尚未接通')
+    expect(node(container, '.settings-appearance h2').textContent).toBe('外观与显示')
+    expect(container.querySelectorAll('.settings-appearance select')).toHaveLength(8)
+    expect(node(container, '.settings-appearance').textContent).toContain('其余六项仅保存')
     click(button(container, '新任务'))
     expect(node<HTMLTextAreaElement>(container, 'textarea').value).toBe('未提交的原文')
     expect(requests).not.toHaveBeenCalled()
@@ -354,7 +374,7 @@ describe('T01 desktop entry and token-only geometry', () => {
     expect(getComputedStyle(node(container, '.composer-context')).display).toBe('flex')
     expect(getComputedStyle(node(container, '.activity-unavailable')).minHeight).toBe('84px')
     expect(SAGE_DESKTOP_CSS).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|--[\w-]+\s*:|var\([^)]*,/i)
-    const names = ['canvas', 'sidebar', 'surface', 'raised', 'overlay', 'ink', 'muted', 'faint', 'divider', 'border', 'brand', 'focus', 'success', 'warning', 'danger', 'radius', 'shadow', 'spacing', 'motion']
+    const names = ['canvas', 'sidebar', 'surface', 'raised', 'overlay', 'ink', 'muted', 'faint', 'divider', 'border', 'brand', 'focus', 'success', 'warning', 'danger', 'radius', 'shadow', 'spacing', 'motion', 'density-nav-item-padding', 'density-main-padding', 'density-card-padding', 'density-row-gap', 'density-control-min-height']
     const tokens = Array.from(SAGE_DESKTOP_CSS.matchAll(/var\(--([\w-]+)\)/g), match => match[1])
     expect(tokens.length).toBeGreaterThan(0)
     for (const token of tokens) expect(names.map(name => `sage-${name}`)).toContain(token)
@@ -407,6 +427,52 @@ describe('T02 account entry reads the local-system bootstrap', () => {
     expect(requests.mock.calls[0]?.[1]?.method).toBe('GET')
     expect(bootstrapReader.mock.calls.length).toBeGreaterThanOrEqual(2)
     expect(container.textContent).toContain('登录请求已发出')
+  })
+
+  it('mounts the independent device preference controller at root and opens the eight-item Settings view', async () => {
+    const preferenceState = {
+      requested: {
+        theme: 'dark' as const,
+        language: 'en' as const,
+        density: 'compact' as const,
+        fontStyle: 'serif' as const,
+        contentWidth: 'wide' as const,
+        terminalTheme: 'manual' as const,
+        fileIcons: 'material' as const,
+        iconAppearance: 'light' as const,
+      },
+      savedAt: '2026-10-05T08:00:00.000Z',
+      effectiveTheme: 'dark' as const,
+    }
+    const preferencesController = createDevicePreferencesController({
+      root: document.documentElement,
+      createSignal: () => new AbortController().signal,
+      fetcher: async () => Response.json(preferenceState),
+    })
+    const bootstrapReader = vi.fn(async (): Promise<DesktopBootstrapRead> => ({
+      kind: 'read',
+      state: { runtime: 'ready', auth: 'signed-out', theme: 'system', density: 'comfortable' },
+    }))
+    const { container } = mount(async () => blocked, bootstrapReader, preferencesController)
+    await act(async () => {
+      await vi.waitFor(() => expect(preferencesController.snapshot().read.kind).toBe('read'))
+    })
+    expect(document.documentElement.dataset.sageThemeRequested).toBe('dark')
+    expect(document.documentElement.dataset.sageThemeEffective).toBe('dark')
+    expect(document.documentElement.dataset.sageDensity).toBe('compact')
+
+    click(button(container, '账号与设置'))
+    click(button(container, '账号与设置页'))
+    await act(async () => {
+      await vi.waitFor(() => expect(container.querySelectorAll('.settings-appearance select')).toHaveLength(8))
+    })
+    expect(node<HTMLSelectElement>(container, 'select[name="theme"]').value).toBe('dark')
+    expect(node<HTMLSelectElement>(container, 'select[name="density"]').value).toBe('compact')
+    expect(container.textContent).toContain('其余六项仅保存，尚未接入产品显示')
+
+    for (const role of ['nav-item-padding', 'main-padding', 'card-padding', 'row-gap', 'control-min-height']) {
+      expect(SAGE_DESKTOP_CSS, role).toContain(`var(--sage-density-${role})`)
+    }
   })
 
   it('withdraws the desktop state immediately after a confirmed logout', async () => {

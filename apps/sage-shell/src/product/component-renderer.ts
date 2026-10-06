@@ -248,7 +248,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
           </div>
           <div class="sage-support-heading"><span class="sage-card-label">CONNECTED SURFACES</span><h2>已接线操作面</h2><p>以下入口沿用既有 Application Service 合同；它们不属于上方只读 composer。</p></div>
                     <section class="sage-matter-list-section" aria-label="事项列表">
-            <article class="sage-card sage-matter-list-card">
+            <article class="sage-card sage-matter-list-card" id="sage-region-matter-list" data-sage-region="matter-list" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">MATTER LIST · ACTION NEED</span><span class="sage-card-index">D0</span></div>
               <h2>事项列表（按行动需求分区）</h2>
               <p class="sage-card-note">分区由 Application Service 从既有事实推导、按最近更新排序（renderer 不自判、不缓存）。“待我处理”逐项标注原因；“待验收”只显示计数——验收与完成语义尚未收口，本版不定义。归档不在默认展开。</p>
@@ -263,7 +263,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
                     <section class="sage-draft-section" aria-label="草案与建项">
-            <article class="sage-card sage-draft-card">
+            <article class="sage-card sage-draft-card" id="sage-region-draft" data-sage-region="draft" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">DRAFT · DEVICE-LOCAL</span><span class="sage-card-index">D1</span></div>
               <h2>首页输入 → 草案整理 → 建项确认</h2>
               <p class="sage-card-note">草案只保存在当前设备：登出后加密锁定、期间不读不写，不自动同步、不换机接续。目标、交付、责任三项必填；项目可选且最多一个。整理只把输入留作前史，<strong>不会自动写入交付或责任</strong>。</p>
@@ -309,7 +309,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-session-section" aria-label="事项主对话">
-            <article class="sage-card sage-session-card">
+            <article class="sage-card sage-session-card" id="sage-region-session" data-sage-region="session" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">MAIN CONVERSATION · ACK ≠ EXECUTION</span><span class="sage-card-index">D3</span></div>
               <h2>事项主对话</h2>
               <p class="sage-card-note">发出输入后基座先回执"已受理"——<strong>回执只表示进了队列，不表示模型已开始工作</strong>；执行中与否只看会话日志里有没有未结束的一轮。流断了会自动按历史重新对账，最终文本以历史为准；重开只读历史，不会重复发送。</p>
@@ -439,7 +439,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-link-section" aria-label="事项与工作区关联">
-            <article class="sage-card sage-link-card">
+            <article class="sage-card sage-link-card" id="sage-region-link" data-sage-region="link" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">MATTER ↔ WORKSPACE · NAMED OPS</span><span class="sage-card-index">D2</span></div>
               <h2>事项 ↔ 工作区关联</h2>
               <p class="sage-card-note">关联由你在事项侧显式建立和解除，每次操作都会写进下面的操作记录（谁、何时、对哪个工作区做了哪一步）。关联只引用已采纳的工作区，<strong>不读取、不上传任何资料内容</strong>；解除只解除关联——既有引用仍指向原来源版本，也不会把执行环境静默换成别的工作区。</p>
@@ -486,7 +486,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-matter-admin-section" aria-label="事项管理">
-            <article class="sage-card sage-matter-admin-card">
+            <article class="sage-card sage-matter-admin-card" id="sage-region-matter-admin" data-sage-region="matter-admin" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">MATTER ADMIN · ARCHIVE · RENAME · BATCH</span><span class="sage-card-index">D7</span></div>
               <h2>事项管理：归档、重命名与逐项批量</h2>
               <p class="sage-card-note">归档是可恢复的列表退役：退出活动列表、<strong>保留事实与回执</strong>，可随时恢复——恢复只回列表呈现，不自动恢复执行、也不把已完成改成运行中。<strong>归档≠停止执行（在跑的运行不受影响）、≠隐藏</strong>；归档不解除未结责任、不扩大读取权限；真正删除是独立受控流程，这里没有入口。重命名经服务裁决，显示的是<strong>回读的实际生效值</strong>（请求值不冒充生效值）。批量<strong>逐项返回</strong>结果与拒绝原因，没有「整体成功」。本版归档依据是声明（已完成／已停止——验收读数未收口，不冒充核验）。</p>
@@ -503,7 +503,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-matter-groups-section" aria-label="任务分组">
-            <article class="sage-card sage-matter-groups-card">
+            <article class="sage-card sage-matter-groups-card" id="sage-region-matter-groups" data-sage-region="matter-groups" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">TASK GROUPS · SAGE-OWNED ORGANIZATION</span><span class="sage-card-index">D12</span></div>
               <h2>任务分组：建立、改名与移除（只改变列表组织）</h2>
               <p class="sage-card-note">分组是 Sage 自有的组织对象：建立、改名、移除都是具名命令，各有回执与回读，<strong>不隐式产生</strong>（对未知分组的操作被拒绝，不会自动建组）。分组<strong>只改变列表组织方式</strong>：不改变事项事实、可见范围、责任或权限；<strong>移除分组≠删除事项</strong>。成员批量<strong>逐项返回</strong>结果与拒绝原因，没有「整体成功」。本版分组是本机组织记录：不做共享与协作语义、不做按分组批量授权、不跨设备同步。</p>
@@ -548,7 +548,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
             </article>
           </section>
           <section class="sage-plan-section" aria-label="方案预览">
-            <article class="sage-card sage-plan-card">
+            <article class="sage-card sage-plan-card" id="sage-region-plans" data-sage-region="plans" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">PLAN · DELIVERABLE · STEP READINESS</span><span class="sage-card-index">D9</span></div>
               <h2>方案预览、步骤就绪与执行确认</h2>
               <p class="sage-card-note">方案是本次交付：<strong>接受方案不等于执行方案</strong>——接受只记录回执，不派发、不铸确认卡、不碰会话。执行必须针对<strong>明确动作</strong>：每个步骤先「准备执行确认卡」（单张卡，衔接执行前确认）；确认执行才携带一次性凭据派发。步骤就绪按<strong>动作前提</strong>显示——<strong>安全或权限未知呈现为阻断而非失败，且不就绪项不被派发</strong>（不显示执行入口）。</p>
@@ -602,7 +602,7 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
         <section class="sage-panel" id="panel-search" role="tabpanel" data-panel="search" aria-labelledby="view-search" hidden>
           <div class="sage-section-heading"><div><p class="sage-eyebrow">SEARCH</p><h1>搜索</h1></div><span class="sage-fixture-pill">只读命中</span></div>
           <section class="sage-search-section" aria-label="搜索">
-            <article class="sage-card sage-search-card">
+            <article class="sage-card sage-search-card" id="sage-region-search" data-sage-region="search" data-region-state="unavailable">
               <div class="sage-card-head"><span class="sage-card-label">SEARCH · MATTERS LOCAL + SESSION CONTENT</span><span class="sage-card-index">D0</span></div>
               <h2>搜索</h2>
               <p class="sage-card-note">一次输入两区：<strong>事项</strong>在 Sage 本地记录按标题与属性匹配；<strong>会话</strong>走运行时检索（只读、有界、只含可见会话，内部分页）。命中都是只读文本——<strong>不打开会话、不激活执行、不加载正文</strong>；全文检索与统一排序后置；运行时没有检索引擎时会话区如实显示「不可用」。</p>
@@ -643,20 +643,20 @@ export function renderSageWorkspace(viewState: SageMatterViewState | null = null
         </section>
 
         <section class="sage-panel" id="panel-capabilities" role="tabpanel" data-panel="capabilities" aria-labelledby="view-capabilities" hidden>
-          <div class="sage-section-heading"><div><p class="sage-eyebrow">CAPABILITY SURFACE</p><h1>能力与接线状态</h1></div><span class="sage-fixture-pill" id="capability-source">来源：等待运行时清单</span></div>
+          <div class="sage-section-heading"><div><p class="sage-eyebrow">CAPABILITY SURFACE</p><h1>能力与接线状态</h1></div><span class="sage-fixture-pill" id="sage-region-capability-source" data-sage-region="capability" data-region-state="unavailable">来源：等待运行时清单</span></div>
           <div class="sage-capability-grid">
             <article class="sage-card sage-capability-card"><span class="sage-capability-glyph">01</span><h2>运行时</h2><p>当前唯一真实接线是 Sage Host 的受控状态读取与恢复动作。</p><strong class="sage-state-tag">runtime projection</strong></article>
             <article class="sage-card sage-capability-card"><span class="sage-capability-glyph">02</span><h2>外部能力</h2><p>外部能力目录与市场还没有可核验的来源；界面不把"没接线"说成"已停用"。</p><strong class="sage-state-tag is-blocked">未接线 · 无 provider</strong></article>
             <article class="sage-card sage-capability-card"><span class="sage-capability-glyph">03</span><h2>业务 Adapter</h2><p>能力适配器只返回安全投影；真实 ActionIntent 进入下一批 Application Service。</p><strong class="sage-state-tag">contract runway</strong></article>
           </div>
-          <article class="sage-card sage-capability-roster">
+          <article class="sage-card sage-capability-roster" id="sage-region-capability" data-sage-region="capability" data-region-state="unavailable">
             <div class="sage-card-head"><span class="sage-card-label">AGENT PRESETS · READ-ONLY</span><span class="sage-card-index">04</span></div>
             <h2>已配置的 Agent 运行时</h2>
             <p class="sage-card-note">这里只显示 Electron main 观察到的运行时清单：已配置不等于已启用，已启用也不等于可用。安装、启用、停用与撤销在本页没有入口。</p>
             <ul class="sage-roster-list" id="capability-rows"></ul>
             <p id="capability-note" class="sage-card-note" role="status" aria-live="polite"></p>
           </article>
-          <article class="sage-card sage-model-config">
+          <article class="sage-card sage-model-config" id="sage-region-model-config" data-sage-region="model-config" data-region-state="unavailable">
             <div class="sage-card-head"><span class="sage-card-label">MODEL CONFIG · READ-ONLY</span><span class="sage-card-index">05</span></div>
             <h2>模型配置</h2>
             <p class="sage-card-note">只显示结构、层级与凭据是否已设置：不显示任何配置值，也无编辑入口。保存过配置不等于这个供应商可用——「已保存」与「连通性」是两回事。</p>

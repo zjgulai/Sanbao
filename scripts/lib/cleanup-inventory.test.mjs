@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
+  createRealDeps,
   dirSizeBytes,
   inspectCandidate,
   judgeCandidate,
@@ -196,3 +197,72 @@ function fakeDeps({ root, flags = 0, hits = {} }) {
     repoRoot: root,
   }
 }
+
+// ── 2026-10-06 加固：读不到 ≠ 没有引用（P-02 族仪器假绿） ────────────────────
+//
+// 负控实测（修复前）：对不存在的仓库 searchTracked 返回空数组，judgeCandidate
+// 给出 `suggested`——一个仓库不可读的对象会被当作可删除项。修法把「扫描失败」
+// 与「无命中」分形；以下用例证明该分支会红（unknown）也会绿（suggested）。
+
+test('judgeCandidate：引用扫描失败必须落 unknown（不得进入删除建议）', () => {
+  const verdict = judgeCandidate({
+    commitments: [],
+    references: [],
+    sizeBytes: 10 * 1024 * 1024,
+    referenceScanOk: false,
+    referenceScanError: 'git grep unavailable (128): not a git repository',
+  })
+  assert.equal(verdict.verdict, 'unknown')
+  assert.match(verdict.reason, /扫描未完成/)
+})
+
+test('orderSuggested：unknown 不进建议清单（只留 suggested）', () => {
+  const items = [
+    { candidate: 'a', verdict: 'suggested', sizeBytes: 10 },
+    { candidate: 'b', verdict: 'unknown', sizeBytes: 999999 },
+    { candidate: 'c', verdict: 'protected', sizeBytes: 999999 },
+  ]
+  assert.deepEqual(orderSuggested(items).map((item) => item.candidate), ['a'])
+})
+
+test('inspectCandidate：真实 deps 在不可用仓库上必须报扫描失败，而不是建议删除', async () => {
+  await withMutationFixture({ prefix: 'cleanup-inventory' }, async (fixture) => {
+    const missingRepo = join(fixture.repo, 'not-a-repo')
+    mkdirSync(missingRepo)
+    const reading = inspectCandidate({
+      candidate: 'ghost',
+      repoRoot: missingRepo,
+      deps: createRealDeps({ repoRoot: missingRepo }),
+    })
+    assert.equal(reading.referenceScanOk, false)
+    assert.equal(reading.verdict, 'unknown')
+    assert.ok(reading.referenceScanError.length > 0)
+  })
+})
+
+test('inspectCandidate：注入 { ok:false } 与「扫描成功但无命中」分形', async () => {
+  await withMutationFixture({ prefix: 'cleanup-inventory' }, async (fixture) => {
+    const item = join(fixture.repo, 'quiet-item')
+    mkdirSync(item)
+    const failed = inspectCandidate({
+      candidate: 'quiet-item',
+      repoRoot: fixture.repo,
+      deps: {
+        ...fakeDeps({ root: fixture.repo }),
+        searchTracked: () => ({ ok: false, error: 'synthetic scan failure' }),
+      },
+    })
+    assert.equal(failed.referenceScanOk, false)
+    assert.equal(failed.verdict, 'unknown')
+    const scannedEmpty = inspectCandidate({
+      candidate: 'quiet-item',
+      repoRoot: fixture.repo,
+      deps: {
+        ...fakeDeps({ root: fixture.repo }),
+        searchTracked: () => ({ ok: true, hits: [] }),
+      },
+    })
+    assert.equal(scannedEmpty.referenceScanOk, true)
+    assert.equal(scannedEmpty.verdict, 'suggested')
+  })
+})

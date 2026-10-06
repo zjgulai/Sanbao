@@ -3,7 +3,9 @@
  *
  * 候选顺序：
  *   1. 环境变量 SAGE_SANBAO_SURFACE_ROOT（显式覆盖；可直接指向产物目录或 prototype 目录）；
- *   2. Sage 仓根的同级快照仓 <repo-parent>/Sanbao|sanbao/repository-snapshot/apps/sanbao-prototype。
+ *   2. 仓内收纳副本 <repo>/vendor/sanbao-prototype（异机交接后的默认形态，不依赖兄弟仓；
+ *      来源、HEAD 与产物摘要见 vendor/sanbao-prototype.pin）；
+ *   3. Sage 仓根的同级快照仓 <repo-parent>/Sanbao|sanbao/repository-snapshot/apps/sanbao-prototype（本机历史布局）。
  *
  * 每个候选里优先 `dist/`（必须含 index.html 与 main.js）；dist 不完整（缺 main.js，例如
  * tsdown 之后尚未 prepare-static）时退到 `_site/`——同一构建的发布产物（main.js 与 dist 同哈希）。
@@ -58,6 +60,8 @@ export function candidateSanbaoPrototypeDirs(env: NodeJS.ProcessEnv = process.en
   const candidates: string[] = []
   const override = env.SAGE_SANBAO_SURFACE_ROOT
   if (typeof override === 'string' && override.length > 0) candidates.push(override)
+  // 收纳副本优先于兄弟仓：异机交接后本地副本是唯一默认；兄弟仓仅本机历史回退。
+  candidates.push(join(sageRepoRoot, 'vendor', 'sanbao-prototype'))
   const parent = dirname(sageRepoRoot)
   for (const name of ['Sanbao', 'sanbao']) {
     candidates.push(join(parent, name, 'repository-snapshot', 'apps', 'sanbao-prototype'))

@@ -240,12 +240,32 @@ interface ProbeResult {
       readonly expectedArtifactsState: string
       readonly expectedSideChatsState: string
       readonly expectedActionItemsState: string
+      readonly expectedPlansState: string
+      readonly expectedLinkState: string
+      readonly expectedMatterAdminState: string
+      readonly expectedMatterGroupsState: string
+      readonly expectedMatterListState: string
+      readonly expectedDraftState: string
+      readonly expectedSessionState: string
+      readonly expectedSearchState: string
+      readonly expectedCapabilityState: string
+      readonly expectedModelConfigState: string
       readonly sites: string | null
       readonly toolResults: string | null
       readonly runMonitor: string | null
       readonly artifacts: string | null
       readonly sideChats: string | null
       readonly actionItems: string | null
+      readonly plans: string | null
+      readonly link: string | null
+      readonly matterAdmin: string | null
+      readonly matterGroups: string | null
+      readonly matterList: string | null
+      readonly draft: string | null
+      readonly session: string | null
+      readonly search: string | null
+      readonly capability: string | null
+      readonly modelConfig: string | null
     }
     readonly stageFacts?: {
       readonly trackCurrentStage: string | null
@@ -817,6 +837,16 @@ describe('Sage fixture projection over the real window (WT-02D.1)', () => {
     expect(result.evidence.regionFacts?.artifacts).toBe(result.evidence.regionFacts?.expectedArtifactsState)
     expect(result.evidence.regionFacts?.sideChats).toBe(result.evidence.regionFacts?.expectedSideChatsState)
     expect(result.evidence.regionFacts?.actionItems).toBe(result.evidence.regionFacts?.expectedActionItemsState)
+    expect(result.evidence.regionFacts?.plans).toBe(result.evidence.regionFacts?.expectedPlansState)
+    expect(result.evidence.regionFacts?.link).toBe(result.evidence.regionFacts?.expectedLinkState)
+    expect(result.evidence.regionFacts?.matterAdmin).toBe(result.evidence.regionFacts?.expectedMatterAdminState)
+    expect(result.evidence.regionFacts?.matterGroups).toBe(result.evidence.regionFacts?.expectedMatterGroupsState)
+    expect(result.evidence.regionFacts?.matterList).toBe(result.evidence.regionFacts?.expectedMatterListState)
+    expect(result.evidence.regionFacts?.draft).toBe(result.evidence.regionFacts?.expectedDraftState)
+    expect(result.evidence.regionFacts?.session).toBe(result.evidence.regionFacts?.expectedSessionState)
+    expect(result.evidence.regionFacts?.search).toBe(result.evidence.regionFacts?.expectedSearchState)
+    expect(result.evidence.regionFacts?.capability).toBe(result.evidence.regionFacts?.expectedCapabilityState)
+    expect(result.evidence.regionFacts?.modelConfig).toBe(result.evidence.regionFacts?.expectedModelConfigState)
 
     // The real wire carries the fixture matter slot; 0.2 service semantics are unchanged.
     expect(result.evidence.stateProbe).toMatchObject({

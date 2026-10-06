@@ -58,20 +58,20 @@ const cancelCheck = (patch = {}) => checkSageRouteAuthority({
 })
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
-  assert.equal(result.expected, 59)
+  assert.equal(result.expected, 60)
   assert.equal(result.expected, result.checked + result.skipped + result.failed)
   assert.ok(result.violations.some((violation) => violation.includes(needle)), JSON.stringify(result.violations))
 }
 
-test('current 59-route registry matches source without claiming product availability', () => {
+test('current 60-route registry matches source without claiming product availability', () => {
   const result = check()
   assert.equal(result.status, 'pass', JSON.stringify(result))
   assert.deepEqual(
     { expected: result.expected, discovered: result.discovered, checked: result.checked, skipped: result.skipped, failed: result.failed },
-    { expected: 59, discovered: 59, checked: 59, skipped: 0, failed: 0 },
+    { expected: 60, discovered: 60, checked: 60, skipped: 0, failed: 0 },
   )
   assert.match(result.note, /13 read-only routes enter projection-read admission/)
-  assert.match(result.note, /1 local-system route enters device-local admission/)
+  assert.match(result.note, /2 local-system routes enter device-local admission/)
   assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
   assert.match(result.note, /17 direct-provider bypasses/)
@@ -360,6 +360,77 @@ test('a local-system route cannot claim compliance without its exact runner sour
   expectNamedFailure(check({ mainAppServiceText: snapshotSpread }), '/.sage/bootstrap')
 })
 
+test('the device-preferences local-system route cannot drift from its exact read contract', () => {
+  const bypassedKernel = baseline.mainAppServiceText.replace(
+    'admitLocalSystemRead<DevicePreferencesState>({',
+    'bypassLocalSystemRead<DevicePreferencesState>({',
+  )
+  assert.notEqual(bypassedKernel, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: bypassedKernel }), '/.sage/device-preferences')
+
+  const droppedAssembly = baseline.mainAppServiceText.replace(
+    'devicePreferencesRead: createDevicePreferencesRunner(options),',
+    'devicePreferencesRead: droppedByAssembly(options),',
+  )
+  assert.notEqual(droppedAssembly, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: droppedAssembly }), '/.sage/device-preferences')
+
+  const sharedDenial = baseline.mainAppServiceText.replace(
+    "unavailableCode: 'device-preferences-unavailable',",
+    "unavailableCode: 'bootstrap-unavailable',",
+  )
+  assert.notEqual(sharedDenial, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: sharedDenial }), '/.sage/device-preferences')
+
+  const droppedValidator = baseline.mainAppServiceText.replace(
+    'validatesReadValue: isDevicePreferencesState,',
+    'validatesReadValue: () => true,',
+  )
+  assert.notEqual(droppedValidator, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: droppedValidator }), '/.sage/device-preferences')
+
+  const mutationPort = baseline.mainAppServiceText.replaceAll(
+    'const preferences = options.preferences?.()',
+    'const preferences = await options.preferencesSave?.({})',
+  )
+  assert.notEqual(mutationPort, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: mutationPort }), '/.sage/device-preferences')
+
+  const widenedDto = baseline.mainAppServiceText.replace(
+    'effectiveTheme: preferences.effectiveTheme,',
+    'effectiveTheme: preferences.effectiveTheme, systemDark: preferences.systemDark,',
+  )
+  assert.notEqual(widenedDto, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: widenedDto }), '/.sage/device-preferences')
+
+  const looseTimestamp = baseline.mainAppServiceText.replace(
+    'record.savedAt === null || isCanonicalIsoTimestamp(record.savedAt)',
+    "record.savedAt === null || typeof record.savedAt === 'string'",
+  )
+  assert.notEqual(looseTimestamp, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: looseTimestamp }), '/.sage/device-preferences')
+})
+
+test('device-preferences method, operation and provider facts stay immutable under coordinated drift', () => {
+  const providerDrift = JSON.parse(baseline.matrixText)
+  providerDrift.routes.find((route) => route.path === '/.sage/device-preferences').providers = ['bootstrapRead']
+  expectNamedFailure(check({ matrixText: JSON.stringify(providerDrift) }), '/.sage/device-preferences')
+
+  const coordinatedMatrix = JSON.parse(baseline.matrixText)
+  const route = coordinatedMatrix.routes.find((candidate) => candidate.path === '/.sage/device-preferences')
+  route.operations = ['write']
+  route.providers = ['savePreferences']
+  const coordinatedSource = baseline.routeSkeletonText.replace(
+    'return deps.providers.devicePreferencesRead()',
+    'return deps.providers.savePreferences({})',
+  )
+  assert.notEqual(coordinatedSource, baseline.routeSkeletonText)
+  expectNamedFailure(check({
+    matrixText: JSON.stringify(coordinatedMatrix),
+    routeSkeletonText: coordinatedSource,
+  }), '/.sage/device-preferences')
+})
+
 test('the projection-read owner cannot drift from the authorised read-policy wiring (T03)', () => {
   const unwiredProjection = baseline.mainIndexText.replace(
     'authorizeProjectionRead: (request) => readPolicyFor().authorizeProjectionRead(request),',
@@ -390,6 +461,22 @@ test('the projection-read owner cannot drift from the authorised read-policy wir
   expectNamedFailure(check({ mainIndexText: perRequestRebuild }), 'production read-policy wiring drifted')
 })
 
+test('the device state collection cannot silently revert to unavailable or open another collection (T03/A)', () => {
+  const revertedCollection = baseline.mainAppServiceText.replace(
+    "return candidate.collection === 'state'",
+    "return candidate.collection === 'sealed'",
+  )
+  assert.notEqual(revertedCollection, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: revertedCollection }), 'projection-read main assembly is missing or bypassed')
+
+  // A permissive variant (every collection allowed) must not satisfy the registered fact.
+  const widenedCollection = baseline.mainAppServiceText.replace(
+    "return candidate.collection === 'state'",
+    "return candidate.collection !== 'never'",
+  )
+  assert.notEqual(widenedCollection, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: widenedCollection }), 'projection-read main assembly is missing or bypassed')
+})
 test('a read route cannot claim projection admission without its route wrapper', () => {
   const routeSkeletonText = baseline.routeSkeletonText.replace(
     'return runProjectionRead(\n      deps,\n      \'state.read\'',

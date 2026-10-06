@@ -27,6 +27,9 @@
 | --- | --- |
 | [architecture.md](architecture.md) | 平台架构与维护/生效语义（含万物互联与出海技能当前产品形态，2026-09-09 对齐） |
 | [plans/2026-09-24-sage-self-owned-desktop-execution-plan.md](plans/2026-09-24-sage-self-owned-desktop-execution-plan.md) | Sage 自有桌面端的阶段边界与验收出口；accepted 不等于全部已实现 |
+| [plans/2026-10-05-sanbao-in-sage-integration-tickets.md](plans/2026-10-05-sanbao-in-sage-integration-tickets.md) | **当前任务入口**：T01–T14 与 DMG-INTERNAL 的范围 / 依赖 / 验收；进度只读 [tracked 矩阵](specs/2026-09-27-sanbao-to-sage-ui-state-map.json) 逐行事实，票据文字不承载状态 |
+| [notes/implemented/process/2026-10-06-portable-cleanup-and-handoff.md](notes/implemented/process/2026-10-06-portable-cleanup-and-handoff.md) | **异机交接与清理记录**：保全 / 收纳 / 删除边界、恢复步骤与下一台电脑 Codex 的续作清单（[ADR-0272](adr/ADR-0272.md)） |
+| [design-loop/](design-loop/README.md) | 设计回路输入快照（工单 / 规格 / 判者）；历史读数不得冒充现行验收，判者在 `scripts/design-loop/` |
 | [upgrade-2.0.5-window-plan.md](upgrade-2.0.5-window-plan.md) | **升级窗口执行方案**（基座升级时整窗执行；含品牌/主题/导航的锚点处置现状与窗口复验清单） |
 | [release-process.md](release-process.md) | 版本发布 SOP |
 | [sop/profile-loadpoint-refill.md](sop/profile-loadpoint-refill.md) | 装载点缺件检查、原子补件、哈希复核及隔离演练读数 |

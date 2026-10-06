@@ -1,0 +1,265 @@
+diff --git a/apps/sage-shell/src/host/index.ts b/apps/sage-shell/src/host/index.ts
+index afc4fd4..f701329 100644
+--- a/apps/sage-shell/src/host/index.ts
++++ b/apps/sage-shell/src/host/index.ts
+@@ -25,6 +25,7 @@ import {
+   type HostEvent,
+   type HostRequestFrame,
+ } from '../protocol.js'
++import { resolveReadOnlyCall, type ReadOnlyBridgeOutcome } from './readonly-bridge.js'
+ import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
+ import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
+ import { createAssetHandler } from './assets.js'
+@@ -50,6 +51,8 @@ export interface HostController {
+   armRuntimeInvalidation(): void
+   /** Dispatch one custom-protocol request and stream its response to the response pipe. */
+   fetch(command: HostFetchCommand, body: ReadableStream<Uint8Array> | null): Promise<void>
++  /** Run one allowlisted read-only base call in this process; never reaches the render side. */
++  bridgeCall(endpoint: string): Promise<ReadOnlyBridgeOutcome>
+   /** Abort one in-flight request. */
+   cancel(streamId: number): void
+   /** Stop accepting messages and await complete host teardown. */
+@@ -209,6 +212,7 @@ export async function runShellHost(input: {
+         requests.delete(command.streamId)
+       }
+     },
++    bridgeCall: (endpoint) => resolveReadOnlyCall(ctx, endpoint),
+     dispose,
+   }
+ }
+@@ -433,6 +437,14 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
+       void stop(1)
+       return
+     }
++    if (message.type === 'bridge-call') {
++      void controller.bridgeCall(message.endpoint).then((outcome) => {
++        send(outcome.ok === true
++          ? { type: 'bridge-result', callId: message.callId, ok: true, result: outcome.result }
++          : { type: 'bridge-result', callId: message.callId, ok: false, code: outcome.code })
++      })
++      return
++    }
+     void stop()
+   })
+   process.once('disconnect', () => { void stop() })
+diff --git a/apps/sage-shell/src/main/host-process.ts b/apps/sage-shell/src/main/host-process.ts
+index d33e329..61eef00 100644
+--- a/apps/sage-shell/src/main/host-process.ts
++++ b/apps/sage-shell/src/main/host-process.ts
+@@ -6,6 +6,7 @@ import { once } from 'node:events'
+ import { Readable, Writable } from 'node:stream'
+ import {
+   HostResponseDecoder,
++  READONLY_BRIDGE_ENDPOINTS,
+   SHELL_HOST_PROTOCOL_VERSION,
+   SHELL_PIPE_CHUNK_BYTES,
+   SHELL_REQUEST_PIPE_FD,
+@@ -21,6 +22,17 @@ import {
+ } from '../protocol.js'
+ import type { HostRuntime } from './runtime.js'
+ 
++/** How long one read-only bridge call may stay unanswered before Electron reports the result as unknown. */
++const READONLY_BRIDGE_TIMEOUT_MS = 10_000
++
++/** Rejection that carries a stable machine code instead of a prose-only message. */
++export class ReadOnlyBridgeError extends Error {
++  constructor(readonly code: string, message: string) {
++    super(message)
++    this.name = 'ReadOnlyBridgeError'
++  }
++}
++
+ interface PendingResponse {
+   readonly resolve: (response: Response) => void
+   readonly reject: (error: Error) => void
+@@ -94,6 +106,7 @@ export class ShellHostProcess {
+   private nextStreamId = 1
+   private readonly pending = new Map<number, PendingResponse>()
+   private readonly blockedResponses = new Set<number>()
++  private readonly bridgePending = new Map<string, { readonly resolve: (value: unknown) => void, readonly reject: (error: Error) => void }>()
+   private readyResolve!: (ready: HostReady) => void
+   private readyReject!: (error: Error) => void
+   private readonly readyPromise = new Promise<HostReady>((resolve, reject) => {
+@@ -427,6 +440,14 @@ export class ShellHostProcess {
+ 
+   private handleMessage(message: HostEvent): void {
+     switch (message.type) {
++      case 'bridge-result': {
++        const pending = this.bridgePending.get(message.callId)
++        if (pending === undefined) return
++        this.bridgePending.delete(message.callId)
++        if (message.ok === true) pending.resolve(message.result)
++        else pending.reject(new ReadOnlyBridgeError(message.code, `sage shell: read-only bridge call refused with ${JSON.stringify(message.code)}`))
++        return
++      }
+       case 'ready': {
+         if (this.terminal || this.readyState !== 'pending') return
+         if (message.profileGeneration !== this.runtime.expectedProfileGeneration) {
+@@ -502,6 +523,49 @@ export class ShellHostProcess {
+     }
+     this.pending.clear()
+     this.blockedResponses.clear()
++    for (const pending of this.bridgePending.values()) {
++      pending.reject(new ReadOnlyBridgeError('bridge-host-lost', 'sage shell: read-only bridge Host stopped before answering'))
++    }
++    this.bridgePending.clear()
+     this.responsePipe?.resume()
+   }
++
++  /**
++   * Invoke one allowlisted read-only base method inside the Host process.
++   * Both refusals (unknown endpoint, Host not active) happen before any frame leaves Electron.
++   * @param endpoint - logical endpoint from the shared read-only allowlist.
++   * @param payload - positional arguments; the allowlisted endpoints currently take none.
++   * @returns the plain-data result the Host serialized.
++   */
++  async callReadOnly(endpoint: string, payload: readonly unknown[] = []): Promise<unknown> {
++    if (!READONLY_BRIDGE_ENDPOINTS.has(endpoint)) {
++      throw new ReadOnlyBridgeError('bridge-endpoint-unsupported', `sage shell: read-only bridge endpoint ${JSON.stringify(endpoint)} is not allowlisted`)
++    }
++    const child = this.child
++    if (this.snapshot.kind !== 'active' || child === undefined || !child.connected) {
++      throw new ReadOnlyBridgeError('bridge-host-not-ready', 'sage shell: read-only bridge requires an active Host')
++    }
++    const callId = randomUUID()
++    const answer = new Promise<unknown>((resolve, reject) => {
++      this.bridgePending.set(callId, { resolve, reject })
++    })
++    try {
++      this.send({ type: 'bridge-call', callId, endpoint, payload })
++    } catch (error) {
++      this.bridgePending.delete(callId)
++      throw new ReadOnlyBridgeError('bridge-send-failed', error instanceof Error ? error.message : String(error))
++    }
++    const timeout = setTimeout(() => {
++      const pending = this.bridgePending.get(callId)
++      if (pending === undefined) return
++      this.bridgePending.delete(callId)
++      pending.reject(new ReadOnlyBridgeError('bridge-result-unknown', 'sage shell: read-only bridge call did not answer in time'))
++    }, READONLY_BRIDGE_TIMEOUT_MS)
++    try {
++      return await answer
++    } finally {
++      clearTimeout(timeout)
++      this.bridgePending.delete(callId)
++    }
++  }
+ }
+diff --git a/apps/sage-shell/src/profile/layout.ts b/apps/sage-shell/src/profile/layout.ts
+index f321731..7832035 100644
+--- a/apps/sage-shell/src/profile/layout.ts
++++ b/apps/sage-shell/src/profile/layout.ts
+@@ -17,6 +17,7 @@ export const HOST_LIB_FILES = [
+   'profile/paths.js',
+   'protocol.js',
+   'host/index.js',
++  'host/readonly-bridge.js',
+   'host/composition.js',
+   'host/assets.js',
+   'host/handler.js',
+diff --git a/apps/sage-shell/src/protocol.ts b/apps/sage-shell/src/protocol.ts
+index d138902..2f79e96 100644
+--- a/apps/sage-shell/src/protocol.ts
++++ b/apps/sage-shell/src/protocol.ts
+@@ -82,6 +82,11 @@ export type HostResponseFrame = {
+ /** Commands retained on Node IPC because they do not carry Fetch payload bytes. */
+ export type HostCommand = {
+   readonly type: 'shutdown'
++} | {
++  readonly type: 'bridge-call'
++  readonly callId: string
++  readonly endpoint: string
++  readonly payload: readonly unknown[]
+ }
+ 
+ /** Lifecycle events retained on Node IPC. */
+@@ -97,8 +102,28 @@ export type HostEvent = {
+ } | {
+   readonly type: 'fatal'
+   readonly message: string
++} | {
++  readonly type: 'bridge-result'
++  readonly callId: string
++  readonly ok: true
++  readonly result: unknown
++} | {
++  readonly type: 'bridge-result'
++  readonly callId: string
++  readonly ok: false
++  readonly code: string
+ }
+ 
++/**
++ * Endpoints the main→Host read-only bridge may invoke. One home for both halves (P-07):
++ * the Electron side refuses anything outside it before sending, and the Host side refuses again
++ * before touching a service.
++ */
++export const READONLY_BRIDGE_ENDPOINTS: ReadonlySet<string> = Object.freeze(new Set(['settings/describe']))
++
++const BRIDGE_CALL_ID = /^[A-Za-z0-9_-]{1,64}$/u
++const BRIDGE_ENDPOINT = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/u
++
+ function isRecord(value: unknown): value is Record<string, unknown> {
+   return typeof value === 'object' && value !== null
+ }
+@@ -337,8 +362,16 @@ export class HostResponseDecoder {
+ }
+ 
+ export function isHostCommand(message: unknown): message is HostCommand {
+-  return typeof message === 'object' && message !== null && 'type' in message
+-    && (message as Record<string, unknown>).type === 'shutdown'
++  if (typeof message === 'object' && message !== null && 'type' in message
++    && (message as Record<string, unknown>).type === 'shutdown') return true
++  const candidate = snapshotPlainDataRecord(message)
++  if (candidate === undefined || candidate.type !== 'bridge-call') return false
++  return hasExactKeys(candidate, ['type', 'callId', 'endpoint', 'payload'])
++    && typeof candidate.callId === 'string' && BRIDGE_CALL_ID.test(candidate.callId)
++    && typeof candidate.endpoint === 'string'
++    && BRIDGE_ENDPOINT.test(candidate.endpoint)
++    && READONLY_BRIDGE_ENDPOINTS.has(candidate.endpoint)
++    && Array.isArray(candidate.payload) && candidate.payload.length <= 8
+ }
+ 
+ function snapshotPlainDataRecord(message: unknown): Record<string, unknown> | undefined {
+@@ -392,6 +425,15 @@ export function isHostEvent(message: unknown): message is HostEvent {
+       return hasExactKeys(candidate, ['type'])
+     case 'fatal':
+       return hasExactKeys(candidate, ['type', 'message']) && typeof candidate.message === 'string'
++    case 'bridge-result': {
++      if (typeof candidate.callId !== 'string' || !BRIDGE_CALL_ID.test(candidate.callId)) return false
++      // A success frame and a failure frame are different shapes: neither may smuggle the other's payload.
++      if (hasExactKeys(candidate, ['type', 'callId', 'ok', 'result'])) return candidate.ok === true
++      if (hasExactKeys(candidate, ['type', 'callId', 'ok', 'code'])) {
++        return candidate.ok === false && typeof candidate.code === 'string'
++      }
++      return false
++    }
+     default:
+       return false
+   }
+diff --git a/apps/sage-shell/test/host-entry.spec.ts b/apps/sage-shell/test/host-entry.spec.ts
+index 8910a53..ae20a81 100644
+--- a/apps/sage-shell/test/host-entry.spec.ts
++++ b/apps/sage-shell/test/host-entry.spec.ts
+@@ -123,4 +123,21 @@ describe('runShellHost lifecycle', () => {
+ 
+     expect(invalidations).toEqual(['runtime-invalidated'])
+   })
++
++  it('answers a bridge call from the booted context without ever throwing across the channel', async () => {
++    const profile = emptyProfile()
++    const controller = await runShellHost({ ...profile, writeResponse })
++
++    // This profile mounts no bundles, so the allowlisted endpoint must be refused as unavailable, not thrown.
++    await expect(controller.bridgeCall('settings/describe')).resolves.toEqual({
++      ok: false,
++      code: 'bridge-provider-unavailable',
++    })
++    await expect(controller.bridgeCall('session/prompt')).resolves.toEqual({
++      ok: false,
++      code: 'bridge-endpoint-unsupported',
++    })
++
++    await controller.dispose()
++  })
+ })

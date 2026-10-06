@@ -44,6 +44,11 @@ import { checkSageShellPin } from './gates/sage-shell-pin.mjs'
 import { checkSageProductBoundary, collectSageProductBoundaryFiles } from './gates/sage-product-boundary.mjs'
 import { checkSageAppServiceImportFirewall, collectSageAppServiceFiles } from './gates/sage-appservice-import-firewall.mjs'
 import { checkSageRouteAuthority } from './gates/sage-route-authority.mjs'
+import { MATRIX_REL_PATH as SAGE_SANBAO_MATRIX_PATH, checkMatrixFile as checkSageSanbaoStateMatrix } from './gates/sage-sanbao-state-matrix.mjs'
+import {
+  SAGE_PACKAGING_PURE_TEST_COUNT,
+  checkSagePackagingContractManifest,
+} from './gates/sage-packaging-contracts.mjs'
 import { checkSageDataIsolation, collectSageDataIsolationFiles } from './gates/sage-data-isolation.mjs'
 import { checkSageBasePathHygiene, collectSageBasePathFiles } from './gates/sage-base-path-hygiene.mjs'
 import { buildOutputRoot, checkDependencyReproducibility, packageScriptOrder } from './gates/dependency-reproducibility.mjs'
@@ -70,13 +75,22 @@ import {
   checkCiWorkflow,
   readWorkflow,
 } from './gates/ci-workflow.mjs'
-import { checkAgentFullstack } from '../packages/capabilities/dsh-overseas-skills/scripts/verify-agent-fullstack.mjs'
-import {
-  auditApprovedWhitelist,
-  auditFullstackCatalog,
-  toCanonicalCatalogResult,
-  toCanonicalWhitelistResult,
-} from '../packages/capabilities/dsh-overseas-skills/scripts/fullstack-contract.mjs'
+// legacy 检查的源住在 quarantine 区 packages/capabilities/dsh-overseas-skills/。
+// 加载改为**容错 TLA**：packages 缺失时 gate 仍能启动（Sage 域零依赖），这些检查在
+// legacy scope 下运行时报出恢复路径（fail-closed，ADR-0273）。
+let checkAgentFullstack = null
+let fullstackContract = null
+try {
+  ;({ checkAgentFullstack } = await import('../packages/capabilities/dsh-overseas-skills/scripts/verify-agent-fullstack.mjs'))
+} catch {
+  // 缺源时静默为 null：可用性由 run() 的具名错误点名，不在加载期炸掉整条 gate。
+}
+try {
+  fullstackContract = await import('../packages/capabilities/dsh-overseas-skills/scripts/fullstack-contract.mjs')
+} catch {
+  // 同上。
+}
+const LEGACY_FULLSTACK_SOURCE_HINT = 'legacy 源在 packages/capabilities/dsh-overseas-skills/ 不可用——恢复：git checkout HEAD -- packages/ 或按包 README 重新安装依赖（ADR-0273）'
 import { checkThirdPartyIntake } from './gates/third-party-intake.mjs'
 import { checkImmutableSupplyChain } from './gates/immutable-supply-chain.mjs'
 import { auditSecurityContractMasterGate } from './gates/security-contract-master.mjs'
@@ -693,6 +707,74 @@ const CHECKS = [
     },
   },
   {
+    name: 'sage-sanbao-state-matrix',
+    remediation:
+      '运行 node scripts/gen-sage-sanbao-state-matrix.mjs --check 与 node scripts/gates/sage-sanbao-state-matrix.mjs；'
+      + '修复 206 行主键、源 pin、summary、五维验证证据或 route ref 漂移，不得把 prototype/fixture/ignored/Pages 证据升格为 Sage 集成完成。',
+    run() {
+      const issues = checkSageSanbaoStateMatrix(repoRoot)
+      let discovered = 0
+      try {
+        const matrix = JSON.parse(readRepoText(SAGE_SANBAO_MATRIX_PATH))
+        discovered = Array.isArray(matrix.states) ? matrix.states.length : 0
+      } catch {
+        discovered = 0
+      }
+      const passed = issues.length === 0 && discovered === 206
+      return {
+        status: passed ? 'pass' : 'fail',
+        expected: 206,
+        discovered,
+        checked: passed ? 206 : 0,
+        skipped: 0,
+        failed: passed ? 0 : 206,
+        typedSkips: [],
+        reason: passed ? 'Sanbao → Sage 206 行交付矩阵完整且证据边界合格' : `206 行交付矩阵不合格：${issues.length} 处`,
+        violations: issues.map(issue => `${issue.code}${issue.stateId ? ` ${issue.stateId}` : ''}: ${issue.detail}`),
+        note: `tracked matrix=${SAGE_SANBAO_MATRIX_PATH}；prototype、fixture、ignored、Pages 与旧 renderer 均不能充当 Sage 完成证据`,
+      }
+    },
+  },
+  {
+    name: 'sage-sanbao-state-matrix-selftest',
+    remediation:
+      '跑 node --test scripts/gates/sage-sanbao-state-matrix.test.mjs；删除/重复/外部 ID、wired 伪升 integrated、'
+      + 'ignored/fixture 伪 verified、blocked+integrated、summary 篡改、无决策 N/A 与未知 route 必须具名判红。',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/sage-sanbao-state-matrix.test.mjs',
+        'Sanbao → Sage 206 行矩阵反向自测失败',
+      )
+    },
+  },
+  {
+    name: 'sage-packaging-contract-manifest',
+    remediation:
+      '运行 node --test scripts/gates/sage-packaging-contracts.test.mjs；packaging-sage 的机器发现测试入口必须全部登记且唯一归入 pure/platform/input/live。',
+    run() {
+      return checkSagePackagingContractManifest(repoRoot)
+    },
+  },
+  {
+    name: 'sage-packaging-contracts',
+    remediation:
+      '运行 pnpm run test:packaging-sage；默认只执行 pure 合同，不得调用 producer/assemble/真实 signing/DMG/live acceptance 或读取 staging/input。',
+    run() {
+      return runSagePackagingContractTests()
+    },
+  },
+  {
+    name: 'sage-packaging-contracts-selftest',
+    remediation:
+      '运行 node --test scripts/gates/sage-packaging-contracts.test.mjs；新增未登记测试、重复登记、未知层级或把 input/platform 测试伪装成 pure 必须判红。',
+    run() {
+      return runNodeTestFile(
+        'scripts/gates/sage-packaging-contracts.test.mjs',
+        'Sage packaging 测试分母与 quick 射程反向自测失败',
+      )
+    },
+  },
+  {
     name: 'service-consumption',
     remediation:
       '按报错方向处置：新消费点（文件或服务名）→ 在 scripts/gates/service-consumption.json 登记（登记动作就是在回答「这个包依赖宿主的什么」）；'
@@ -941,7 +1023,8 @@ const CHECKS = [
     remediation:
       '运行 node packages/capabilities/dsh-overseas-skills/scripts/verify-fullstack.mjs --json；mapping 与 extra 必须先合成唯一 catalog，再逐项修复 missing、metadata、来源或产物语法问题（ADR-0096）',
     run() {
-      return toCanonicalCatalogResult(auditFullstackCatalog())
+      if (fullstackContract === null) throw new Error(LEGACY_FULLSTACK_SOURCE_HINT)
+      return fullstackContract.toCanonicalCatalogResult(fullstackContract.auditFullstackCatalog())
     },
   },
   {
@@ -949,8 +1032,9 @@ const CHECKS = [
     remediation:
       '核对 packages/capabilities/dsh-overseas-skills/manifest/agent-fullstack-whitelist.json：owner 批准的 skillIds、setSha256 与 138 catalog 必须闭合；产品变更需先更新 ADR/Note，不得从 live preset 自动反推（ADR-0096）',
     run() {
-      const catalogAudit = auditFullstackCatalog({ checkInstalled: false })
-      return toCanonicalWhitelistResult(auditApprovedWhitelist({ catalogAudit }))
+      if (fullstackContract === null) throw new Error(LEGACY_FULLSTACK_SOURCE_HINT)
+      const catalogAudit = fullstackContract.auditFullstackCatalog({ checkInstalled: false })
+      return fullstackContract.toCanonicalWhitelistResult(fullstackContract.auditApprovedWhitelist({ catalogAudit }))
     },
   },
   {
@@ -969,6 +1053,7 @@ const CHECKS = [
     remediation:
       '按报错修 ~/.dsh/.agent-presets/agent-fullstack/：persona 行与 SOUL.md 不同源时改 SOUL.md 再跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-persona.mjs（不要直接编辑 persona 行）；icon 行缺失或与图标库不同源时不要手抄 base64，跑 node packages/capabilities/dsh-overseas-skills/scripts/sync-fullstack-avatar.mjs（改头像要改图标库，不是改 preset.yml）；白名单 missing/unexpected 或节点错挂先对照 canonical approved manifest 与 catalog nodeId，不能从 live 反写产品意图；压缩行报非法键就直接删键——compaction-basic 的 validateKeys 抛错会让整行不加载',
     run() {
+      if (checkAgentFullstack === null) throw new Error(LEGACY_FULLSTACK_SOURCE_HINT)
       const { presetRoot, skipped, facts, problems } = checkAgentFullstack({})
       // 空射程不许与「都合格」同形（ADR-0075）：用户预设不进仓库，干净检出上本就该跳过。
       if (skipped) {
@@ -2516,6 +2601,11 @@ const SAGE_CHECK_NAMES = Object.freeze([
   'sage-appservice-import-firewall-selftest',
   'sage-route-authority',
   'sage-route-authority-selftest',
+  'sage-sanbao-state-matrix',
+  'sage-sanbao-state-matrix-selftest',
+  'sage-packaging-contract-manifest',
+  'sage-packaging-contracts',
+  'sage-packaging-contracts-selftest',
   'adr-agent-records',
   'adr-agent-records-selftest',
   'docs-link-integrity',
@@ -2913,6 +3003,47 @@ function runSageShellQuality() {
     passed: violations.length === 0,
     violations,
     note: '已依次执行 Sage Shell typecheck → build → test；未遍历 legacy packages',
+  }
+}
+
+/** Sage packaging quick gate only executes manifest-declared pure contract tests. */
+function runSagePackagingContractTests() {
+  const manifest = checkSagePackagingContractManifest(repoRoot)
+  if (manifest.status !== 'pass') {
+    return {
+      status: 'fail',
+      expected: SAGE_PACKAGING_PURE_TEST_COUNT,
+      discovered: SAGE_PACKAGING_PURE_TEST_COUNT,
+      checked: 0,
+      skipped: 0,
+      failed: SAGE_PACKAGING_PURE_TEST_COUNT,
+      typedSkips: [],
+      reason: 'Sage packaging 测试分母无效，pure 合同未执行',
+      violations: manifest.violations,
+      note: manifest.note,
+    }
+  }
+  const { command, env } = nodeCommand()
+  const result = runScript(
+    repoRoot,
+    `"${command}" packaging-sage/tests/run-contract-tests.mjs`,
+    120000,
+    env,
+  )
+  const passed = result.code === 0
+  return {
+    status: passed ? 'pass' : 'fail',
+    expected: SAGE_PACKAGING_PURE_TEST_COUNT,
+    discovered: SAGE_PACKAGING_PURE_TEST_COUNT,
+    checked: passed ? SAGE_PACKAGING_PURE_TEST_COUNT : 0,
+    skipped: 0,
+    failed: passed ? 0 : SAGE_PACKAGING_PURE_TEST_COUNT,
+    typedSkips: [],
+    reason: passed
+      ? `Sage packaging pure 合同 ${SAGE_PACKAGING_PURE_TEST_COUNT}/${SAGE_PACKAGING_PURE_TEST_COUNT} 通过`
+      : 'Sage packaging pure 合同失败',
+    violations: passed ? [] : [commandFailure('Sage packaging pure 合同', result)],
+    note: '只执行 pure 层；platform/input/live 均未进入 quick gate，且不读取 packaging-sage/staging/input',
   }
 }
 

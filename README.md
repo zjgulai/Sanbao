@@ -2,7 +2,7 @@
 
 Sage 是面向跨境电商经营的桌面 AgenticOS。当前仓库以自有 `apps/sage-shell/` 为产品壳，通过 Capability Adapter 消费 Harness runtime；Sanbao 原型提供交互输入，Career 提供经营事项语义，历史插件暂时隔离、按需重新接入。
 
-> 当前开发状态：**Sage P0 本机工程基线，尚未形成可发布 Sage.app**。BASE-01～05 的恢复与隔离边界见 [ADR-0160](docs/adr/ADR-0160.md)。
+> 当前开发状态：**Sanbao 完整复刻面是 Sage 默认桌面**（[ADR-0265](docs/adr/ADR-0265.md)～[ADR-0267](docs/adr/ADR-0267.md)），206 状态接线进行中（[tracked 矩阵](docs/specs/2026-09-27-sanbao-to-sage-ui-state-map.json)）；Sage 0.1.0 已有本机自签内测 DMG 链（[ADR-0271](docs/adr/ADR-0271.md)），无 Developer ID / 公证 / 公开发布资格。异机交接与本轮清理边界见 [交接记录](docs/notes/implemented/process/2026-10-06-portable-cleanup-and-handoff.md)；BASE-01～05 的恢复与隔离边界见 [ADR-0160](docs/adr/ADR-0160.md)。
 >
 > 历史本地制品最高见 **v2.5.0**（DSH 2.0.10 / runtime 0.1.5-rc.2）；其正式发布状态与唯一分发渠道仍待核验。相关 DMG、安装说明、插件和打包流水线是 legacy / deferred 资产，不代表 Sage 已完成发布。
 
@@ -14,6 +14,8 @@ Sage 是面向跨境电商经营的桌面 AgenticOS。当前仓库以自有 `app
 | Sage 候选资产 | `assets/sage/` | 仅供内部工程验收；权属、商标、视觉批准和 release gate 仍未通过 |
 | Harness runtime 参照 | `vendor/dsh-desktop/` | pin 的只读能力底座，不拥有 Sage 产品 UI |
 | 产品决策 | `docs/adr/ADR-0159.md`、`docs/adr/ADR-0160.md` | 自有桌面端、活动仓基线、历史能力隔离与验收边界 |
+| Sanbao 承载面来源 | `vendor/sanbao-prototype/`（`vendor/sanbao-prototype.pin`） | 收纳副本：surface、矩阵再生成与 crawl 的仓内默认来源；Sage 同级快照仓仅为历史回退 |
+| 当前任务入口 | [集成票据](docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md) + [tracked 矩阵](docs/specs/2026-09-27-sanbao-to-sage-ui-state-map.json) | T01–T14 与 DMG-INTERNAL；票据只写范围与依赖，进度只读矩阵逐行事实 |
 
 ## Legacy / deferred 能力
 

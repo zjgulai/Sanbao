@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import { renderSageDocument } from '../src/product/renderer.js'
-import { bootSagePage, statePayload, type FakeElement } from './support/sage-page.js'
+import { bootSagePage, setDraftFields, statePayload, type FakeElement, setLinkSelection } from './support/sage-page.js'
 
 /**
  * Ticket 032 on the shipped page (US-165~171).
  *
- * The plan card keeps acceptance and dispatch apart; blocked steps render without any execution
- * entry; the exit checklist composes real projection facts with the page's true unsaved edits;
- * and the guide/environment cards stay read-only with nothing to write.
+ * Batch 19 / P3 (ADR-0261): the plan card moved to the React region — its bridge contract and
+ * rendering are pinned in `test/plan-region-bridge.spec.ts` and
+ * `test/product-app/plan-region.spec.tsx`. What stays on the legacy wire here: the exit checklist
+ * composes real projection facts with the page's true unsaved edits, and the guide/environment
+ * cards stay read-only with nothing to write.
  */
 
 const workspaces = {
@@ -22,16 +24,6 @@ const draft = (overrides: Record<string, unknown> = {}) => ({
   fields: { goal: '', deliverable: '', responsibility: '', projectRef: '' },
   clarification: '', history: [], status: 'editing', matterRef: null, attempt: null, complete: true,
   createdAt: 'x', updatedAt: 'x', ...overrides,
-})
-
-const plan = (overrides: Record<string, unknown> = {}) => ({
-  planId: 'plan-1', matterRef: 'matter:1', title: '上架方案',
-  steps: [
-    { stepNo: 1, title: '备料', readiness: 'ready', readinessNote: '执行环境 ws-1 存在（逐次核验）' },
-    { stepNo: 2, title: '试产', readiness: 'not-ready', readinessNote: '执行环境 ws-9 在最近折叠中不存在——重新选择或核验后再试' },
-    { stepNo: 3, title: '投放', readiness: 'unknown', readinessNote: '前提未知（workspace-fold-unreadable）——按阻断处理，不派发' },
-  ],
-  state: 'draft', acceptedAt: null, createdAt: 'x', ...overrides,
 })
 
 const payload = (plans: unknown, channel: Record<string, unknown> = {}, extra: Record<string, unknown> = {}) => statePayload({
@@ -48,107 +40,8 @@ const payload = (plans: unknown, channel: Record<string, unknown> = {}, extra: R
 })
 
 const setContext = (harness: Awaited<ReturnType<typeof bootSagePage>>) => {
-  harness.node('link-matter').value = 'matter:1'
-  harness.node('link-workspace').value = 'ws-1'
+  setLinkSelection('matter:1', 'ws-1')
 }
-
-describe('the plan card (ticket 032)', () => {
-  it('states the discipline in its own words', () => {
-    const document = renderSageDocument()
-    const card = document.slice(
-      document.indexOf('class="sage-card sage-plan-card"'),
-      // 033 inserted D10 between the plan card and the matter layout — keep the slice exact.
-      document.indexOf('class="sage-card sage-tool-results-card"'),
-    )
-    expect(card).toContain('接受方案不等于执行方案')
-    expect(card).toContain('不派发、不铸确认卡、不碰会话')
-    expect(card).toContain('安全或权限未知呈现为阻断而非失败')
-    expect(card).toContain('不就绪项不被派发')
-    expect(card).toContain('确认执行才携带一次性凭据派发')
-  })
-
-  it('creates a plan from the chosen matter and posts acceptance as a receipt only', async () => {
-    const harness = await bootSagePage(payload({ state: 'read', plans: [plan()], lastStepRun: null }))
-    // The create reads the chosen matter from the 011 select; every poll re-derives it, so pick it
-    // right before the click.
-    setContext(harness)
-    harness.node('plan-title').value = '上架方案'
-    harness.node('plan-steps').value = '备料\n试产\n投放'
-    harness.node('plan-create').dispatch('click')
-    await harness.settle()
-    expect(harness.requests[0]).toEqual({
-      path: '/.sage/plans',
-      body: { action: 'create', matterRef: 'matter:1', title: '上架方案', steps: ['备料', '试产', '投放'] },
-    })
-
-    const row = harness.node('plan-rows').children[0]!
-    const acceptButton = row.querySelector('[data-plan-action="accept"]')!
-    harness.node('plan-rows').dispatch('click', { target: acceptButton })
-    await harness.settle()
-    // Acceptance is exactly one request and nothing else — no prepare, no execute.
-    expect(harness.requests[1]).toEqual({ path: '/.sage/plans', body: { action: 'accept', planId: 'plan-1' } })
-    expect(harness.requests).toHaveLength(2)
-  })
-
-  it('renders readiness honestly and gives blocked steps no execution entry', async () => {
-    const harness = await bootSagePage(payload({ state: 'read', plans: [plan()], lastStepRun: null }))
-    const steps = harness.node('plan-step-rows').children
-    expect(steps).toHaveLength(3)
-    expect(steps[0]?.textContent).toContain('就绪')
-    expect(steps[1]?.textContent).toContain('未就绪（阻断——不派发）')
-    expect(steps[2]?.textContent).toContain('未知（阻断——不派发）')
-    // Only the ready step has a prepare entry — a blocked step cannot be dispatched at all.
-    expect(steps[0]?.querySelector('[data-plan-action="prepare-step"]')).not.toBeNull()
-    expect(steps[1]?.querySelector('[data-plan-action="prepare-step"]')).toBeNull()
-    expect(steps[2]?.querySelector('[data-plan-action="prepare-step"]')).toBeNull()
-  })
-
-  it('prepares the single card, executes with the credential, and reads the result from the projection', async () => {
-    const card = {
-      confirmationId: 'cf-7', preparedAt: 't', target: { matterRef: 'matter:1', revisionRef: 'plan:plan-1:step:1' },
-      action: { type: 'plan-step', scope: 'matter' },
-      resources: [{ kind: 'execution-environment', ref: 'ws-1', state: 'selected' }],
-      prerequisites: [{ name: 'execution-environment', state: 'met', note: 'environment-chosen' }],
-      costEstimate: { state: 'unavailable', note: 'estimate-unavailable' }, effect: 'not-yet-happened',
-    }
-    const executedRun = { planId: 'plan-1', stepNo: 1, state: 'not-ready', code: 'step-execution-unavailable', at: 't' }
-    const harness = await bootSagePage(payload({ state: 'read', plans: [plan()], lastStepRun: null }), {
-      // One route, two actions: prepare mints the card; execute answers the production shape —
-      // the refusal with the run carried in the same projection the poll serves.
-      '/.sage/plans': (request: unknown) => (request as { action?: string }).action === 'prepare-step'
-        ? { state: 'prepared', planId: 'plan-1', stepNo: 1, card }
-        : { state: 'not-ready', plans: { state: 'read', plans: [plan()], lastStepRun: executedRun }, code: 'step-execution-unavailable' },
-    })
-    const stepRow = harness.node('plan-step-rows').children[0]!
-    const prepare = stepRow.querySelector('[data-plan-action="prepare-step"]')!
-    harness.node('plan-step-rows').dispatch('click', { target: prepare })
-    await harness.settle()
-    expect(harness.requests[0]).toEqual({ path: '/.sage/plans', body: { action: 'prepare-step', planId: 'plan-1', stepNo: 1 } })
-    expect(harness.node('plan-step-card').hidden).toBe(false)
-    expect(harness.node('plan-step-target').textContent).toContain('plan:plan-1:step:1')
-    expect(harness.node('plan-step-prereq').textContent).toContain('已满足')
-
-    harness.node('plan-step-execute').dispatch('click')
-    await harness.settle()
-    expect(harness.requests[1]).toEqual({
-      path: '/.sage/plans',
-      body: { action: 'execute-step', planId: 'plan-1', stepNo: 1, confirmationId: 'cf-7' },
-    })
-    expect(harness.node('plan-step-card').hidden).toBe(true)
-
-    // The durable run lives in the projection: the next poll carries it and the page reads the
-    // sentence from there — no local notice masking it, no fabricated completion.
-    harness.setPayload(payload({
-      state: 'read',
-      plans: [plan({ state: 'accepted', acceptedAt: 't-accept' })],
-      lastStepRun: executedRun,
-    }))
-    await harness.refresh()
-    expect(harness.node('plan-step-result').textContent).toContain('未接线')
-    expect(harness.node('plan-step-result').textContent).toContain('不消耗确认')
-    expect(harness.node('plan-step-result').textContent).not.toContain('已结算')
-  })
-})
 
 describe('the exit checklist, guide and environment cards (ticket 032)', () => {
   it('lists real impact facts including true unsaved edits, and cancel posts nothing', async () => {
@@ -157,7 +50,7 @@ describe('the exit checklist, guide and environment cards (ticket 032)', () => {
       { execution: 'executing', pending: [{ itemId: 'p-1', text: '补充要求', state: 'pending', note: null, editable: true }] },
     ))
     // A true unsaved edit: the typed goal differs from the projection.
-    harness.node('draft-goal').value = '还没保存的新目标'
+    setDraftFields({ goal: '还没保存的新目标' })
     harness.node('exit-check-open').dispatch('click')
     await harness.settle()
     const rows = harness.node('exit-impact-rows').children.map((row) => row.textContent)
@@ -202,5 +95,22 @@ describe('the exit checklist, guide and environment cards (ticket 032)', () => {
     expect(harness.node('env-runtime').textContent).toContain('dsh 0.2.0-rc.2')
     expect(harness.node('env-matter-ref').textContent).toContain('ws-1')
     expect(harness.node('env-fold').textContent).toContain('已读取')
+  })
+
+  // Relocated from the link card's driver spec (batch 20): it never touched the link DOM — it
+  // pins the command surface's words for an unavailable default environment.
+  it('words an unavailable environment as a prompt, not as a silent switch', async () => {
+    const harness = await bootSagePage(statePayload({
+      draft: { state: 'unlocked', drafts: [draft()] },
+      service: {
+        status: 'unavailable', reason: 'authenticated', correlation: 'c',
+        auth: { status: 'signed-in', displayName: '林一' },
+        command: { correlation: 'c-9', outcome: 'not-ready', code: 'environment-unavailable', retryable: true },
+      },
+    }))
+    const note = harness.node('command-note').textContent
+    expect(note).toContain('该事项选定的默认执行环境已不可用')
+    expect(note).toContain('不会自动换到别的工作区')
+    expect(harness.node('retry').hidden).toBe(true)
   })
 })

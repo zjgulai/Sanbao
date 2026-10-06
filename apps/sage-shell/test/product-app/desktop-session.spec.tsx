@@ -4,11 +4,19 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DesktopPage } from '../../src/product/app/desktop/page.js'
 import { classifyDesktopState, type DesktopBootstrapRead, type DesktopRead } from '../../src/product/app/desktop/client.js'
+import type { DevicePreferencesController } from '../../src/product/app/desktop/device-preferences.js'
 import { desktopSessionPayload } from '../support/desktop-session-fixture.js'
 
 const cleanups: Array<() => void> = []
 const blocked: DesktopRead = { kind: 'blocked', code: 'projection-read-unavailable' }
 const unavailableBootstrap = async (): Promise<DesktopBootstrapRead> => ({ kind: 'unavailable', code: null })
+const unavailablePreferences = { kind: 'unavailable' as const, code: null }
+const inertPreferencesController: DevicePreferencesController = {
+  snapshot: () => ({ read: unavailablePreferences, saving: false, lastSave: 'idle' }),
+  subscribe: () => () => undefined,
+  refresh: async () => unavailablePreferences,
+  save: async () => ({ outcome: 'refused', read: unavailablePreferences }),
+}
 const snapshot = () => classifyDesktopState(desktopSessionPayload())
 const ack = () => Response.json({ state: 'accepted', sessionId: 'session:one', requestId: 'request:one', mode: 'queue' })
 function deferred<T>() {
@@ -21,7 +29,13 @@ async function mount(readState: () => Promise<DesktopRead>, readBootstrap: () =>
   document.body.append(container)
   const root = createRoot(container)
   const render = async (reader: () => Promise<DesktopRead>) => {
-    await act(async () => { root.render(createElement(DesktopPage, { readState: reader, readBootstrap })) })
+    await act(async () => {
+      root.render(createElement(DesktopPage, {
+        readState: reader,
+        readBootstrap,
+        preferencesController: inertPreferencesController,
+      }))
+    })
   }
   await render(readState)
   cleanups.push(() => { act(() => root.unmount()); container.remove() })

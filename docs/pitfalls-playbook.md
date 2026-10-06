@@ -1488,6 +1488,8 @@
   → ② **有没有人引用它**（`grep` 调用点）→ ③ 多大体积。前两问任一为「是」，它就不是垃圾，
   是**证据面**；第三问只在①②都为「否」时才用来排优先级。这组动作现在有单一执行点：
   `node scripts/cleanup-inventory.mjs <候选路径>...`（读数不齐就别写进删除批次）。
+  2026-10-06 加固：引用扫描**失败**与「无引用」分形（失败落 `unknown`，阻断删除建议），射程纳入
+  `--untracked` 与 `packaging-sage/`——此前对**不可读对象**会给出 `suggested`（负控实证，[ADR-0272](adr/ADR-0272.md)）。
   **先量体积再问承诺，顺序反了，结论会整个反过来**（P-44 的同族：读错一份参照物，结论翻转）。
 - **详见**：[ADR-0123](adr/ADR-0123.md)、[ADR-0067](adr/ADR-0067.md)、[ADR-0058](adr/ADR-0058.md)、[Note](notes/implemented/process/2026-09-18-agent-readable-adr-ledger.md)
 
@@ -1800,3 +1802,42 @@
 - **已落地机制**：`gate:sage-shell-quality` 运行 `ui-keyboard.spec.ts` 与真实 `sage-fixture-projection-window.spec.ts`。前者先让 trigger-origin Escape、vertical/roving tabs、modal containment 产生 7 个具名 Red；后者用 CDP 发送真实键盘事件并读取 activeElement 与完整 AX tree，同时覆盖 close/Escape focus return、1440↔760 modal 语义、computed focus/reduced-motion 与约 320 CSS px reflow。旧实现 Red、产品修复后同判据 Green；probe 还会在 200% 截图后恢复 zoom，避免同 origin 状态污染第二进程。
 - **下一版默认动作**：键盘/焦点验收先写清用户动作后的真实 activeElement，再从那个节点发送 key；至少一条真实浏览器/Electron 路径读取 focus return 与 AX/computed style。允许 Fake DOM 做快速回归，但禁止向“预期会处理”的节点直投事件后宣布用户路径完成；跨 viewport/zoom/restart 的探针必须在每段结束恢复自己改变的状态。
 - **详见**：[ADR-0257](adr/ADR-0257.md) 与 [Note](notes/implemented/surface/2026-10-04-semantic-theme-accessibility-batch-10.md)。
+
+## P-67 · 按目录名裁第三方发布包：attestation 能忠实证明一棵已经不能运行的树
+
+- **症状**：DMG producer 为了去掉开发物，递归删除每个 npm 包里的 `src/`、`scripts/` 与 prose；
+  依赖图、symlink、manifest 和 attestation 仍全绿，但真实 production 依赖 `debug@2.6.9` 的
+  `main` 正是 `./src/index.js`，Host 首次加载才会报 `MODULE_NOT_FOUND`。同类做法把 foreign native
+  逐文件删掉而保留 JS loader，也会得到「摘要正确、运行必坏」的 package。
+- **根因类**：把仓库惯例当成 npm 发布合同，又把完整性证明误当成可运行性证明。attestation 只能回答
+  「现在这棵树是否还是被摘要的那棵树」，不会替 producer 判断删掉的文件是不是入口或动态资源。
+- **已落地机制**：`packaging-sage` 对产品自有 build output 与第三方 published package 分域；第三方
+  retained package 默认完整保留，只允许对 exact package/version/path 做平台投影。当前唯一投影是
+  `node-pty@1.2.0-beta.15` 的 non-darwin-arm64 payload，投影前必须存在 arm64 目标，投影后全树 magic
+  扫描仍须无 ELF/PE/非 arm64 Mach-O。`native-projection-test.mjs` 钉住 `main=src/index.js`、未知版本/
+  路径与 foreign native 负例；`fixture-test.sh` 还会在 attestation 后改 `node_modules`，要求 fresh verifier 判红。
+- **下一版默认动作**：不得再用 `src`、`scripts`、扩展名或「看起来像文档」作为第三方 package 的删除依据。
+  要缩包先证明 package/version/path 与 target platform 的完整合同，再以 exact projection 加正负例；任何
+  integrity receipt 之前都要先问「这棵树还能按 package 的 `main`/`exports` 与动态资源约定加载吗」。
+- **详见**：[ADR-0271](adr/ADR-0271.md) 与 [Note](notes/implemented/packaging/2026-10-05-sage-internal-dmg.md)。
+
+## P-68 · 用签前 raw digest 验签后 Mach-O：正确签名被判篡改，outer signer 又掩盖 mixed signer
+
+- **症状**：assembly metadata 记录未签 runtime/profile 的 raw tree digest，签名阶段再给其中的 `.node` /
+  Mach-O 写入 signature superblob；DMG 阶段按当前 bytes 重算，必然与签前摘要不同。若为追绿直接跳过
+  native 文件，签名之外的代码篡改也会漏掉；若 signing receipt 只抽 outer app 证书，nested Mach-O
+  混入另一个 signer 仍可能通过 `--deep` seal 验证。
+- **根因类**：把可预期的签名变换与业务字节变换压成同一种 raw byte drift，同时把「bundle seal 完整」
+  升格成「每个 nested target 都由同一 identity 签出」。这是 P-01 与 P-02 在 artifact pipeline 的交叉类。
+- **已落地机制**：metadata v4 分开 source raw digest 与 signing-normalized assembly digest；归一化只在私有
+  copy 上移除 Mach-O signature，其他 bytes/size/mode/path/directory/symlink 全部入摘要，foreign native
+  fail closed。signing plan 对所有 regular file 做 magic inventory，签名前后精确一致；
+  `sage.local-signing-receipt.v2` 绑定 signed
+  app tree、plan digest、designated requirement 与证书指纹，并按 plan 对每个 Mach-O/framework/helper/app
+  抽取 leaf cert，要求同一 SHA-256/SHA-1/CN，同时拒绝 runtime、secure timestamp 与 App Sandbox。
+  `signing-normalized-tree-test.mjs` 证明 unsigned→ad-hoc 摘要不变、改非签名字节必变，
+  `signing-plan-test.mjs` 证明 0644 opaque Mach-O 也不能逃出计划。
+- **下一版默认动作**：任何会合法改写 artifact bytes 的阶段都要先定义可验证 transform，不得在末端选择
+  「关掉 digest」或「整类文件不看」。container verification 与 leaf identity verification必须分开；
+  receipt 声称同一 signer 时，就逐 target 观察，而不是从 outer 推断 nested。
+- **详见**：[ADR-0271](adr/ADR-0271.md) 与 [Note](notes/implemented/packaging/2026-10-05-sage-internal-dmg.md)。

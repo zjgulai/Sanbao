@@ -70,4 +70,22 @@ describe('local-system admission kernel', () => {
     expect(settled).toEqual(unavailable)
     expect(JSON.stringify(settled)).not.toContain('private-provider-path')
   })
+
+  it('uses the closed route-specific unavailable code without changing admission order', async () => {
+    const { ports, spies } = buildPorts({ verifyFrame: async () => ({ state: 'unavailable' as const }) })
+    const result = await admitLocalSystemRead<Value>({
+      correlation: 'corr-1',
+      ports,
+      validatesReadValue: validates,
+      unavailableCode: 'device-preferences-unavailable',
+    })
+    expect(result).toEqual({
+      state: 'unavailable',
+      code: 'device-preferences-unavailable',
+      stage: 'local-system',
+      retryable: true,
+      correlation: 'corr-1',
+    })
+    expect(spies.read).not.toHaveBeenCalled()
+  })
 })

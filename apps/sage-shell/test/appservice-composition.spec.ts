@@ -130,7 +130,8 @@ describe('matter projection slot (WT-02D.1)', () => {
     // action-item verbs + the project trio, ticket 029 the four matter-admin verbs, ticket 031 the
     // monitor read, ticket 032 the plan create/accept + step prepare/execute quartet, ticket 033
     // the external-link open + preview fullscreen, ticket 008 the queue-item edit/remove, ticket 009 the cold-history
-    // list/detail pair, T02 the local-system bootstrap read; any further
+    // list/detail pair, T02 the local-system bootstrap read, and the independent device-preferences
+    // read; any further
     // port must be a deliberate edit here rather than something that rides in silently.
     expect(Object.keys(service).sort()).toEqual([
       'acceptPlan',
@@ -155,6 +156,7 @@ describe('matter projection slot (WT-02D.1)', () => {
       'createPlan',
       'createProject',
       'createSideChat',
+      'devicePreferencesRead',
       'diffEditDraft',
       'dispatch',
       'executePlanStep',

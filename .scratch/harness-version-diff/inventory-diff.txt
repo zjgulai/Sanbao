@@ -1,0 +1,717 @@
+# 包清单 diff（路径键）
+old: fb2c4b9e (297 个 package.json)
+new: 639ed015397290b3745d163aafe02ffee4aa3f84 (351 个 package.json)
+
+## 新增路径 (65)
+apps/web/tests/fixtures/plugins/fixture-bundle/package.json	@fixture/bundle@0.0.1
+apps/web/tests/fixtures/plugins/fixture-input-extension/package.json	@fixture/input-extension@0.0.1
+apps/web/tests/fixtures/plugins/fixture-live-client/package.json	@fixture/live-client@0.0.1
+packages/api/account-controller/package.json	@deepseek-ai/dsh-api-account-controller@0.2.0-rc.2
+packages/api/job-controller/package.json	@deepseek-ai/dsh-api-job-controller@0.2.0-rc.2
+packages/api/terminal-controller/package.json	@deepseek-ai/dsh-api-terminal-controller@0.2.0-rc.2
+packages/boot/config-editor/package.json	@deepseek-ai/dsh-config-editor@0.2.0-rc.2
+packages/boot/hmr/package.json	@deepseek-ai/dsh-hmr@0.2.0-rc.2
+packages/boot/plugin-manager/package.json	@deepseek-ai/dsh-plugin-manager@0.2.0-rc.2
+packages/browser-use/browser-use/package.json	@deepseek-ai/dsh-browser-use@0.2.0-rc.2
+packages/client/product-analytics/package.json	@deepseek-ai/dsh-client-product-analytics@0.2.0-rc.2
+packages/client/shortcuts/package.json	@deepseek-ai/dsh-client-shortcuts@0.2.0-rc.2
+packages/client/ui-plugin-manager/package.json	@deepseek-ai/dsh-client-ui-plugin-manager@0.2.0-rc.2
+packages/client/ui-settings-account/package.json	@deepseek-ai/dsh-client-ui-settings-account@0.2.0-rc.2
+packages/client/ui-settings-agent-loop/package.json	@deepseek-ai/dsh-client-ui-settings-agent-loop@0.2.0-rc.2
+packages/client/ui-settings-session-log/package.json	@deepseek-ai/dsh-client-ui-settings-session-log@0.2.0-rc.2
+packages/client/ui-settings-shell/package.json	@deepseek-ai/dsh-client-ui-settings-shell@0.2.0-rc.2
+packages/client/ui-settings-subagent/package.json	@deepseek-ai/dsh-client-ui-settings-subagent@0.2.0-rc.2
+packages/client/ui-settings-web-search/package.json	@deepseek-ai/dsh-client-ui-settings-web-search@0.2.0-rc.2
+packages/client/ui-shortcuts/package.json	@deepseek-ai/dsh-client-ui-shortcuts@0.2.0-rc.2
+packages/client/ui-sidebar-browser/package.json	@deepseek-ai/dsh-client-ui-sidebar-browser@0.2.0-rc.2
+packages/client/ui-sidebar-terminal/package.json	@deepseek-ai/dsh-client-ui-sidebar-terminal@0.2.0-rc.2
+packages/compaction/compaction-image-offload/package.json	@deepseek-ai/dsh-compaction-image-offload@0.2.0-rc.2
+packages/computer-use/computer-use/package.json	@deepseek-ai/dsh-computer-use@0.2.0-rc.2
+packages/credentials/deepseek-account-platform/package.json	@deepseek-ai/dsh-deepseek-account-platform@0.2.0-rc.2
+packages/credentials/deepseek-account/package.json	@deepseek-ai/dsh-deepseek-account@0.2.0-rc.2
+packages/deliverables/tool-present/package.json	@deepseek-ai/dsh-tool-present@0.2.0-rc.2
+packages/deliverables/workspace-changes/package.json	@deepseek-ai/dsh-workspace-changes@0.2.0-rc.2
+packages/document/office-to-pdf/package.json	@deepseek-ai/dsh-office-to-pdf@0.2.0-rc.2
+packages/experimental/api-speech-to-text/package.json	@deepseek-ai/dsh-experimental-api-speech-to-text@0.2.0-rc.2
+packages/experimental/auto-review/package.json	@deepseek-ai/dsh-experimental-auto-review@0.2.0-rc.2
+packages/experimental/browser-use-chrome-devtools-mcp/package.json	@deepseek-ai/dsh-experimental-browser-use-chrome-devtools-mcp@0.2.0-rc.2
+packages/experimental/browser-use-playwright-mcp/package.json	@deepseek-ai/dsh-experimental-browser-use-playwright-mcp@0.2.0-rc.2
+packages/experimental/browser-use-runtime/package.json	@deepseek-ai/dsh-experimental-browser-use-runtime@0.2.0-rc.2
+packages/experimental/browser-use-stagehand-native/package.json	@deepseek-ai/dsh-experimental-browser-use-stagehand-native@0.2.0-rc.2
+packages/experimental/client-ui-voice-input/package.json	@deepseek-ai/dsh-experimental-client-ui-voice-input@0.2.0-rc.2
+packages/experimental/computer-use-cua-driver-mcp/package.json	@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp@0.2.0-rc.2
+packages/experimental/computer-use-cua-driver-native/package.json	@deepseek-ai/dsh-experimental-computer-use-cua-driver-native@0.2.0-rc.2
+packages/experimental/ptc-runtime-python/package.json	@deepseek-ai/dsh-experimental-ptc-runtime-python@0.2.0-rc.2
+packages/experimental/schedule-bundle/package.json	@deepseek-ai/dsh-experimental-schedule-bundle@0.2.0-rc.2
+packages/experimental/speech-to-text-sensevoice/package.json	@deepseek-ai/dsh-experimental-speech-to-text-sensevoice@0.2.0-rc.2
+packages/experimental/speech-to-text/package.json	@deepseek-ai/dsh-experimental-speech-to-text@0.2.0-rc.2
+packages/experimental/voice-input-bundle/package.json	@deepseek-ai/dsh-experimental-voice-input-bundle@0.2.0-rc.2
+packages/host/product-telemetry-otel/package.json	@deepseek-ai/dsh-host-product-telemetry-otel@0.2.0-rc.2
+packages/llm/llm-deepseek-account/package.json	@deepseek-ai/dsh-llm-deepseek-account@0.2.0-rc.2
+packages/llm/llm-deepseek-api-key/package.json	@deepseek-ai/dsh-llm-deepseek-api-key@0.2.0-rc.2
+packages/mcp/mcp-resources/package.json	@deepseek-ai/dsh-mcp-resources@0.2.0-rc.2
+packages/preset/agent-preset-registry/package.json	@deepseek-ai/dsh-agent-preset-registry@0.2.0-rc.2
+packages/preset/agent-preset/package.json	@deepseek-ai/dsh-agent-preset@0.2.0-rc.2
+packages/preset/agent-preset/skills/cordis-plugin-development/templates/decoration/package.json	@local/my-decoration@1.0.0
+packages/preset/agent-preset/skills/cordis-plugin-development/templates/mcp/package.json	@local/demo-mcp@1.0.0
+packages/ptc-runtime/ptc-runtime-node/package.json	@deepseek-ai/dsh-ptc-runtime-node@0.2.0-rc.2
+packages/ptc-runtime/ptc-runtime/package.json	@deepseek-ai/dsh-ptc-runtime@0.2.0-rc.2
+packages/session/session-format-v3-to-v4/package.json	@deepseek-ai/dsh-session-format-v3-to-v4@0.2.0-rc.2
+packages/skill/skill-office/package.json	@deepseek-ai/dsh-skill-office@0.2.0-rc.2
+packages/skill/tool-workspace-dependencies/package.json	@deepseek-ai/dsh-tool-workspace-dependencies@0.2.0-rc.2
+packages/ssh/fs-ssh/package.json	@deepseek-ai/dsh-fs-ssh@0.2.0-rc.2
+packages/ssh/sandbox-ssh/package.json	@deepseek-ai/dsh-sandbox-ssh@0.2.0-rc.2
+packages/ssh/ssh/package.json	@deepseek-ai/dsh-ssh@0.2.0-rc.2
+packages/ssh/subprocess-ssh/package.json	@deepseek-ai/dsh-subprocess-ssh@0.2.0-rc.2
+packages/telemetry/otel/package.json	@deepseek-ai/dsh-otel@0.2.0-rc.2
+packages/test-support/remote-mock/package.json	@deepseek-ai/dsh-remote-mock@0.2.0-rc.2
+packages/util/code-language/package.json	@deepseek-ai/dsh-util-code-language@0.2.0-rc.2
+packages/util/lazy-require/package.json	@deepseek-ai/dsh-lazy-require@0.2.0-rc.2
+packages/workflow/workflow-ptc/package.json	@deepseek-ai/dsh-workflow-ptc@0.2.0-rc.2
+
+## 移除路径 (11)
+packages/code-runtime/code-runtime-worker-thread/package.json	@deepseek-ai/dsh-code-runtime-worker-thread@0.1.5-rc.2
+packages/code-runtime/code-runtime/package.json	@deepseek-ai/dsh-code-runtime@0.1.5-rc.2
+packages/e2b/e2b/package.json	@deepseek-ai/dsh-e2b@0.1.5-rc.2
+packages/e2b/fs-e2b/package.json	@deepseek-ai/dsh-fs-e2b@0.1.5-rc.2
+packages/e2b/subprocess-e2b/package.json	@deepseek-ai/dsh-subprocess-e2b@0.1.5-rc.2
+packages/experimental/agent-team-web-profile/package.json	@deepseek-ai/dsh-experimental-agent-team-web-profile@0.1.5-rc.2
+packages/experimental/code-runtime-python/package.json	@deepseek-ai/dsh-experimental-code-runtime-python@0.1.5-rc.2
+packages/fs/tool-present/package.json	@deepseek-ai/dsh-tool-present@0.1.5-rc.2
+packages/preset/agent-presets/package.json	@deepseek-ai/dsh-agent-presets@0.1.5-rc.2
+packages/settings/settings-file/package.json	@deepseek-ai/dsh-settings-file@0.1.5-rc.2
+packages/workflow/workflow-worker-thread/package.json	@deepseek-ai/dsh-workflow-worker-thread@0.1.5-rc.2
+
+## 版本/改名变化 (270)
+apps/cli/package.json	@deepseek-ai/dsh@0.1.5-rc.2	→	@deepseek-ai/dsh@0.2.0-rc.2
+apps/desktop-host/package.json	@deepseek-ai/dsh-desktop-host@0.1.5-rc.2	→	@deepseek-ai/dsh-desktop-host@0.2.0-rc.2
+apps/desktop/package.json	@deepseek-ai/dsh-desktop@0.1.5-rc.2	→	@deepseek-ai/dsh-desktop@0.2.0-rc.2
+apps/web/package.json	@deepseek-ai/dsh-web-frontend@0.1.5-rc.2	→	@deepseek-ai/dsh-web-frontend@0.2.0-rc.2
+package.json	@deepseek-ai/dsh-root@0.1.5-rc.2	→	@deepseek-ai/dsh-root@0.2.0-rc.2
+packages/acp/acp/package.json	@deepseek-ai/dsh-acp@0.1.5-rc.2	→	@deepseek-ai/dsh-acp@0.2.0-rc.2
+packages/api/gateway/package.json	@deepseek-ai/dsh-api-gateway@0.1.5-rc.2	→	@deepseek-ai/dsh-api-gateway@0.2.0-rc.2
+packages/api/remotes/package.json	@deepseek-ai/dsh-api-remotes@0.1.5-rc.2	→	@deepseek-ai/dsh-api-remotes@0.2.0-rc.2
+packages/api/session-controller/package.json	@deepseek-ai/dsh-api-session-controller@0.1.5-rc.2	→	@deepseek-ai/dsh-api-session-controller@0.2.0-rc.2
+packages/api/settings-controller/package.json	@deepseek-ai/dsh-api-settings-controller@0.1.5-rc.2	→	@deepseek-ai/dsh-api-settings-controller@0.2.0-rc.2
+packages/api/workspace-controller/package.json	@deepseek-ai/dsh-api-workspace-controller@0.1.5-rc.2	→	@deepseek-ai/dsh-api-workspace-controller@0.2.0-rc.2
+packages/api/workspace-files/package.json	@deepseek-ai/dsh-api-workspace-files@0.1.5-rc.2	→	@deepseek-ai/dsh-api-workspace-files@0.2.0-rc.2
+packages/attachment/attachment-local/package.json	@deepseek-ai/dsh-attachment-local@0.1.5-rc.2	→	@deepseek-ai/dsh-attachment-local@0.2.0-rc.2
+packages/attachment/attachment/package.json	@deepseek-ai/dsh-attachment@0.1.5-rc.2	→	@deepseek-ai/dsh-attachment@0.2.0-rc.2
+packages/boot/app-boot/package.json	@deepseek-ai/dsh-app-boot@0.1.5-rc.2	→	@deepseek-ai/dsh-app-boot@0.2.0-rc.2
+packages/boot/cmdline/package.json	@deepseek-ai/dsh-cmdline@0.1.5-rc.2	→	@deepseek-ai/dsh-cmdline@0.2.0-rc.2
+packages/bundle/acp-app/package.json	@deepseek-ai/dsh-acp-app@0.1.5-rc.2	→	@deepseek-ai/dsh-acp-app@0.2.0-rc.2
+packages/bundle/base/package.json	@deepseek-ai/dsh-base@0.1.5-rc.2	→	@deepseek-ai/dsh-base@0.2.0-rc.2
+packages/bundle/headless/package.json	@deepseek-ai/dsh-headless@0.1.5-rc.2	→	@deepseek-ai/dsh-headless@0.2.0-rc.2
+packages/bundle/sdk-app/package.json	@deepseek-ai/dsh-sdk-app@0.1.5-rc.2	→	@deepseek-ai/dsh-sdk-app@0.2.0-rc.2
+packages/bundle/sdk-minimal/package.json	@deepseek-ai/dsh-sdk-minimal@0.1.5-rc.2	→	@deepseek-ai/dsh-sdk-minimal@0.2.0-rc.2
+packages/bundle/web-app/package.json	@deepseek-ai/dsh-web-app@0.1.5-rc.2	→	@deepseek-ai/dsh-web-app@0.2.0-rc.2
+packages/client/connection/package.json	@deepseek-ai/dsh-client-connection@0.1.5-rc.2	→	@deepseek-ai/dsh-client-connection@0.2.0-rc.2
+packages/client/file-upload/package.json	@deepseek-ai/dsh-client-file-upload@0.1.5-rc.2	→	@deepseek-ai/dsh-client-file-upload@0.2.0-rc.2
+packages/client/hmr/package.json	@deepseek-ai/dsh-client-hmr@0.1.5-rc.2	→	@deepseek-ai/dsh-client-hmr@0.2.0-rc.2
+packages/client/locale/package.json	@deepseek-ai/dsh-client-locale@0.1.5-rc.2	→	@deepseek-ai/dsh-client-locale@0.2.0-rc.2
+packages/client/modules/package.json	@deepseek-ai/dsh-client-modules@0.1.5-rc.2	→	@deepseek-ai/dsh-client-modules@0.2.0-rc.2
+packages/client/resources/package.json	@deepseek-ai/dsh-client-resources@0.1.5-rc.2	→	@deepseek-ai/dsh-client-resources@0.2.0-rc.2
+packages/client/store/package.json	@deepseek-ai/dsh-client-store@0.1.5-rc.2	→	@deepseek-ai/dsh-client-store@0.2.0-rc.2
+packages/client/ui-agent-preset/package.json	@deepseek-ai/dsh-client-ui-agent-preset@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-agent-preset@0.2.0-rc.2
+packages/client/ui-approval/package.json	@deepseek-ai/dsh-client-ui-approval@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-approval@0.2.0-rc.2
+packages/client/ui-attachment/package.json	@deepseek-ai/dsh-client-ui-attachment@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-attachment@0.2.0-rc.2
+packages/client/ui-brand-official/package.json	@deepseek-ai/dsh-client-ui-brand-official@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-brand-official@0.2.0-rc.2
+packages/client/ui-chat/package.json	@deepseek-ai/dsh-client-ui-chat@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-chat@0.2.0-rc.2
+packages/client/ui-commands/package.json	@deepseek-ai/dsh-client-ui-commands@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-commands@0.2.0-rc.2
+packages/client/ui-conversation/package.json	@deepseek-ai/dsh-client-ui-conversation@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-conversation@0.2.0-rc.2
+packages/client/ui-deliverables/package.json	@deepseek-ai/dsh-client-ui-deliverables@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-deliverables@0.2.0-rc.2
+packages/client/ui-directory-picker-browse/package.json	@deepseek-ai/dsh-client-ui-directory-picker-browse@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-directory-picker-browse@0.2.0-rc.2
+packages/client/ui-directory-picker-native/package.json	@deepseek-ai/dsh-client-ui-directory-picker-native@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-directory-picker-native@0.2.0-rc.2
+packages/client/ui-dockkit/package.json	@deepseek-ai/dsh-client-ui-dockkit@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-dockkit@0.2.0-rc.2
+packages/client/ui-goal/package.json	@deepseek-ai/dsh-client-ui-goal@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-goal@0.2.0-rc.2
+packages/client/ui-input-trigger/package.json	@deepseek-ai/dsh-client-ui-input-trigger@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-input-trigger@0.2.0-rc.2
+packages/client/ui-jobs/package.json	@deepseek-ai/dsh-client-ui-jobs@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-jobs@0.2.0-rc.2
+packages/client/ui-layout/package.json	@deepseek-ai/dsh-client-ui-layout@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-layout@0.2.0-rc.2
+packages/client/ui-message-feedback/package.json	@deepseek-ai/dsh-client-ui-message-feedback@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-message-feedback@0.2.0-rc.2
+packages/client/ui-model-selection/package.json	@deepseek-ai/dsh-client-ui-model-selection@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-model-selection@0.2.0-rc.2
+packages/client/ui-open-in-app/package.json	@deepseek-ai/dsh-client-ui-open-in-app@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-open-in-app@0.2.0-rc.2
+packages/client/ui-permission-presets/package.json	@deepseek-ai/dsh-client-ui-permission-presets@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-permission-presets@0.2.0-rc.2
+packages/client/ui-plan/package.json	@deepseek-ai/dsh-client-ui-plan@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-plan@0.2.0-rc.2
+packages/client/ui-primitives/package.json	@deepseek-ai/dsh-client-ui-primitives@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2
+packages/client/ui-reference/package.json	@deepseek-ai/dsh-client-ui-reference@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-reference@0.2.0-rc.2
+packages/client/ui-renderer/package.json	@deepseek-ai/dsh-client-ui-renderer@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-renderer@0.2.0-rc.2
+packages/client/ui-schedule/package.json	@deepseek-ai/dsh-client-ui-schedule@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-schedule@0.2.0-rc.2
+packages/client/ui-session/package.json	@deepseek-ai/dsh-client-ui-session@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-session@0.2.0-rc.2
+packages/client/ui-settings-general/package.json	@deepseek-ai/dsh-client-ui-settings-general@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-settings-general@0.2.0-rc.2
+packages/client/ui-settings-models/package.json	@deepseek-ai/dsh-client-ui-settings-models@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-settings-models@0.2.0-rc.2
+packages/client/ui-settings-plugin-inventory/package.json	@deepseek-ai/dsh-client-ui-settings-plugin-inventory@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-settings-plugin-inventory@0.2.0-rc.2
+packages/client/ui-settings-plugins/package.json	@deepseek-ai/dsh-client-ui-settings-plugins@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-settings-plugins@0.2.0-rc.2
+packages/client/ui-settings/package.json	@deepseek-ai/dsh-client-ui-settings@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-settings@0.2.0-rc.2
+packages/client/ui-sidebar-documentpreview/package.json	@deepseek-ai/dsh-client-ui-sidebar-documentpreview@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-sidebar-documentpreview@0.2.0-rc.2
+packages/client/ui-sidebar-files/package.json	@deepseek-ai/dsh-client-ui-sidebar-files@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-sidebar-files@0.2.0-rc.2
+packages/client/ui-sidebar-right/package.json	@deepseek-ai/dsh-client-ui-sidebar-right@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-sidebar-right@0.2.0-rc.2
+packages/client/ui-sidebar/package.json	@deepseek-ai/dsh-client-ui-sidebar@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-sidebar@0.2.0-rc.2
+packages/client/ui-skill/package.json	@deepseek-ai/dsh-client-ui-skill@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-skill@0.2.0-rc.2
+packages/client/ui-slots/package.json	@deepseek-ai/dsh-client-ui-slots@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-slots@0.2.0-rc.2
+packages/client/ui-subagent/package.json	@deepseek-ai/dsh-client-ui-subagent@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-subagent@0.2.0-rc.2
+packages/client/ui-theme/package.json	@deepseek-ai/dsh-client-ui-theme@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-theme@0.2.0-rc.2
+packages/client/ui-tool/package.json	@deepseek-ai/dsh-client-ui-tool@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-tool@0.2.0-rc.2
+packages/client/ui-trajectory/package.json	@deepseek-ai/dsh-client-ui-trajectory@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-trajectory@0.2.0-rc.2
+packages/client/ui-user-questions/package.json	@deepseek-ai/dsh-client-ui-user-questions@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-user-questions@0.2.0-rc.2
+packages/client/ui-workflow-run/package.json	@deepseek-ai/dsh-client-ui-workflow-run@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-workflow-run@0.2.0-rc.2
+packages/client/ui-workspace/package.json	@deepseek-ai/dsh-client-ui-workspace@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-workspace@0.2.0-rc.2
+packages/client/web/package.json	@deepseek-ai/dsh-client-web@0.1.5-rc.2	→	@deepseek-ai/dsh-client-web@0.2.0-rc.2
+packages/compaction/command-compact/package.json	@deepseek-ai/dsh-command-compact@0.1.5-rc.2	→	@deepseek-ai/dsh-command-compact@0.2.0-rc.2
+packages/compaction/compaction-basic/package.json	@deepseek-ai/dsh-compaction-basic@0.1.5-rc.2	→	@deepseek-ai/dsh-compaction-basic@0.2.0-rc.2
+packages/compaction/compaction-tool-result-pruner/package.json	@deepseek-ai/dsh-compaction-tool-result-pruner@0.1.5-rc.2	→	@deepseek-ai/dsh-compaction-tool-result-pruner@0.2.0-rc.2
+packages/compaction/compaction/package.json	@deepseek-ai/dsh-compaction@0.1.5-rc.2	→	@deepseek-ai/dsh-compaction@0.2.0-rc.2
+packages/context/agent-instructions/package.json	@deepseek-ai/dsh-agent-instructions@0.1.5-rc.2	→	@deepseek-ai/dsh-agent-instructions@0.2.0-rc.2
+packages/context/file-reference-local/package.json	@deepseek-ai/dsh-file-reference-local@0.1.5-rc.2	→	@deepseek-ai/dsh-file-reference-local@0.2.0-rc.2
+packages/context/file-reference/package.json	@deepseek-ai/dsh-file-reference@0.1.5-rc.2	→	@deepseek-ai/dsh-file-reference@0.2.0-rc.2
+packages/context/session-reference/package.json	@deepseek-ai/dsh-session-reference@0.1.5-rc.2	→	@deepseek-ai/dsh-session-reference@0.2.0-rc.2
+packages/context/time-context/package.json	@deepseek-ai/dsh-time-context@0.1.5-rc.2	→	@deepseek-ai/dsh-time-context@0.2.0-rc.2
+packages/context/tmux-context/package.json	@deepseek-ai/dsh-tmux-context@0.1.5-rc.2	→	@deepseek-ai/dsh-tmux-context@0.2.0-rc.2
+packages/core/agent-default-model/package.json	@deepseek-ai/dsh-agent-default-model@0.1.5-rc.2	→	@deepseek-ai/dsh-agent-default-model@0.2.0-rc.2
+packages/core/agent-loop/package.json	@deepseek-ai/dsh-agent-loop@0.1.5-rc.2	→	@deepseek-ai/dsh-agent-loop@0.2.0-rc.2
+packages/core/agent-tool-presentation/package.json	@deepseek-ai/dsh-agent-tool-presentation@0.1.5-rc.2	→	@deepseek-ai/dsh-agent-tool-presentation@0.2.0-rc.2
+packages/core/agent/package.json	@deepseek-ai/dsh-agent@0.1.5-rc.2	→	@deepseek-ai/dsh-agent@0.2.0-rc.2
+packages/core/scope/package.json	@deepseek-ai/dsh-scope@0.1.5-rc.2	→	@deepseek-ai/dsh-scope@0.2.0-rc.2
+packages/core/session/package.json	@deepseek-ai/dsh-session@0.1.5-rc.2	→	@deepseek-ai/dsh-session@0.2.0-rc.2
+packages/core/system-prompt/package.json	@deepseek-ai/dsh-system-prompt@0.1.5-rc.2	→	@deepseek-ai/dsh-system-prompt@0.2.0-rc.2
+packages/core/tools/package.json	@deepseek-ai/dsh-tools@0.1.5-rc.2	→	@deepseek-ai/dsh-tools@0.2.0-rc.2
+packages/credentials/authorization/package.json	@deepseek-ai/dsh-authorization@0.1.5-rc.2	→	@deepseek-ai/dsh-authorization@0.2.0-rc.2
+packages/credentials/credentials-local/package.json	@deepseek-ai/dsh-credentials-local@0.1.5-rc.2	→	@deepseek-ai/dsh-credentials-local@0.2.0-rc.2
+packages/credentials/credentials/package.json	@deepseek-ai/dsh-credentials@0.1.5-rc.2	→	@deepseek-ai/dsh-credentials@0.2.0-rc.2
+packages/experimental/agent-team-profile/package.json	@deepseek-ai/dsh-experimental-agent-team-profile@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-agent-team-profile@0.2.0-rc.2
+packages/experimental/agent-team/package.json	@deepseek-ai/dsh-experimental-agent-team@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-agent-team@0.2.0-rc.2
+packages/experimental/client-ui-agent-team/package.json	@deepseek-ai/dsh-experimental-client-ui-agent-team@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-client-ui-agent-team@0.2.0-rc.2
+packages/experimental/inspector/package.json	@deepseek-ai/dsh-experimental-inspector@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-inspector@0.2.0-rc.2
+packages/experimental/tool-agent-team/package.json	@deepseek-ai/dsh-experimental-tool-agent-team@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-tool-agent-team@0.2.0-rc.2
+packages/experimental/webworker-packer/package.json	@deepseek-ai/dsh-experimental-webworker-packer@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-webworker-packer@0.2.0-rc.2
+packages/experimental/webworker-runtime/package.json	@deepseek-ai/dsh-experimental-webworker-runtime@0.1.5-rc.2	→	@deepseek-ai/dsh-experimental-webworker-runtime@0.2.0-rc.2
+packages/extensions/cordis-client-runner/package.json	@deepseek-ai/dsh-cordis-client-runner@0.1.5-rc.2	→	@deepseek-ai/dsh-cordis-client-runner@0.2.0-rc.2
+packages/extensions/cordis-host-runner/package.json	@deepseek-ai/dsh-cordis-host-runner@0.1.5-rc.2	→	@deepseek-ai/dsh-cordis-host-runner@0.2.0-rc.2
+packages/extensions/tool-cordis/package.json	@deepseek-ai/dsh-tool-cordis@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-cordis@0.2.0-rc.2
+packages/extensions/ui-cordis/package.json	@deepseek-ai/dsh-client-ui-cordis@0.1.5-rc.2	→	@deepseek-ai/dsh-client-ui-cordis@0.2.0-rc.2
+packages/feedback/command-feedback/package.json	@deepseek-ai/dsh-command-feedback@0.1.5-rc.2	→	@deepseek-ai/dsh-command-feedback@0.2.0-rc.2
+packages/feedback/message-feedback/package.json	@deepseek-ai/dsh-message-feedback@0.1.5-rc.2	→	@deepseek-ai/dsh-message-feedback@0.2.0-rc.2
+packages/fs/fs-local/package.json	@deepseek-ai/dsh-fs-local@0.1.5-rc.2	→	@deepseek-ai/dsh-fs-local@0.2.0-rc.2
+packages/fs/fs-observation-policy/package.json	@deepseek-ai/dsh-fs-observation-policy@0.1.5-rc.2	→	@deepseek-ai/dsh-fs-observation-policy@0.2.0-rc.2
+packages/fs/fs-sandbox/package.json	@deepseek-ai/dsh-fs-sandbox@0.1.5-rc.2	→	@deepseek-ai/dsh-fs-sandbox@0.2.0-rc.2
+packages/fs/fs/package.json	@deepseek-ai/dsh-fs@0.1.5-rc.2	→	@deepseek-ai/dsh-fs@0.2.0-rc.2
+packages/fs/tool-fs-search/package.json	@deepseek-ai/dsh-tool-fs-search@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-fs-search@0.2.0-rc.2
+packages/fs/tool-fs/package.json	@deepseek-ai/dsh-tool-fs@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-fs@0.2.0-rc.2
+packages/fs/tool-str-replace-editor/package.json	@deepseek-ai/dsh-tool-str-replace-editor@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-str-replace-editor@0.2.0-rc.2
+packages/goal/command-goal/package.json	@deepseek-ai/dsh-command-goal@0.1.5-rc.2	→	@deepseek-ai/dsh-command-goal@0.2.0-rc.2
+packages/goal/goal-round-driver/package.json	@deepseek-ai/dsh-goal-round-driver@0.1.5-rc.2	→	@deepseek-ai/dsh-goal-round-driver@0.2.0-rc.2
+packages/goal/goal/package.json	@deepseek-ai/dsh-goal@0.1.5-rc.2	→	@deepseek-ai/dsh-goal@0.2.0-rc.2
+packages/goal/tool-goal/package.json	@deepseek-ai/dsh-tool-goal@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-goal@0.2.0-rc.2
+packages/guard/repeat-tool-reminder/package.json	@deepseek-ai/dsh-repeat-tool-reminder@0.1.5-rc.2	→	@deepseek-ai/dsh-repeat-tool-reminder@0.2.0-rc.2
+packages/guard/timeout-policy/package.json	@deepseek-ai/dsh-tool-call-timeout-policy@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-call-timeout-policy@0.2.0-rc.2
+packages/hooks/hook-protocol/package.json	@deepseek-ai/dsh-hook-protocol@0.1.5-rc.2	→	@deepseek-ai/dsh-hook-protocol@0.2.0-rc.2
+packages/hooks/hooks-claude-code/package.json	@deepseek-ai/dsh-hooks-claude-code@0.1.5-rc.2	→	@deepseek-ai/dsh-hooks-claude-code@0.2.0-rc.2
+packages/hooks/hooks-codex/package.json	@deepseek-ai/dsh-hooks-codex@0.1.5-rc.2	→	@deepseek-ai/dsh-hooks-codex@0.2.0-rc.2
+packages/host/directory-picker-auto/package.json	@deepseek-ai/dsh-host-directory-picker-auto@0.1.5-rc.2	→	@deepseek-ai/dsh-host-directory-picker-auto@0.2.0-rc.2
+packages/host/directory-picker-browse/package.json	@deepseek-ai/dsh-host-directory-picker-browse@0.1.5-rc.2	→	@deepseek-ai/dsh-host-directory-picker-browse@0.2.0-rc.2
+packages/host/directory-picker-native/package.json	@deepseek-ai/dsh-host-directory-picker-native@0.1.5-rc.2	→	@deepseek-ai/dsh-host-directory-picker-native@0.2.0-rc.2
+packages/host/directory-picker/package.json	@deepseek-ai/dsh-host-directory-picker@0.1.5-rc.2	→	@deepseek-ai/dsh-host-directory-picker@0.2.0-rc.2
+packages/host/frontend-static/package.json	@deepseek-ai/dsh-host-frontend-static@0.1.5-rc.2	→	@deepseek-ai/dsh-host-frontend-static@0.2.0-rc.2
+packages/host/open-in-app/package.json	@deepseek-ai/dsh-host-open-in-app@0.1.5-rc.2	→	@deepseek-ai/dsh-host-open-in-app@0.2.0-rc.2
+packages/host/plugin-inventory/package.json	@deepseek-ai/dsh-host-plugin-inventory@0.1.5-rc.2	→	@deepseek-ai/dsh-host-plugin-inventory@0.2.0-rc.2
+packages/host/webserver/package.json	@deepseek-ai/dsh-host-webserver@0.1.5-rc.2	→	@deepseek-ai/dsh-host-webserver@0.2.0-rc.2
+packages/identity/anonymous-user-id/package.json	@deepseek-ai/dsh-anonymous-user-id@0.1.5-rc.2	→	@deepseek-ai/dsh-anonymous-user-id@0.2.0-rc.2
+packages/interaction/commands/package.json	@deepseek-ai/dsh-commands@0.1.5-rc.2	→	@deepseek-ai/dsh-commands@0.2.0-rc.2
+packages/interaction/permission-presets/package.json	@deepseek-ai/dsh-permission-presets@0.1.5-rc.2	→	@deepseek-ai/dsh-permission-presets@0.2.0-rc.2
+packages/interaction/tool-ask-user/package.json	@deepseek-ai/dsh-tool-ask-user@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-ask-user@0.2.0-rc.2
+packages/interaction/user-approval/package.json	@deepseek-ai/dsh-user-approval@0.1.5-rc.2	→	@deepseek-ai/dsh-user-approval@0.2.0-rc.2
+packages/interaction/user-questions/package.json	@deepseek-ai/dsh-user-questions@0.1.5-rc.2	→	@deepseek-ai/dsh-user-questions@0.2.0-rc.2
+packages/jobs/jobs-local/package.json	@deepseek-ai/dsh-jobs-local@0.1.5-rc.2	→	@deepseek-ai/dsh-jobs-local@0.2.0-rc.2
+packages/jobs/jobs/package.json	@deepseek-ai/dsh-jobs@0.1.5-rc.2	→	@deepseek-ai/dsh-jobs@0.2.0-rc.2
+packages/jobs/tool-jobs/package.json	@deepseek-ai/dsh-tool-jobs@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-jobs@0.2.0-rc.2
+packages/llm/deepseek-llm-api-extensions/package.json	@deepseek-ai/dsh-deepseek-llm-api-extensions@0.1.5-rc.2	→	@deepseek-ai/dsh-deepseek-llm-api-extensions@0.2.0-rc.2
+packages/llm/llm-deepseek/package.json	@deepseek-ai/dsh-llm-deepseek@0.1.5-rc.2	→	@deepseek-ai/dsh-llm-deepseek@0.2.0-rc.2
+packages/llm/llm-pi-ai/package.json	@deepseek-ai/dsh-llm-pi-ai@0.1.5-rc.2	→	@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2
+packages/llm/llm-retry/package.json	@deepseek-ai/dsh-llm-retry@0.1.5-rc.2	→	@deepseek-ai/dsh-llm-retry@0.2.0-rc.2
+packages/llm/llm/package.json	@deepseek-ai/dsh-llm@0.1.5-rc.2	→	@deepseek-ai/dsh-llm@0.2.0-rc.2
+packages/llm/plugin-package-inventory-deepseek/package.json	@deepseek-ai/dsh-plugin-package-inventory-deepseek@0.1.5-rc.2	→	@deepseek-ai/dsh-plugin-package-inventory-deepseek@0.2.0-rc.2
+packages/llm/token-meter/package.json	@deepseek-ai/dsh-token-meter@0.1.5-rc.2	→	@deepseek-ai/dsh-token-meter@0.2.0-rc.2
+packages/lsp/lsp-stdio/package.json	@deepseek-ai/dsh-lsp-stdio@0.1.5-rc.2	→	@deepseek-ai/dsh-lsp-stdio@0.2.0-rc.2
+packages/lsp/lsp/package.json	@deepseek-ai/dsh-lsp@0.1.5-rc.2	→	@deepseek-ai/dsh-lsp@0.2.0-rc.2
+packages/lsp/tool-lsp/package.json	@deepseek-ai/dsh-tool-lsp@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-lsp@0.2.0-rc.2
+packages/mcp/mcp-client/package.json	@deepseek-ai/dsh-mcp-client@0.1.5-rc.2	→	@deepseek-ai/dsh-mcp-client@0.2.0-rc.2
+packages/plan/plan-mode/package.json	@deepseek-ai/dsh-plan-mode@0.1.5-rc.2	→	@deepseek-ai/dsh-plan-mode@0.2.0-rc.2
+packages/preset/persona/package.json	@deepseek-ai/dsh-persona@0.1.5-rc.2	→	@deepseek-ai/dsh-persona@0.2.0-rc.2
+packages/runtime-diagnostics/invariants/package.json	@deepseek-ai/dsh-invariants@0.1.5-rc.2	→	@deepseek-ai/dsh-invariants@0.2.0-rc.2
+packages/sandbox/sandbox-local/package.json	@deepseek-ai/dsh-sandbox-local@0.1.5-rc.2	→	@deepseek-ai/dsh-sandbox-local@0.2.0-rc.2
+packages/sandbox/sandbox-policy/package.json	@deepseek-ai/dsh-sandbox-policy@0.1.5-rc.2	→	@deepseek-ai/dsh-sandbox-policy@0.2.0-rc.2
+packages/sandbox/sandbox-windows-acl/package.json	@deepseek-ai/dsh-sandbox-windows-acl@0.1.5-rc.2	→	@deepseek-ai/dsh-sandbox-windows-acl@0.2.0-rc.2
+packages/sandbox/sandbox/package.json	@deepseek-ai/dsh-sandbox@0.1.5-rc.2	→	@deepseek-ai/dsh-sandbox@0.2.0-rc.2
+packages/schedule/schedule/package.json	@deepseek-ai/dsh-schedule@0.1.5-rc.2	→	@deepseek-ai/dsh-schedule@0.2.0-rc.2
+packages/sdk/client/package.json	@deepseek-ai/dsh-sdk-client@0.1.5-rc.2	→	@deepseek-ai/dsh-sdk-client@0.2.0-rc.2
+packages/sdk/protocol/package.json	@deepseek-ai/dsh-sdk-protocol@0.1.5-rc.2	→	@deepseek-ai/dsh-sdk-protocol@0.2.0-rc.2
+packages/sdk/server/package.json	@deepseek-ai/dsh-sdk-jsonrpc-server@0.1.5-rc.2	→	@deepseek-ai/dsh-sdk-jsonrpc-server@0.2.0-rc.2
+packages/session-query/session-log-export/package.json	@deepseek-ai/dsh-session-log-export@0.1.5-rc.2	→	@deepseek-ai/dsh-session-log-export@0.2.0-rc.2
+packages/session-query/session-query-sqlite/package.json	@deepseek-ai/dsh-session-query-sqlite@0.1.5-rc.2	→	@deepseek-ai/dsh-session-query-sqlite@0.2.0-rc.2
+packages/session-query/session-query/package.json	@deepseek-ai/dsh-session-query@0.1.5-rc.2	→	@deepseek-ai/dsh-session-query@0.2.0-rc.2
+packages/session-query/tool-session-query/package.json	@deepseek-ai/dsh-tool-session-query@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-session-query@0.2.0-rc.2
+packages/session/session-checkpoint-policy/package.json	@deepseek-ai/dsh-session-checkpoint-policy@0.1.5-rc.2	→	@deepseek-ai/dsh-session-checkpoint-policy@0.2.0-rc.2
+packages/session/session-format-catalog/package.json	@deepseek-ai/dsh-session-format-catalog@0.1.5-rc.2	→	@deepseek-ai/dsh-session-format-catalog@0.2.0-rc.2
+packages/session/session-format-v0-to-v1/package.json	@deepseek-ai/dsh-session-format-v0-to-v1@0.1.5-rc.2	→	@deepseek-ai/dsh-session-format-v0-to-v1@0.2.0-rc.2
+packages/session/session-format-v1-to-v2/package.json	@deepseek-ai/dsh-session-format-v1-to-v2@0.1.5-rc.2	→	@deepseek-ai/dsh-session-format-v1-to-v2@0.2.0-rc.2
+packages/session/session-format-v2-to-v3/package.json	@deepseek-ai/dsh-session-format-v2-to-v3@0.1.5-rc.2	→	@deepseek-ai/dsh-session-format-v2-to-v3@0.2.0-rc.2
+packages/session/session-format/package.json	@deepseek-ai/dsh-session-format@0.1.5-rc.2	→	@deepseek-ai/dsh-session-format@0.2.0-rc.2
+packages/session/session-log-deepseek/package.json	@deepseek-ai/dsh-session-log-deepseek@0.1.5-rc.2	→	@deepseek-ai/dsh-session-log-deepseek@0.2.0-rc.2
+packages/session/session-persistence-jsonl/package.json	@deepseek-ai/dsh-session-persistence-jsonl@0.1.5-rc.2	→	@deepseek-ai/dsh-session-persistence-jsonl@0.2.0-rc.2
+packages/session/session-persistence/package.json	@deepseek-ai/dsh-session-persistence@0.1.5-rc.2	→	@deepseek-ai/dsh-session-persistence@0.2.0-rc.2
+packages/session/session-projection-cache/package.json	@deepseek-ai/dsh-session-projection-cache@0.1.5-rc.2	→	@deepseek-ai/dsh-session-projection-cache@0.2.0-rc.2
+packages/session/session-projection/package.json	@deepseek-ai/dsh-session-projection@0.1.5-rc.2	→	@deepseek-ai/dsh-session-projection@0.2.0-rc.2
+packages/session/session-stats/package.json	@deepseek-ai/dsh-session-stats@0.1.5-rc.2	→	@deepseek-ai/dsh-session-stats@0.2.0-rc.2
+packages/session/session-telemetry-otel/package.json	@deepseek-ai/dsh-session-telemetry-otel@0.1.5-rc.2	→	@deepseek-ai/dsh-session-telemetry-otel@0.2.0-rc.2
+packages/session/session-telemetry/package.json	@deepseek-ai/dsh-session-telemetry@0.1.5-rc.2	→	@deepseek-ai/dsh-session-telemetry@0.2.0-rc.2
+packages/session/session-title-all-prompts-llm/package.json	@deepseek-ai/dsh-session-title-all-prompts-llm@0.1.5-rc.2	→	@deepseek-ai/dsh-session-title-all-prompts-llm@0.2.0-rc.2
+packages/session/session-title-first-prompt-llm/package.json	@deepseek-ai/dsh-session-title-first-prompt-llm@0.1.5-rc.2	→	@deepseek-ai/dsh-session-title-first-prompt-llm@0.2.0-rc.2
+packages/session/session-title-llm/package.json	@deepseek-ai/dsh-session-title-llm@0.1.5-rc.2	→	@deepseek-ai/dsh-session-title-llm@0.2.0-rc.2
+packages/session/session-title/package.json	@deepseek-ai/dsh-session-title@0.1.5-rc.2	→	@deepseek-ai/dsh-session-title@0.2.0-rc.2
+packages/session/session-turn-outline/package.json	@deepseek-ai/dsh-session-turn-outline@0.1.5-rc.2	→	@deepseek-ai/dsh-session-turn-outline@0.2.0-rc.2
+packages/settings/settings/package.json	@deepseek-ai/dsh-settings@0.1.5-rc.2	→	@deepseek-ai/dsh-settings@0.2.0-rc.2
+packages/shell/bash-local/package.json	@deepseek-ai/dsh-bash-local@0.1.5-rc.2	→	@deepseek-ai/dsh-bash-local@0.2.0-rc.2
+packages/shell/bash-sandbox/package.json	@deepseek-ai/dsh-bash-sandbox@0.1.5-rc.2	→	@deepseek-ai/dsh-bash-sandbox@0.2.0-rc.2
+packages/shell/pwsh-local/package.json	@deepseek-ai/dsh-pwsh-local@0.1.5-rc.2	→	@deepseek-ai/dsh-pwsh-local@0.2.0-rc.2
+packages/shell/pwsh-sandbox/package.json	@deepseek-ai/dsh-pwsh-sandbox@0.1.5-rc.2	→	@deepseek-ai/dsh-pwsh-sandbox@0.2.0-rc.2
+packages/shell/shell-env/package.json	@deepseek-ai/dsh-shell-env@0.1.5-rc.2	→	@deepseek-ai/dsh-shell-env@0.2.0-rc.2
+packages/shell/shell/package.json	@deepseek-ai/dsh-shell@0.1.5-rc.2	→	@deepseek-ai/dsh-shell@0.2.0-rc.2
+packages/shell/tool-bash-persistent/package.json	@deepseek-ai/dsh-tool-bash-persistent@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-bash-persistent@0.2.0-rc.2
+packages/shell/tool-bash/package.json	@deepseek-ai/dsh-tool-bash@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-bash@0.2.0-rc.2
+packages/shell/tool-pwsh-persistent/package.json	@deepseek-ai/dsh-tool-pwsh-persistent@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-pwsh-persistent@0.2.0-rc.2
+packages/shell/tool-pwsh/package.json	@deepseek-ai/dsh-tool-pwsh@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-pwsh@0.2.0-rc.2
+packages/skill/skill-badge/package.json	@deepseek-ai/dsh-skill-badge@0.1.5-rc.2	→	@deepseek-ai/dsh-skill-badge@0.2.0-rc.2
+packages/skill/skill-filesystem/package.json	@deepseek-ai/dsh-skill-filesystem@0.1.5-rc.2	→	@deepseek-ai/dsh-skill-filesystem@0.2.0-rc.2
+packages/skill/skill/package.json	@deepseek-ai/dsh-skill@0.1.5-rc.2	→	@deepseek-ai/dsh-skill@0.2.0-rc.2
+packages/skill/tool-skill/package.json	@deepseek-ai/dsh-tool-skill@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-skill@0.2.0-rc.2
+packages/spill/spill-local/package.json	@deepseek-ai/dsh-spill-local@0.1.5-rc.2	→	@deepseek-ai/dsh-spill-local@0.2.0-rc.2
+packages/spill/spill-policy/package.json	@deepseek-ai/dsh-spill-policy@0.1.5-rc.2	→	@deepseek-ai/dsh-spill-policy@0.2.0-rc.2
+packages/spill/spill/package.json	@deepseek-ai/dsh-spill@0.1.5-rc.2	→	@deepseek-ai/dsh-spill@0.2.0-rc.2
+packages/storage/storage-domain/package.json	@deepseek-ai/dsh-storage-domain@0.1.5-rc.2	→	@deepseek-ai/dsh-storage-domain@0.2.0-rc.2
+packages/storage/storage-json/package.json	@deepseek-ai/dsh-storage-json@0.1.5-rc.2	→	@deepseek-ai/dsh-storage-json@0.2.0-rc.2
+packages/storage/storage-sqlite/package.json	@deepseek-ai/dsh-storage-sqlite@0.1.5-rc.2	→	@deepseek-ai/dsh-storage-sqlite@0.2.0-rc.2
+packages/storage/storage/package.json	@deepseek-ai/dsh-storage@0.1.5-rc.2	→	@deepseek-ai/dsh-storage@0.2.0-rc.2
+packages/subagent/subagent-acp/package.json	@deepseek-ai/dsh-subagent-acp@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-acp@0.2.0-rc.2
+packages/subagent/subagent-claude-code/package.json	@deepseek-ai/dsh-subagent-claude-code@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-claude-code@0.2.0-rc.2
+packages/subagent/subagent-codex/package.json	@deepseek-ai/dsh-subagent-codex@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-codex@0.2.0-rc.2
+packages/subagent/subagent-dsh-sdk/package.json	@deepseek-ai/dsh-subagent-dsh-sdk@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-dsh-sdk@0.2.0-rc.2
+packages/subagent/subagent-fork-in-process/package.json	@deepseek-ai/dsh-subagent-fork-in-process@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-fork-in-process@0.2.0-rc.2
+packages/subagent/subagent-in-process-driver/package.json	@deepseek-ai/dsh-subagent-in-process-driver@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-in-process-driver@0.2.0-rc.2
+packages/subagent/subagent-spawn-in-process/package.json	@deepseek-ai/dsh-subagent-spawn-in-process@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent-spawn-in-process@0.2.0-rc.2
+packages/subagent/subagent/package.json	@deepseek-ai/dsh-subagent@0.1.5-rc.2	→	@deepseek-ai/dsh-subagent@0.2.0-rc.2
+packages/subagent/tool-subagent-control/package.json	@deepseek-ai/dsh-tool-subagent-control@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-subagent-control@0.2.0-rc.2
+packages/subagent/tool-subagent/package.json	@deepseek-ai/dsh-tool-subagent@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-subagent@0.2.0-rc.2
+packages/subprocess/subprocess-local/package.json	@deepseek-ai/dsh-subprocess-local@0.1.5-rc.2	→	@deepseek-ai/dsh-subprocess-local@0.2.0-rc.2
+packages/subprocess/subprocess/package.json	@deepseek-ai/dsh-subprocess@0.1.5-rc.2	→	@deepseek-ai/dsh-subprocess@0.2.0-rc.2
+packages/subprocess/win32-process/package.json	@deepseek-ai/dsh-win32-process@0.1.5-rc.2	→	@deepseek-ai/dsh-win32-process@0.2.0-rc.2
+packages/terminal/terminal-bash/package.json	@deepseek-ai/dsh-terminal-bash@0.1.5-rc.2	→	@deepseek-ai/dsh-terminal-bash@0.2.0-rc.2
+packages/terminal/terminal/package.json	@deepseek-ai/dsh-terminal@0.1.5-rc.2	→	@deepseek-ai/dsh-terminal@0.2.0-rc.2
+packages/terminal/tool-terminal/package.json	@deepseek-ai/dsh-tool-terminal@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-terminal@0.2.0-rc.2
+packages/test-support/agent-loop-testkit/package.json	@deepseek-ai/dsh-agent-loop-testkit@0.1.5-rc.2	→	@deepseek-ai/dsh-agent-loop-testkit@0.2.0-rc.2
+packages/test-support/client-runtime/package.json	@deepseek-ai/dsh-client-test-runtime@0.1.5-rc.2	→	@deepseek-ai/dsh-client-test-runtime@0.2.0-rc.2
+packages/test-support/llm-mock-server/package.json	@deepseek-ai/dsh-llm-mock-server@0.1.5-rc.2	→	@deepseek-ai/dsh-llm-mock-server@0.2.0-rc.2
+packages/test-support/llm-replay/package.json	@deepseek-ai/dsh-llm-replay@0.1.5-rc.2	→	@deepseek-ai/dsh-llm-replay@0.2.0-rc.2
+packages/test-support/loader-smoke/package.json	@deepseek-ai/dsh-loader-smoke@0.1.5-rc.2	→	@deepseek-ai/dsh-loader-smoke@0.2.0-rc.2
+packages/test-support/session-snapshot/package.json	@deepseek-ai/dsh-session-snapshot@0.1.5-rc.2	→	@deepseek-ai/dsh-session-snapshot@0.2.0-rc.2
+packages/todo/tool-todo/package.json	@deepseek-ai/dsh-tool-todo@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-todo@0.2.0-rc.2
+packages/typert/generator/package.json	@deepseek-ai/dsh-typert-generator@0.1.5-rc.2	→	@deepseek-ai/dsh-typert-generator@0.2.0-rc.2
+packages/typert/loader/package.json	@deepseek-ai/dsh-typert-loader@0.1.5-rc.2	→	@deepseek-ai/dsh-typert-loader@0.2.0-rc.2
+packages/typert/protocol/package.json	@deepseek-ai/dsh-typert-protocol@0.1.5-rc.2	→	@deepseek-ai/dsh-typert-protocol@0.2.0-rc.2
+packages/typert/registry/package.json	@deepseek-ai/dsh-typert-registry@0.1.5-rc.2	→	@deepseek-ai/dsh-typert-registry@0.2.0-rc.2
+packages/util/atomic-write/package.json	@deepseek-ai/dsh-atomic-write@0.1.5-rc.2	→	@deepseek-ai/dsh-atomic-write@0.2.0-rc.2
+packages/util/brand/package.json	@deepseek-ai/dsh-brand@0.1.5-rc.2	→	@deepseek-ai/dsh-brand@0.2.0-rc.2
+packages/util/chunked-list/package.json	@deepseek-ai/dsh-chunked-list@0.1.5-rc.2	→	@deepseek-ai/dsh-chunked-list@0.2.0-rc.2
+packages/util/crypto/package.json	@deepseek-ai/dsh-util-crypto@0.1.5-rc.2	→	@deepseek-ai/dsh-util-crypto@0.2.0-rc.2
+packages/util/deque/package.json	@deepseek-ai/dsh-deque@0.1.5-rc.2	→	@deepseek-ai/dsh-deque@0.2.0-rc.2
+packages/util/home-paths/package.json	@deepseek-ai/dsh-home-paths@0.1.5-rc.2	→	@deepseek-ai/dsh-home-paths@0.2.0-rc.2
+packages/util/http-proxy/package.json	@deepseek-ai/dsh-http-proxy@0.1.5-rc.2	→	@deepseek-ai/dsh-http-proxy@0.2.0-rc.2
+packages/util/launch-environment/package.json	@deepseek-ai/dsh-launch-environment@0.1.5-rc.2	→	@deepseek-ai/dsh-launch-environment@0.2.0-rc.2
+packages/util/native-command/package.json	@deepseek-ai/dsh-native-command@0.1.5-rc.2	→	@deepseek-ai/dsh-native-command@0.2.0-rc.2
+packages/util/output-retention/package.json	@deepseek-ai/dsh-output-retention@0.1.5-rc.2	→	@deepseek-ai/dsh-output-retention@0.2.0-rc.2
+packages/util/package-manifest/package.json	@deepseek-ai/dsh-package-manifest@0.1.5-rc.2	→	@deepseek-ai/dsh-package-manifest@0.2.0-rc.2
+packages/util/time/package.json	@deepseek-ai/dsh-util-time@0.1.5-rc.2	→	@deepseek-ai/dsh-util-time@0.2.0-rc.2
+packages/util/timeout/package.json	@deepseek-ai/dsh-timeout@0.1.5-rc.2	→	@deepseek-ai/dsh-timeout@0.2.0-rc.2
+packages/util/values/package.json	@deepseek-ai/dsh-util-values@0.1.5-rc.2	→	@deepseek-ai/dsh-util-values@0.2.0-rc.2
+packages/util/workspace-path/package.json	@deepseek-ai/dsh-util-workspace-path@0.1.5-rc.2	→	@deepseek-ai/dsh-util-workspace-path@0.2.0-rc.2
+packages/web/tool-web/package.json	@deepseek-ai/dsh-tool-web@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-web@0.2.0-rc.2
+packages/web/web-fetch-http/package.json	@deepseek-ai/dsh-web-fetch-http@0.1.5-rc.2	→	@deepseek-ai/dsh-web-fetch-http@0.2.0-rc.2
+packages/web/web-search-deepseek/package.json	@deepseek-ai/dsh-web-search-deepseek@0.1.5-rc.2	→	@deepseek-ai/dsh-web-search-deepseek@0.2.0-rc.2
+packages/web/web-search-exa/package.json	@deepseek-ai/dsh-web-search-exa@0.1.5-rc.2	→	@deepseek-ai/dsh-web-search-exa@0.2.0-rc.2
+packages/web/web-search-perplexity/package.json	@deepseek-ai/dsh-web-search-perplexity@0.1.5-rc.2	→	@deepseek-ai/dsh-web-search-perplexity@0.2.0-rc.2
+packages/web/web/package.json	@deepseek-ai/dsh-web@0.1.5-rc.2	→	@deepseek-ai/dsh-web@0.2.0-rc.2
+packages/webhook/webhook-github/package.json	@deepseek-ai/dsh-webhook-github@0.1.5-rc.2	→	@deepseek-ai/dsh-webhook-github@0.2.0-rc.2
+packages/webhook/webhook/package.json	@deepseek-ai/dsh-webhook@0.1.5-rc.2	→	@deepseek-ai/dsh-webhook@0.2.0-rc.2
+packages/workflow/tool-ralph/package.json	@deepseek-ai/dsh-tool-ralph@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-ralph@0.2.0-rc.2
+packages/workflow/tool-workflow/package.json	@deepseek-ai/dsh-tool-workflow@0.1.5-rc.2	→	@deepseek-ai/dsh-tool-workflow@0.2.0-rc.2
+packages/workflow/workflow/package.json	@deepseek-ai/dsh-workflow@0.1.5-rc.2	→	@deepseek-ai/dsh-workflow@0.2.0-rc.2
+packages/workspace/workspace/package.json	@deepseek-ai/dsh-workspace@0.1.5-rc.2	→	@deepseek-ai/dsh-workspace@0.2.0-rc.2
+vendor/cordis/package.json	@deepseek-ai/cordis@4.0.2	→	@deepseek-ai/cordis@4.0.4
+vendor/cosmokit/package.json	@deepseek-ai/cosmokit@1.8.3	→	@deepseek-ai/cosmokit@1.8.5
+vendor/group/package.json	@deepseek-ai/cordis-plugin-group@1.0.2	→	@deepseek-ai/cordis-plugin-group@1.0.4
+vendor/hmr/package.json	@deepseek-ai/cordis-plugin-hmr@1.0.17	→	@deepseek-ai/cordis-plugin-hmr@1.0.19
+vendor/include/package.json	@deepseek-ai/cordis-plugin-include@1.0.7	→	@deepseek-ai/cordis-plugin-include@1.0.9
+vendor/loader/package.json	@deepseek-ai/cordis-plugin-loader@1.0.3	→	@deepseek-ai/cordis-plugin-loader@1.0.5
+vendor/logger-console/package.json	@deepseek-ai/cordis-plugin-logger-console@1.0.2	→	@deepseek-ai/cordis-plugin-logger-console@1.0.4
+vendor/schemastery/package.json	@deepseek-ai/schemastery@3.18.2	→	@deepseek-ai/schemastery@3.18.4
+vendor/timer/package.json	@deepseek-ai/cordis-plugin-timer@1.1.4	→	@deepseek-ai/cordis-plugin-timer@1.1.6
+
+## @deepseek-ai/* 全量: old 289 个 → new 338 个
+
+### 新增 (59)
+@deepseek-ai/dsh-agent-preset
+@deepseek-ai/dsh-agent-preset-registry
+@deepseek-ai/dsh-api-account-controller
+@deepseek-ai/dsh-api-job-controller
+@deepseek-ai/dsh-api-terminal-controller
+@deepseek-ai/dsh-browser-use
+@deepseek-ai/dsh-client-product-analytics
+@deepseek-ai/dsh-client-shortcuts
+@deepseek-ai/dsh-client-ui-plugin-manager
+@deepseek-ai/dsh-client-ui-settings-account
+@deepseek-ai/dsh-client-ui-settings-agent-loop
+@deepseek-ai/dsh-client-ui-settings-session-log
+@deepseek-ai/dsh-client-ui-settings-shell
+@deepseek-ai/dsh-client-ui-settings-subagent
+@deepseek-ai/dsh-client-ui-settings-web-search
+@deepseek-ai/dsh-client-ui-shortcuts
+@deepseek-ai/dsh-client-ui-sidebar-browser
+@deepseek-ai/dsh-client-ui-sidebar-terminal
+@deepseek-ai/dsh-compaction-image-offload
+@deepseek-ai/dsh-computer-use
+@deepseek-ai/dsh-config-editor
+@deepseek-ai/dsh-deepseek-account
+@deepseek-ai/dsh-deepseek-account-platform
+@deepseek-ai/dsh-experimental-api-speech-to-text
+@deepseek-ai/dsh-experimental-auto-review
+@deepseek-ai/dsh-experimental-browser-use-chrome-devtools-mcp
+@deepseek-ai/dsh-experimental-browser-use-playwright-mcp
+@deepseek-ai/dsh-experimental-browser-use-runtime
+@deepseek-ai/dsh-experimental-browser-use-stagehand-native
+@deepseek-ai/dsh-experimental-client-ui-voice-input
+@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp
+@deepseek-ai/dsh-experimental-computer-use-cua-driver-native
+@deepseek-ai/dsh-experimental-ptc-runtime-python
+@deepseek-ai/dsh-experimental-schedule-bundle
+@deepseek-ai/dsh-experimental-speech-to-text
+@deepseek-ai/dsh-experimental-speech-to-text-sensevoice
+@deepseek-ai/dsh-experimental-voice-input-bundle
+@deepseek-ai/dsh-fs-ssh
+@deepseek-ai/dsh-hmr
+@deepseek-ai/dsh-host-product-telemetry-otel
+@deepseek-ai/dsh-lazy-require
+@deepseek-ai/dsh-llm-deepseek-account
+@deepseek-ai/dsh-llm-deepseek-api-key
+@deepseek-ai/dsh-mcp-resources
+@deepseek-ai/dsh-office-to-pdf
+@deepseek-ai/dsh-otel
+@deepseek-ai/dsh-plugin-manager
+@deepseek-ai/dsh-ptc-runtime
+@deepseek-ai/dsh-ptc-runtime-node
+@deepseek-ai/dsh-remote-mock
+@deepseek-ai/dsh-sandbox-ssh
+@deepseek-ai/dsh-session-format-v3-to-v4
+@deepseek-ai/dsh-skill-office
+@deepseek-ai/dsh-ssh
+@deepseek-ai/dsh-subprocess-ssh
+@deepseek-ai/dsh-tool-workspace-dependencies
+@deepseek-ai/dsh-util-code-language
+@deepseek-ai/dsh-workflow-ptc
+@deepseek-ai/dsh-workspace-changes
+
+### 移除 (10)
+@deepseek-ai/dsh-agent-presets
+@deepseek-ai/dsh-code-runtime
+@deepseek-ai/dsh-code-runtime-worker-thread
+@deepseek-ai/dsh-e2b
+@deepseek-ai/dsh-experimental-agent-team-web-profile
+@deepseek-ai/dsh-experimental-code-runtime-python
+@deepseek-ai/dsh-fs-e2b
+@deepseek-ai/dsh-settings-file
+@deepseek-ai/dsh-subprocess-e2b
+@deepseek-ai/dsh-workflow-worker-thread
+
+### 版本变化 (271)
+@deepseek-ai/cordis	4.0.2	→	4.0.4
+@deepseek-ai/cordis-plugin-group	1.0.2	→	1.0.4
+@deepseek-ai/cordis-plugin-hmr	1.0.17	→	1.0.19
+@deepseek-ai/cordis-plugin-include	1.0.7	→	1.0.9
+@deepseek-ai/cordis-plugin-loader	1.0.3	→	1.0.5
+@deepseek-ai/cordis-plugin-logger-console	1.0.2	→	1.0.4
+@deepseek-ai/cordis-plugin-timer	1.1.4	→	1.1.6
+@deepseek-ai/cosmokit	1.8.3	→	1.8.5
+@deepseek-ai/dsh	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-acp	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-acp-app	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent-default-model	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent-instructions	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent-loop	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent-loop-testkit	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-agent-tool-presentation	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-anonymous-user-id	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-gateway	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-remotes	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-session-controller	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-settings-controller	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-workspace-controller	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-api-workspace-files	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-app-boot	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-atomic-write	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-attachment	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-attachment-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-authorization	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-base	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-bash-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-bash-sandbox	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-brand	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-chunked-list	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-connection	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-file-upload	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-hmr	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-locale	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-modules	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-resources	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-store	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-test-runtime	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-agent-preset	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-approval	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-attachment	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-brand-official	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-chat	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-commands	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-conversation	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-cordis	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-deliverables	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-directory-picker-browse	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-directory-picker-native	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-dockkit	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-goal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-input-trigger	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-jobs	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-layout	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-message-feedback	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-model-selection	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-open-in-app	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-permission-presets	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-plan	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-primitives	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-reference	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-renderer	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-schedule	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-session	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-settings	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-settings-general	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-settings-models	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-settings-plugin-inventory	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-settings-plugins	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-sidebar	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-sidebar-documentpreview	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-sidebar-files	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-sidebar-right	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-skill	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-slots	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-subagent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-theme	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-tool	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-trajectory	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-user-questions	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-workflow-run	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-ui-workspace	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-client-web	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-cmdline	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-command-compact	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-command-feedback	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-command-goal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-commands	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-compaction	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-compaction-basic	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-compaction-tool-result-pruner	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-cordis-client-runner	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-cordis-host-runner	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-credentials	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-credentials-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-deepseek-llm-api-extensions	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-deque	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-desktop	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-desktop-host	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-agent-team	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-agent-team-profile	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-client-ui-agent-team	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-inspector	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-tool-agent-team	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-webworker-packer	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-experimental-webworker-runtime	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-file-reference	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-file-reference-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-fs	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-fs-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-fs-observation-policy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-fs-sandbox	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-goal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-goal-round-driver	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-headless	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-home-paths	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-hook-protocol	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-hooks-claude-code	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-hooks-codex	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-directory-picker	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-directory-picker-auto	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-directory-picker-browse	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-directory-picker-native	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-frontend-static	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-open-in-app	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-plugin-inventory	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-host-webserver	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-http-proxy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-invariants	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-jobs	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-jobs-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-launch-environment	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm-deepseek	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm-mock-server	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm-pi-ai	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm-replay	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-llm-retry	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-loader-smoke	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-lsp	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-lsp-stdio	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-mcp-client	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-message-feedback	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-native-command	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-output-retention	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-package-manifest	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-permission-presets	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-persona	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-plan-mode	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-plugin-package-inventory-deepseek	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-pwsh-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-pwsh-sandbox	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-repeat-tool-reminder	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-root	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sandbox	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sandbox-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sandbox-policy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sandbox-windows-acl	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-schedule	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-scope	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sdk-app	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sdk-client	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sdk-jsonrpc-server	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sdk-minimal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-sdk-protocol	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-checkpoint-policy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-format	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-format-catalog	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-format-v0-to-v1	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-format-v1-to-v2	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-format-v2-to-v3	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-log-deepseek	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-log-export	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-persistence	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-persistence-jsonl	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-projection	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-projection-cache	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-query	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-query-sqlite	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-reference	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-snapshot	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-stats	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-telemetry	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-telemetry-otel	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-title	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-title-all-prompts-llm	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-title-first-prompt-llm	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-title-llm	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-session-turn-outline	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-settings	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-shell	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-shell-env	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-skill	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-skill-badge	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-skill-filesystem	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-spill	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-spill-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-spill-policy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-storage	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-storage-domain	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-storage-json	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-storage-sqlite	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-acp	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-claude-code	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-codex	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-dsh-sdk	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-fork-in-process	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-in-process-driver	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subagent-spawn-in-process	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subprocess	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-subprocess-local	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-system-prompt	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-terminal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-terminal-bash	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-time-context	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-timeout	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tmux-context	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-token-meter	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-ask-user	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-bash	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-bash-persistent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-call-timeout-policy	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-cordis	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-fs	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-fs-search	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-goal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-jobs	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-lsp	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-present	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-pwsh	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-pwsh-persistent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-ralph	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-session-query	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-skill	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-str-replace-editor	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-subagent	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-subagent-control	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-terminal	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-todo	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-web	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tool-workflow	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-tools	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-typert-generator	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-typert-loader	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-typert-protocol	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-typert-registry	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-user-approval	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-user-questions	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-util-crypto	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-util-time	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-util-values	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-util-workspace-path	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-app	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-fetch-http	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-frontend	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-search-deepseek	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-search-exa	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-web-search-perplexity	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-webhook	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-webhook-github	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-win32-process	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-workflow	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/dsh-workspace	0.1.5-rc.2	→	0.2.0-rc.2
+@deepseek-ai/schemastery	3.18.2	→	3.18.4
+
+### new 侧版本分布
+0.2.0-rc.2	321
+0.1.2	6
+1.0.4	2
+0.1.3-alpha.1	1
+4.0.4	1
+1.8.5	1
+1.0.19	1
+1.0.9	1
+1.0.5	1
+3.18.4	1
+1.1.6	1
+0.0.1	1

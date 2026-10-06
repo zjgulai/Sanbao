@@ -61,39 +61,53 @@ describe('the reminder discipline (023)', () => {
   })
 
   it('keeps the nav marker and the list counts on the one projection fact, and follows the next read', async () => {
-    const withAction = statePayload({
-      matterList: {
-        state: 'read', code: null,
-        items: [{
-          itemId: 'receipt:1', matterRef: 'receipt:1', title: '稳定订单增长', partition: 'action',
-          triggers: [{ kind: 'pending-inputs', ref: 'receipt:1', count: 1 }], acceptanceCandidateCount: 0,
-          lifecycle: 'active', updatedAt: '2026-10-02T12:00:00.000Z',
-        }],
-        counts: { action: 1, inProgress: 0, acceptance: 0 },
-      },
-    })
-    const harness = await bootSagePage(withAction)
-    // Same number in both places, from the same payload: one fact, two views.
-    expect(harness.node('nav-matter-count').hidden).toBe(false)
-    expect(harness.node('nav-matter-count').textContent).toBe('1')
-    expect(harness.node('nav-matter-count').attributes['aria-label']).toBe('待我处理 1 项')
-    expect(harness.node('matter-count-action').textContent).toBe('1')
+    // Batch 22: the card counts belong to the React region; the nav marker stays legacy. Capture
+    // the published region slice so both views are asserted on the same read.
+    const byRegion: Array<{ region: string, message: { kind: string, code?: string, slot?: { items?: unknown[] } } }> = []
+    const target = globalThis as { __SAGE_APP_SET_REGION__?: unknown }
+    const previous = target.__SAGE_APP_SET_REGION__
+    target.__SAGE_APP_SET_REGION__ = (region: string, message: { kind: string, code?: string, slot?: { items?: unknown[] } }): void => { byRegion.push({ region, message }) }
+    const lastList = () => byRegion.filter((entry) => entry.region === 'matter-list').at(-1)?.message
+    try {
+      const withAction = statePayload({
+        matterList: {
+          state: 'read', code: null,
+          items: [{
+            itemId: 'receipt:1', matterRef: 'receipt:1', title: '稳定订单增长', partition: 'action',
+            triggers: [{ kind: 'pending-inputs', ref: 'receipt:1', count: 1 }], acceptanceCandidateCount: 0,
+            lifecycle: 'active', updatedAt: '2026-10-02T12:00:00.000Z',
+          }],
+          counts: { action: 1, inProgress: 0, acceptance: 0 },
+        },
+      })
+      const harness = await bootSagePage(withAction)
+      // Same number in both places, from the same payload: one fact, two views.
+      expect(harness.node('nav-matter-count').hidden).toBe(false)
+      expect(harness.node('nav-matter-count').textContent).toBe('1')
+      expect(harness.node('nav-matter-count').attributes['aria-label']).toBe('待我处理 1 项')
+      expect(lastList()?.kind).toBe('read')
+      expect(lastList()?.slot?.items).toHaveLength(1)
 
-    // Coming back to the app is enough: the next read moves both together (no user action).
-    harness.setPayload(statePayload({
-      matterList: { state: 'read', code: null, items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
-    }))
-    await harness.refresh()
-    expect(harness.node('nav-matter-count').hidden).toBe(true)
-    expect(harness.node('matter-count-action').textContent).toBe('0')
+      // Coming back to the app is enough: the next read moves both together (no user action).
+      harness.setPayload(statePayload({
+        matterList: { state: 'read', code: null, items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
+      }))
+      await harness.refresh()
+      expect(harness.node('nav-matter-count').hidden).toBe(true)
+      expect(lastList()?.slot?.items).toHaveLength(0)
 
-    // An underivable list hides the marker too — absence never reads as "nothing to do".
-    harness.setPayload(statePayload({
-      matterList: { state: 'unavailable', code: 'matter-list-locked', items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
-    }))
-    await harness.refresh()
-    expect(harness.node('nav-matter-count').hidden).toBe(true)
-    expect(harness.node('matter-count-action').textContent).toBe('—')
+      // An underivable list hides the marker too — absence never reads as "nothing to do".
+      harness.setPayload(statePayload({
+        matterList: { state: 'unavailable', code: 'matter-list-locked', items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
+      }))
+      await harness.refresh()
+      expect(harness.node('nav-matter-count').hidden).toBe(true)
+      expect(lastList()?.kind).toBe('unavailable')
+      expect(lastList()?.code).toBe('matter-list-locked')
+    } finally {
+      if (previous === undefined) delete target.__SAGE_APP_SET_REGION__
+      else target.__SAGE_APP_SET_REGION__ = previous
+    }
   })
 
   it('keeps the task-title and dock surfaces untouched by the design: no title flash text exists', () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { renderSageDocument } from '../src/product/renderer.js'
-import { bootSagePage, statePayload } from './support/sage-page.js'
+import { bootSagePage, statePayload, setLinkSelection } from './support/sage-page.js'
 
 /**
  * Batch 18 / P3 (ADR-0261 strangler): the side-chat card (`#side-chat-*`) and the action-items
@@ -158,8 +158,7 @@ describe('side-chat region bridge (batch 18)', () => {
     expect(noContext).toContain('先在上面选好事项与工作区')
     expect(page.requests).toHaveLength(0)
 
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     const created = await actions.createSideChat!()
     expect(page.requests[0]).toEqual({ path: '/.sage/side-chats', body: { action: 'create', matterRef: 'matter:1' } })
     expect(created).toBe('已派生侧聊 sc-9（子会话，独立上下文；主对话历史未改动）。')
@@ -250,8 +249,7 @@ describe('action-items region bridge (batch 18)', () => {
     const actions = legacyActions()
 
     expect(await actions.createActionItem!('  ', null)).toContain('先在「事项 ↔ 工作区关联」里选好事项')
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     expect(await actions.createActionItem!('   ', null)).toContain('先写一个行动项标题（≤200 字）。')
     expect(await actions.createActionItem!('补充渠道对比', '说明文本')).toBeNull()
     await page.settle()
@@ -263,8 +261,7 @@ describe('action-items region bridge (batch 18)', () => {
     expect(page.requests[1]).toEqual({ path: '/.sage/action-items', body: { action: 'start', actionId: 'act-1' } })
     expect(page.requests[2]).toEqual({ path: '/.sage/action-items', body: { action: 'complete', actionId: 'act-1' } })
 
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     expect(await actions.submitCorrection!(null, '文本')).toContain('先选一条原要求（已发送的消息）。')
     expect(await actions.submitCorrection!({ text: '原要求', at: null }, '   ')).toContain('更正副本还是空的')
     expect(await actions.submitCorrection!({ text: '把预算数字核对一下', at: '2026-10-03T09:00:00.000Z' }, '更正后的要求')).toBeNull()
@@ -277,12 +274,10 @@ describe('action-items region bridge (batch 18)', () => {
     expect(await actions.createProject!('   ')).toContain('先写一个项目名（≤100 字）。')
     expect(await actions.createProject!('增长专项')).toBeNull()
     // A refresh re-fills the selects from the payload (fake DOM has no matters fixture).
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     expect(await actions.assignProject!('none')).toContain('先新建一个项目再归属。')
     expect(await actions.assignProject!('prj-1')).toBeNull()
-    page.node('link-matter').value = 'matter:1'
-    page.node('link-workspace').value = 'ws-1'
+    setLinkSelection('matter:1', 'ws-1')
     expect(await actions.unassignProject!()).toBeNull()
     await page.settle()
     expect(page.requests[4]).toEqual({ path: '/.sage/projects', body: { action: 'create', name: '增长专项' } })

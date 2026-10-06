@@ -15,9 +15,18 @@ import type { JSX } from 'react'
 
 import { createAppBridgeStore } from './bridge.js'
 import { ActionItemsRegion } from './action-items-view.js'
+import { DraftRegion } from './draft-view.js'
 import { ArtifactRegion } from './artifact-view.js'
+import { LinkRegion } from './link-view.js'
+import { MatterAdminRegion } from './matter-admin-view.js'
+import { MatterGroupsRegion } from './matter-groups-view.js'
+import { MatterListRegion } from './matter-list-view.js'
 import { MatterRegion } from './matter-view.js'
 import { MonitorRegion } from './monitor-view.js'
+import { PlanRegion } from './plan-view.js'
+import { CapabilityRegion, CapabilitySourceBadge, ModelConfigRegion } from './capability-view.js'
+import { SearchRegion } from './search-view.js'
+import { SessionRegion } from './session-view.js'
 import { SideChatsRegion } from './side-chats-view.js'
 import { SitesRegion } from './sites-view.js'
 import { ToolResultsRegion } from './tool-results-view.js'
@@ -78,6 +87,61 @@ if (sideChatsHost !== null) {
 const actionItemsHost = document.getElementById('sage-region-action-items')
 if (actionItemsHost !== null) {
   createRoot(actionItemsHost).render(<ActionItemsRegion store={store} container={actionItemsHost} />)
+}
+
+const planHost = document.getElementById('sage-region-plans')
+if (planHost !== null) {
+  createRoot(planHost).render(<PlanRegion store={store} container={planHost} />)
+}
+
+const linkHost = document.getElementById('sage-region-link')
+if (linkHost !== null) {
+  createRoot(linkHost).render(<LinkRegion store={store} container={linkHost} />)
+}
+
+const matterAdminHost = document.getElementById('sage-region-matter-admin')
+if (matterAdminHost !== null) {
+  createRoot(matterAdminHost).render(<MatterAdminRegion store={store} container={matterAdminHost} />)
+}
+
+const matterGroupsHost = document.getElementById('sage-region-matter-groups')
+if (matterGroupsHost !== null) {
+  createRoot(matterGroupsHost).render(<MatterGroupsRegion store={store} container={matterGroupsHost} />)
+}
+
+const matterListHost = document.getElementById('sage-region-matter-list')
+if (matterListHost !== null) {
+  createRoot(matterListHost).render(<MatterListRegion store={store} container={matterListHost} />)
+}
+
+const draftHost = document.getElementById('sage-region-draft')
+if (draftHost !== null) {
+  createRoot(draftHost).render(<DraftRegion store={store} container={draftHost} />)
+}
+
+const sessionHost = document.getElementById('sage-region-session')
+if (sessionHost !== null) {
+  createRoot(sessionHost).render(<SessionRegion store={store} container={sessionHost} />)
+}
+
+const searchHost = document.getElementById('sage-region-search')
+if (searchHost !== null) {
+  createRoot(searchHost).render(<SearchRegion store={store} container={searchHost} />)
+}
+
+const capabilityHost = document.getElementById('sage-region-capability')
+if (capabilityHost !== null) {
+  createRoot(capabilityHost).render(<CapabilityRegion store={store} container={capabilityHost} />)
+}
+
+const capabilitySourceHost = document.getElementById('sage-region-capability-source')
+if (capabilitySourceHost !== null) {
+  createRoot(capabilitySourceHost).render(<CapabilitySourceBadge store={store} container={capabilitySourceHost} />)
+}
+
+const modelConfigHost = document.getElementById('sage-region-model-config')
+if (modelConfigHost !== null) {
+  createRoot(modelConfigHost).render(<ModelConfigRegion store={store} container={modelConfigHost} />)
 }
 
 const markerHost = document.getElementById('sage-app-root')

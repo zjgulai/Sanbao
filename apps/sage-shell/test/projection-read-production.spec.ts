@@ -144,14 +144,32 @@ describe('production projection-read assembly', () => {
     expect(projectionReadScope.current()).toBeUndefined()
   })
 
-  it.each([
-    ['state.read', { kind: 'collection', collection: 'state' }],
-    ['search.query', { kind: 'collection', collection: 'search' }],
-  ] as const)('does not widen one matter grant to the %s collection', async (operation, candidate) => {
+  // T03/A (user decision, ADR-0268): the device `state` aggregate rides the same active-matter
+  // grant the rest of the read surface uses — the fresh scope already binds exact session, matter,
+  // revision, workspace and generations. This supersedes the earlier conservative default that
+  // kept every collection at candidate-match unavailable. Search still spans multiple matters and
+  // global sessions, so its collection stays blocked until a main-owned object resolver exists.
+  it('widens the granted matter scope to the device state aggregate only (T03/A)', async () => {
     const { options } = productionOptions()
     const raw = vi.fn(async () => Response.json({ raw: true }))
 
-    const result = await run(options, { operation, candidate }, raw)
+    const result = await run(options, {
+      operation: 'state.read',
+      candidate: { kind: 'collection', collection: 'state' },
+    }, raw)
+
+    expect(result.state).toBe('read')
+    expect(raw).toHaveBeenCalledTimes(1)
+  })
+
+  it('still keeps the multi-matter search collection at candidate-match unavailable', async () => {
+    const { options } = productionOptions()
+    const raw = vi.fn(async () => Response.json({ raw: true }))
+
+    const result = await run(options, {
+      operation: 'search.query',
+      candidate: { kind: 'collection', collection: 'search' },
+    }, raw)
 
     expect(result).toMatchObject({ state: 'unavailable', stage: 'candidate-match' })
     expect(raw).not.toHaveBeenCalled()

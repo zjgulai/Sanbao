@@ -10,6 +10,7 @@ import { createSageFixtureViewState, parseSageFixtureStage } from '../product/vi
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../appservice/composition.js'
 import { serviceJson } from '../appservice/errors.js'
 import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner, LocalSystemBootstrapState } from '../appservice/contracts.js'
+import type { DevicePreferencesState } from '../appservice/contracts.js'
 import { admitProjectionRead } from '../appservice/projection-read-admission.js'
 import type { ProjectionReadOperation, ProjectionReadScope } from '../appservice/projection-read-admission.js'
 import { admitLocalSystemRead } from '../appservice/local-system-admission.js'
@@ -477,7 +478,16 @@ function createProjectionReadRunner(options: SageAppServiceOptions): ProjectionR
           }
         },
         matchCandidate: async ({ candidate, scope }) => {
-          if (candidate.kind === 'collection') return { state: 'unavailable' as const }
+          // T03/A (user-authorised): the device `state` aggregate rides the same active-matter grant
+          // as the rest of the read surface — the fresh scope already binds exact session, matter,
+          // revision, workspace and generations, and composition only assembles main-owned
+          // projections. Every other collection (search spans multiple matters and global
+          // sessions) still needs its own main-owned object resolver.
+          if (candidate.kind === 'collection') {
+            return candidate.collection === 'state'
+              ? { state: 'allowed' as const, value: { candidateRef: 'collection:state' } }
+              : { state: 'unavailable' as const }
+          }
           if (candidate.kind === 'active-matter') {
             return { state: 'allowed' as const, value: { candidateRef: `matter:${scope.matterRef}` } }
           }
@@ -568,11 +578,71 @@ function createLocalSystemBootstrapRunner(options: SageAppServiceOptions): () =>
   }
 }
 
+/** Device-local preference read. It deliberately shares no matter/session admission: a verified
+ * caller plus one ready, uncontaminated, unmoved frame may read the sealed device record while
+ * signed out. Identity-status or frame-generation movement during the read discards the value. */
+function createDevicePreferencesRunner(options: SageAppServiceOptions): () => Promise<Response> {
+  return async () => {
+    const correlation = options.callerBinding?.correlation ?? randomUUID()
+    const result = await admitLocalSystemRead<DevicePreferencesState>({
+      correlation,
+      unavailableCode: 'device-preferences-unavailable',
+      validatesReadValue: isDevicePreferencesState,
+      ports: {
+        verifyCaller: async () => {
+          const binding = options.callerBinding
+          return binding === undefined || binding === null
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { bindingRef: binding.correlation } }
+        },
+        verifyFrame: async () => {
+          const frame = options.framePolicySnapshot?.()
+          return frame === undefined || !frame.ready || frame.contaminated
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { frameGeneration: frame.generation } }
+        },
+        read: async () => {
+          const beforeStatus = options.vault.status()
+          const preferences = options.preferences?.()
+          if (preferences === undefined || options.vault.status() !== beforeStatus) {
+            return { state: 'unavailable' as const }
+          }
+          return {
+            state: 'allowed' as const,
+            value: {
+              requested: preferences.requested,
+              savedAt: preferences.savedAt,
+              effectiveTheme: preferences.effectiveTheme,
+            },
+          }
+        },
+        checkPostReadFreshness: async (frameGeneration) => {
+          const frame = options.framePolicySnapshot?.()
+          if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' as const }
+          return frame.generation === frameGeneration ? { state: 'allowed' as const } : { state: 'stale' as const }
+        },
+      },
+    })
+    return result.state === 'read'
+      ? serviceJson(result.value, 200)
+      : serviceJson({ code: result.code, stage: result.stage, retryable: result.retryable, correlation: result.correlation }, 200)
+  }
+}
+
 /** The DTO is closed: three exact sub-objects, no name, credential, session, configuration,
  *  workspace or business field can slip through validation. */
 function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const keys = Object.keys(value).sort()
   return keys.length === expected.length && keys.every((key, index) => key === expected[index])
+}
+
+function isCanonicalIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== 'string' || value === '') return false
+  try {
+    return new Date(value).toISOString() === value
+  } catch {
+    return false
+  }
 }
 
 function isLocalSystemBootstrapState(value: unknown): value is LocalSystemBootstrapState {
@@ -592,6 +662,26 @@ function isLocalSystemBootstrapState(value: unknown): value is LocalSystemBootst
     && hasExactKeys(display as Record<string, unknown>, ['density', 'theme'])
     && (display.theme === 'light' || display.theme === 'dark' || display.theme === 'system')
     && (display.density === 'comfortable' || display.density === 'compact')
+}
+
+function isDevicePreferencesState(value: unknown): value is DevicePreferencesState {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const record = value as Record<string, unknown>
+  if (!hasExactKeys(record, ['effectiveTheme', 'requested', 'savedAt'])) return false
+  const requested = record.requested
+  if (requested === null || typeof requested !== 'object' || Array.isArray(requested)) return false
+  const fields = requested as Record<string, unknown>
+  return hasExactKeys(fields, ['contentWidth', 'density', 'fileIcons', 'fontStyle', 'iconAppearance', 'language', 'terminalTheme', 'theme'])
+    && (fields.theme === 'light' || fields.theme === 'dark' || fields.theme === 'system')
+    && (fields.language === 'zh' || fields.language === 'en')
+    && (fields.density === 'comfortable' || fields.density === 'compact')
+    && (fields.fontStyle === 'sans' || fields.fontStyle === 'serif')
+    && (fields.contentWidth === 'standard' || fields.contentWidth === 'wide')
+    && (fields.terminalTheme === 'follow' || fields.terminalTheme === 'manual')
+    && (fields.fileIcons === 'product' || fields.fileIcons === 'material')
+    && (fields.iconAppearance === 'system' || fields.iconAppearance === 'light' || fields.iconAppearance === 'dark')
+    && (record.savedAt === null || isCanonicalIsoTimestamp(record.savedAt))
+    && (record.effectiveTheme === null || record.effectiveTheme === 'light' || record.effectiveTheme === 'dark')
 }
 
 /** AUTH-02A/02B assemble caller/context/candidate checks for the admitted session family. Later
@@ -718,6 +808,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     ...(options.selectActiveMatter === undefined ? {} : { selectActiveMatter: options.selectActiveMatter }),
     runProjectionRead: createProjectionReadRunner(options),
     bootstrapRead: createLocalSystemBootstrapRunner(options),
+    devicePreferencesRead: createDevicePreferencesRunner(options),
     protectedEffectPorts: createSessionCoreProtectedEffectPorts(options),
     protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),

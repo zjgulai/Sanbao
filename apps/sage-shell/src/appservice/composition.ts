@@ -49,6 +49,8 @@ export interface ServiceOptions {
   readonly runProjectionRead?: ProjectionReadRouteRunner
   /** T02: the local-system bootstrap read; assembled by main, absent keeps the stable denial. */
   readonly bootstrapRead?: () => Promise<Response>
+  /** Device-local preference read; main owns admission and the exact DTO projection. */
+  readonly devicePreferencesRead?: () => Promise<Response>
   /** Explicit fixture-mode matter projection (WT-02D.1): injected by main only under its fixture switch; absent keeps the slot null. */
   readonly fixtureProjection?: () => SageMatterViewState
   /** WT-02D.2A: composed command ports (real step-2 over fail-closed defaults); absent keeps every port fail-closed. */
@@ -359,6 +361,12 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
     // never a synthesized runtime/auth/display fact.
     bootstrapRead: options.bootstrapRead ?? (async (): Promise<Response> => serviceJson({
       code: 'bootstrap-unavailable',
+      stage: 'local-system',
+      retryable: true,
+      correlation: randomUUID(),
+    }, 200)),
+    devicePreferencesRead: options.devicePreferencesRead ?? (async (): Promise<Response> => serviceJson({
+      code: 'device-preferences-unavailable',
       stage: 'local-system',
       retryable: true,
       correlation: randomUUID(),

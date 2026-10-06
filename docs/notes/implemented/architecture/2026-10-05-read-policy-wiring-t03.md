@@ -29,3 +29,13 @@
 ## Verification
 
 证据：门禁自测 `node --test scripts/gates/sage-route-authority.test.mjs` 32/32（含新 T03 用例 4 突变具名红）；`pnpm run gate` 27/27（objects 85/85）；`apps/sage-shell` typecheck 0；全量套件 193 文件全部通过（读数见回报）；实机探针（隔离根、无登录）确认 state 读仍诚实 unavailable、writes=0、0 异常，证据目录 `.birdview/evidence/sanbao-desktop-t03-2026-10-05/`。
+
+## 追加（2026-10-05 晚）：T03/A 设备聚合读授权（ADR-0268）
+
+用户对 A/B/C 选择 A。`createProjectionReadRunner` 的 candidate-match 放行 `collection:'state'`（candidateRef `collection:state`）；search 与其他 opaque 读维持 unavailable。既有准入链前提不变。门禁新增放行事实（`return candidate.collection === 'state'`，旧全封禁语句不得回）与两条具名突变；`projection-read-production.spec.ts` 护栏由批-4 的「所有 collection 一律 unavailable」拆分为 state 放行（raw 恰一次）与 search 维持封锁两条，取代关系在 ADR-0268 记录。集成 spec 新增 `/state` 放行（activeContext/workspaces/matterLinks 真投影）与 search 维持拒绝两组断言。设备级槽位随该授权对已签入会话可见（A 的已知暴露面，用户已接受）；B 的窄化如需要另开票。
+
+## 追加（2026-10-05 晚）：T03-D 搜索页接线
+
+桌面搜索页消费真实 `/.sage/search`：`src/product/app/desktop/search.ts` 本地守卫（trim 空或超 500 字→`invalid-search-request`，不发请求）、POST 单键 `{query}`、传输码映射（400/403/405/413/415）、响应形状不符→固定 `search-result-unrecognised`（绝不渲染任何命中）；`page.tsx` SearchPage 标题逐字「搜索」、composition 期间 Enter 不提交、refused/unknown 不渲染结果行、重提交先清旧结果。本次未登录实机验证仅证明搜索请求遭拒，未记录具体准入拒绝阶段；不能据此声称请求到达 candidate-match。源码另确认 ADR-0268 仍封锁 `collection:'search'`，因此登录就绪也不足以开放搜索。页面显示不可用提示且无结果行；这不等于真实空命中态已验收。
+
+验证：`test/product-app/desktop-search.spec.tsx` 8/8；聚焦 85/85；全量 195 文件/1780 通过/1 skip；tsc 0；gate 27/27；实机探针（隔离 dev 根，新证据目录 `.birdview/evidence/sanbao-desktop-t03-search-2026-10-05/`）exit 0——搜索阶段恰 1 次 POST `/.sage/search`（唯一写形请求）、拒答文案逐字、0 结果行、0 异常、1440/660/320 无横向回流。矩阵 `QDR.P02.search.empty`→implementing；真实搜索结果/空命中态需登录＋search 对象 resolver，保持未完成。

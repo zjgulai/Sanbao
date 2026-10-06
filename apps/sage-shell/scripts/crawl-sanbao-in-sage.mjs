@@ -158,11 +158,13 @@ function parseCsvRows(text) {
   return rows.filter((entries) => entries.some((entry) => entry.trim().length > 0))
 }
 
-/** 默认清单发现：env 覆盖先行，再按 Sage 同级快照仓布局（与 test/support/sanbao-surface-root.mjs 同约定）。 */
+/** 默认清单发现：env 覆盖先行，再取仓内收纳副本 vendor/sanbao-prototype，再按 Sage 同级快照仓布局
+ *  （与 test/support/sanbao-surface-root.mjs 同约定）。 */
 function candidateLedgerPaths(env) {
   const bases = []
   const override = env.SAGE_SANBAO_SURFACE_ROOT
   if (typeof override === 'string' && override.length > 0) bases.push(override)
+  bases.push(join(SAGE_ROOT, 'vendor', 'sanbao-prototype'))
   const parent = dirname(SAGE_ROOT)
   for (const name of ['Sanbao', 'sanbao']) {
     bases.push(join(parent, name, 'repository-snapshot', 'apps', 'sanbao-prototype'))

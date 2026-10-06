@@ -1,0 +1,166 @@
+{
+  "productWindows": [
+    {
+      "url": "dsh-app://app/index.html",
+      "title": "Sage"
+    }
+  ],
+  "reads": {
+    "initial": {
+      "title": "Sage",
+      "heading": "不止于编程",
+      "catalog": false,
+      "sidebar": "编程\n通用\n新任务\n搜索\n工作区\n工作区待接入\n知识中心\n站点\n自动化\n扩展\n?\n账号与设置\n未登录",
+      "input": true,
+      "state": "blocked"
+    },
+    "service": {
+      "status": 200,
+      "body": {
+        "code": "projection-read-unavailable",
+        "stage": "read-policy",
+        "retryable": true,
+        "correlation": "50acda69-4b5e-49b3-8fea-07d2995dc217"
+      }
+    },
+    "csp": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; frame-src 'none'; child-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+    "bootstrap": {
+      "status": 200,
+      "body": {
+        "runtime": {
+          "status": "ready"
+        },
+        "auth": {
+          "status": "signed-out"
+        },
+        "display": {
+          "theme": "system",
+          "density": "comfortable"
+        }
+      }
+    },
+    "devicePreferences": {
+      "status": 200,
+      "body": {
+        "requested": {
+          "theme": "system",
+          "language": "zh",
+          "density": "comfortable",
+          "fontStyle": "sans",
+          "contentWidth": "standard",
+          "terminalTheme": "follow",
+          "fileIcons": "product",
+          "iconAppearance": "system"
+        },
+        "savedAt": null,
+        "effectiveTheme": "dark"
+      }
+    },
+    "settings": {
+      "heading": "外观与显示",
+      "selects": [
+        {
+          "name": "theme",
+          "value": "system"
+        },
+        {
+          "name": "language",
+          "value": "zh"
+        },
+        {
+          "name": "density",
+          "value": "comfortable"
+        },
+        {
+          "name": "fontStyle",
+          "value": "sans"
+        },
+        {
+          "name": "contentWidth",
+          "value": "standard"
+        },
+        {
+          "name": "terminalTheme",
+          "value": "follow"
+        },
+        {
+          "name": "fileIcons",
+          "value": "product"
+        },
+        {
+          "name": "iconAppearance",
+          "value": "system"
+        }
+      ],
+      "copy": "主题与密度在保存并完成权威回读后立即生效；其余六项仅保存，尚未接入产品显示。"
+    },
+    "interactions": {
+      "settingsMounted": true,
+      "draftRetained": true,
+      "enterDidNotDispatch": true,
+      "navigationRetained": true,
+      "escapeReturnedFocus": true,
+      "retryReadObserved": true,
+      "searchRefused": true,
+      "searchPosts": 1
+    },
+    "geometry": [
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "inputWidth": 714,
+        "ink": "rgb(244, 247, 245)",
+        "theme": "dark",
+        "themeSimulation": "dark"
+      },
+      {
+        "width": 660,
+        "scroll": 660,
+        "inputWidth": 433,
+        "ink": "rgb(244, 247, 245)",
+        "theme": "dark",
+        "themeSimulation": "light"
+      },
+      {
+        "width": 320,
+        "scroll": 320,
+        "inputWidth": 254,
+        "ink": "rgb(244, 247, 245)",
+        "theme": "dark",
+        "themeSimulation": "light"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "url": "dsh-app://app/.sage/state",
+      "method": "GET"
+    },
+    {
+      "url": "dsh-app://app/index.html",
+      "method": "HEAD"
+    },
+    {
+      "url": "dsh-app://app/.sage/bootstrap",
+      "method": "GET"
+    },
+    {
+      "url": "dsh-app://app/.sage/device-preferences",
+      "method": "GET"
+    },
+    {
+      "url": "dsh-app://app/.sage/device-preferences",
+      "method": "GET"
+    },
+    {
+      "url": "dsh-app://app/.sage/search",
+      "method": "POST"
+    },
+    {
+      "url": "dsh-app://app/.sage/state",
+      "method": "GET"
+    }
+  ],
+  "exceptions": [],
+  "passed": true
+}

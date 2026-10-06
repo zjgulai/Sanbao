@@ -5,7 +5,8 @@
  * 用法：node scripts/cleanup-inventory.mjs <仓库相对路径>... [--json]
  *   · 例：node scripts/cleanup-inventory.mjs packaging/release/2.4.1 packaging/release/2.5.0
  *     （shell 展开版本目录亦可：把该目录下的每个条目列成候选）
- *   · 结论只有两种：`protected`（①②任一命中——证据面，不进入删除建议）
+ *   · 结论有三种：`protected`（①②任一命中——证据面，不进入删除建议）、
+ *     `unknown`（引用扫描没跑完——未核清，先修仪器再重跑，不得删除）、
  *     与 `suggested`（①②都为否，按③体积降序进入建议清单）。
  *   · 本工具**不删除、不判红**：它产出的读数才是「把候选写进删除批次」的前置（P-49）。
  *   · 判据与分工见 scripts/lib/cleanup-inventory.mjs 的模块注释（与 gate:object-store-hygiene
@@ -62,20 +63,40 @@ for (const reading of readings) {
     ? reading.commitments.map((entry) => `${entry.kind}（${entry.detail}）`).join('；')
     : '无'
   process.stdout.write(`  ① 承诺：${commitments}\n`)
-  const references = reading.references.length > 0
-    ? reading.references.slice(0, 3).map((hit) => `${hit.file}:${hit.line}`).join('、') + (reading.references.length > 3 ? `（共 ${reading.references.length} 处）` : '')
-    : '无'
+  let references
+  if (reading.referenceScanOk === false) {
+    references = `扫描失败（${reading.referenceScanError}）——未核清`
+  } else if (reading.references.length > 0) {
+    references = reading.references.slice(0, 3).map((hit) => `${hit.file}:${hit.line}`).join('、')
+      + (reading.references.length > 3 ? `（共 ${reading.references.length} 处）` : '')
+  } else {
+    references = '无'
+  }
   process.stdout.write(`  ② 引用：${references}\n`)
   process.stdout.write(`  ③ 体积：${human(reading.sizeBytes)}\n`)
-  process.stdout.write(`  → ${reading.verdict === 'protected' ? '出局（证据面）' : '进入建议清单'}：${reading.reason}\n`)
+  const verdictLabel = reading.verdict === 'protected'
+    ? '出局（证据面）'
+    : reading.verdict === 'unknown'
+      ? '未核清（先修仪器再重跑，不得删除）'
+      : '进入建议清单'
+  process.stdout.write(`  → ${verdictLabel}：${reading.reason}\n`)
 }
 
-process.stdout.write(`\n共 ${readings.length} 个候选：证据面（被承诺/被引用）${protectedItems.length} 个 / 建议清单 ${suggested.length} 个\n`)
+const unknownItems = readings.filter((reading) => reading.verdict === 'unknown')
+process.stdout.write(`\n共 ${readings.length} 个候选：证据面（被承诺/被引用）${protectedItems.length} 个 / 未核清 ${unknownItems.length} 个 / 建议清单 ${suggested.length} 个\n`)
+if (unknownItems.length > 0) {
+  process.stdout.write('未核清（引用扫描失败；先修仪器再重跑）：\n')
+  unknownItems.forEach((reading) => {
+    process.stdout.write(`  - ${reading.candidate}：${reading.referenceScanError}\n`)
+  })
+}
 if (suggested.length > 0) {
   process.stdout.write('建议清单（①②都为否，按体积降序）：\n')
   suggested.forEach((reading, index) => {
     process.stdout.write(`  ${index + 1}. ${reading.candidate}  ${human(reading.sizeBytes)}\n`)
   })
 } else {
-  process.stdout.write('建议清单为空：没有一个候选同时满足「无承诺、无引用」。\n')
+  process.stdout.write(unknownItems.length > 0
+    ? '建议清单为空；但存在未核清候选（见上），不得当作「都没有问题」。\n'
+    : '建议清单为空：没有一个候选同时满足「无承诺、无引用」。\n')
 }
