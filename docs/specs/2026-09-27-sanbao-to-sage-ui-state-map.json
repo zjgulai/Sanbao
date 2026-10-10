@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 5,
-        "pending": 193,
+        "implementing": 6,
+        "pending": 192,
         "verified": 8
       },
       "applicationService": {
@@ -2321,8 +2321,24 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-page.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2343,7 +2359,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "按 Sage 真实入口重述（ADR-0283 D3）：Sage 无「设置导航→外观」两级入口，真实形态为账号菜单 → 外观与显示表单；待按该语义出句级证据批次。"
+          "入口已按 Sage 真实形态实现：账号菜单 → 外观与显示表单，两级交互均有 tracked 测试与打包 live 读数句级证据；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
