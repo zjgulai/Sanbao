@@ -13,6 +13,7 @@ import {
   revokeDecision,
   startAttempt,
   stopMatter,
+  succeedAttempt,
   type BusinessMatter,
 } from '../src/domain/business-matter.js'
 import {
@@ -101,7 +102,14 @@ function allEventHistories(): readonly BusinessMatter[] {
   const secondRun = startAttempt(reconfirmed, { eventId: 'retry:attempt-2', occurredAt: '2026-09-27T00:05:00Z', attemptId: 'attempt:2', revisionId: 'revision:1', actionScopes: ['draft.prepare'], decisionIds: [], executionSnapshot: snapshot, compatibility: equivalent })
   const failedAgain = failAttempt(secondRun, { eventId: 'retry:failed-2', occurredAt: '2026-09-27T00:06:00Z', attemptId: 'attempt:2', source: 'runtime', reason: 'Stopped.', impact: 'No completion.' })
   const stopped = stopMatter(failedAgain, { eventId: 'retry:stop', occurredAt: '2026-09-27T00:07:00Z', revisionId: 'revision:1', reason: 'Stop.' })
-  return [completed, stopped]
+
+  // ADR-0293: the light turn closure — succeeded attempt, then a second attempt in the SAME
+  // revision (the repeat-send path this event exists for).
+  const lightRun = startAttempt(matter(), { eventId: 'light:attempt-1', occurredAt: '2026-09-27T00:02:00Z', attemptId: 'attempt:1', revisionId: 'revision:1', actionScopes: ['draft.prepare'], decisionIds: [], executionSnapshot: snapshot, compatibility: equivalent })
+  const lightDone = succeedAttempt(lightRun, { eventId: 'light:succeeded-1', occurredAt: '2026-09-27T00:03:00Z', attemptId: 'attempt:1' })
+  const lightRun2 = startAttempt(lightDone, { eventId: 'light:attempt-2', occurredAt: '2026-09-27T00:04:00Z', attemptId: 'attempt:2', revisionId: 'revision:1', actionScopes: ['draft.prepare'], decisionIds: [], executionSnapshot: snapshot, compatibility: equivalent })
+  const lightDone2 = succeedAttempt(lightRun2, { eventId: 'light:succeeded-2', occurredAt: '2026-09-27T00:05:00Z', attemptId: 'attempt:2' })
+  return [completed, stopped, lightDone2]
 }
 
 function expectCodecError(
@@ -191,11 +199,12 @@ describe('BusinessMatter WT-02A.1 codec and strict rehydration', () => {
     expect(projectBusinessMatter(restored)).toEqual(projectBusinessMatter(original))
   })
 
-  it('round-trips two histories whose independent expected set covers all 11 event types', () => {
+  it('round-trips three histories whose independent expected set covers all 12 event types', () => {
     const expected = new Set([
       'matter-created', 'revision-entered', 'clarification-requested',
       'decision-recorded', 'decision-revoked', 'attempt-started', 'attempt-failed',
-      'revision-reconfirmed', 'artifact-recorded', 'receipt-recorded', 'matter-stopped',
+      'attempt-succeeded', 'revision-reconfirmed', 'artifact-recorded', 'receipt-recorded',
+      'matter-stopped',
     ])
     const actual = new Set<string>()
     for (const history of allEventHistories()) {
@@ -446,6 +455,7 @@ describe('BusinessMatter WT-02A.1 codec and strict rehydration', () => {
         ;(payload.attempt as Record<string, unknown>).actionScopes = [7]
       },
       'attempt-failed': (payload) => { payload.source = 'mystery' },
+      'attempt-succeeded': (payload) => { payload.attemptId = 7 },
       'revision-reconfirmed': (payload) => {
         ;(payload.compatibility as Record<string, unknown>).outcome = 'mystery'
       },

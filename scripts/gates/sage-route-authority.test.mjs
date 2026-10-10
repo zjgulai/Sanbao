@@ -34,6 +34,8 @@ const baseline = Object.freeze({
   protectedEffectAdmissionText: read('apps/sage-shell/src/appservice/protected-effect-admission.ts'),
   sessionPromptPrepareText: read('apps/sage-shell/src/main/session-prompt-prepare.ts'),
   activeMatterSelectionText: read('apps/sage-shell/src/main/active-matter-selection.ts'),
+  sessionTurnCloseText: read('apps/sage-shell/src/main/session-turn-close.ts'),
+  sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -1091,6 +1093,50 @@ test('the selection-time ensure cannot drift from its order, refusal, grant chec
   const unwire = baseline.mainIndexText.replace('ensureRunnableRevision: prepareEnsure,', '')
   assert.notEqual(unwire, baseline.mainIndexText)
   expectNamedFailure(check({ mainIndexText: unwire }), 'index must hand the selection kernel the governed ensure')
+})
+
+test('the turn-end closure cannot drift from its edge key, taxonomy, order or idempotency', () => {
+  const kindKey = baseline.mainIndexText.replace(
+    'observePostTurn(matterRef, status.lastTurnEndEdge, status.lastTurnEnd)',
+    'observePostTurn(matterRef, status.lastTurnEnd, status.lastTurnEnd)',
+  )
+  assert.notEqual(kindKey, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: kindKey }), 'the post-turn observer must key on the edge, not the bare kind')
+
+  const edgeDrop = baseline.sessionChannelText.replace(
+    'lastTurnEndEdge: `${seq}:${turnEndKind(data)}`',
+    'lastTurnEndEdge: turnEndKind(data)',
+  )
+  assert.notEqual(edgeDrop, baseline.sessionChannelText)
+  expectNamedFailure(check({ sessionChannelText: edgeDrop }), 'the session fold must expose the cursor-keyed turn-end edge')
+
+  const blockedCloses = baseline.sessionTurnCloseText.replace(
+    'if (!SUCCESS_KINDS.has(endKind) && !FAILURE_KINDS.has(endKind)) return',
+    '',
+  )
+  assert.notEqual(blockedCloses, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: blockedCloses }), 'blocked and unknown kinds must leave the attempt open')
+
+  const successAsFailure = baseline.sessionTurnCloseText.replace(
+    "const SUCCESS_KINDS = new Set(['completed'])",
+    "const SUCCESS_KINDS = new Set(['nothing'])",
+  )
+  assert.notEqual(successAsFailure, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: successAsFailure }), 'the closure taxonomy must keep completed light and error kinds as failures')
+
+  const appendIdDrift = baseline.sessionTurnCloseText.replace(
+    'turn-close:${attemptId}:${endKind}',
+    'turn-close:${endKind}',
+  )
+  assert.notEqual(appendIdDrift, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: appendIdDrift }), 'the closure append must be idempotent per attempt and kind')
+
+  const orderSwap = baseline.mainIndexText.replace(
+    '    if (kind !== null && kind !== \'\') {\n      void sessionTurnClose({ matterRef, endKind: kind }).catch(() => undefined)\n    }',
+    '',
+  )
+  assert.notEqual(orderSwap, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: orderSwap }), 'the turn-end closure must run before the artifact observation')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

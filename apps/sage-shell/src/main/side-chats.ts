@@ -181,6 +181,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
           assistantText: pageFold.assistantText ?? fold.assistantText,
           executingTurn: pageFold.executingTurn,
           lastTurnEnd: pageFold.lastTurnEnd,
+          lastTurnEndEdge: pageFold.lastTurnEndEdge,
           unapplied: fold.unapplied + pageFold.unapplied,
           records: fold.records + page.result.records.length,
         }
@@ -213,6 +214,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
       sessionId: record.sessionId,
       execution: fold.executingTurn === null ? 'idle' : 'executing',
       lastTurnEnd: fold.lastTurnEnd,
+      lastTurnEndEdge: fold.lastTurnEndEdge,
       reply,
       transcript,
       reconciled,

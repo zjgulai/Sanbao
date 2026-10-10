@@ -249,6 +249,17 @@ interface AttemptFailedEvent {
   readonly impact: string
 }
 
+/** Session-family light closure (ADR-0293): the turn ended `completed` and no artifact/receipt
+ *  review is in play — the attempt closes as succeeded and the matter returns to `evidence`,
+ *  ready for the next attempt in the same revision. */
+interface AttemptSucceededEvent {
+  readonly type: 'attempt-succeeded'
+  readonly eventId: string
+  readonly matterId: string
+  readonly occurredAt: string
+  readonly attemptId: string
+}
+
 interface RevisionReconfirmedEvent {
   readonly type: 'revision-reconfirmed'
   readonly eventId: string
@@ -292,6 +303,7 @@ export type BusinessMatterEvent =
   | DecisionRevokedEvent
   | AttemptStartedEvent
   | AttemptFailedEvent
+  | AttemptSucceededEvent
   | RevisionReconfirmedEvent
   | ArtifactRecordedEvent
   | ReceiptRecordedEvent
@@ -391,6 +403,12 @@ export interface FailAttemptInput {
   readonly source: AttemptFailedEvent['source']
   readonly reason: string
   readonly impact: string
+}
+
+export interface SucceedAttemptInput {
+  readonly eventId: string
+  readonly occurredAt: string
+  readonly attemptId: string
 }
 
 export interface ReconfirmRevisionInput {
@@ -850,6 +868,17 @@ export function projectBusinessMatter(
         activeAttemptId = undefined
         pendingClarification = undefined
         stage = 'failed-retry'
+        break
+      case 'attempt-succeeded':
+        replaceAttempt(attempts, event.attemptId, (attempt) => ({
+          ...attempt,
+          status: 'succeeded',
+          endedAt: event.occurredAt,
+          terminationReason: undefined,
+        }))
+        activeAttemptId = undefined
+        pendingClarification = undefined
+        stage = 'evidence'
         break
       case 'revision-reconfirmed':
         pendingClarification = undefined
@@ -1363,6 +1392,31 @@ export function failAttempt(
     source: input.source,
     reason: input.reason,
     impact: input.impact,
+  })
+}
+
+/** Session-family light closure (ADR-0293): close the active attempt as succeeded without an
+ *  artifact or receipt. Only the CURRENT running attempt may succeed; the matter returns to
+ *  `evidence` so the next attempt may start in the same revision. */
+export function succeedAttempt(
+  matter: BusinessMatter,
+  input: SucceedAttemptInput,
+): BusinessMatter {
+  const state = projectBusinessMatter(matter)
+  assertNoConclusion(state)
+  if (state.stage !== 'running' || state.activeAttemptId !== input.attemptId) {
+    error('invalid-transition', 'Only the active running attempt may succeed.')
+  }
+  assertNonBlank(input.eventId, 'eventId')
+  assertIsoTimestamp(input.occurredAt, 'occurredAt')
+  assertNonBlank(input.attemptId, 'attemptId')
+
+  return appendEvents(matter, {
+    type: 'attempt-succeeded',
+    eventId: input.eventId,
+    matterId: state.matterId,
+    occurredAt: input.occurredAt,
+    attemptId: input.attemptId,
   })
 }
 

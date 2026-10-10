@@ -90,13 +90,15 @@ interface Fold {
   readonly cursor: number
   readonly executingTurn: number | null
   readonly lastTurnEnd: string | null
+  /** ADR-0293: `${cursor}:${kind}` of the last turn end — the observers' edge key. */
+  readonly lastTurnEndEdge: string | null
   readonly records: number
   readonly unapplied: number
   /** Only attachment-bearing user messages are folded: plain text history rows stayed hidden (005). */
   readonly userMessages: readonly FoldedUserMessage[]
 }
 
-const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, records: 0, unapplied: 0, userMessages: [] }
+const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [] }
 
 /** Fold the session log: an open turn is the only "executing" evidence; the final text is the last
  *  `assistant/message`. Unknown frames are counted, never interpreted. */
@@ -159,10 +161,10 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
   const data = event.data
   if (event.type === 'turn/start') {
     const turn = isRecord(data) && typeof data.turn === 'number' ? data.turn : null
-    return { ...fold, cursor: seq, executingTurn: turn, lastTurnEnd: null }
+    return { ...fold, cursor: seq, executingTurn: turn, lastTurnEnd: null, lastTurnEndEdge: null }
   }
   if (event.type === 'turn/end') {
-    return { ...fold, cursor: seq, executingTurn: null, lastTurnEnd: turnEndKind(data) }
+    return { ...fold, cursor: seq, executingTurn: null, lastTurnEnd: turnEndKind(data), lastTurnEndEdge: `${seq}:${turnEndKind(data)}` }
   }
   if (event.type === 'assistant/message') {
     // "Assembled assistant message for one step (derived history uses this)." The message is the
@@ -393,7 +395,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
       if (sessionId === undefined) {
         // Nothing was ever sent for this matter: no session exists, and reading must not create one.
         return {
-          state: 'no-session', sessionId: null, execution: 'idle', lastTurnEnd: null,
+          state: 'no-session', sessionId: null, execution: 'idle', lastTurnEnd: null, lastTurnEndEdge: null,
           reply: { text: null, endKind: null, failed: false, actions: [] },
           transcript: [],
           reconciled: false, streamBroken: false, code: null, records: 0, unapplied: 0,
@@ -436,6 +438,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
             assistantText: pageFold.assistantText ?? fold.assistantText,
             executingTurn: pageFold.executingTurn,
             lastTurnEnd: pageFold.lastTurnEnd,
+            lastTurnEndEdge: pageFold.lastTurnEndEdge,
             unapplied: fold.unapplied + pageFold.unapplied,
             records: fold.records + page.result.records.length,
             userMessages: appendUserMessages(fold.userMessages, pageFold.userMessages),
@@ -480,6 +483,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         sessionId,
         execution: fold.executingTurn === null ? 'idle' : 'executing',
         lastTurnEnd: fold.lastTurnEnd,
+        lastTurnEndEdge: fold.lastTurnEndEdge,
         reply,
         transcript,
         reconciled,

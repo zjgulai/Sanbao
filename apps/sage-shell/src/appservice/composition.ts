@@ -448,7 +448,7 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         runMonitor: (await options.runMonitor?.()) ?? { state: 'unavailable' as const, matterRef: null, steps: { state: 'unavailable' as const, lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' }, budget: { reserved: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, consumed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, billed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const } }, device: { state: 'unknown' as const, reason: 'device-binding-unavailable' as const }, background: { state: 'unknown' as const, reason: 'background-host-unavailable' as const }, context: { state: 'unknown' as const, reason: 'context-usage-unavailable' as const, compaction: 'unknown' as const } },
         plans: options.plans?.() ?? { state: 'unavailable' as const, plans: [], lastStepRun: null },
         sessionChannel: await (options.sessionChannel?.() ?? Promise.resolve({
-          state: 'unavailable' as const, sessionId: null, execution: 'idle' as const, lastTurnEnd: null,
+          state: 'unavailable' as const, sessionId: null, execution: 'idle' as const, lastTurnEnd: null, lastTurnEndEdge: null,
           reply: { text: null, endKind: null, failed: false, actions: [] },
           transcript: [], reconciled: false, streamBroken: false, code: null, records: 0, unapplied: 0,
           paused: false, pending: [],

@@ -9686,6 +9686,44 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0293",
+      "title": "ADR-0293 · 回合收口：轻终态事件、cursor 边沿与重复发送解锁",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "attempt-succeeded 轻终态（第 12 型；succeeded 后 stage 回 evidence，同 revision 可续发）。",
+          "constraints": [
+            "review path unchanged",
+            "12-type completeness pin holds"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "lastTurnEndEdge = cursor:kind 加法字段；lastTurnEnd 保持 kind 串。",
+          "constraints": [
+            "UI kind branching untouched"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "runner：completed→succeed；error 族→fail(runtime)；blocked/未知保持打开；幂等 appendId；fire-and-forget。",
+          "constraints": [
+            "never throws to the observer",
+            "no active attempt means no-op"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "收口先于 artifact 观察；门禁六突变钉住。",
+          "constraints": [
+            "mechanism over review"
+          ]
+        }
+      ]
     }
   ]
 }

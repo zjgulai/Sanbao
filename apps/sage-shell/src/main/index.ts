@@ -18,6 +18,7 @@ import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
+import { createSessionTurnClose } from './session-turn-close.js'
 import { createSessionPromptPrepareEnsure } from './session-prompt-prepare.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
@@ -143,6 +144,12 @@ async function main(paths: SagePaths): Promise<void> {
   const matterCustody = createMatterCustody({ sagePaths: paths })
   // ADR-0288: the persist step's own store handle; mirrors the rehydrate port's lazy-open shape.
   const sessionPromptAttempts = createSessionPromptAttemptStore({ sagePaths: paths })
+  // ADR-0293: the turn-end closure runner — completes the attempt when the session fold reports
+  // a terminal turn end, so the next send may start.
+  const sessionTurnClose = createSessionTurnClose({
+    attempts: sessionPromptAttempts,
+    now: () => new Date().toISOString(),
+  })
   app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); sessionPromptAttempts.close(); revisionDigestStore?.close() })
 
   // C2D.2A (ADR-0277) + first-party publication (ADR-0285): the bundled default stays the honest
@@ -598,10 +605,16 @@ async function main(paths: SagePaths): Promise<void> {
   // One observation read per new turn-end edge (never a timer): the fold is what says a turn
   // ended, and the matter's default environment names the workspace the clues belong to.
   const lastTurnEndSeen = new Map<string, string>()
-  const observeArtifactsAfterTurn = (matterRef: string, turnEnd: string | null): void => {
-    if (matterRef === '' || turnEnd === null || turnEnd === '') return
-    if (lastTurnEndSeen.get(matterRef) === turnEnd) return
-    lastTurnEndSeen.set(matterRef, turnEnd)
+  // ADR-0293: the post-turn observer now keys on the EDGE (`cursor:kind`) so two consecutive
+  // same-kind turns are both seen. A terminal edge also closes the session-family attempt
+  // (light `attempt-succeeded` or the existing `attempt-failed`), before the artifact observation.
+  const observePostTurn = (matterRef: string, edge: string | null, kind: string | null): void => {
+    if (matterRef === '' || edge === null || edge === '') return
+    if (lastTurnEndSeen.get(matterRef) === edge) return
+    lastTurnEndSeen.set(matterRef, edge)
+    if (kind !== null && kind !== '') {
+      void sessionTurnClose({ matterRef, endKind: kind }).catch(() => undefined)
+    }
     const defaultLink = matterLinks.snapshot().links.find((link) => link.matterRef === matterRef && link.isDefault)
     if (defaultLink === undefined) return
     void artifacts.observe({ matterRef, workspaceRoot: defaultLink.workspacePath }).catch(() => undefined)
@@ -634,8 +647,9 @@ async function main(paths: SagePaths): Promise<void> {
     sessionChannel: async () => {
       const matterRef = scopedMatterRef()
       const status = await sessionChannel.read({ matterRef })
-      // Ticket 015: a fresh turn-end edge triggers one bounded artifact observation (cards only).
-      if (status.state === 'read') observeArtifactsAfterTurn(matterRef, status.lastTurnEnd)
+      // Ticket 015 + ADR-0293: a fresh turn-end edge closes the attempt and triggers one bounded
+      // artifact observation (cards only).
+      if (status.state === 'read') observePostTurn(matterRef, status.lastTurnEndEdge, status.lastTurnEnd)
       return status
     },
     // Ticket 014: the next send carries this matter's stored-but-unsent attachments; only a

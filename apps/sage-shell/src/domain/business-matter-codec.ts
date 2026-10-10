@@ -3,6 +3,7 @@ import {
   createBusinessMatter,
   enterEvidence,
   failAttempt,
+  succeedAttempt,
   projectBusinessMatter,
   reconfirmRevision,
   recordArtifact,
@@ -14,8 +15,7 @@ import {
   stopMatter,
   type BusinessMatter,
   type BusinessMatterErrorCode,
-  type BusinessMatterEvent,
-} from './business-matter.js'
+  type BusinessMatterEvent,} from './business-matter.js'
 
 export type BusinessMatterCodecErrorCode =
   | 'duplicate-event-id'
@@ -78,6 +78,7 @@ const EVENT_TYPES = new Set<BusinessMatterEvent['type']>([
   'decision-revoked',
   'attempt-started',
   'attempt-failed',
+  'attempt-succeeded',
   'revision-reconfirmed',
   'artifact-recorded',
   'receipt-recorded',
@@ -572,6 +573,9 @@ function assertEventRuntimeShape(
     case 'attempt-failed':
       required.push('attemptId', 'source', 'reason', 'impact')
       break
+    case 'attempt-succeeded':
+      required.push('attemptId')
+      break
     case 'revision-reconfirmed':
       required.push('revisionId', 'compatibility', 'reason')
       break
@@ -614,6 +618,9 @@ function assertEventRuntimeShape(
       break
     case 'attempt-started':
       assertAttempt(value.attempt, 'payload.attempt', context)
+      break
+    case 'attempt-succeeded':
+      payloadString(value.attemptId, 'payload.attemptId', context)
       break
     case 'attempt-failed':
       payloadString(value.attemptId, 'payload.attemptId', context)
@@ -1013,6 +1020,12 @@ function replayEvent(
         source: event.source,
         reason: event.reason,
         impact: event.impact,
+      })
+    case 'attempt-succeeded':
+      return succeedAttempt(matter, {
+        eventId: event.eventId,
+        occurredAt: event.occurredAt,
+        attemptId: event.attemptId,
       })
     case 'revision-reconfirmed':
       return reconfirmRevision(matter, {

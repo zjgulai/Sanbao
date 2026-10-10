@@ -796,6 +796,10 @@ export interface SessionChannelStatus {
   /** `executing` requires an open `turn/start` in the log — the ack alone never sets it. */
   readonly execution: 'idle' | 'executing'
   readonly lastTurnEnd: string | null
+  /** ADR-0293: the edge key for observers — `${cursor}:${kind}` of the last turn end. The fold
+   *  cursor makes two consecutive same-kind turns distinguishable; `lastTurnEnd` stays the bare
+   *  kind string for UI branching. */
+  readonly lastTurnEndEdge: string | null
   readonly transcript: readonly SessionChannelEntry[]
   /** true when the final text was (re)read from history — the post-break reconciliation. */
   readonly reconciled: boolean
