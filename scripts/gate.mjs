@@ -691,6 +691,7 @@ const CHECKS = [
         callerBindingText: readRepoText('apps/sage-shell/src/main/appservice-binding.ts'),
         mainAppServiceText: readRepoText('apps/sage-shell/src/main/app-service.ts'),
         mainIndexText: readRepoText('apps/sage-shell/src/main/index.ts'),
+        matterCustodyText: readRepoText('apps/sage-shell/src/main/matter-custody.ts'),
       })
     },
   },

@@ -17,6 +17,7 @@ import { handleSageServiceRequest, isSageServicePath } from '../appservice/route
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { createMatterRehydratePort } from './matter-rehydrate-port.js'
+import { createMatterCustody } from './matter-custody.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
 import { createWorkspaceMutations } from './workspace-mutations.js'
@@ -131,7 +132,9 @@ async function main(paths: SagePaths): Promise<void> {
   // lazily on first command, so a broken store degrades to the fail-closed denial instead of
   // blocking startup; steps 4-10 keep their fail-closed ports.
   const matterRehydrate = createMatterRehydratePort({ sagePaths: paths })
-  app.on('will-quit', () => { matterRehydrate.close() })
+  // T04: the creation half of the same store — the custodian for home-page matter creation.
+  const matterCustody = createMatterCustody({ sagePaths: paths })
+  app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close() })
 
   // WT-02C.2E.2: one main-owned composition read of the full runtime inventory. It never
   // blocks startup and emits exactly one stable, non-sensitive stdout line; the registry
@@ -249,9 +252,9 @@ async function main(paths: SagePaths): Promise<void> {
       const record = drafts.cancelAttempt(request.draftId)
       return record === undefined ? undefined : toDraftStatus({ state: 'ready', drafts: [record] })
     },
-    // Ticket 003: reconcile asks the custodian about the *same* request. There is no custodian
-    // query port in this slice, so the honest answer is "still unknown" — never a settled guess.
-    reconcileDraftCreation: () => ({ state: 'unknown' as const, code: 'custodian-query-unavailable' }),
+    // T04: reconcile asks the real custodian (the Sage-owned authoritative store) about the same
+    // request. An unobserved creation stays unknown — never a settled guess.
+    reconcileDraftCreation: (request: { readonly draftId: string, readonly correlation: string }) => matterCustody.reconcileCreation(request),
     draftCommitConversion: (request: { readonly draftId: string, readonly matterRef: string }) => { drafts.commitConversion(request.draftId, request.matterRef) },
   }
 
@@ -994,6 +997,9 @@ async function main(paths: SagePaths): Promise<void> {
         // Ticket 002: drafts live on this device; the conversion half runs the same pipeline as
         // every command (composition does the running; this half only validates and receipts).
         ...draftWiring,
+        // T04: the creation branch's real custodian — appends the first stream to the Sage-owned
+        // authoritative store. Absent wiring keeps the pipeline's honest not-ready denial.
+        createMatter: (request) => matterCustody.createMatter(request),
         // Ticket 026: the four rear read-only families. Every fact here is one main already holds
         // (or an explicit absence); nothing is inferred and no conclusion is composed.
         readout: (context) => {

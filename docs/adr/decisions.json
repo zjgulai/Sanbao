@@ -8797,6 +8797,58 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0274",
+      "title": "ADR-0274 · 首页耐用事项创建：Sage 自有权威存储成为真实托管方（T04）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "托管方 = Sage 自有权威事件存储：main-owned matter-custody.ts 以 not-exists append 落地创建（matter-created + 首个 revision-entered，单事务批次）；ADR-0201 的落点条款被取代，其余语义保留。",
+          "constraints": [
+            "main is the only writer",
+            "single transactional batch",
+            "ADR-0201 branch and codes retained"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "正式身份与幂等来自服务签发 correlation：matterId=matter:<correlation>、revisionId=revision:1、appendId=draft-conversion:<correlation>；重复调用经指纹幂等或流内证明结算，绝不重复建流。",
+          "constraints": [
+            "renderer candidate never becomes the formal id",
+            "conflicts require in-stream proof",
+            "no duplicate stream"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "回执只从提交证明产生：appended/replayed 或流内证明的冲突 → receiptRef；commit-unknown → {unknown:true}；storage-busy/invalid-request/断言拒绝 → denied；打不开/关闭/blocked → undefined。",
+          "constraints": [
+            "unknown is never retryable",
+            "no receipt without proof",
+            "unavailable shares the step-3 doctrine"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "reconcile 只读流内事实：已证明 → settled；not-found → unknown（查不到仍未知）；存储不可用 → unknown/custodian-query-unavailable；占位查询从 composition root 退场且不得回潮。",
+          "constraints": [
+            "never auto-settle",
+            "no placeholder in index"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "route-authority 门禁登记 custody 源码事实（index 构造与两条接线、显式 options-gated 合并、not-exists/appendId/派生/commit-unknown→unknown/查询保持 unknown、占位码不得在 index）附具名突变；matrix 两行 runtimeLevel 同步改述。",
+          "constraints": [
+            "no exemptions added",
+            "counts unchanged",
+            "named mutations per fact"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -179,6 +179,9 @@ export interface SageAppServiceOptions {
     | { readonly state: 'settled', readonly matterRef: string }
     | { readonly state: 'unknown', readonly code: string }
     | { readonly state: 'failed', readonly code: string }
+  /** T04: the creation branch's custodian (the Sage-owned authoritative store). Absent keeps the
+   *  pipeline's honest "custodian not wired" denial. */
+  readonly createMatter?: NonNullable<CommandPipelinePorts['createMatter']>
   /** Ticket 011: the Sage-owned link state and its three named operations; the gate runs per dispatch. */
   readonly matterLinks?: () => MatterLinkState
   readonly matterLinkApply?: (request: { readonly action: 'link' | 'unlink' | 'set-default', readonly matterRef: string, readonly workspaceRef?: string }) => MatterLinkState | Promise<MatterLinkState> | undefined
@@ -277,6 +280,9 @@ function createAuthorizationCommandPorts(options: SageAppServiceOptions & { read
     // Step 3 becomes a real read when a store port is wired; without it the fail-closed default
     // still answers, so the merge cannot silently open a later step.
     ...(options.matterRehydrate === undefined ? {} : { strictRehydrate: options.matterRehydrate }),
+    // T04: the creation branch gets its custodian; with it absent the fail-closed default still
+    // answers, so the merge cannot silently open the branch.
+    ...(options.createMatter === undefined ? {} : { createMatter: options.createMatter }),
     resolveIdentityPolicy: ({ intent }) => {
       if ('type' in intent) return undefined // defensive: retry rides the availability branch, never this port
       const session = vault.identitySession()

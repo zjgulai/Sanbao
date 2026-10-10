@@ -407,6 +407,52 @@ function editDraftCreateSourceViolations(routeSkeletonText, mainAppServiceText) 
   return violations
 }
 
+function matterCustodyViolations(input) {
+  const violations = []
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  const appServiceText = typeof input?.mainAppServiceText === 'string' ? input.mainAppServiceText : ''
+  const custodyText = typeof input?.matterCustodyText === 'string' ? input.matterCustodyText : ''
+  if (indexText === '' || appServiceText === '' || custodyText === '') {
+    violations.push('custody wiring source facts are unavailable')
+    return violations
+  }
+  // The home-page creation branch gains its real custodian (T04); the honest placeholder query
+  // must not come back into the composition root.
+  if (!indexText.includes('const matterCustody = createMatterCustody({ sagePaths: paths })')) {
+    violations.push('index must construct the custody provider from the Sage paths')
+  }
+  if (!indexText.includes('createMatter: (request) => matterCustody.createMatter(request)')) {
+    violations.push('index must wire createMatter to the custody provider')
+  }
+  if (!indexText.includes('reconcileDraftCreation: (request: { readonly draftId: string, readonly correlation: string }) => matterCustody.reconcileCreation(request)')) {
+    violations.push('index must wire reconcileDraftCreation to the custody query')
+  }
+  if (indexText.includes('custodian-query-unavailable')) {
+    violations.push('the placeholder custodian query must not return to index')
+  }
+  if (!appServiceText.includes('...(options.createMatter === undefined ? {} : { createMatter: options.createMatter }),')) {
+    violations.push('app-service must merge createMatter only when explicitly provided')
+  }
+  // The custodian appends the first stream only, idempotent per attempt, and a receipt exists
+  // only when the store proved the commit.
+  if (!custodyText.includes("expectedVersion: { kind: 'not-exists' }")) {
+    violations.push('custody must create only non-existent streams')
+  }
+  if (!custodyText.includes('appendId: `draft-conversion:${request.correlation}`')) {
+    violations.push('custody must key its append idempotency on the attempt correlation')
+  }
+  if (!custodyText.includes('const matterId = `matter:${request.correlation}`')) {
+    violations.push('custody must derive the formal identity from the service-issued correlation')
+  }
+  if (!custodyText.includes("case 'commit-unknown':") || !custodyText.includes('return { unknown: true }')) {
+    violations.push('commit-unknown must answer outcome-unknown, never a receipt')
+  }
+  if (!custodyText.includes("state: 'unknown', code: 'custodian-query-unavailable'")) {
+    violations.push('an unobservable custodian query must stay unknown')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -565,7 +611,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -584,6 +630,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.mainIndexText !== 'string') {
     return failAll(discovered, ['main index unavailable; projection-read owner cannot be checked'])
+  }
+  if (typeof input?.matterCustodyText !== 'string') {
+    return failAll(discovered, ['matter custody module unavailable; the creation-branch custodian cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -927,6 +976,9 @@ export function checkSageRouteAuthority(input) {
     failGlobal(`expected 13 protected-effect admitted routes, registered ${admittedProtectedRoutes.length}`)
   }
 
+  const custodyViolations = matterCustodyViolations(input)
+  for (const violation of custodyViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -937,7 +989,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

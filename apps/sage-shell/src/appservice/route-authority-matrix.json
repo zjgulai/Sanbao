@@ -273,7 +273,7 @@
       "activeContext": "caller draftId rebuilt as an exact command intent",
       "providers": ["convertDraft"],
       "persistence": "durable draft attempt and command receipt",
-      "runtimeLevel": "L1 command kernel plus L4 draft attempt; custodian remains unavailable-first",
+      "runtimeLevel": "L1 command kernel plus L4 draft attempt; custodian wired over the Sage-owned authoritative store",
       "runCommand": { "required": true, "actual": true },
       "unsupportedOperations": [],
       "currentAuthority": { "status": "compliant", "mode": "runCommand" }
@@ -289,7 +289,7 @@
       "activeContext": "caller draftId and stored attempt correlation",
       "providers": ["reconcileDraft"],
       "persistence": "durable draft attempt store",
-      "runtimeLevel": "L4 local record plus external reconciliation seam",
+      "runtimeLevel": "L4 local record plus the custodian reconciliation query",
       "runCommand": { "required": true, "actual": false },
       "unsupportedOperations": [],
       "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }

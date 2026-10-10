@@ -14,6 +14,7 @@ const baseline = Object.freeze({
   callerBindingText: read('apps/sage-shell/src/main/appservice-binding.ts'),
   mainAppServiceText: read('apps/sage-shell/src/main/app-service.ts'),
   mainIndexText: read('apps/sage-shell/src/main/index.ts'),
+  matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -76,6 +77,7 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
   assert.match(result.note, /16 direct-provider bypasses/)
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
+  assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -529,6 +531,50 @@ test('edit-drafts/create source-read admission cannot drift from its scope-bound
   )
   assert.notEqual(parserDrift, baseline.routeSkeletonText)
   expectNamedFailure(check({ routeSkeletonText: parserDrift }), 'edit-drafts/create parser must accept exactly one key')
+})
+
+test('the home-page custodian cannot drift from its scope-bound wiring facts', () => {
+  const unwiredCreate = baseline.mainIndexText.replace(
+    'createMatter: (request) => matterCustody.createMatter(request),',
+    '',
+  )
+  assert.notEqual(unwiredCreate, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwiredCreate }), 'index must wire createMatter to the custody provider')
+
+  const stubQuery = baseline.mainIndexText.replace(
+    'reconcileDraftCreation: (request: { readonly draftId: string, readonly correlation: string }) => matterCustody.reconcileCreation(request),',
+    "reconcileDraftCreation: () => ({ state: 'unknown' as const, code: 'custodian-query-unavailable' }),",
+  )
+  assert.notEqual(stubQuery, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: stubQuery }), 'the placeholder custodian query must not return to index')
+
+  const silentMerge = baseline.mainAppServiceText.replace(
+    '...(options.createMatter === undefined ? {} : { createMatter: options.createMatter }),',
+    'createMatter: options.createMatter,',
+  )
+  assert.notEqual(silentMerge, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: silentMerge }), 'app-service must merge createMatter only when explicitly provided')
+
+  const appendDrift = baseline.matterCustodyText.replace(
+    "expectedVersion: { kind: 'not-exists' }",
+    "expectedVersion: { kind: 'exact', value: 0 }",
+  )
+  assert.notEqual(appendDrift, baseline.matterCustodyText)
+  expectNamedFailure(check({ matterCustodyText: appendDrift }), 'custody must create only non-existent streams')
+
+  const unknownDrift = baseline.matterCustodyText.replace(
+    'return { unknown: true }',
+    'return { receiptRef: matterId }',
+  )
+  assert.notEqual(unknownDrift, baseline.matterCustodyText)
+  expectNamedFailure(check({ matterCustodyText: unknownDrift }), 'commit-unknown must answer outcome-unknown, never a receipt')
+
+  const queryDrift = baseline.matterCustodyText.replaceAll(
+    "state: 'unknown', code: 'custodian-query-unavailable'",
+    "state: 'settled', matterRef: matterId",
+  )
+  assert.notEqual(queryDrift, baseline.matterCustodyText)
+  expectNamedFailure(check({ matterCustodyText: queryDrift }), 'an unobservable custodian query must stay unknown')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {
