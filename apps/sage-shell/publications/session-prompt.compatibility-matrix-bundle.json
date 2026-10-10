@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "sage.compatibility-matrix-bundle.v2",
+  "canonicalizationVersion": "sage.compatibility-matrix-bundle-canonical-json.v2",
+  "providerProvenanceDigest": "sha256:44ba760418253a868aaaa475f3ea2082fc9adb63551bfcc8e91b3a276c0fc3af",
+  "artifacts": [
+    {
+      "matrixId": "urn:sage:compatibility-matrix:sha256:ddeea6b8accff5f9d315a8dedcd1befe87561e20006e117b17c10cfe9cd52a78",
+      "canonicalMatrix": "{\"schemaVersion\":\"sage.compatibility-matrix.v2\",\"canonicalizationVersion\":\"sage.compatibility-canonical-json.v2\",\"semanticVersion\":\"2.0.0\",\"targetContractVersion\":\"sage.compatibility-target-semantic.v2\",\"runtimeContractVersion\":\"sage.runtime-descriptor.v2\",\"issuer\":{\"identity\":\"authority:sage-compatibility\",\"version\":\"2.0.0\",\"digest\":\"sha256:dc57b819202881ec2ffac399a3f7652aa8dbf76a06bc5dbdfc3390a829bacfe6\"},\"validFrom\":\"2026-10-11T00:00:00Z\",\"expiresAt\":\"2027-10-11T00:00:00Z\",\"rules\":[{\"ruleId\":\"rule:sage-session-prompt-v1\",\"targetSemanticDigest\":\"urn:sage:target-semantic:sha256:3da420a7c9d9cd15895a744a13fa4695c9d4082a15325518e6873ee1eb36540f\",\"runtimeDescriptorDigest\":\"urn:sage:runtime-descriptor:sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b\",\"outcome\":\"equivalent\",\"reasonCode\":\"owner-approved-exact-pair\",\"reason\":\"用户裁决的首发精确稳定对。\"}]}"
+    }
+  ],
+  "bundleId": "urn:sage:compatibility-matrix-bundle:sha256:1f054011902eeca3a68e969e11f97d2f230a0bb99a05f6260439bc1ceb243554"
+}

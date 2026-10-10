@@ -9300,6 +9300,59 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0284",
+      "title": "ADR-0284 · T05-mid step 6：矩阵制品发布与真实 compatibility 步装配（评估时点=最后可信观测）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "矩阵 bundle + 空撤销源以内核封存落 publications/；规则=owner 稳定对；窗口与 requirement 对齐；provenance=决策+稳定对域分隔（第一方）。",
+          "constraints": [
+            "same tree and loader layout as the requirement bundle",
+            "no external provenance claimed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "semantic 由 requirement+观测 descriptor 重建（与候选线同家）；capabilities 非空 fail closed。",
+          "constraints": [
+            "rebuild must pin the published targetSemanticDigest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "targetEvidence 全字段确定性推导（域分隔规则见正文）；equivalent→allowed、requires-new-revision→denied、其余→unavailable。",
+          "constraints": [
+            "only a published requires-new-revision rule may deny",
+            "evidence carries its own sealed digest"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "评估时点=证据 observedAt（最后可信观测）；墙钟新鲜度由 Host 生命周期失效接线恢复（后续票）。显式设计裁决，待用户复核。",
+          "constraints": [
+            "never evaluate at wall-clock now while re-observation is off the path",
+            "host lifecycle invalidation is a registered follow-up"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "revisionDigest 经 store 已校验链暴露（revision-digest-reader，sha256:<hex>|undefined），不造第二套摘要。",
+          "constraints": [
+            "single source: the store validated chain"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "route-authority 兼容事实组 + 四条具名突变；note 句更新为停在 registry/preflight/persistence。",
+          "constraints": [
+            "named mutations for each fact"
+          ]
+        }
+      ]
     }
   ]
 }

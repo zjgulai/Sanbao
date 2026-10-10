@@ -16,9 +16,11 @@ import type { SageActionIntentV2, SageDispatchIntent } from '../appservice/comma
 import { handleSageServiceRequest, isSageServicePath } from '../appservice/route-skeleton.js'
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { isRuntimeEffectiveObservation } from '../protocol.js'
-import { createMatterRehydratePort } from './matter-rehydrate-port.js'
+import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
+import { createRevisionDigestReader } from './revision-digest-reader.js'
+import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
 import { createMatterCustody } from './matter-custody.js'
-import { loadSessionPromptRequirementBundle } from './publication-bundle.js'
+import { loadSessionPromptCompatibilityPublication, loadSessionPromptRequirementBundle } from './publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
@@ -136,7 +138,7 @@ async function main(paths: SagePaths): Promise<void> {
   const matterRehydrate = createMatterRehydratePort({ sagePaths: paths })
   // T04: the creation half of the same store — the custodian for home-page matter creation.
   const matterCustody = createMatterCustody({ sagePaths: paths })
-  app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close() })
+  app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); revisionDigestStore?.close() })
 
   // C2D.2A (ADR-0277): the bundled registry provider supplies the first published snapshot —
   // the internal-stage empty set — so the inventory provider can now release the descriptor
@@ -181,6 +183,37 @@ async function main(paths: SagePaths): Promise<void> {
   const requirementBundle = loadSessionPromptRequirementBundle()
   if (!requirementBundle.ok) {
     process.stdout.write(`sage shell: requirement bundle unavailable: ${requirementBundle.reason}\n`)
+  }
+
+  // T05-mid step 6 (ADR-0284): the shipped matrix/revocation publication plus the main-owned
+  // revision-digest surface. The reader's store opens lazily on first compatibility evaluation;
+  // an unopenable store is a missing provider (undefined), never a fabricated digest.
+  const compatibilityPublication = loadSessionPromptCompatibilityPublication()
+  if (!compatibilityPublication.ok) {
+    process.stdout.write(`sage shell: compatibility publication unavailable: ${compatibilityPublication.reason}\n`)
+  }
+  let revisionDigestReader: ReturnType<typeof createRevisionDigestReader> | undefined
+  let revisionDigestStore: ReturnType<typeof openBusinessMatterEventStore> | undefined
+  let revisionDigestOpenFailed = false
+  const revisionDigestFor = (matterId: string, revisionId: string): string | undefined => {
+    if (revisionDigestReader === undefined) {
+      if (revisionDigestOpenFailed) return undefined
+      try {
+        revisionDigestStore = openBusinessMatterEventStore({
+          sagePaths: paths,
+          maxStreamEvents: MATTER_STORE_MAX_STREAM_EVENTS,
+          maxPayloadBytes: MATTER_STORE_MAX_PAYLOAD_BYTES,
+          busyTimeoutMs: MATTER_STORE_BUSY_TIMEOUT_MS,
+          clock: () => new Date().toISOString(),
+        })
+        revisionDigestReader = createRevisionDigestReader({ store: revisionDigestStore })
+      } catch {
+        revisionDigestOpenFailed = true
+        return undefined
+      }
+    }
+    if (revisionDigestReader === undefined) return undefined
+    return revisionDigestReader.revisionDigest(matterId, revisionId)
   }
 
   // CTX-01A: the active matter has one generation-bound owner in Electron main. This batch does
@@ -937,6 +970,13 @@ async function main(paths: SagePaths): Promise<void> {
         // T05-mid (ADR-0282): the session family's target step evaluates the startup-loaded,
         // kernel-sealed requirement bundle; the object reference is stable across requests.
         requirementBundle,
+        // T05-mid step 6 (ADR-0284): the shipped matrix publication and the main-owned observation
+        // and revision-digest surfaces for the real compatibility step.
+        compatibilityPublication,
+        runtimeInventoryObservation: () => (runtimeInventoryResult?.kind === 'available'
+          ? { descriptor: runtimeInventoryResult.descriptor, evidence: runtimeInventoryResult.evidence }
+          : undefined),
+        revisionDigest: revisionDigestFor,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
         // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.

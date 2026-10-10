@@ -174,3 +174,50 @@ export function sealCandidateTargetRequirement(
     },
   })
 }
+
+export type TargetSemanticRebuild =
+  | { readonly ok: true; readonly semantic: CompatibilityTargetSemanticV2 }
+  | { readonly ok: false; readonly reason: string }
+
+/** The requirement-half inverse of {@link buildTargetRequirementCandidate}: rebuild the target
+ *  semantic face from a published requirement entry plus the OBSERVED descriptor's product-line
+ *  policy digests. Publishing and resolving must agree byte for byte — the rebuilt digest is only
+ *  admitted when it recomputes the exact value the matrix rule pairs (ADR-0284).
+ *
+ *  Fail-closed gap: a requirement whose capabilities are non-empty cannot be rebuilt, because the
+ *  semantic capability face additionally carries registry/adapter digests that the C2.2T
+ *  requirement entry does not publish (empty in the current first publication). */
+export function computeTargetSemanticFromRequirement(
+  requirement: CompatibilityTargetRequirementV1,
+  descriptor: RuntimeDescriptorV2,
+): TargetSemanticRebuild {
+  if (requirement.capabilities.length > 0) {
+    return {
+      ok: false,
+      reason: 'published requirement declares capabilities; the semantic face needs registry/adapter digests this carrier does not publish',
+    }
+  }
+  const semanticBody: CompatibilityTargetSemanticBodyV2 = {
+    schemaVersion: 'sage.compatibility-target-semantic.v2',
+    canonicalizationVersion: 'sage.compatibility-canonical-json.v2',
+    actionPolicies: requirement.actionRequirements.map((action) => ({
+      actionScope: action.actionScope,
+      effectClass: action.effectClass,
+      requiresDecision: action.requiresDecision,
+    })),
+    permissionPolicyDigest: policyListDigest('urn:sage:target-requirement.permission-policy.v1:', requirement.permissionRequirements),
+    dataDestinationPolicyDigest: policyListDigest('urn:sage:target-requirement.data-destination-policy.v1:', requirement.dataBoundaryRequirements),
+    provider: { ...requirement.provider },
+    model: { ...requirement.model },
+    agent: { ...requirement.agent },
+    preset: { ...requirement.preset },
+    capabilities: [],
+    protocolContractDigest: descriptor.protocolContractDigest,
+    launchPolicyDigest: descriptor.launchPolicyDigest,
+    overlayPolicyDigest: descriptor.overlayPolicyDigest,
+  }
+  return {
+    ok: true,
+    semantic: { ...semanticBody, targetSemanticDigest: computeTargetSemanticDigestV2(semanticBody) },
+  }
+}

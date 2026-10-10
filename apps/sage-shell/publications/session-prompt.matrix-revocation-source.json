@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "sage.compatibility-matrix-revocation-source.v2",
+  "canonicalizationVersion": "sage.compatibility-matrix-revocation-canonical-json.v2",
+  "createdAt": "2026-10-10T09:00:00Z",
+  "sourceProvenanceDigest": "sha256:66b834d33d448477a29e625e93e567f3c0ff4619a10340fffaba05b9892898d4",
+  "entries": [],
+  "sourceId": "urn:sage:compatibility-matrix-revocation-source:sha256:9837c233d165e19c205a31c80962917102b16768475ecef3e03bd5806ae2d5a1"
+}

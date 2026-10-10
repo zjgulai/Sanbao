@@ -21,6 +21,7 @@ const baseline = Object.freeze({
   sessionPromptPublicationText: read('apps/sage-shell/src/main/session-prompt-publication.ts'),
   sessionPromptTargetText: read('apps/sage-shell/src/main/session-prompt-target.ts'),
   publicationBundleText: read('apps/sage-shell/src/main/publication-bundle.ts'),
+  sessionPromptCompatibilityText: read('apps/sage-shell/src/main/session-prompt-compatibility.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -732,11 +733,41 @@ test('the real target step cannot drift from its gated wiring or unavailable-fir
   expectNamedFailure(check({ sessionPromptTargetText: refDrift }), 'the target ref must bind the snapshot id and requirement digest')
 
   const unparsed = baseline.publicationBundleText.replace(
-    'parseCompatibilityTargetRequirementSnapshot(value)',
-    'value',
+    'parseCompatibilityTargetRequirementSnapshot(',
+    'JSON.parse(',
   )
   assert.notEqual(unparsed, baseline.publicationBundleText)
   expectNamedFailure(check({ publicationBundleText: unparsed }), 'the bundle loader must validate through the C2.2T kernel parse')
+})
+
+test('the real compatibility step cannot drift from its gated wiring or evaluation instant', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    'options.compatibilityPublication === undefined',
+    'false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the compatibility step must be wired only behind all main-owned inputs')
+
+  const nowDrift = baseline.sessionPromptCompatibilityText.replace(
+    'const evaluatedAt = observation.evidence.observedAt',
+    'const evaluatedAt = options.now()',
+  )
+  assert.notEqual(nowDrift, baseline.sessionPromptCompatibilityText)
+  expectNamedFailure(check({ sessionPromptCompatibilityText: nowDrift }), 'compatibility must evaluate at the last trusted observation instant (ADR-0284)')
+
+  const denialDrift = baseline.sessionPromptCompatibilityText.replace(
+    "if (resolved.outcome === 'requires-new-revision') return { state: 'denied' }",
+    "if (resolved.outcome === 'requires-new-revision') return { state: 'unavailable' }",
+  )
+  assert.notEqual(denialDrift, baseline.sessionPromptCompatibilityText)
+  expectNamedFailure(check({ sessionPromptCompatibilityText: denialDrift }), 'only a published requires-new-revision rule may deny; everything else answers unavailable')
+
+  const unadapted = baseline.sessionPromptCompatibilityText.replace(
+    'toCompatibilityMatrixV2ProviderResult(matrix)',
+    'matrix',
+  )
+  assert.notEqual(unadapted, baseline.sessionPromptCompatibilityText)
+  expectNamedFailure(check({ sessionPromptCompatibilityText: unadapted }), 'the compatibility port must compose the exact V2 resolve input through the kernel adapters')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

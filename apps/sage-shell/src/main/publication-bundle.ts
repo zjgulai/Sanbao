@@ -16,9 +16,18 @@ import {
   parseCompatibilityTargetRequirementSnapshot,
   type CompatibilityTargetRequirementSnapshotV1,
 } from '../security/compatibility-target-requirement.js'
+import {
+  createBundledCompatibilityMatrixProviderV2,
+  parseCompatibilityMatrixBundleV2,
+  parseCompatibilityMatrixRevocationSourceV2,
+  type CompatibilityMatrixProviderV2,
+} from '../security/compatibility-matrix-provider.js'
 
 /** The first shipped publication (ADR-0278 bytes, sealed through the C2.2T kernel). */
 export const SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH = 'publications/session-prompt.requirement-snapshot.json'
+/** The first shipped matrix pair publication (ADR-0284 bytes, sealed through the C2 matrix kernel). */
+export const SESSION_PROMPT_MATRIX_BUNDLE_REL_PATH = 'publications/session-prompt.compatibility-matrix-bundle.json'
+export const SESSION_PROMPT_MATRIX_REVOCATION_REL_PATH = 'publications/session-prompt.matrix-revocation-source.json'
 
 export type RequirementBundleLoad =
   | {
@@ -28,28 +37,69 @@ export type RequirementBundleLoad =
     }
   | { readonly ok: false; readonly reason: string }
 
+export type CompatibilityMatrixPublicationLoad =
+  | {
+      readonly ok: true
+      readonly provider: CompatibilityMatrixProviderV2
+      readonly bundleId: string
+      readonly matrixId: string
+      readonly revocationSourceId: string
+    }
+  | { readonly ok: false; readonly reason: string }
+
+function readJsonFile(baseDir: string, relPath: string): { ok: true; value: unknown } | { ok: false; reason: string } {
+  let text: string
+  try {
+    text = readFileSync(join(baseDir, relPath), 'utf8')
+  } catch (error) {
+    return { ok: false, reason: `${relPath} is unreadable: ${error instanceof Error ? error.message : String(error)}` }
+  }
+  try {
+    return { ok: true, value: JSON.parse(text) as unknown }
+  } catch {
+    return { ok: false, reason: `${relPath} is not valid JSON` }
+  }
+}
+
 export function loadSessionPromptRequirementBundle(
   options: { readonly baseDir?: string } = {},
 ): RequirementBundleLoad {
   const baseDir = options.baseDir ?? fileURLToPath(new URL('../../', import.meta.url))
-  let text: string
-  try {
-    text = readFileSync(join(baseDir, SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH), 'utf8')
-  } catch (error) {
-    return {
-      ok: false,
-      reason: `requirement bundle is unreadable: ${error instanceof Error ? error.message : String(error)}`,
-    }
-  }
-  let value: unknown
-  try {
-    value = JSON.parse(text)
-  } catch {
-    return { ok: false, reason: 'requirement bundle is not valid JSON' }
-  }
-  const parsed = parseCompatibilityTargetRequirementSnapshot(value)
+  const file = readJsonFile(baseDir, SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH)
+  if (!file.ok) return { ok: false, reason: `requirement bundle: ${file.reason}` }
+  const parsed = parseCompatibilityTargetRequirementSnapshot(file.value)
   if (!parsed.ok) {
     return { ok: false, reason: `requirement bundle rejected by the kernel: ${parsed.code}: ${parsed.reason}` }
   }
   return { ok: true, snapshotId: parsed.value.snapshotId, snapshot: parsed.value }
+}
+
+export function loadSessionPromptCompatibilityPublication(
+  options: { readonly baseDir?: string } = {},
+): CompatibilityMatrixPublicationLoad {
+  const baseDir = options.baseDir ?? fileURLToPath(new URL('../../', import.meta.url))
+  const bundleFile = readJsonFile(baseDir, SESSION_PROMPT_MATRIX_BUNDLE_REL_PATH)
+  if (!bundleFile.ok) return { ok: false, reason: `matrix bundle: ${bundleFile.reason}` }
+  const revocationFile = readJsonFile(baseDir, SESSION_PROMPT_MATRIX_REVOCATION_REL_PATH)
+  if (!revocationFile.ok) return { ok: false, reason: `matrix revocation source: ${revocationFile.reason}` }
+  const parsedBundle = parseCompatibilityMatrixBundleV2(bundleFile.value)
+  if (!parsedBundle.ok) {
+    return { ok: false, reason: `matrix bundle rejected by the kernel: ${parsedBundle.code}: ${parsedBundle.reason}` }
+  }
+  const parsedRevocation = parseCompatibilityMatrixRevocationSourceV2(revocationFile.value)
+  if (!parsedRevocation.ok) {
+    return {
+      ok: false,
+      reason: `matrix revocation source rejected by the kernel: ${parsedRevocation.code}: ${parsedRevocation.reason}`,
+    }
+  }
+  const matrixId = parsedBundle.value.artifacts[0]?.matrixId
+  if (matrixId === undefined) return { ok: false, reason: 'matrix bundle ships no artifacts' }
+  return {
+    ok: true,
+    provider: createBundledCompatibilityMatrixProviderV2(parsedBundle.value, parsedRevocation.value),
+    bundleId: parsedBundle.value.bundleId,
+    matrixId,
+    revocationSourceId: parsedRevocation.value.sourceId,
+  }
 }

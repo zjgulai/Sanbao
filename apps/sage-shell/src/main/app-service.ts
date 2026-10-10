@@ -25,7 +25,11 @@ import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
-import type { RequirementBundleLoad } from './publication-bundle.js'
+import {
+  createSessionPromptCompatibilityPort,
+  type RuntimeInventoryObservation,
+} from './session-prompt-compatibility.js'
+import type { CompatibilityMatrixPublicationLoad, RequirementBundleLoad } from './publication-bundle.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
 import type { StrictRehydratePort } from './matter-rehydrate-port.js'
 import type { CallerBinding } from '../appservice/contracts.js'
@@ -97,6 +101,12 @@ export interface SageAppServiceOptions {
    *  keeps the target step absent exactly as before; a failed load keeps it present but
    *  unavailable-first. Wired on its own switch so the two steps stay independently observable. */
   readonly requirementBundle?: RequirementBundleLoad
+  /** T05-mid step 6 (ADR-0284): the shipped matrix/revocation publication plus the main-owned
+   *  observation and store-validated revision surfaces. All must exist for the real
+   *  compatibility step; otherwise it stays absent (fail closed, same as before). */
+  readonly compatibilityPublication?: CompatibilityMatrixPublicationLoad
+  readonly runtimeInventoryObservation?: () => RuntimeInventoryObservation | undefined
+  readonly revisionDigest?: (matterId: string, revisionId: string) => string | undefined
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -822,6 +832,24 @@ function createSessionCoreProtectedEffectPorts(
       : {
           resolveTarget: createSessionPromptTargetPort({
             bundle: options.requirementBundle,
+            now: options.authority.now,
+          }),
+        }),
+    // T05-mid step 6: the real compatibility step over the shipped matrix publication (ADR-0284).
+    // Wired only when every main-owned input exists; any missing piece keeps the step absent.
+    ...(options.authority === undefined
+      || options.requirementBundle === undefined
+      || options.compatibilityPublication === undefined
+      || options.runtimeInventoryObservation === undefined
+      || options.revisionDigest === undefined
+      ? {}
+      : {
+          resolveCompatibility: createSessionPromptCompatibilityPort({
+            authority: options.authority,
+            requirementBundle: options.requirementBundle,
+            matrixPublication: options.compatibilityPublication,
+            runtimeObservation: options.runtimeInventoryObservation,
+            revisionDigest: options.revisionDigest,
             now: options.authority.now,
           }),
         }),
