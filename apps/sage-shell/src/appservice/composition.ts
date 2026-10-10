@@ -66,6 +66,10 @@ export interface ServiceOptions {
     | { readonly state: 'not-needed' }
     | { readonly state: 'refused'; readonly code: string }
   >
+  /** ADR-0293 (alternative C): the best-effort attempt reconcile that rides the next send —
+   *  a stuck active attempt from a turn the observer never saw ends, self-healed before this
+   *  send's admission. Never denies the send; failures are swallowed on the reconcile side too. */
+  readonly reconcileSessionAttempt?: (request: { readonly matterRef: string }) => Promise<void>
   /** The verified request binding owns this correlation when assembled by Electron main. */
   readonly protectedEffectCorrelation?: () => string
   /** Ticket 030: main-owned read of the live runtime roster; absent keeps the surface at 未核验. */
@@ -659,6 +663,15 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson({ state: 'prepared', card } satisfies ActionConfirmationPrepareOutcome, 200)
     },
     async sendSessionPrompt(request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' }): Promise<Response> {
+      // ADR-0293 (alternative C): before this send's admission, give a stuck active attempt one
+      // chance to self-heal from the observable fold. Best-effort — a failure never denies the send.
+      if (options.reconcileSessionAttempt !== undefined) {
+        try {
+          await options.reconcileSessionAttempt({ matterRef: request.matterRef })
+        } catch {
+          // The reconcile is a repair step, not a gate: the honest downstream refusals stand.
+        }
+      }
       // ADR-0290: the first send on a fresh matter enters its working revision first. The runner
       // answers not-needed when a revision exists; a refusal stops the send before admission.
       if (options.prepareSessionPrompt !== undefined) {

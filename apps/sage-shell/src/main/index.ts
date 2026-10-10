@@ -19,6 +19,7 @@ import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
 import { createSessionTurnClose } from './session-turn-close.js'
+import { createSessionSendReconcile } from './session-send-reconcile.js'
 import { createSessionPromptPrepareEnsure } from './session-prompt-prepare.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
@@ -149,6 +150,12 @@ async function main(paths: SagePaths): Promise<void> {
   const sessionTurnClose = createSessionTurnClose({
     attempts: sessionPromptAttempts,
     now: () => new Date().toISOString(),
+  })
+  // ADR-0293 (alternative C): the next send heals a stuck attempt the observer never saw.
+  const sessionSendReconcile = createSessionSendReconcile({
+    attempts: sessionPromptAttempts,
+    readChannel: (matterRef: string) => sessionChannel.read({ matterRef }),
+    close: sessionTurnClose,
   })
   app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); sessionPromptAttempts.close(); revisionDigestStore?.close() })
 
@@ -1025,6 +1032,7 @@ async function main(paths: SagePaths): Promise<void> {
         capabilityRegistry: bundledRegistry,
         // T05-mid step 9 (ADR-0288): the persistence step's store handle (same Sage-owned store).
         sessionPromptAttempts,
+        sessionSendReconcile,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
         // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.

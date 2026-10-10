@@ -28,6 +28,7 @@ import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
 import { createSessionPromptPrepareRunner, type SessionPrepareRunner } from './session-prompt-prepare.js'
+import type { SessionSendReconcile } from './session-send-reconcile.js'
 import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
 import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
@@ -119,6 +120,9 @@ export interface SageAppServiceOptions {
   /** T05-mid step 9 (ADR-0288): the persist step's store handle over the matter event store.
    *  Absent keeps the persistence step absent (fail closed). */
   readonly sessionPromptAttempts?: SessionPromptAttemptStorePort
+  /** ADR-0293 (alternative C): the send-path reconcile fallback for a stuck active attempt.
+   *  Absent keeps the send path without the self-heal (the observer runner still owns closure). */
+  readonly sessionSendReconcile?: SessionSendReconcile
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -1007,6 +1011,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     ...(sessionCoreAssembly.prepareSessionPrompt === undefined
       ? {}
       : { prepareSessionPrompt: sessionCoreAssembly.prepareSessionPrompt }),
+    ...(options.sessionSendReconcile === undefined ? {} : { reconcileSessionAttempt: options.sessionSendReconcile }),
     protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),
     ...(options.runtimeEffective === undefined ? {} : { runtimeEffective: options.runtimeEffective }),

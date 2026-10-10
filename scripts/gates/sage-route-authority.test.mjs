@@ -36,6 +36,7 @@ const baseline = Object.freeze({
   activeMatterSelectionText: read('apps/sage-shell/src/main/active-matter-selection.ts'),
   sessionTurnCloseText: read('apps/sage-shell/src/main/session-turn-close.ts'),
   sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
+  sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -1137,6 +1138,33 @@ test('the turn-end closure cannot drift from its edge key, taxonomy, order or id
   )
   assert.notEqual(orderSwap, baseline.mainIndexText)
   expectNamedFailure(check({ mainIndexText: orderSwap }), 'the turn-end closure must run before the artifact observation')
+})
+
+test('the send-path reconcile cannot drift from its order, gates or shared closure', () => {
+  const unwired = baseline.compositionText.replace(
+    'await options.reconcileSessionAttempt({ matterRef: request.matterRef })',
+    'await Promise.resolve()',
+  )
+  assert.notEqual(unwired, baseline.compositionText)
+  expectNamedFailure(check({ compositionText: unwired }), 'the send-path reconcile must run before the prepare runner')
+
+  const interrupt = baseline.sessionSendReconcileText.replace(
+    "if (fold.execution === 'executing') return",
+    '',
+  )
+  assert.notEqual(interrupt, baseline.sessionSendReconcileText)
+  expectNamedFailure(check({ sessionSendReconcileText: interrupt }), 'the reconcile must never interrupt a running turn')
+
+  const reimplemented = baseline.sessionSendReconcileText.replace(
+    'await options.close({ matterRef, endKind: fold.lastTurnEnd })',
+    'void options.close',
+  )
+  assert.notEqual(reimplemented, baseline.sessionSendReconcileText)
+  expectNamedFailure(check({ sessionSendReconcileText: reimplemented }), 'the reconcile must reuse the closure runner, never a second write path')
+
+  const unwireIndex = baseline.mainIndexText.replace('close: sessionTurnClose,', '')
+  assert.notEqual(unwireIndex, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwireIndex }), 'the reconcile must be an injectable option wired from the same closure runner')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

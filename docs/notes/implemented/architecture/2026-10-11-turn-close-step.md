@@ -2,7 +2,7 @@
 
 - 日期：2026-10-11
 - 决策：[ADR-0293](../../../adr/ADR-0293.md)
-- 状态：已实施（域第 12 型事件 + cursor 边沿 + 收口 runner + 观察次序 + 门禁事实）；send 前 reconcile 兜底与 blocked 语义登记未闭。
+- 状态：已实施（域第 12 型事件 + cursor 边沿 + 收口 runner + 观察次序 + 门禁事实；send 前 reconcile 兜底 2026-10-11 增补，见 ADR-0293 备选表）；blocked 语义登记未闭。
 
 ## Problem
 
@@ -22,7 +22,7 @@ dispatch v1 不写收口 → 第二次 send 被 `active-attempt` 诚实拒绝；
 ## Consequences
 
 - 重复发送解锁（真实库 spec 实证）：completed 收口后同 revision 可续发；失败回合入 failed-retry 仪式；blocked 诚实保持打开。
-- 未闭：send 前 reconcile 兜底、blocked 裁决、回合产物与轻路径并存策略、宿主生命周期失效。
+- 未闭：blocked 裁决、回合产物与轻路径并存策略、宿主生命周期失效。
 
 ## Verification
 
