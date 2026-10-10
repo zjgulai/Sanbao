@@ -57,7 +57,15 @@ export interface ServiceOptions {
   readonly commandPorts?: CommandPipelinePorts
   /** AUTH-02A: request-scoped session-effect checks. Dispatch is deliberately absent until the
    * remaining identity/policy, compatibility, Registry, preflight and persistence ports exist. */
-  readonly protectedEffectPorts?: Omit<ProtectedEffectAdmissionPorts, 'dispatch'>
+  // ADR-0289/0290: the withheld-dispatch era of AUTH-02A has ended — the assembled ports now
+  // include the real dispatch step; the route still fails closed because the chain itself does.
+  readonly protectedEffectPorts?: ProtectedEffectAdmissionPorts
+  /** T05 prepare (ADR-0290): the governed local preparation write before the first send. */
+  readonly prepareSessionPrompt?: (request: { readonly matterRef: string, readonly text: string }) => Promise<
+    | { readonly state: 'prepared' }
+    | { readonly state: 'not-needed' }
+    | { readonly state: 'refused'; readonly code: string }
+  >
   /** The verified request binding owns this correlation when assembled by Electron main. */
   readonly protectedEffectCorrelation?: () => string
   /** Ticket 030: main-owned read of the live runtime roster; absent keeps the surface at 未核验. */
@@ -651,6 +659,19 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson({ state: 'prepared', card } satisfies ActionConfirmationPrepareOutcome, 200)
     },
     async sendSessionPrompt(request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' }): Promise<Response> {
+      // ADR-0290: the first send on a fresh matter enters its working revision first. The runner
+      // answers not-needed when a revision exists; a refusal stops the send before admission.
+      if (options.prepareSessionPrompt !== undefined) {
+        let prepared
+        try {
+          prepared = await options.prepareSessionPrompt({ matterRef: request.matterRef, text: request.text })
+        } catch {
+          prepared = { state: 'refused' as const, code: 'protected-effect-unavailable' }
+        }
+        if (prepared.state === 'refused') {
+          return serviceJson({ state: 'refused', code: prepared.code } satisfies SessionSendOutcome, 200)
+        }
+      }
       const admission = await admitSessionCoreProtectedEffect(
         options,
         'session.send',

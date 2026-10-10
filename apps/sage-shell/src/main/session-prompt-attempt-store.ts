@@ -27,7 +27,22 @@ export type SessionPromptAttemptRehydrate =
   | { readonly denied: 'not-found' | 'stale-revision' }
   | undefined
 
+export type SessionPromptMatterRead =
+  | { readonly matter: BusinessMatter; readonly version: number }
+  | { readonly denied: 'not-found' }
+  | undefined
+
 export interface SessionPromptAttemptStorePort {
+  /** Matter-only read for the prepare step (no revision exists yet on first prepare). */
+  readonly readMatter: (matterId: string) => SessionPromptMatterRead
+  /** Plain append for the revision-entered write (ADR-0290): no compatibility evidence rides a
+   *  local preparation write. */
+  readonly appendRevision: (request: {
+    readonly matterId: string
+    readonly expectedVersion: ExpectedVersion
+    readonly appendId: string
+    readonly events: readonly EncodedNewBusinessMatterEvent[]
+  }) => BusinessMatterAppendResult
   readonly strictRehydrate: (request: {
     readonly matterId: string
     readonly revisionId: string
@@ -72,6 +87,31 @@ export function createSessionPromptAttemptStore(
   }
 
   return {
+    readMatter: (matterId) => {
+      const database = opened()
+      if (database === undefined) return undefined
+      let loaded
+      try {
+        loaded = database.load(matterId)
+      } catch {
+        return undefined
+      }
+      if (loaded.kind === 'not-found') return { denied: 'not-found' }
+      if (loaded.kind === 'blocked') return undefined
+      return { matter: loaded.matter, version: loaded.version }
+    },
+    appendRevision: (request) => {
+      const database = opened()
+      if (database === undefined) {
+        return { kind: 'blocked', reason: 'io-unavailable' }
+      }
+      return database.append({
+        matterId: request.matterId,
+        expectedVersion: request.expectedVersion,
+        appendId: request.appendId,
+        events: request.events,
+      })
+    },
     strictRehydrate: (request) => {
       const database = opened()
       if (database === undefined) return undefined

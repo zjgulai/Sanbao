@@ -1,7 +1,7 @@
 # 「进入 revision」流设计裁决
 
 - 日期：2026-10-11
-- 状态：proposed（用户已裁决七项；实现属后续批，届时转 implemented 并挂 ADR）
+- 状态：proposed（用户已裁决七项；实现第一批——runner/注册/钩子——已落地并挂 [ADR-0290](../../../adr/ADR-0290.md)；选择流编排与全新 matter 端到端属下一刀）
 - 来源：R1 只读侦察报告（2026-10-11）＋ 用户裁决
 - 相关：[ADR-0288](../../../adr/ADR-0288.md)、[ADR-0289](../../../adr/ADR-0289.md)、[Application Service 边界](2026-09-30-application-service-boundary.md)
 

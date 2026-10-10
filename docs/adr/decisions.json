@@ -9577,6 +9577,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0290",
+      "title": "ADR-0290 · T05 prepare 第一刀：受治理的首修订进入 runner 与真实出生修订语义",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "session.prepare 注册为 local-write 独立四元组。",
+          "constraints": [
+            "distinct grant from session.send"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "runner = 确保 current revision 声明 send scope；出生修订与无修订都进入新修订；同前端端口实例按链序。",
+          "constraints": [
+            "no external-effect surfaces"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "域 authored revision-entered；用户输入见证；requirement 投影策略；普通幂等 append。",
+          "constraints": [
+            "no compatibility evidence rides a local write"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "失败面：按态拒绝族 + session-prepare-declined + 存储不可判 unavailable。",
+          "constraints": [
+            "honest decline, never prepared"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "编排本刀不完整（send 钩子 + not-needed 已证；全新 matter 流属选择流前置 ensure，下一刀含 E2E）。",
+          "constraints": [
+            "no silent context reactivation from send"
+          ]
+        }
+      ]
     }
   ]
 }

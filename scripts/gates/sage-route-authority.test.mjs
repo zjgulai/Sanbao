@@ -32,6 +32,7 @@ const baseline = Object.freeze({
   sessionPromptReverifyText: read('apps/sage-shell/src/main/session-prompt-reverify.ts'),
   sessionPromptDispatchText: read('apps/sage-shell/src/main/session-prompt-dispatch.ts'),
   protectedEffectAdmissionText: read('apps/sage-shell/src/appservice/protected-effect-admission.ts'),
+  sessionPromptPrepareText: read('apps/sage-shell/src/main/session-prompt-prepare.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -600,11 +601,11 @@ test('the home-page custodian cannot drift from its scope-bound wiring facts', (
 test('the session-family identity step cannot drift from its gated wiring and registration facts', () => {
   const ungated = baseline.mainAppServiceText.replace(
     [
-      '...(options.authority === undefined',
-      '      ? {}',
-      '      : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),',
+      'const identityPolicyPort = options.authority === undefined',
+      '    ? undefined',
+      '    : createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority })',
     ].join('\n'),
-    'resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }),',
+    'const identityPolicyPort = createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority })',
   )
   assert.notEqual(ungated, baseline.mainAppServiceText)
   expectNamedFailure(check({ mainAppServiceText: ungated }), 'session-core identity step must be wired only behind the instance authority option')
@@ -990,6 +991,64 @@ test('the real dispatch step cannot drift from its wiring, guard order, ref equa
   )
   assert.notEqual(closureWrite, baseline.sessionPromptDispatchText)
   expectNamedFailure(check({ sessionPromptDispatchText: closureWrite }), 'dispatch v1 writes no domain closure events (turn-close is the registered ticket)')
+})
+
+test('the governed prepare write cannot drift from its registration, witness, order or refusal family', () => {
+  const unregistered = baseline.actionAuthorityTableText.replace(
+    "'session.prepare': Object.freeze({",
+    "'session.prepare-x': Object.freeze({",
+  )
+  assert.notEqual(unregistered, baseline.actionAuthorityTableText)
+  expectNamedFailure(check({ actionAuthorityTableText: unregistered }), 'session.prepare must be registered in the action authority table as a local write')
+
+  const witnessDrift = baseline.sessionPromptPrepareText.replace(
+    "source: 'user-input',",
+    "source: 'ui-reported',",
+  )
+  assert.notEqual(witnessDrift, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: witnessDrift }), 'the user explicit input is the prepare witness')
+
+  const policyDrop = baseline.sessionPromptPrepareText.replace(
+    'requirement.actionRequirements.map(',
+    '[].map(',
+  )
+  assert.notEqual(policyDrop, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: policyDrop }), "the revision's run policies must project the requirement declaration")
+
+  const orderBreak = baseline.sessionPromptPrepareText.replace(
+    'options.ports.verifyCaller!(',
+    'options.ports.matchCandidate!(',
+  )
+  assert.notEqual(orderBreak, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: orderBreak }), 'the prepare runner must run the front ports in their chain order')
+
+  const familyFlat = baseline.sessionPromptPrepareText.replace(
+    'code: FAILURE_CODES[step.state]',
+    'code: FAILURE_CODES.unavailable',
+  )
+  assert.notEqual(familyFlat, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: familyFlat }), 'port failures must keep their per-state protected-effect refusal family')
+
+  const declineSwallow = baseline.sessionPromptPrepareText.replace(
+    "return { state: 'refused', code: 'session-prepare-declined' }",
+    "return { state: 'not-needed' }",
+  )
+  assert.notEqual(declineSwallow, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: declineSwallow }), 'a domain decline must answer honestly, never as prepared')
+
+  const scopeCreep = baseline.sessionPromptPrepareText.replace(
+    "const sendTable = ACTION_AUTHORITY_TABLE['session.send']",
+    "resolveCompatibility(); const sendTable = ACTION_AUTHORITY_TABLE['session.send']",
+  )
+  assert.notEqual(scopeCreep, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: scopeCreep }), 'a local preparation write must not reach the external-effect surfaces')
+
+  const hookRemoval = baseline.compositionText.replace(
+    'options.prepareSessionPrompt !== undefined',
+    'false',
+  )
+  assert.notEqual(hookRemoval, baseline.compositionText)
+  expectNamedFailure(check({ compositionText: hookRemoval }), 'the send route must run the prepare runner first and stop on its refusal')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

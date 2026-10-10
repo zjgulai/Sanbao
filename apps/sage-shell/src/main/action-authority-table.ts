@@ -45,4 +45,14 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'external-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // T05 prepare (ADR-0290): entering the first working revision is a local audit write. It
+  // touches only the Sage-owned store, so it registers with a local-write class of its own —
+  // a distinct grant from the external-write send it prepares for.
+  'session.prepare': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.prepare',
+    actionScope: 'session.prepare',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

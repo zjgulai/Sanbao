@@ -27,6 +27,7 @@ import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
+import { createSessionPromptPrepareRunner, type SessionPrepareRunner } from './session-prompt-prepare.js'
 import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
 import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
@@ -733,7 +734,10 @@ function isDevicePreferencesState(value: unknown): value is DevicePreferencesSta
  * fresh workspace fold and renderer frame before the active snapshot can be reused. */
 function createSessionCoreProtectedEffectPorts(
   options: SageAppServiceOptions,
-): ProtectedEffectAdmissionPorts {
+): {
+  readonly ports: ProtectedEffectAdmissionPorts
+  readonly prepareSessionPrompt?: SessionPrepareRunner
+} {
   // Shared re-verification reads for steps 9 and 10 (ADR-0288/0289): one closure set, one home.
   const reverifyReads = options.activeMatterContext === undefined
     || options.framePolicySnapshot === undefined
@@ -780,14 +784,13 @@ function createSessionCoreProtectedEffectPorts(
         requirementBundle: options.requirementBundle,
         runtimeEffective: options.runtimeEffective,
       })
-  return {
-    verifyCaller: async () => {
+  const verifyCallerPort: NonNullable<ProtectedEffectAdmissionPorts['verifyCaller']> = async () => {
       const binding = options.callerBinding
       return binding === undefined || binding === null
         ? { state: 'unavailable' as const }
         : { state: 'allowed' as const, value: { bindingRef: binding.correlation } }
-    },
-    resolveActiveContext: async ({ caller }) => {
+  }
+  const activeContextPort: NonNullable<ProtectedEffectAdmissionPorts['resolveActiveContext']> = async ({ caller }) => {
       const binding = options.callerBinding
       if (binding === undefined || binding === null || caller.bindingRef !== binding.correlation) {
         return { state: 'denied' as const }
@@ -846,8 +849,8 @@ function createSessionCoreProtectedEffectPorts(
           generation: String(snapshot.contextGeneration),
         },
       }
-    },
-    matchCandidate: async ({ context }) => {
+  }
+  const candidatePort: NonNullable<ProtectedEffectAdmissionPorts['matchCandidate']> = async ({ context }) => {
       const active = options.activeMatterContext
       const frame = options.framePolicySnapshot?.()
       const snapshot = active?.snapshot()
@@ -875,12 +878,34 @@ function createSessionCoreProtectedEffectPorts(
         state: 'allowed' as const,
         value: { candidateRef: `active:${context.matterRef}:${context.revisionRef}:${context.generation}` },
       }
-    },
-    // T05 first cut: the real Identity / Policy step for registered session-family operations.
-    // Without the instance authority option the step stays absent, exactly as before.
-    ...(options.authority === undefined
-      ? {}
-      : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),
+  }
+  // T05 first cut: the real Identity / Policy step for registered session-family operations.
+  // Without the instance authority option the step stays absent, exactly as before.
+  const identityPolicyPort = options.authority === undefined
+    ? undefined
+    : createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority })
+  const sessionCorePorts = {
+    verifyCaller: verifyCallerPort,
+    resolveActiveContext: activeContextPort,
+    matchCandidate: candidatePort,
+    ...(identityPolicyPort === undefined ? {} : { resolveIdentityPolicy: identityPolicyPort }),
+  }
+  // T05 prepare (ADR-0290): the governed local preparation write rides these SAME front ports.
+  const prepareSessionPrompt = options.callerBinding === undefined || options.callerBinding === null
+    || options.authority === undefined
+    || options.sessionPromptAttempts === undefined
+    || options.requirementBundle === undefined
+    || identityPolicyPort === undefined
+    ? undefined
+    : createSessionPromptPrepareRunner({
+        ports: sessionCorePorts,
+        attempts: options.sessionPromptAttempts,
+        requirementBundle: options.requirementBundle,
+        callerCorrelation: options.callerBinding.correlation,
+        now: options.authority.now,
+      })
+  const ports: ProtectedEffectAdmissionPorts = {
+    ...sessionCorePorts,
     // T05-mid: the real target step over the shipped requirement bundle (ADR-0282). The target
     // step rides the same instance clock as the identity step; without the authority switch the
     // chain already stops at identity, so the target port is wired only when both exist.
@@ -951,11 +976,17 @@ function createSessionCoreProtectedEffectPorts(
           }),
         }),
   }
+  return {
+    ports,
+    ...(prepareSessionPrompt === undefined ? {} : { prepareSessionPrompt }),
+  }
 }
 
 /** Assemble providers for one request; callers pass a fresh `viewState` per evaluation. */
 export function createSageAppServiceProviders(options: SageAppServiceOptions): ServiceProviders {
   const { viewState, vault, adapter } = options
+  // One assembly per request; the prepare runner shares the exact same front ports.
+  const sessionCoreAssembly = createSessionCoreProtectedEffectPorts(options)
   return createUnavailableFirstService(viewState, {
     authSnapshot: () => vault.status() === 'pending'
       ? { status: 'pending' as const, displayName: null }
@@ -972,7 +1003,10 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     runProjectionRead: createProjectionReadRunner(options),
     bootstrapRead: createLocalSystemBootstrapRunner(options),
     devicePreferencesRead: createDevicePreferencesRunner(options),
-    protectedEffectPorts: createSessionCoreProtectedEffectPorts(options),
+    protectedEffectPorts: sessionCoreAssembly.ports,
+    ...(sessionCoreAssembly.prepareSessionPrompt === undefined
+      ? {}
+      : { prepareSessionPrompt: sessionCoreAssembly.prepareSessionPrompt }),
     protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),
     ...(options.runtimeEffective === undefined ? {} : { runtimeEffective: options.runtimeEffective }),
