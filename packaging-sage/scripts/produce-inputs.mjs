@@ -390,6 +390,11 @@ async function produce() {
     for (const name of ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml', 'cordis.yml', 'cordis.patch.yml']) {
       copyRegularFile(join(shellRoot, 'seed', name), join(appRuntime, 'seed', name))
     }
+    // T05-mid (ADR-0282): shipped governance publications ride with the runtime at the same
+    // relative path the loader resolves in a dev checkout (app root / publications).
+    for (const name of readdirSync(join(shellRoot, 'publications'))) {
+      copyRegularFile(join(shellRoot, 'publications', name), join(appRuntime, 'publications', name))
+    }
 
     const dependencies = Object.fromEntries(graph.externalPackages.map(name => [name, installedVersion(shellRoot, name)]))
     const dependencyInstall = join(work, 'runtime-dependencies')

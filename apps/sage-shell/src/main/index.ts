@@ -18,6 +18,7 @@ import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createMatterCustody } from './matter-custody.js'
+import { loadSessionPromptRequirementBundle } from './publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
@@ -173,6 +174,14 @@ async function main(paths: SagePaths): Promise<void> {
   }).catch(() => {
     process.stdout.write('sage shell: runtime inventory unavailable (assembly-invalid)\n')
   })
+
+  // T05-mid (ADR-0282): the shipped C2.2T requirement publication, read and kernel-parsed once at
+  // startup. A failed load is logged and forwarded as-is; the target step stays present but
+  // unavailable-first, and no later request re-reads or repairs the bundle.
+  const requirementBundle = loadSessionPromptRequirementBundle()
+  if (!requirementBundle.ok) {
+    process.stdout.write(`sage shell: requirement bundle unavailable: ${requirementBundle.reason}\n`)
+  }
 
   // CTX-01A: the active matter has one generation-bound owner in Electron main. This batch does
   // not add an activation route or infer one from the newest draft, so it starts inactive and all
@@ -925,6 +934,9 @@ async function main(paths: SagePaths): Promise<void> {
         // WT-02C.2E.2: the composed inventory provider rides the same flow until the
         // C2E.2 resolver wiring lands; nothing consumes it yet.
         runtimeInventory,
+        // T05-mid (ADR-0282): the session family's target step evaluates the startup-loaded,
+        // kernel-sealed requirement bundle; the object reference is stable across requests.
+        requirementBundle,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
         // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.

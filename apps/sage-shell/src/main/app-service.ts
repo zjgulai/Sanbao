@@ -24,6 +24,8 @@ import type { RuntimeInventoryProvider } from './runtime-inventory-provider.js'
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import { createSessionPromptTargetPort } from './session-prompt-target.js'
+import type { RequirementBundleLoad } from './publication-bundle.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
 import type { StrictRehydratePort } from './matter-rehydrate-port.js'
 import type { CallerBinding } from '../appservice/contracts.js'
@@ -91,6 +93,10 @@ export interface SageAppServiceOptions {
     readonly readFileBytes: (absolutePath: string) => Buffer
     readonly now: () => string
   }
+  /** T05-mid (ADR-0282): the startup-loaded, kernel-sealed C2.2T requirement bundle. Absent
+   *  keeps the target step absent exactly as before; a failed load keeps it present but
+   *  unavailable-first. Wired on its own switch so the two steps stay independently observable. */
+  readonly requirementBundle?: RequirementBundleLoad
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -808,6 +814,17 @@ function createSessionCoreProtectedEffectPorts(
     ...(options.authority === undefined
       ? {}
       : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),
+    // T05-mid: the real target step over the shipped requirement bundle (ADR-0282). The target
+    // step rides the same instance clock as the identity step; without the authority switch the
+    // chain already stops at identity, so the target port is wired only when both exist.
+    ...(options.authority === undefined || options.requirementBundle === undefined
+      ? {}
+      : {
+          resolveTarget: createSessionPromptTargetPort({
+            bundle: options.requirementBundle,
+            now: options.authority.now,
+          }),
+        }),
   }
 }
 

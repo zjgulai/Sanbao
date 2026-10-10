@@ -9197,6 +9197,61 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0282",
+      "title": "ADR-0282 · T05-mid 发布票第一刀：requirement 落 bundle 与真实 target 步装配",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "requirement 以内核封存 snapshot 落 apps/sage-shell/publications/；dev 与打包同相对布局；producer 拷贝整个目录。",
+          "constraints": [
+            "createdAt = owner decision decidedAt for determinism",
+            "one relative layout in dev and packaged runtime"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "启动时一次读取 + 内核 parse；失败只日志并原样转发；不修复、不默认、不重封、不逐请求重读。",
+          "constraints": [
+            "parse failure never repaired, only forwarded"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "target 端口：表查 actionScope → 唯一声明 requirement → provider(evaluatedAt=authority.now)；一切失败 → unavailable（不得 denied）；targetRef 绑定 snapshotId+requirementDigest。",
+          "constraints": [
+            "governance absence is never a policy denial",
+            "republication moves the target ref by construction"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "仅 authority+requirementBundle 同时存在才装配；拒绝码保持 protected-effect-unavailable；stage 不入信封。",
+          "constraints": [
+            "no protocol surface change in this batch",
+            "step wiring stays independently observable"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "route-authority 门禁新增 target 事实组 + 五条具名突变；note 句更新为 target 已真实、停在 compatibility/registry。",
+          "constraints": [
+            "mechanism over review",
+            "named mutations for each fact"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "不改 owner 数据、不写矩阵、不接 compatibility/registry/persist/dispatch；生效前求值按设计 unavailable。",
+          "constraints": [
+            "no铸造 of governance data",
+            "scope limited to requirement half"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -552,6 +552,44 @@ function sessionPromptPublicationViolations(input) {
   return violations
 }
 
+function sessionPromptTargetViolations(input) {
+  const violations = []
+  const appServiceText = typeof input?.mainAppServiceText === 'string' ? input.mainAppServiceText : ''
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  const targetText = typeof input?.sessionPromptTargetText === 'string' ? input.sessionPromptTargetText : ''
+  const bundleText = typeof input?.publicationBundleText === 'string' ? input.publicationBundleText : ''
+  if (appServiceText === '' || indexText === '' || targetText === '' || bundleText === '') {
+    violations.push('session-prompt target sources are unavailable')
+    return violations
+  }
+  // T05-mid (ADR-0282): the real target step is wired only when BOTH the instance authority and
+  // the startup-loaded requirement bundle exist; every provider failure collapses to unavailable.
+  if (!appServiceText.includes('options.requirementBundle === undefined')
+    || !appServiceText.includes('resolveTarget: createSessionPromptTargetPort({')) {
+    violations.push('the real target step must be wired only behind the requirement-bundle option')
+  }
+  if (!indexText.includes('const requirementBundle = loadSessionPromptRequirementBundle()')) {
+    violations.push('index must load the requirement bundle once at startup')
+  }
+  if (!targetText.includes('ACTION_AUTHORITY_TABLE[intent.operation]')
+    || !targetText.includes('createBundledCompatibilityTargetProvider')) {
+    violations.push('the target port must resolve the registered action scope through the bundled C2.2T provider')
+  }
+  if (!targetText.includes('declaring.length === 1')) {
+    violations.push('an ambiguous published requirement must answer unavailable, never a guess')
+  }
+  if (!targetText.includes('target:${resolved.snapshotId}:${resolved.requirement.requirementDigest}')) {
+    violations.push('the target ref must bind the snapshot id and requirement digest')
+  }
+  if (targetText.includes("'denied'")) {
+    violations.push('a missing or failing target must map to unavailable, never a policy denial')
+  }
+  if (!bundleText.includes('parseCompatibilityTargetRequirementSnapshot(value)')) {
+    violations.push('the bundle loader must validate through the C2.2T kernel parse')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -710,7 +748,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -741,6 +779,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.sessionPromptPublicationText !== 'string') {
     return failAll(discovered, ['session-prompt publication source unavailable; the first publication cannot be checked'])
+  }
+  if (typeof input?.sessionPromptTargetText !== 'string' || typeof input?.publicationBundleText !== 'string') {
+    return failAll(discovered, ['session-prompt target sources unavailable; the shipped requirement bundle cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1096,6 +1137,9 @@ export function checkSageRouteAuthority(input) {
   const publicationViolations = sessionPromptPublicationViolations(input)
   for (const violation of publicationViolations) failGlobal(violation)
 
+  const targetViolations = sessionPromptTargetViolations(input)
+  for (const violation of targetViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -1106,7 +1150,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face). 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) before stopping at the absent compatibility / registry steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

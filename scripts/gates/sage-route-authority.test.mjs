@@ -19,6 +19,8 @@ const baseline = Object.freeze({
   actionAuthorityTableText: read('apps/sage-shell/src/main/action-authority-table.ts'),
   capabilityRegistryProviderText: read('apps/sage-shell/src/security/capability-registry-provider.ts'),
   sessionPromptPublicationText: read('apps/sage-shell/src/main/session-prompt-publication.ts'),
+  sessionPromptTargetText: read('apps/sage-shell/src/main/session-prompt-target.ts'),
+  publicationBundleText: read('apps/sage-shell/src/main/publication-bundle.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -698,6 +700,43 @@ test('the first session-prompt publication cannot drift from the owner-approved 
   )
   assert.notEqual(unsealed, baseline.sessionPromptPublicationText)
   expectNamedFailure(check({ sessionPromptPublicationText: unsealed }), 'the publication must seal through the candidate line and the kernel')
+})
+
+test('the real target step cannot drift from its gated wiring or unavailable-first mapping', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    'options.authority === undefined || options.requirementBundle === undefined',
+    'false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the real target step must be wired only behind the requirement-bundle option')
+
+  const startupDrift = baseline.mainIndexText.replace(
+    'const requirementBundle = loadSessionPromptRequirementBundle()',
+    'const requirementBundle = undefined',
+  )
+  assert.notEqual(startupDrift, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: startupDrift }), 'index must load the requirement bundle once at startup')
+
+  const denialDrift = baseline.sessionPromptTargetText.replace(
+    "if (provider === undefined || snapshot === undefined) return { state: 'unavailable' }",
+    "if (provider === undefined || snapshot === undefined) return { state: 'denied' }",
+  )
+  assert.notEqual(denialDrift, baseline.sessionPromptTargetText)
+  expectNamedFailure(check({ sessionPromptTargetText: denialDrift }), 'a missing or failing target must map to unavailable, never a policy denial')
+
+  const refDrift = baseline.sessionPromptTargetText.replace(
+    '`target:${resolved.snapshotId}:${resolved.requirement.requirementDigest}`',
+    "'target:any'",
+  )
+  assert.notEqual(refDrift, baseline.sessionPromptTargetText)
+  expectNamedFailure(check({ sessionPromptTargetText: refDrift }), 'the target ref must bind the snapshot id and requirement digest')
+
+  const unparsed = baseline.publicationBundleText.replace(
+    'parseCompatibilityTargetRequirementSnapshot(value)',
+    'value',
+  )
+  assert.notEqual(unparsed, baseline.publicationBundleText)
+  expectNamedFailure(check({ publicationBundleText: unparsed }), 'the bundle loader must validate through the C2.2T kernel parse')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "sage.compatibility-target-requirement.v1",
+  "canonicalizationVersion": "sage.compatibility-target-requirement-canonical-json.v1",
+  "createdAt": "2026-10-10T09:00:00Z",
+  "publicationDecision": {
+    "decisionId": "decision:sage-t05-first-session-prompt",
+    "ownerId": "owner:sage-product",
+    "decidedAt": "2026-10-10T09:00:00Z",
+    "reason": "用户裁决：模型面严格精确钉（发布时重观测）；策略文档按最小声明发布。"
+  },
+  "entries": [
+    {
+      "schemaVersion": "sage.compatibility-target-requirement-entry.v1",
+      "canonicalizationVersion": "sage.compatibility-target-requirement-canonical-json.v1",
+      "requirementId": "requirement:sage-session-prompt",
+      "requirementVersion": "1.0.0",
+      "state": "active",
+      "actionRequirements": [
+        {
+          "actionScope": "session.prompt",
+          "effectClass": "external-write",
+          "requiresDecision": false
+        }
+      ],
+      "permissionRequirements": [
+        {
+          "identity": "permission:sage.session-prompt",
+          "version": "1.0.0",
+          "digest": "sha256:e6c126cdb3290976981b89e2bdacf11cc0b9db809a50aff315eaa7320ee0d153"
+        }
+      ],
+      "dataBoundaryRequirements": [
+        {
+          "identity": "data-boundary:sage.model-egress",
+          "version": "1.0.0",
+          "digest": "sha256:ef840683c833ca1f1b6e59734c1fed459537860e3d5ec7614de27251f6e70c54"
+        }
+      ],
+      "provider": {
+        "identity": "provider:deepseek-official",
+        "version": "0.2.0-rc.2",
+        "artifactDigest": "sha256:75a5fc9d0d4f213db7159aa97fd10e088b3657751c32a665d51027bd9caa0c80",
+        "contractDigest": "sha256:854668f6efb05732a60d95606c36315448ea6a9e7d0688f5f7229324cf993601",
+        "behaviorConfigurationDigest": "sha256:9c4a732ad9a7d5712155c3f1defffaae2b520e846082ad1790fdf8c44dae6fdc"
+      },
+      "model": {
+        "identity": "model:deepseek-official/deepseek-flash",
+        "version": "0.2.0-rc.2",
+        "artifactDigest": "sha256:75a5fc9d0d4f213db7159aa97fd10e088b3657751c32a665d51027bd9caa0c80",
+        "contractDigest": "sha256:854668f6efb05732a60d95606c36315448ea6a9e7d0688f5f7229324cf993601",
+        "behaviorConfigurationDigest": "sha256:6e62552e697aca796ec30d3244c62665c940b6e7ed1d434d54923eb17668cf78"
+      },
+      "agent": {
+        "identity": "agent:@deepseek-ai/dsh-agent",
+        "version": "0.2.0-rc.2",
+        "artifactDigest": "sha256:ebe889db92257469086c56f5416ca99de709fdb09a5de3bebedf272f10c8fb9c",
+        "contractDigest": "sha256:9fc023a603cc87960bf068e3e6315a3b907c257d921f2d133542f1ca5758e0b8",
+        "behaviorConfigurationDigest": "sha256:f86bd7329485d5a720a444c8a3e4869a73cf465e27afc811982ea287a5bcb823"
+      },
+      "preset": {
+        "identity": "preset:set",
+        "version": "0.2.0-rc.2",
+        "artifactDigest": "sha256:b8c1bd8a4dd820a32ea381feec477e73642b3e19d02ca37252ef4aace62fe585",
+        "contractDigest": "sha256:7808cab40e5d4d9c41957c2739ffb3e8ce13d9172f6695fcdcea4cbfd93b7cfb",
+        "behaviorConfigurationDigest": "sha256:f86bd7329485d5a720a444c8a3e4869a73cf465e27afc811982ea287a5bcb823"
+      },
+      "capabilities": [],
+      "ownerDecision": {
+        "decisionId": "decision:sage-t05-first-session-prompt",
+        "ownerId": "owner:sage-product",
+        "decidedAt": "2026-10-10T09:00:00Z",
+        "reason": "用户裁决：模型面严格精确钉（发布时重观测）；策略文档按最小声明发布。"
+      },
+      "effectiveAt": "2026-10-11T00:00:00Z",
+      "expiresAt": "2027-10-11T00:00:00Z",
+      "requirementDigest": "urn:sage:compatibility-target-requirement:sha256:c7583d07f88f6326c32d5e1339cf908e300034d8ca55812f1136cd6f3705f2eb"
+    }
+  ],
+  "snapshotId": "urn:sage:compatibility-target-requirement-snapshot:sha256:521b87ace95e8556de898c62973a02fd0f402efca20b1d529d18f5eff892394f"
+}
