@@ -1,7 +1,7 @@
 import { X509Certificate } from 'node:crypto'
 import { lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { loadConfig, safeOutputPath, packagingRoot, sha256File } from './lib.mjs'
+import { loadConfig, ownedPackagingRoots, safeOutputPath, packagingRoot, sha256File } from './lib.mjs'
 import { artifactTreeDigest, designatedRequirement } from './signing-evidence.mjs'
 import { assertLocalSelfSignedCodeSigningCertificate } from './certificate-policy.mjs'
 
@@ -21,7 +21,7 @@ try {
   const certificateSha1 = certificate.fingerprint.replaceAll(':', '').toLowerCase()
   if (certificateSha256 !== fingerprint) throw new Error('embedded leaf certificate does not match the selected SHA-256 fingerprint')
   assertLocalSelfSignedCodeSigningCertificate(certificate, config.signing.identityCommonName)
-  const resolvedOutput = safeOutputPath(output, [`${packagingRoot}/staging`, `${packagingRoot}/release`])
+  const resolvedOutput = safeOutputPath(output, ownedPackagingRoots(packagingRoot))
   const planEntry = lstatSync(signingPlanPath)
   if (!planEntry.isFile() || planEntry.isSymbolicLink()) throw new Error('signing plan must be a regular file')
   const receipt = {

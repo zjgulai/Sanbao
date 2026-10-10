@@ -15,6 +15,7 @@ import {
   assertDirectory,
   loadConfig,
   packagingRoot,
+  ownedPackagingRoots,
   safeOutputPath,
   sha256File,
   walkTree,
@@ -119,7 +120,7 @@ function diskInfoToJson(device, temporaryPlist) {
 
 export function verifyMountedVolume({ mountpoint, attachPlist, output }) {
   const config = loadConfig()
-  const resolvedOutput = safeOutputPath(output, [join(packagingRoot, 'staging'), join(packagingRoot, 'release')])
+  const resolvedOutput = safeOutputPath(output, ownedPackagingRoots(packagingRoot))
   mkdirSync(dirname(resolvedOutput), { recursive: true })
   const root = assertDirectory(mountpoint, 'DMG mountpoint')
   const attach = plistFileToJson(attachPlist)

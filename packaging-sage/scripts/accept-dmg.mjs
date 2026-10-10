@@ -23,14 +23,14 @@ import {
   assertRegularFile,
   loadConfig,
   packagingRoot,
+  ownedPackagingRoots,
   safeOutputPath,
   sha256File,
   walkTree,
 } from './lib.mjs'
 
 const repoRoot = realpathSync(join(packagingRoot, '..'))
-const releaseRoot = join(packagingRoot, 'release')
-const stagingRoot = join(packagingRoot, 'staging')
+const [stagingRoot, releaseRoot] = ownedPackagingRoots(packagingRoot)
 const liveCheck = join(repoRoot, 'apps', 'sage-shell', 'test', 'support', 'desktop-live-check.mjs')
 const DEFAULT_TIMEOUT_MS = 90_000
 let activeLaunch

@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import {
   assertDirectory,
   nativeBinaryKind,
+  ownedPackagingRoots,
   packagingRoot,
   sha256File,
   walkTree,
@@ -83,8 +84,9 @@ export function linkeditVmsizeOffset(bytes) {
  */
 export function signingNormalizedTreeDigest(root) {
   const canonicalRoot = assertDirectory(root, 'signing-normalized tree')
-  mkdirSync(join(packagingRoot, 'staging'), { recursive: true })
-  const temporary = mkdtempSync(join(packagingRoot, 'staging', '.signing-normalize.'))
+  const [stagingRoot] = ownedPackagingRoots(packagingRoot)
+  mkdirSync(stagingRoot, { recursive: true })
+  const temporary = mkdtempSync(join(stagingRoot, '.signing-normalize.'))
   let cleaned = false
   const cleanup = () => {
     if (cleaned) return

@@ -21,9 +21,11 @@ import { collectRuntimeGraph } from './runtime-graph.mjs'
 import {
   loadConfig,
   packagingRoot,
+  ownedPackagingRoots,
   safeOutputPath,
 } from './lib.mjs'
 import { projectKnownPlatformNativePayloads } from './native-projection.mjs'
+import { removeMacosMetadata } from './macos-metadata.mjs'
 import { removeExactPnpmInstallerArtifacts } from './pnpm-install-artifacts.mjs'
 import { writeRuntimePackage } from './write-runtime-package.mjs'
 
@@ -344,7 +346,10 @@ async function produce() {
     execFileSync('pnpm', ['store', 'path'], { encoding: 'utf8' }).trim(),
     'pnpm store',
   )
-  const stagingRoot = join(packagingRoot, 'staging')
+  // Honor the same relocation override the shell layer documents (ADR-0292): a checkout inside
+  // an iCloud-managed scope must be able to build outside the sync domain, where the sync
+  // daemon cannot write .DS_Store files into the tree mid-digest.
+  const [stagingRoot] = ownedPackagingRoots(packagingRoot)
   mkdirSync(stagingRoot, { recursive: true, mode: 0o755 })
   const outputRoot = safeOutputPath(join(stagingRoot, 'input'), [stagingRoot])
   const existingOutput = lstatIfPresent(outputRoot)
@@ -431,6 +436,10 @@ async function produce() {
     projectKnownPlatformNativePayloads(join(appRuntime, 'node_modules'), { architecture: config.arch })
     removeExactPnpmInstallerArtifacts(join(appRuntime, 'node_modules'))
     writeRuntimePackage(appRuntime)
+    const runtimeMetadata = removeMacosMetadata(appRuntime)
+    if (runtimeMetadata > 0) {
+      process.stdout.write(`[sage-packaging] removed ${String(runtimeMetadata)} macOS .DS_Store metadata files (iCloud/Finder artifact)\n`)
+    }
 
     run(process.execPath, [join(packagingRoot, 'scripts', 'validate-inputs.mjs'), 'runtime', appRuntime])
     run(process.execPath, [join(packagingRoot, 'scripts', 'validate-mach-o.mjs'), appRuntime, 'app-runtime'])
@@ -515,6 +524,10 @@ async function produce() {
       artifactAttestationDigest: attestation.artifactAttestationDigest,
     })
 
+    const templateMetadata = removeMacosMetadata(profileTemplate)
+    if (templateMetadata > 0) {
+      process.stdout.write(`[sage-packaging] removed ${String(templateMetadata)} macOS .DS_Store metadata files (iCloud/Finder artifact)\n`)
+    }
     run(
       process.execPath,
       [join(packagingRoot, 'scripts', 'validate-inputs.mjs'), 'profile', profileTemplate],

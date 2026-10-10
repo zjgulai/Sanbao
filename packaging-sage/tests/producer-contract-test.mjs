@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { packagingRoot } from '../scripts/lib.mjs'
+import { ownedPackagingRoots, packagingRoot } from '../scripts/lib.mjs'
 import { acquireInputLock, releaseInputLock } from '../lib/input-lock.mjs'
 
 function runNode(script, args) {
@@ -12,7 +12,7 @@ function runNode(script, args) {
 }
 
 const lock = acquireInputLock({
-  lockDir: join(packagingRoot, 'staging', '.packaging-input.lock'),
+  lockDir: join(process.env.PACKAGING_STAGING_ROOT ?? join(packagingRoot, 'staging'), '.packaging-input.lock'),
   operation: 'producer-contract',
 })
 let interruptedSignal
@@ -28,7 +28,8 @@ let temporary
 try {
   assertNotInterrupted()
   const repoRoot = execFileSync('git', ['-C', packagingRoot, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()
-  const inputRoot = join(packagingRoot, 'staging', 'input')
+  const [stagingRoot] = ownedPackagingRoots(packagingRoot)
+  const inputRoot = join(stagingRoot, 'input')
   const appRuntime = join(inputRoot, 'app-runtime')
   const profileTemplate = join(inputRoot, 'profile-template')
   if (!existsSync(appRuntime) || !existsSync(profileTemplate)) {
@@ -44,7 +45,7 @@ try {
   const pathsModule = await import(pathToFileURL(join(shellRoot, 'lib', 'profile', 'paths.js')).href)
   const bundledModule = await import(pathToFileURL(join(shellRoot, 'lib', 'profile', 'bundled-profile.js')).href)
   const templateManifest = JSON.parse(readFileSync(join(profileTemplate, 'template-manifest.json'), 'utf8'))
-  temporary = mkdtempSync(join(packagingRoot, 'staging', '.producer-contract.'))
+  temporary = mkdtempSync(join(stagingRoot, '.producer-contract.'))
   const paths = pathsModule.resolveSagePaths({
     home: join(temporary, 'home'),
     root: join(temporary, 'root'),

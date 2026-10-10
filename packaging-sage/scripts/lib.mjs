@@ -241,6 +241,16 @@ export async function fileContains(path, needle) {
   return false
 }
 
+// One home for the packaging build roots (ADR-0292): a checkout inside an iCloud-managed
+// scope must be able to build outside the sync domain via the same env overrides the shell
+// layer documents. Ordinary checkouts keep the repository defaults.
+export function ownedPackagingRoots(packagingRoot) {
+  return [
+    process.env.PACKAGING_STAGING_ROOT ?? join(packagingRoot, 'staging'),
+    process.env.PACKAGING_RELEASE_ROOT ?? join(packagingRoot, 'release'),
+  ]
+}
+
 export function safeOutputPath(output, allowedRoots) {
   const candidate = resolve(output)
   for (const root of allowedRoots.map((item) => resolve(item))) {

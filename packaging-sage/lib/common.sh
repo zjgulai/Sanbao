@@ -5,8 +5,14 @@ set -euo pipefail
 PACKAGING_SAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 REPO_ROOT="$(git -C "$PACKAGING_SAGE_ROOT" rev-parse --show-toplevel)"
 CONFIG_PATH="$PACKAGING_SAGE_ROOT/product.json"
-STAGING_ROOT="$PACKAGING_SAGE_ROOT/staging"
-RELEASE_ROOT="$PACKAGING_SAGE_ROOT/release"
+# Build trees can leave the repository when the checkout lives inside an iCloud Drive managed
+# scope (Desktop & Documents sync): the sync daemon writes .DS_Store files into freshly created
+# directories and can touch files mid-digest, which fails the producer's tree-stability guards
+# (observed 2026-10-11; ADR-0292). The overrides keep the default layout for ordinary checkouts.
+STAGING_ROOT="${PACKAGING_STAGING_ROOT:-$PACKAGING_SAGE_ROOT/staging}"
+RELEASE_ROOT="${PACKAGING_RELEASE_ROOT:-$PACKAGING_SAGE_ROOT/release}"
+export PACKAGING_STAGING_ROOT="$STAGING_ROOT"
+export PACKAGING_RELEASE_ROOT="$RELEASE_ROOT"
 PACKAGING_INPUT_LOCK_DIR="$STAGING_ROOT/.packaging-input.lock"
 PACKAGING_INPUT_LOCK_HELPER="$PACKAGING_SAGE_ROOT/lib/input-lock.mjs"
 

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadConfig, packagingRoot, safeOutputPath, sha256File } from './lib.mjs'
+import { loadConfig, ownedPackagingRoots, packagingRoot, safeOutputPath, sha256File } from './lib.mjs'
 
 function readJson(path, label) {
   const entry = lstatSync(path)
@@ -150,7 +150,7 @@ export function writeDmgReceipt({
       treeSha256: volume.treeSha256,
     },
   }
-  const resolvedOutput = safeOutputPath(output, [join(packagingRoot, 'staging'), join(packagingRoot, 'release')])
+  const resolvedOutput = safeOutputPath(output, ownedPackagingRoots(packagingRoot))
   mkdirSync(dirname(resolvedOutput), { recursive: true })
   const temporary = `${resolvedOutput}.${process.pid}.tmp`
   writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o644 })

@@ -9657,6 +9657,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0292",
+      "title": "ADR-0292 · iCloud 同步域内的构建干扰与构建根外迁（验收准备批）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "构建根单一家环境覆盖（PACKAGING_STAGING_ROOT/RELEASE_ROOT），全部触碰点经 ownedPackagingRoots()。",
+          "constraints": [
+            "defaults unchanged for ordinary checkouts"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "producer 校验前移除 .DS_Store（精确名单、计数、日志）作为纵深防御。",
+          "constraints": [
+            "normalization never hides unreadable entries"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "验收批边界：A 版干跑零新授权；B 版被 WT-02B.2B 阻塞；真实模型调用另需授权。",
+          "constraints": [
+            "no completion claims without the missing authorizations"
+          ]
+        }
+      ]
     }
   ]
 }

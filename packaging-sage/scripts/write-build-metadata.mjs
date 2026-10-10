@@ -5,6 +5,7 @@ import { dirname, join, relative, sep } from 'node:path'
 import {
   assertDirectory,
   loadConfig,
+  ownedPackagingRoots,
   safeOutputPath,
   packagingRoot,
   sha256File,
@@ -66,7 +67,7 @@ function packagingDefinitionDigest() {
 }
 
 const config = loadConfig()
-const resolvedOutput = safeOutputPath(output, [join(packagingRoot, 'staging'), join(packagingRoot, 'release')])
+const resolvedOutput = safeOutputPath(output, ownedPackagingRoots(packagingRoot))
 const template = JSON.parse(readFileSync(join(profileTemplateRoot, 'template-manifest.json'), 'utf8'))
 const repoRoot = execFileSync('git', ['-C', packagingRoot, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()
 const observedHead = execFileSync('git', ['-C', repoRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { lstatSync, mkdirSync, readlinkSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { loadConfig, packagingRoot, safeOutputPath, sha256File, walkTree } from './lib.mjs'
+import { loadConfig, ownedPackagingRoots, packagingRoot, safeOutputPath, sha256File, walkTree } from './lib.mjs'
 
 const artifact = process.argv[2]
 const output = process.argv[3]
@@ -12,7 +12,7 @@ if (artifact === undefined || output === undefined || !['assembled', 'signed', '
 }
 
 const config = loadConfig()
-const resolvedOutput = safeOutputPath(output, [join(packagingRoot, 'staging'), join(packagingRoot, 'release')])
+const resolvedOutput = safeOutputPath(output, ownedPackagingRoots(packagingRoot))
 const entry = lstatSync(artifact)
 let payload
 if (entry.isFile()) {
