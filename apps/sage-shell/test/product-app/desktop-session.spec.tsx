@@ -157,8 +157,12 @@ describe('default desktop session submission lifecycle', () => {
     const { container } = await mount(async () => executing)
     expect(fetcher.mock.calls.some(([url]) => url === '/.sage/session/stream')).toBe(true)
 
-    await act(async () => { streamBody.enqueue(encoder.encode('data: {"text":"半句话"}\n\n')) })
-    expect(container.querySelector('.streaming-message')?.textContent).toContain('半句话')
+    // ADR-0299: a heading arriving mid-stream renders as a heading, as the observed product does.
+    await act(async () => { streamBody.enqueue(encoder.encode('data: {"text":"## 半标题\\n- 一项"}\n\n')) })
+    const live = container.querySelector('.streaming-message')
+    expect(live?.textContent).toContain('半标题')
+    expect(live?.querySelector('h2')?.textContent).toBe('半标题')
+    expect(live?.querySelector('li')?.textContent).toBe('一项')
 
     // The stream ends at the turn end: the live text is presentation only and clears at once.
     await act(async () => { streamBody.close() })

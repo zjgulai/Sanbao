@@ -194,8 +194,25 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .assistant-message { min-width: 0; margin-bottom: 28px; }
 .sage-desktop .assistant-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; font-size: 11px; color: var(--sage-brand); }
 .sage-desktop .assistant-heading strong { font-weight: 600; }
-.sage-desktop .reply-body { font-size: 13px; line-height: 1.95; color: var(--sage-ink); }
-.sage-desktop .user-message > span, .sage-desktop .reply-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sage-desktop .reply-body { font-size: 13px; line-height: 1.95; color: var(--sage-ink); overflow-wrap: anywhere; }
+.sage-desktop .user-message > span { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* ADR-0299: rendered markdown blocks replace the old pre-wrap plain text. */
+.sage-desktop .reply-body p { margin: 0 0 8px; }
+.sage-desktop .reply-body > :last-child { margin-bottom: 0; }
+.sage-desktop .reply-body h1, .sage-desktop .reply-body h2, .sage-desktop .reply-body h3,
+.sage-desktop .reply-body h4 { margin: 14px 0 8px; line-height: 1.5; }
+.sage-desktop .reply-body h1 { font-size: 17px; }
+.sage-desktop .reply-body h2 { font-size: 15px; }
+.sage-desktop .reply-body h3, .sage-desktop .reply-body h4 { font-size: 14px; }
+.sage-desktop .reply-body ul, .sage-desktop .reply-body ol { margin: 0 0 8px; padding-left: 20px; }
+.sage-desktop .reply-body li { margin: 2px 0; }
+.sage-desktop .reply-body pre { margin: 0 0 8px; padding: 10px 12px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 8px; overflow-x: auto; }
+.sage-desktop .reply-body pre code { background: none; border: 0; padding: 0; }
+.sage-desktop .reply-body code { padding: 0 3px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.sage-desktop .reply-body blockquote { margin: 0 0 8px; padding-left: 10px; border-left: 2px solid var(--sage-border); color: var(--sage-muted); }
+.sage-desktop .reply-body table { border-collapse: collapse; margin: 0 0 8px; }
+.sage-desktop .reply-body th, .sage-desktop .reply-body td { border: 1px solid var(--sage-border); padding: 4px 8px; }
+.sage-desktop .md-link { text-decoration: underline; text-underline-offset: 2px; }
 .sage-desktop .session-empty { color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .account-root { position: relative; }
 .sage-desktop .small-menu.account-menu { width: 100%; }

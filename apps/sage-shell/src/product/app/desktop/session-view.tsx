@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
+import { MarkdownText } from '../markdown.js'
+
 export interface DesktopSessionViewProps {
   readonly title: string
   readonly execution: 'idle' | 'executing'
@@ -47,12 +49,12 @@ export function DesktopSessionView({
               ? <div className="user-message" key={index}><span>{message.text}</span></div>
               : <div className="assistant-message" key={index}>
                 <div className="assistant-heading"><strong>Sage</strong></div>
-                <div className="reply-body">{message.text}</div>
+                <div className="reply-body"><MarkdownText text={message.text} /></div>
               </div>)}
           {streaming !== null && streaming !== ''
             ? <div className="assistant-message streaming-message" aria-label="正在生成">
               <div className="assistant-heading"><strong>Sage</strong></div>
-              <div className="reply-body">{streaming}</div>
+              <div className="reply-body"><MarkdownText text={streaming} /></div>
             </div>
             : null}
         </div>

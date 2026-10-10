@@ -70,8 +70,8 @@ describe('desktop session reads source projections instead of prototype observat
     expect(node.textContent).not.toMatch(/成功|已完成/)
   })
 
-  it('preserves message order, blank lines, indentation and literal markdown', () => {
-    const texts = ['  第一行\n\n\t缩进 **原文**  ', '  回复\n\n\t<script>原文</script>  ', '后续问题']
+  it('keeps user text literal and renders assistant markdown (ADR-0299)', () => {
+    const texts = ['  第一行\n\n\t缩进 **原文**  ', '## 标题\n\n**重点** 回复正文', '后续问题']
     const node = renderSession({ messages: [
       { role: 'user', text: texts[0]! },
       { role: 'assistant', text: texts[1]! },
@@ -81,13 +81,24 @@ describe('desktop session reads source projections instead of prototype observat
     style.textContent = SAGE_DESKTOP_CSS
     document.head.append(style)
     mounted.push(() => style.remove())
-    const bodies = [...node.querySelectorAll('.user-message > span, .reply-body')]
-    expect(bodies.map(body => body.textContent)).toEqual(texts)
-    for (const body of bodies) {
+    // The user side stays literal text; the assistant reply is rendered markdown.
+    const userBodies = [...node.querySelectorAll('.user-message > span')]
+    expect(userBodies.map(body => body.textContent)).toEqual([texts[0], texts[2]])
+    for (const body of userBodies) {
       expect(body.childElementCount).toBe(0)
       expect(getComputedStyle(body).whiteSpace).toBe('pre-wrap')
       expect(getComputedStyle(body).overflowWrap).toBe('anywhere')
     }
+    const reply = node.querySelector('.reply-body')!
+    expect(reply.querySelector('h2')?.textContent).toBe('标题')
+    expect(reply.querySelector('strong')?.textContent).toBe('重点')
+    expect(reply.textContent).toContain('回复正文')
+  })
+
+  it('never renders raw HTML from assistant text', () => {
+    const node = renderSession({ messages: [{ role: 'assistant', text: '<script>alert(1)</script>\n\n正文一段' }] })
+    expect(node.querySelector('script')).toBeNull()
+    expect(node.textContent).toContain('正文一段')
   })
 
   it('does not synthesize an answer or an outgoing prompt for an empty transcript', () => {
