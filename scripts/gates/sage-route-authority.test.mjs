@@ -37,6 +37,7 @@ const baseline = Object.freeze({
   sessionTurnCloseText: read('apps/sage-shell/src/main/session-turn-close.ts'),
   sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
   sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
+  runtimeInventoryCurrencyText: read('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -1165,6 +1166,36 @@ test('the send-path reconcile cannot drift from its order, gates or shared closu
   const unwireIndex = baseline.mainIndexText.replace('close: sessionTurnClose,', '')
   assert.notEqual(unwireIndex, baseline.mainIndexText)
   expectNamedFailure(check({ mainIndexText: unwireIndex }), 'the reconcile must be an injectable option wired from the same closure runner')
+})
+
+test('the host-epoch currency check cannot drift from its guard or its three conditions', () => {
+  const unguarded = baseline.mainIndexText.replace(
+    'isInventoryObservationCurrent(runtimeInventoryResult.evidence, host.readSnapshot())',
+    'true',
+  )
+  assert.notEqual(unguarded, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unguarded }), 'the inventory observation closure must check the live Host epoch before serving')
+
+  const generationDrop = baseline.runtimeInventoryCurrencyText.replace(
+    'snapshot.runtimeGeneration === evidence.runtimeGeneration',
+    'true',
+  )
+  assert.notEqual(generationDrop, baseline.runtimeInventoryCurrencyText)
+  expectNamedFailure(check({ runtimeInventoryCurrencyText: generationDrop }), 'the currency check must require an active snapshot of the same boot and generation')
+
+  const bootDrop = baseline.runtimeInventoryCurrencyText.replace(
+    'snapshot.bootId === evidence.bootId',
+    'true',
+  )
+  assert.notEqual(bootDrop, baseline.runtimeInventoryCurrencyText)
+  expectNamedFailure(check({ runtimeInventoryCurrencyText: bootDrop }), 'the currency check must require an active snapshot of the same boot and generation')
+
+  const kindDrop = baseline.runtimeInventoryCurrencyText.replace(
+    "snapshot.kind === 'active'",
+    'true',
+  )
+  assert.notEqual(kindDrop, baseline.runtimeInventoryCurrencyText)
+  expectNamedFailure(check({ runtimeInventoryCurrencyText: kindDrop }), 'the currency check must require an active snapshot of the same boot and generation')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

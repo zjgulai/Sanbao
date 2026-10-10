@@ -20,6 +20,7 @@ import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_ST
 import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
 import { createSessionTurnClose } from './session-turn-close.js'
 import { createSessionSendReconcile } from './session-send-reconcile.js'
+import { isInventoryObservationCurrent } from './runtime-inventory-currency.js'
 import { createSessionPromptPrepareEnsure } from './session-prompt-prepare.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
@@ -1024,6 +1025,9 @@ async function main(paths: SagePaths): Promise<void> {
         // and revision-digest surfaces for the real compatibility step.
         compatibilityPublication,
         runtimeInventoryObservation: () => (runtimeInventoryResult?.kind === 'available'
+          // ADR-0294: a dead or moved Host epoch invalidates the startup observation — the
+          // chain fails closed instead of evaluating against a dead epoch's facts.
+          && isInventoryObservationCurrent(runtimeInventoryResult.evidence, host.readSnapshot())
           ? { descriptor: runtimeInventoryResult.descriptor, evidence: runtimeInventoryResult.evidence }
           : undefined),
         revisionDigest: revisionDigestFor,

@@ -9724,6 +9724,28 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0294",
+      "title": "ADR-0294 · Host 生命周期失效接线：启动观测只服务于同一活跃 epoch",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "isInventoryObservationCurrent：active + bootId + runtimeGeneration 三条件全等。",
+          "constraints": [
+            "pure comparison, per-request evaluation"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "观测闭包为唯一出口；不匹配即 undefined（fail closed）。",
+          "constraints": [
+            "gate pins the guard call and its three conditions"
+          ]
+        }
+      ]
     }
   ]
 }
