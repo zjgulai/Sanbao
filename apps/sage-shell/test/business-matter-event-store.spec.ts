@@ -945,4 +945,56 @@ describe('BusinessMatter WT-02A.2 file-backed SQLite event store', () => {
     invalidClock.close()
     expectEmptyAuthorityTables(invalidClockPath)
   })
+
+  it('reads the committed revision-entered digest from the validated chain and isolates revisions', async () => {
+    const databasePath = await temporaryDatabase('revision-digest.sqlite3')
+    const first = openTrackedStore(databasePath)
+    const matterA = matterWithEvidence('matter:digest-a')
+    const matterB = matterWithEvidence('matter:digest-b')
+    expect(first.append(appendRequest(matterA, 'append:digest-a'))).toEqual({
+      kind: 'appended',
+      firstVersion: 1,
+      lastVersion: 2,
+    })
+    expect(first.append(appendRequest(matterB, 'append:digest-b'))).toEqual({
+      kind: 'appended',
+      firstVersion: 1,
+      lastVersion: 2,
+    })
+
+    const digestA = first.readRevisionDigest('matter:digest-a', 'revision:1')
+    const digestB = first.readRevisionDigest('matter:digest-b', 'revision:1')
+    expect(digestA).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(digestB).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(digestA).not.toEqual(digestB)
+    // Same revision id, same matter: the answer is stable within the session.
+    expect(first.readRevisionDigest('matter:digest-a', 'revision:1')).toEqual(digestA)
+    // Unknown revision inside an existing matter, and unknown matter, stay undefined.
+    expect(first.readRevisionDigest('matter:digest-a', 'revision:absent')).toBeUndefined()
+    expect(first.readRevisionDigest('matter:absent', 'revision:1')).toBeUndefined()
+    first.close()
+
+    // Reopen: the same committed digest comes back from the persisted chain.
+    const reopened = openTrackedStore(databasePath)
+    expect(reopened.readRevisionDigest('matter:digest-a', 'revision:1')).toEqual(digestA)
+    expect(reopened.readRevisionDigest('matter:digest-b', 'revision:1')).toEqual(digestB)
+
+    // A committed event that the digest chain does not verify is a boundary violation, never
+    // a settled answer from unvalidated bytes.
+    reopened.close()
+    withDatabase(databasePath, (database) => {
+      const update = database.prepare(`
+        UPDATE business_matter_events
+        SET event_digest = zeroblob(32)
+        WHERE matter_id = ? AND stream_version = 2
+      `).run('matter:digest-a')
+      expect(update.changes).toBe(1)
+    })
+    const guarded = openTrackedStore(databasePath)
+    expectStoreError(
+      () => guarded.readRevisionDigest('matter:digest-a', 'revision:1'),
+      'storage-boundary-violation',
+    )
+    guarded.close()
+  })
 })

@@ -225,6 +225,7 @@ export interface BusinessMatterEventStore {
   readonly capabilities: BusinessMatterEventStoreCapabilities
   readonly compatibilityEvaluationEvidence: CompatibilityEvaluationEvidencePortV1
   load(matterId: string): BusinessMatterLoadResult
+  readRevisionDigest(matterId: string, revisionId: string): string | undefined
   append(request: AppendRequest): BusinessMatterAppendResult
   appendWithCompatibilityEvidence(
     request: AppendRequest,
@@ -2481,6 +2482,102 @@ class SqliteBusinessMatterEventStore implements BusinessMatterEventStore {
       return isSqliteCorrupt(error)
         ? blockedLoad('corrupt')
         : blockedLoad('io-unavailable')
+    }
+  }
+
+  /** 已提交摘要语义（本读方法唯一事实来源）：
+   *
+   * 选择候选 B——该 matter 事件链中该 revision 的 `revision-entered` 事件的
+   * `event_digest`（逐事件链摘要），而非候选 A 的流 head_digest。
+   *
+   * 理由：①「该 revision 的已提交摘要」必须唯一可寻址到 revision 本身；流
+   * head_digest 只锚定「某次 append 后的流终态」，revision 与流版本没有一对一
+   * 关系（一个 append 可含多个事件，revision-entered 之后还有 attempt、decision
+   * 等事件），用 head_digest 会把 revision 之后的流演化伪装成 revision 的摘要。
+   * ② revision-entered 的 event_digest 是 store 自己既有 SHA-256 域分隔链
+   * （COMMITTED_EVENT_DIGEST_DOMAIN，computeBusinessMatterCommittedEventDigest）
+   * 的产物，append 时写入、internalLoad 时逐事件重算校验、且与 head_digest 链式
+   * 锁定（previous_digest 连锁），不另造第二套摘要定义。③ 同一 revisionId 在
+   * 不同 matter 下各自有独立事件行，天然隔离。
+   *
+   * 「已提交」定义：只认 internalLoad 已通过全链校验的流。流被篡改或损坏时按
+   * store 既有语义 blocked（抛 BusinessMatterEventStoreError），绝不返回未校验
+   * 字节。读到的 32 字节 BLOB 按 `'sha256:' + hex(digest bytes)` 包裹，满足 V2
+   * kernel 的 content-digest 形状（/^sha256:[0-9a-f]{64}$/，见
+   * security/compatibility.ts）。
+   *
+   * 返回 undefined 的唯一情形：matter 流不存在，或该 revisionId 不在此流的任何
+   * revision-entered 事件里。store 未打开等内部错误按既有语义抛错。
+   */
+  readRevisionDigest(matterId: string, revisionId: string): string | undefined {
+    this.assertOpen()
+    this.assertStorageBoundary()
+    try {
+      const result = this.internalLoad(matterId)
+      this.assertStorageBoundary()
+      if (result.kind === 'blocked') {
+        // The stream failed the store's own full-chain validation. A digest read has no
+        // "blocked" shape to return, and answering `undefined` would pass tampered data off
+        // as a missing fact, so the blocked outcome surfaces as a thrown integrity
+        // violation carrying the blocked reason — never as bytes from an unverified chain.
+        throw new BusinessMatterEventStoreError(
+          'storage-boundary-violation',
+          `The committed stream could not be validated: ${result.reason}.`,
+        )
+      }
+      if (result.kind !== 'loaded') return undefined
+      for (const envelope of result.envelopes) {
+        if (envelope.eventType !== 'revision-entered') continue
+        const payloadBytes = envelope.payloadBytes
+        let payload: unknown
+        try {
+          payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payloadBytes))
+        } catch {
+          throw new BusinessMatterEventStoreError(
+            'storage-boundary-violation',
+            'The committed revision-entered payload is not readable UTF-8 JSON.',
+          )
+        }
+        // The revision-entered payload is `{ type, eventId, matterId, occurredAt,
+        // revision: RevisionSnapshot }`; the revision identity lives in
+        // payload.revision.revisionId (assertRevision in the codec).
+        const record = typeof payload === 'object' && payload !== null
+          ? payload as Record<string, unknown>
+          : undefined
+        const revision = record === undefined ? undefined : record.revision
+        if (
+          typeof revision !== 'object'
+          || revision === null
+          || (revision as Record<string, unknown>).revisionId !== revisionId
+        ) continue
+        // Stream version n maps 1:1 to envelopes[n-1] and rows ordered by
+        // stream_version; internalLoad already verified every event_digest.
+        const rows = this.database.prepare(`
+          SELECT event_digest
+          FROM business_matter_events
+          WHERE matter_id = ? AND stream_version = ?
+        `).all(matterId, envelope.streamVersion)
+        const row = rows.length === 1 ? rows[0] : undefined
+        const digest = row === undefined ? undefined : rowBytes(row, 'event_digest')
+        if (
+          digest === undefined
+          || digest.byteLength !== DIGEST_BYTES
+        ) {
+          throw new BusinessMatterEventStoreError(
+            'storage-boundary-violation',
+            'The committed revision digest is unreadable.',
+          )
+        }
+        return `sha256:${Buffer.from(digest).toString('hex')}`
+      }
+      return undefined
+    } catch (error) {
+      if (error instanceof BusinessMatterEventStoreError) throw error
+      this.assertStorageBoundary()
+      throw new BusinessMatterEventStoreError(
+        'io-unavailable',
+        'The committed revision digest could not be read.',
+      )
     }
   }
 
