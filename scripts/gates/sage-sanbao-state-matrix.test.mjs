@@ -15,7 +15,11 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], { encodin
 const baseline = JSON.parse(readFileSync(join(repoRoot, MATRIX_REL_PATH), 'utf8'))
 const routeKeys = routeKeysFromAuthorityMatrix(JSON.parse(readFileSync(join(repoRoot, ROUTE_MATRIX_REL_PATH), 'utf8')))
 const options = {
-  isTrackedEvidence: ref => typeof ref === 'string' && ref.startsWith('docs/'),
+  // Mirrors the real git-tracked checker for repo paths actually used by verification refs
+  // (docs specs/notes, sage-shell tests/sources, packaging harness) — ADR-0283 D2 introduced
+  // non-docs tracked refs, which the old docs/-only approximation misread as untracked.
+  isTrackedEvidence: ref => typeof ref === 'string'
+    && (ref.startsWith('docs/') || ref.startsWith('apps/') || ref.startsWith('packaging-sage/')),
   routeKeys,
 }
 

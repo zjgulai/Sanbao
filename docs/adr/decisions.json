@@ -9252,6 +9252,54 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0283",
+      "title": "ADR-0283 · T13-A 治理裁决：外观三族 not-applicable、verified 证据政策、入口语义重述与 Registry 自证等价路线",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "外观三族（theme/text-size/ui-scale）记 not-applicable：缩放归平台 zoom，色板不在当前产品面；未来收编=新 ADR/新 DTO/新行。",
+          "constraints": [
+            "decision ref must be a tracked ADR path",
+            "rationale is per-row and non-empty"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "verified 证据政策：acceptance-result.json 稳定命名入仓 docs/notes/implemented/packaging/evidence/，行以 countsAsVerification:true 引用；截图不入 git；文件内机器路径为 sanctioned 历史证据例外。",
+          "constraints": [
+            "only tracked paths count as verification",
+            "visualAcceptance keeps a stricter gate"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "appearance.entry 按 Sage 真实入口（账号菜单→外观与显示）重述；*.open 族观察重述为控件存在+选项集+权威值+保存/回读。",
+          "constraints": [
+            "no product surface change",
+            "semantic restatement recorded on the row"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "Registry 首方 entry 自证等价：provenance = C2A 制品 attestation + 发布决策 + owner 审批；明确不宣称 C2C.5 外部等价。",
+          "constraints": [
+            "no fake external anchor",
+            "Registry four-state governance unchanged"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首次应用：8 条外观族行 ui/applicationService/electronAcceptance 升 verified（tracked spec + v2 读数 + route matrix）；hostIntegration/visualAcceptance 保持 pending。",
+          "constraints": [
+            "summary recomputed by derivation",
+            "source/prototype PINs untouched"
+          ]
+        }
+      ]
     }
   ]
 }

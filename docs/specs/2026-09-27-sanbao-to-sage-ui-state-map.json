@@ -105,26 +105,31 @@
         "T13": 74
       },
       "applicability": {
-        "unreviewed": 206
+        "not-applicable": 3,
+        "unreviewed": 203
       },
       "ui": {
-        "implementing": 13,
-        "pending": 193
+        "implementing": 5,
+        "pending": 193,
+        "verified": 8
       },
       "applicationService": {
-        "blocked": 206
+        "blocked": 198,
+        "verified": 8
       },
       "hostIntegration": {
         "pending": 206
       },
       "electronAcceptance": {
-        "pending": 206
+        "pending": 198,
+        "verified": 8
       },
       "visualAcceptance": {
         "pending": 206
       },
       "integration": {
-        "pending": 206
+        "not-applicable": 3,
+        "pending": 203
       }
     }
   },
@@ -2338,7 +2343,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "按 Sage 真实入口重述（ADR-0283 D3）：Sage 无「设置导航→外观」两级入口，真实形态为账号菜单 → 外观与显示表单；待按该语义出句级证据批次。"
         ]
       }
     },
@@ -7598,32 +7603,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -7631,7 +7660,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "Sage 入口=账号菜单 → 外观与显示；ui/applicationService/electronAcceptance 依 live 读数与 tracked 证据核验；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7676,32 +7705,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -7709,7 +7762,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7754,32 +7807,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -7787,7 +7864,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7832,32 +7909,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -7865,7 +7966,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7910,32 +8011,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -7943,7 +8068,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7988,32 +8113,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -8021,7 +8170,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -8066,32 +8215,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -8099,7 +8272,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -8144,32 +8317,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
             },
             {
-              "kind": "tracked-doc",
-              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
-              "countsAsVerification": false
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "GET /.sage/device-preferences"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-10-dmg06-v2-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "harness",
+              "ref": "packaging-sage/scripts/accept-dmg.mjs",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -8177,7 +8374,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
+          "弹层观察按 Sage 真实形态重述（ADR-0283 D2/D3）：控件存在 + 选项集 + 权威值 + 保存/回读；macOS 原生 select 弹层无法被 CDP 驱动（DMG note 十二追加）。hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -8488,7 +8685,7 @@
       "delivery": {
         "ownerTicket": "T13",
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
-        "applicability": "unreviewed",
+        "applicability": "not-applicable",
         "ui": {
           "status": "pending",
           "evidenceRefs": []
@@ -8510,10 +8707,12 @@
           "status": "pending",
           "evidenceRefs": []
         },
-        "integrationStatus": "pending",
+        "integrationStatus": "not-applicable",
         "blockers": [
           "requires ticket implementation and scoped real service verification"
-        ]
+        ],
+        "notApplicableDecisionRef": "docs/adr/ADR-0283.md",
+        "notApplicableRationale": "主题色板（森林/薄荷/蜜蜂/羊皮纸）：Sage 语义 token 面（ADR-0257/0258）只承诺 light/dark/system 与 density；色板=新设计系统层（token 单源、逐色板对比度、投影与验收全链），无需求证据。未来收编=新 ADR + 新 DTO + 新矩阵行（ADR-0283 D1）。"
       }
     },
     {
@@ -8622,7 +8821,7 @@
       "delivery": {
         "ownerTicket": "T13",
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
-        "applicability": "unreviewed",
+        "applicability": "not-applicable",
         "ui": {
           "status": "pending",
           "evidenceRefs": []
@@ -8644,10 +8843,12 @@
           "status": "pending",
           "evidenceRefs": []
         },
-        "integrationStatus": "pending",
+        "integrationStatus": "not-applicable",
         "blockers": [
           "requires ticket implementation and scoped real service verification"
-        ]
+        ],
+        "notApplicableDecisionRef": "docs/adr/ADR-0283.md",
+        "notApplicableRationale": "文字大小（小/中/大）：Sage 不铸平行 DTO；缩放由平台手段承担（Chromium zoom，已有 200% reflow 验收），系统级文字缩放在 Electron 网页内容不生效，应用级字号=新持久化契约且无需求证据（ADR-0283 D1）。"
       }
     },
     {
@@ -8689,7 +8890,7 @@
       "delivery": {
         "ownerTicket": "T13",
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
-        "applicability": "unreviewed",
+        "applicability": "not-applicable",
         "ui": {
           "status": "pending",
           "evidenceRefs": []
@@ -8711,10 +8912,12 @@
           "status": "pending",
           "evidenceRefs": []
         },
-        "integrationStatus": "pending",
+        "integrationStatus": "not-applicable",
         "blockers": [
           "requires ticket implementation and scoped real service verification"
-        ]
+        ],
+        "notApplicableDecisionRef": "docs/adr/ADR-0283.md",
+        "notApplicableRationale": "界面缩放（中/大）：同文字大小——平台 zoom 承担并有 200% reflow 验收；应用级缩放 DTO 与窗口缩放语义冲突（ADR-0283 D1）。"
       }
     },
     {
