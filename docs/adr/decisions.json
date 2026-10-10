@@ -9445,6 +9445,50 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0287",
+      "title": "ADR-0287 · 第 8 步 preflight：fresh availability、实时 epoch 读与判词边界",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "preflight v1 = 实时 runtime-effective 观测三步读法（形状/observed/否则 unavailable）；坏链先拒、后触 Host；纯读无时钟。",
+          "constraints": [
+            "an unusable chain never touches the Host",
+            "live read per request"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "preflightRef 域分隔绑定 targetRef/mappingRef/requirementDigest/实时读数；roster 移动即 ref 移动。",
+          "constraints": [
+            "deterministic, no clock"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "判词集：永不 denied / stale；运行时缺失=unavailable；再核验归 persistence/dispatch。",
+          "constraints": [
+            "zero denied exits, zero stale exits"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "不宣称操作 preflight 完成：boot 静态一致由 inventory 证明；availability 不是 execution authority。",
+          "constraints": [
+            "dispatch stays absent"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "options-gated 接线复用 Ticket 030 验证闭包；门禁六项事实 + 六条突变；note 句迁出 absent 名单。",
+          "constraints": [
+            "mechanism over review"
+          ]
+        }
+      ]
     }
   ]
 }

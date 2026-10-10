@@ -25,6 +25,7 @@ const baseline = Object.freeze({
   sessionPromptRegistryText: read('apps/sage-shell/src/main/session-prompt-registry.ts'),
   capabilityEntryDerivationText: read('apps/sage-shell/src/main/capability-entry-derivation.ts'),
   runtimeInventoryProviderText: read('apps/sage-shell/src/main/runtime-inventory-provider.ts'),
+  sessionPromptPreflightText: read('apps/sage-shell/src/main/session-prompt-preflight.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -829,6 +830,50 @@ test('the real registry step cannot drift from its gated wiring, bindings or den
   )
   assert.notEqual(secondForma, baseline.runtimeInventoryProviderText)
   expectNamedFailure(check({ runtimeInventoryProviderText: secondForma }), 'the derivation forma must stay single-sourced across the inventory producer and the registry step')
+})
+
+test('the real preflight step cannot drift from its gated wiring, live validation or verdict set', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    'options.requirementBundle === undefined || options.runtimeEffective === undefined',
+    'false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the preflight step must be wired only behind the bundle and the live runtime read')
+
+  const unvalidated = baseline.sessionPromptPreflightText.replace(
+    'isRuntimeEffectiveObservation(live)',
+    'true',
+  )
+  assert.notEqual(unvalidated, baseline.sessionPromptPreflightText)
+  expectNamedFailure(check({ sessionPromptPreflightText: unvalidated }), 'the preflight step must validate the live runtime-effective observation')
+
+  const observedDrift = baseline.sessionPromptPreflightText.replace(
+    "if (live.kind !== 'observed') return { state: 'unavailable' }",
+    "if (live.kind === 'nothing') return { state: 'unavailable' }",
+  )
+  assert.notEqual(observedDrift, baseline.sessionPromptPreflightText)
+  expectNamedFailure(check({ sessionPromptPreflightText: observedDrift }), 'a non-observed runtime must answer unavailable, never allowed')
+
+  const denialDrift = baseline.sessionPromptPreflightText.replace(
+    "if (live.kind !== 'observed') return { state: 'unavailable' }",
+    "if (live.kind !== 'observed') return { state: 'denied' }",
+  )
+  assert.notEqual(denialDrift, baseline.sessionPromptPreflightText)
+  expectNamedFailure(check({ sessionPromptPreflightText: denialDrift }), 'the preflight step never denies and never stales; a missing runtime answers unavailable')
+
+  const guardDrift = baseline.sessionPromptPreflightText.replace(
+    "!registry.mappingRef.startsWith('mapping:')",
+    'false',
+  )
+  assert.notEqual(guardDrift, baseline.sessionPromptPreflightText)
+  expectNamedFailure(check({ sessionPromptPreflightText: guardDrift }), 'the preflight step must refuse a malformed mapping ref before reading the Host')
+
+  const domainDrift = baseline.sessionPromptPreflightText.replace(
+    "const domain = 'urn:sage:preflight:v1:'",
+    "const domain = 'urn:sage:preflight:v2:'",
+  )
+  assert.notEqual(domainDrift, baseline.sessionPromptPreflightText)
+  expectNamedFailure(check({ sessionPromptPreflightText: domainDrift }), 'the preflight ref must carry its own domain-separated namespace')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

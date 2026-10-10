@@ -24,6 +24,7 @@ import type { RegistrySnapshotPort, RuntimeInventoryProvider } from './runtime-i
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
 import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
 import {
@@ -868,6 +869,16 @@ function createSessionCoreProtectedEffectPorts(
             requirementBundle: options.requirementBundle,
             registryProvider: options.capabilityRegistry,
             runtimeObservation: options.runtimeInventoryObservation,
+          }),
+        }),
+    // T05-mid step 8: the real preflight step over the live runtime-effective observation of the
+    // Host epoch (ADR-0287). Wired only when the bundle and the live read both exist.
+    ...(options.requirementBundle === undefined || options.runtimeEffective === undefined
+      ? {}
+      : {
+          preflight: createSessionPromptPreflightPort({
+            requirementBundle: options.requirementBundle,
+            runtimeEffective: options.runtimeEffective,
           }),
         }),
   }
