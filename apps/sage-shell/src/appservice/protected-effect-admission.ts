@@ -6,6 +6,8 @@
  * collapsed to stable product states; provider errors and authority objects never reach callers.
  */
 
+import type { CompatibilityEvaluationEvidenceV1 } from '../security/compatibility-evaluation-evidence.js'
+
 export interface SessionCoreProtectedEffectIntent {
   readonly family: 'session-core'
   readonly requestId: string
@@ -48,6 +50,10 @@ export interface TrustedTargetFact {
 export interface EquivalentCompatibilityFact {
   readonly evaluationRef: string
   readonly outcome: 'equivalent'
+  /** The sealed evaluation evidence this admission actually used (ADR-0288). Optional in the
+   *  admission contract — probes and pre-evidence ports may omit it — but the persist step
+   *  refuses to write without it. The shape guard stays lenient; validation is the codec's job. */
+  readonly evidence?: CompatibilityEvaluationEvidenceV1
 }
 
 export interface ApprovedRegistryFact {

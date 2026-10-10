@@ -31,6 +31,7 @@ import { toCompatibilityMatrixV2ProviderResult } from '../security/compatibility
 import { ACTION_AUTHORITY_TABLE } from './action-authority-table.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
 import type { CompatibilityMatrixPublicationLoad, RequirementBundleLoad } from './publication-bundle.js'
+import { buildSessionPromptEvaluationEvidence } from './session-prompt-evaluation-evidence.js'
 import { computeTargetSemanticFromRequirement } from './target-requirement-candidate.js'
 
 export interface RuntimeInventoryObservation {
@@ -110,6 +111,11 @@ export function createSessionPromptCompatibilityPort(
       JSON.stringify(intent.candidate),
       JSON.stringify(intent.payload),
     ])
+    const attemptId = `attempt:sage.${intent.requestId}`
+    const targetProviderProvenanceDigest = evidenceDigest('urn:sage:compatibility-target-provenance:v1:', [
+      bundle.snapshotId,
+      requirement.requirementDigest,
+    ])
     const targetEvidenceBody: CompatibilityTargetEvidenceBodyV2 = {
       schemaVersion: 'sage.compatibility-target-evidence.v2',
       canonicalizationVersion: 'sage.compatibility-canonical-json.v2',
@@ -123,12 +129,9 @@ export function createSessionPromptCompatibilityPort(
       accountBoundaryDigest: evidenceDigest('urn:sage:compatibility-boundary.account:v1:', [identityPolicy.actorScopeRef]),
       resourceBoundaryDigest: evidenceDigest('urn:sage:compatibility-boundary.resource:v1:', [context.matterRef, context.revisionRef]),
       decisionDigest: evidenceDigest('urn:sage:compatibility-decision:v1:', [identityPolicy.decisionRef]),
-      attemptId: `attempt:sage.${intent.requestId}`,
+      attemptId,
       issuedAt,
-      targetProviderProvenanceDigest: evidenceDigest('urn:sage:compatibility-target-provenance:v1:', [
-        bundle.snapshotId,
-        requirement.requirementDigest,
-      ]),
+      targetProviderProvenanceDigest,
     }
     const resolved = resolveCompatibilityV2({
       evaluatedAt,
@@ -148,6 +151,29 @@ export function createSessionPromptCompatibilityPort(
     })
 
     if (resolved.outcome === 'equivalent') {
+      // The sealed evidence this admission actually used (ADR-0288): built from the same
+      // in-instant facts, carried in the fact so the persist step writes exactly these bytes.
+      const built = buildSessionPromptEvaluationEvidence({
+        evaluationId: `evaluation:sage.${intent.requestId}`,
+        attemptId,
+        matterId: context.matterRef,
+        revisionId: context.revisionRef,
+        revisionDigest,
+        actionScope: entry.actionScope,
+        actionIntentDigest: actionIntent,
+        targetSemanticDigest: targetSemantic.targetSemanticDigest,
+        targetEvidenceDigest: resolved.binding.targetEvidenceDigest,
+        runtimeDescriptorDigest: observation.descriptor.runtimeDescriptorDigest,
+        inventoryEvidenceDigest: resolved.binding.inventoryEvidenceDigest,
+        inventoryProviderProvenanceDigest: observation.evidence.mainObservationProvenanceDigest,
+        targetProviderProvenanceDigest,
+        matrixResult: matrix,
+        matchedRuleId: resolved.binding.matchedRuleId,
+        matrixProviderProvenanceDigest: resolved.binding.matrixProviderProvenanceDigest,
+        evaluatedAt,
+        revocationSource: publication.revocationSource,
+      })
+      if (!built.ok) return { state: 'unavailable' }
       return {
         state: 'allowed',
         value: {
@@ -159,6 +185,7 @@ export function createSessionPromptCompatibilityPort(
             resolved.binding.evaluatedAt,
           ]),
           outcome: 'equivalent',
+          evidence: built.evidence,
         },
       }
     }

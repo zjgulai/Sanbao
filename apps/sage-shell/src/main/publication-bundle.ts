@@ -20,7 +20,9 @@ import {
   createBundledCompatibilityMatrixProviderV2,
   parseCompatibilityMatrixBundleV2,
   parseCompatibilityMatrixRevocationSourceV2,
+  type CompatibilityMatrixBundleV2,
   type CompatibilityMatrixProviderV2,
+  type CompatibilityMatrixRevocationSourceV2,
 } from '../security/compatibility-matrix-provider.js'
 import {
   parseCapabilityRegistrySnapshot,
@@ -51,6 +53,10 @@ export type CompatibilityMatrixPublicationLoad =
       readonly bundleId: string
       readonly matrixId: string
       readonly revocationSourceId: string
+      /** The sealed bundle bytes (ADR-0288): the persist step rebuilds the historical matrix from
+       *  these exact values, not from a second read of the file. */
+      readonly bundle: CompatibilityMatrixBundleV2
+      readonly revocationSource: CompatibilityMatrixRevocationSourceV2
     }
   | { readonly ok: false; readonly reason: string }
 
@@ -147,5 +153,7 @@ export function loadSessionPromptCompatibilityPublication(
     bundleId: parsedBundle.value.bundleId,
     matrixId,
     revocationSourceId: parsedRevocation.value.sourceId,
+    bundle: parsedBundle.value,
+    revocationSource: parsedRevocation.value,
   }
 }

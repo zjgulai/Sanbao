@@ -110,6 +110,8 @@ function testPublication(outcome: 'equivalent' | 'requires-new-revision' = 'equi
     bundleId: sealed.value.bundleId,
     matrixId: sealed.value.artifacts[0]!.matrixId,
     revocationSourceId: revocation.value.sourceId,
+    bundle: sealed.value,
+    revocationSource: revocation.value,
   }
 }
 
@@ -155,7 +157,7 @@ function port(options: Partial<Parameters<typeof createSessionPromptCompatibilit
 }
 
 const request = (operation: string) => ({
-  intent: { operation, requestId: 'request:fixture', candidate: { kind: 'matter', matterRef: 'matter:active' }, payload: { text: 'fixture' } },
+  intent: { operation, requestId: 'request-fixture-1', candidate: { kind: 'matter', matterRef: 'matter:active' }, payload: { text: 'fixture' } },
   context: { matterRef: 'matter:active', revisionRef: 'revision:active.1' },
   identityPolicy: { actorScopeRef: 'urn:sage:actor-scope:v1:fixture', decisionRef: 'urn:sage:identity-decision:v1:fixture' },
 }) as never
