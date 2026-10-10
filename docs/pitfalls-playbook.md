@@ -1841,3 +1841,27 @@
   「关掉 digest」或「整类文件不看」。container verification 与 leaf identity verification必须分开；
   receipt 声称同一 signer 时，就逐 target 观察，而不是从 outer 推断 nested。
 - **详见**：[ADR-0271](adr/ADR-0271.md) 与 [Note](notes/implemented/packaging/2026-10-05-sage-internal-dmg.md)。
+
+## P-69 · 回执 DR 读取走错流：仪器恒报「0 条」，被测物被连修三轮
+
+- **症状**：首次真实签发 28 个 Mach-O 全部成功，回执却报 `expected one designated requirement,
+  observed 0`。据此判定「此 macOS 对非 Apple 锚不再隐式生成 DR」，连续三轮改**签名侧**
+  （显式 `--requirements` 字符串形态 → 文件形态），每轮都真实重跑、每轮仍是 0 条。无信任
+  A/B 复刻钉死：DR 从未缺失——不传 `--requirements` 的对照组 stdout 回读即
+  `identifier "com.lute.sage" and certificate leaf = H"…"`（`Internal requirements count=1 size=92`）；
+  错的是读取侧：`codesign -d -r-` 的 dash 形式把 human-readable requirement 写到 **stdout**
+  （stderr 只有 `Executable=` 头），解析器只读 stderr，于是**每一次**读数都是 0。仪器诚实
+  报废，看起来却像被测物坏了。
+- **根因类**：P-50（判据前提坏掉后看起来像被测物坏了）在**观测流**上的同族，与 P-56（校验器
+  只吃合成样本）成对：DR 读取器从未对**真实签名件**跑过，直到首跑——而首跑失败被读成产品
+  缺陷，症状层修复被当成根除，且每轮都有一部分真实读数通过，强化误诊。
+- **已落地机制**：`script:packaging-sage/scripts/signing-evidence.mjs` 改读 stdout（`-r-` 的
+  dash 语义即「human-readable 到 stdout」）并保留 `{ run }` 注入点；
+  `script:packaging-sage/tests/signing-evidence-test.mjs` 钉住流与形态（stderr 上的 DR 行必须
+  不满足读取、两行判 2、空值判非法、参数保持 `-d -r-`），经 `gate:sage-packaging-contracts`
+  的清单进入门禁；A/B 复刻组（与 sign-local 同配方的自签身份 + 临时钥匙串 + 搜索列表成员）
+  作为真实故障现场完成端到端回读。
+- **下一版默认动作**：任何解析外部工具输出的判据，落地前先对**真实故障现场**跑一次正例
+  （不是合成形状、不是「预期输出」）；判据报「观测到 0」时，先验证流/格式前提，再怀疑被测物。
+  仪器修复与被测物修复必须能在一次运行里区分开：先让仪器对已知好的件读出正确值。
+- **详见**：[Note](notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md)（七追加）。

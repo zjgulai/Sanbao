@@ -16,8 +16,9 @@ keychain, asks macOS SecurityAgent to trust it for code signing, delegates the a
 transaction to sign.sh, removes the trust, and deletes all temporary identity material.
 
 This command intentionally requires interactive SecurityAgent approval. It never uses an
-existing identity and verifies that its private keychain is absent from the user's keychain
-search lists before the operation can complete.
+existing identity; the private keychain must be absent from the user's keychain search lists
+before the operation, joins them for the signing window only, and every path restores the
+exactly captured prior list afterwards.
 EOF
 }
 
@@ -150,7 +151,12 @@ openssl pkcs12 -export $pkcs12_legacy \
 
 /usr/bin/security create-keychain -p "$keychain_password" "$keychain"
 node "$RECOVERY_HELPER" assert-keychain-unlisted "$work" "$$"
-/usr/bin/security set-keychain-settings -lut 300 "$keychain"
+# Idle auto-lock must outlive the whole signing transaction: sign.sh copies the ~29k-file
+# candidate and re-verifies its plans BEFORE the first codesign call, with zero keychain access
+# in between — a short idle timeout locks the keychain mid-flight and codesign then reports
+# "<sha1>: no identity found" (first real run, 2026-10-10). The security boundary here is the
+# end-of-script trust removal and material deletion, not the idle lock.
+/usr/bin/security set-keychain-settings -lut 3600 "$keychain"
 /usr/bin/security unlock-keychain -p "$keychain_password" "$keychain"
 /usr/bin/security import "$identity_archive" \
   -k "$keychain" \
@@ -188,6 +194,27 @@ fi
 node "$RECOVERY_HELPER" assert-code-signing-trust "$work" "$$"
 node "$PACKAGING_SAGE_ROOT/scripts/resolve-signing-identity.mjs" \
   "$identity" "$certificate_sha256" "$keychain" >/dev/null
+
+# Re-unlock immediately before the transaction so a sleep/lock between trust and signing cannot
+# strand codesign with an inaccessible private key.
+/usr/bin/security unlock-keychain -p "$keychain_password" "$keychain"
+
+# codesign(1) "SIGNING IDENTITIES": an identity must be stored in a keychain that is on the
+# calling user's keychain search list — --keychain only narrows that search (first real run,
+# 2026-10-10: codesign reported "<sha1>: no identity found" although find-identity saw the
+# identity). The ephemeral keychain therefore joins the search list for the signing window only.
+# The exact prior list is captured first so recovery restores it on every path, crash included.
+search_list_paths=()
+while IFS= read -r raw_line; do
+  stripped="${raw_line#"${raw_line%%[![:space:]]*}"}"
+  stripped="${stripped%\"}"
+  stripped="${stripped#\"}"
+  [[ -z "$stripped" ]] || search_list_paths+=("$stripped")
+done < <(/usr/bin/security list-keychains -d user)
+[[ ${#search_list_paths[@]} -gt 0 ]] || die 'user keychain search list is unexpectedly empty'
+printf '%s\n' ${search_list_paths[@]+"${search_list_paths[@]}"} > "$work/search-list-before.txt"
+chmod 600 "$work/search-list-before.txt"
+/usr/bin/security list-keychains -d user -s ${search_list_paths[@]+"${search_list_paths[@]}"} "$keychain"
 
 bash "$PACKAGING_SAGE_ROOT/sign.sh" \
   --app "$app" \

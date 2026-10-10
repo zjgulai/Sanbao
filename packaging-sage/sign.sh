@@ -216,6 +216,10 @@ while IFS=$'\t' read -r kind relative_path extra; do
     app)
       [[ "$relative_path" == '.' && "$target" == "$candidate_app" ]] \
         || die "invalid outer app signing target: $relative_path"
+      # No --requirements here: codesign already synthesizes the designated requirement for the
+      # self-signed identity (identifier + certificate leaf hash), and the receipt step reads that
+      # DR from STDOUT. An explicit requirement chased a phantom for three runs (2026-10-10; see
+      # the seventh addendum of the DMG-chain note).
       codesign --force --sign "$identity_sha1" --timestamp=none ${codesign_keychain_args[@]+"${codesign_keychain_args[@]}"} "$target"
       ;;
     *)

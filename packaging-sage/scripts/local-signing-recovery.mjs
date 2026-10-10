@@ -25,6 +25,8 @@ const CERTIFICATE_NAME = 'certificate.pem'
 const PRIVATE_KEY_NAME = 'private-key.pem'
 const IDENTITY_ARCHIVE_NAME = 'identity.p12'
 const KEYCHAIN_NAME = 'identity.keychain-db'
+/** Written by sign-local.sh inside the signing window; bare absolute keychain paths, one per line. */
+const SEARCH_LIST_CAPTURE_NAME = 'search-list-before.txt'
 const STATES = new Set(['pre-trust', 'trust-unknown', 'trust-removed'])
 const COMMAND_ENV = { LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin:/usr/sbin:/sbin' }
 
@@ -525,6 +527,30 @@ function verifyKeychainUnlisted(keychain, runSecurity, errors) {
   }
 }
 
+function restoreUserSearchList(work, runSecurity, errors) {
+  const capturePath = join(work, SEARCH_LIST_CAPTURE_NAME)
+  if (!existsSync(capturePath)) {
+    // No signing window was opened: nothing was added to the search list.
+    return
+  }
+  let lines
+  try {
+    lines = readFileSync(capturePath, 'utf8').split('\n')
+  } catch (error) {
+    errors.push(`could not read the captured user keychain search list: ${error instanceof Error ? error.message : String(error)}`)
+    return
+  }
+  const paths = lines.filter(line => line !== '')
+  if (paths.length === 0 || paths.some(path => !path.startsWith('/') || path.includes('\u0000'))) {
+    errors.push('captured user keychain search list is malformed; refusing to rewrite it')
+    return
+  }
+  const restore = runSecurity(['list-keychains', '-d', 'user', '-s', ...paths])
+  if (!commandSucceeded(restore)) {
+    errors.push(`could not restore the user keychain search list (${paths.length} entries)`)
+  }
+}
+
 function destroyKeychain(keychain, runSecurity, errors) {
   const existed = existsSync(keychain)
   if (existed) {
@@ -622,6 +648,12 @@ export function recoverLocalSigningWork(workInput, options = {}) {
   const identityArchive = join(work, IDENTITY_ARCHIVE_NAME)
   const keychain = join(work, KEYCHAIN_NAME)
   const certificate = join(work, CERTIFICATE_NAME)
+
+  // Restore the user keychain search list FIRST: codesign(1) requires the identity's keychain to
+  // be on that list, so sign-local.sh adds the ephemeral keychain for the signing window only and
+  // captures the exact prior list here. Without this step a crash inside the window would leave a
+  // dangling entry (and destroyKeychain's unlisted postcondition would fail).
+  restoreUserSearchList(work, runSecurity, errors)
 
   // Destroy reusable signing capability before any potentially interactive trust operation.
   removeRegularOrSymlink(privateKey, errors)

@@ -42,6 +42,54 @@ function fixture() {
     mkdirSync(current.work, { mode: 0o700 })
     initializeLocalSigningRecovery(current.work, process.pid)
     writeSensitiveFixture(current.work)
+    writeFileSync(
+      join(current.work, 'search-list-before.txt'),
+      '/Users/example/Library/Keychains/login.keychain-db\n',
+      'utf8',
+    )
+    const calls = []
+    const result = recoverLocalSigningWork(current.work, {
+      requesterPid: process.pid,
+      runSecurity: fakeSecurity(current.work, { listed: true, calls }),
+    })
+    assert.equal(result.ok, true, result.errors.join('\n'))
+    const restore = calls.find(args => args[0] === 'list-keychains' && args.includes('-s'))
+    assert.deepEqual(restore, [
+      'list-keychains', '-d', 'user', '-s', '/Users/example/Library/Keychains/login.keychain-db',
+    ])
+    process.stdout.write('PASS recovery restores the captured keychain search list\n')
+  } finally {
+    current.cleanup()
+  }
+}
+
+{
+  const current = fixture()
+  try {
+    mkdirSync(current.work, { mode: 0o700 })
+    initializeLocalSigningRecovery(current.work, process.pid)
+    writeSensitiveFixture(current.work)
+    writeFileSync(join(current.work, 'search-list-before.txt'), 'not-an-absolute-path\n', 'utf8')
+    const calls = []
+    const result = recoverLocalSigningWork(current.work, {
+      requesterPid: process.pid,
+      runSecurity: fakeSecurity(current.work, { listed: true, calls }),
+    })
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some(error => error.includes('malformed')))
+    assert.ok(!calls.some(args => args[0] === 'list-keychains' && args.includes('-s')))
+    process.stdout.write('PASS a malformed captured search list is refused instead of rewritten\n')
+  } finally {
+    current.cleanup()
+  }
+}
+
+{
+  const current = fixture()
+  try {
+    mkdirSync(current.work, { mode: 0o700 })
+    initializeLocalSigningRecovery(current.work, process.pid)
+    writeSensitiveFixture(current.work)
     assert.doesNotThrow(() => assertLocalSigningKeychainUnlisted(current.work, process.pid, {
       runSecurity: fakeSecurity(current.work),
     }))
@@ -59,13 +107,19 @@ function fixture() {
 
 function fakeSecurity(work, options = {}) {
   const keychain = join(realpathSync(work), 'identity.keychain-db')
+  let listed = options.listed === true
   return args => {
     options.calls?.push([...args])
     if (args[0] === 'delete-keychain' && options.deleteFails !== true && existsSync(keychain)) {
       unlinkSync(keychain)
     }
     if (args[0] === 'list-keychains') {
-      return { status: 0, signal: null, stdout: options.listed === true ? `\"${keychain}\"\n` : '', stderr: '' }
+      // Stateful: a `-s <paths...>` rewrite moves the simulated list; later plain queries reflect
+      // it, so the restore step is observable exactly like on the real system.
+      if (args.includes('-s')) {
+        listed = args.slice(args.indexOf('-s') + 1).includes(keychain)
+      }
+      return { status: 0, signal: null, stdout: listed ? `\"${keychain}\"\n` : '', stderr: '' }
     }
     return { status: options.deleteFails === true && args[0] === 'delete-keychain' ? 1 : 0, signal: null, stdout: '', stderr: '' }
   }

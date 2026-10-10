@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path'
 
 export const SAGE_PACKAGING_TEST_LAYERS = Object.freeze(['pure', 'platform', 'input', 'live'])
 export const SAGE_PACKAGING_TEST_RUNNERS = Object.freeze(['node', 'node-test', 'bash'])
-export const SAGE_PACKAGING_EXPECTED_TEST_COUNT = 14
+export const SAGE_PACKAGING_EXPECTED_TEST_COUNT = 15
 
 export const SAGE_PACKAGING_CONTRACT_TESTS = Object.freeze([
   Object.freeze({
@@ -63,6 +63,11 @@ export const SAGE_PACKAGING_CONTRACT_TESTS = Object.freeze([
   }),
   Object.freeze({
     path: 'packaging-sage/tests/shell-scripts-bash32-safety-test.mjs',
+    layer: 'pure',
+    runner: 'node',
+  }),
+  Object.freeze({
+    path: 'packaging-sage/tests/signing-evidence-test.mjs',
     layer: 'pure',
     runner: 'node',
   }),

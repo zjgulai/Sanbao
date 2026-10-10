@@ -16,8 +16,8 @@ export function artifactTreeDigest(root) {
   return createHash('sha256').update(JSON.stringify(rows)).digest('hex')
 }
 
-export function designatedRequirement(app) {
-  const result = spawnSync('/usr/bin/codesign', ['-d', '-r-', app], {
+export function designatedRequirement(app, { run = spawnSync } = {}) {
+  const result = run('/usr/bin/codesign', ['-d', '-r-', app], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 30_000,
@@ -27,7 +27,11 @@ export function designatedRequirement(app) {
   if (result.error !== undefined || result.status !== 0) {
     throw new Error(`codesign could not read the designated requirement: ${result.error?.message ?? result.stderr.trim()}`)
   }
-  const rows = result.stderr.split(/\r?\n/u).filter((row) => row.startsWith('designated => '))
+  // `-r-` (the dash form of --requirements) routes the human-readable requirement to STDOUT;
+  // stderr carries only the `Executable=` header. Parsing stderr observed zero requirements on
+  // every real signature until a headless A/B fixture pinned the stream (2026-10-10, DMG-chain
+  // note seventh addendum).
+  const rows = result.stdout.split(/\r?\n/u).filter((row) => row.startsWith('designated => '))
   if (rows.length !== 1) throw new Error(`expected one designated requirement, observed ${String(rows.length)}`)
   const requirement = rows[0].slice('designated => '.length)
   if (requirement === '' || /[\r\n\u0000]/u.test(requirement)) {

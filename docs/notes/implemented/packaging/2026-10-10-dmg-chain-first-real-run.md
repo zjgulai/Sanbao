@@ -35,6 +35,21 @@
 
 **再追加（2026-10-10 晚，第二次重跑）**：越过空数组路径后，签发崩于 `security import`：`MAC verification failed during PKCS12 import`。最小复现实证——PATH 上的 Homebrew OpenSSL 3.6.2 默认以 AES-256-CBC/SHA-256 写 PKCS#12，macOS `security import` 拒收（`modern.p12` 复现同一报错）；`openssl pkcs12 -export -legacy` 产物 `1 identity imported.`（exit 0）。修复：`sign-local.sh` 按版本门控 `-legacy`（LibreSSL 主机本就传统算法且无该旗标，不做假设）。
 
+**三追加（2026-10-10 晚，第三次重跑）**：p12 导入成功后（`1 identity imported.`），签发倒在首个 `codesign`：`5348E9A9…: no identity found`——而此时 `find-identity -v -p codesigning` 两次解析均已通过。根因链：`set-keychain-settings -lut 300` 的 300 秒**空闲**锁在 sign.sh 的候选校验阶段（29k 文件拷贝与计划复核、其间零钥匙串访问）到期，codesign 取不到私钥即报该错（社区确证的 `no identity found` 两大主因=钥匙串锁定/无匹配私钥；后者被 `find-identity -v` 成功排除）。修复：空闲锁扩至 3600 秒（安全边界=脚本末尾的信任移除与临时材料删除，不是空闲锁）＋签发事务前再次 `unlock-keychain`。待用户第四次重跑读数。
+
+**四追加（2026-10-10 晚，第四次重跑）**：同一报错在原地复现（换新证书 SHA-1，确定性失败）——空闲锁假设被证伪。决定性证据在 `codesign(1)` 手册「SIGNING IDENTITIES」节：**身份必须存放在调用用户钥匙串搜索列表上的钥匙串里**；`--keychain` 只做收窄搜索、不替代列表成员资格——而脚本按设计把临时钥匙串排除在搜索列表外（`assert-keychain-unlisted`），codesign 因此永远找不到它。修复：签名窗口内把临时钥匙串加入用户搜索列表（先把原列表规范化捕获到 `search-list-before.txt`），`recover` 全路径（成功/失败/崩溃）先恢复捕获列表再销毁钥匙串；畸形捕获拒绝改写并报错。纯测试新增两例（恢复捕获列表正例、畸形拒绝负例）并让 fakeSecurity 状态化；恢复套件 13/13 全绿。待用户第五次重跑读数。
+
+**五追加（2026-10-10 晚，第五次重跑）**：搜索列表修复立竿见影——**28 个 Mach-O 全部签名成功**（含 helpers/frameworks/profile 原生模块），签后计划复核通过。随后倒在回执前的一步：`expected one designated requirement, observed 0`——终端可见的 `Executable=…` 单独一行证明此 macOS 对非 Apple 锚的签名**不再隐式生成 DR**（`code-evidence` 读 `codesign -d -r-` 的 `designated =>` 行得 0）。修复：外层 app 签名时显式 `--requirements "identifier "com.lute.sage" and certificate leaf = H"<leaf sha1>""`（内测构建=标识符绑定当次临时签名叶），回执自此有真实且可复验的 DR；helper/framework 不设（回执只核外层）。待用户第六次重跑读数。（更正：本节「不再隐式生成 DR」的结论与显式需求的修复已被七追加推翻与回退。）
+
+**六追加（2026-10-10 晚，第六次重跑）**：28 目标签名再次全成，外层 app 显式需求被拒：`…: No such file or directory / invalid requirement specification`。本地 ad-hoc 探针（`-s -`，无需信任）钉死语法事实：`--requirements` 把参数当**文件路径**读——字符串两形态（裸串与 `designated =>` 前缀串）都以同一错误失败；文件形态成功（`replacing existing signature`），且 `codesign -d -r-` 能回读嵌入的 `designated => identifier "com.lute.sage" and certificate leaf = H"…"`（回读为小写十六进制，回执对比走回读值、大小写无碍）。修复：sign.sh 外层 app 分支把需求写入 `$work/outer-requirement.txt`（0600）后以文件路径传入。待用户第七次重跑读数。（更正：该修复已随七追加回退；`--requirements` 的字符串形态按文件路径解析这一语法事实仍成立，只是本链不需要它。）
+
+**七追加（2026-10-10 晚，第七次重跑；根因更正）**：搜索列表窗口与文件形态的显式需求都已生效——**外层 app 签名成功、无任何报错**，但回执仍在 `expected one designated requirement, observed 0` 倒下。改用无信任 A/B 复刻定位（签名不需要信任，只需私钥可用：与 sign-local.sh 完全相同的 OpenSSL 自签配方 + 临时钥匙串 + 搜索列表成员 + 相同 codesign 旗标），钉死**根因在观测器，不在签名**：
+
+- `codesign -d -r-` 的 dash 形式把 human-readable requirement 写到 **stdout**（stderr 只有 `Executable=` 头）；`signing-evidence.mjs` 只解析 stderr，**每一次**真实签名都被读成 0 条 DR；
+- 真实身份**不传** `--requirements` 的对照组同样合成完整 DR（stdout 回读即 `designated => identifier "com.lute.sage" and certificate leaf = H"…"`；`Internal requirements count=1 size=92`）——五追加「此 macOS 不再隐式生成 DR」的结论**撤回**；六/七追加的显式 `--requirements` 修复随之**回退**（sign.sh 恢复原签名行，仅留防复陷注释）。
+
+修复：`signing-evidence.mjs` 改读 stdout（保留 `{ run }` 注入点）；新增纯回归测试 `signing-evidence-test.mjs`（钉住：stderr 上的 DR 行必须不满足读取、两行判 2、空值判非法、参数保持 `-d -r-` 形态）；打包清单 14→15（pure 9→10），两处计数钉子同步。待用户第八次重跑读数；证据见 Verification。
+
 ## Verification
 
 证据（2026-10-10，全部真实执行；未跑的步骤照实写）：
@@ -46,4 +61,5 @@
 - **门禁**：`node --test scripts/gates/ci-workflow.test.mjs`（含版本单源用例）与 `node --test scripts/gates/sage-packaging-contracts.test.mjs`（13 项清单）全绿；`node packaging-sage/tests/run-contract-tests.mjs`——`pure contract suite: PASS (8/13 executed; platform/input/live not run)`。
 - **重观测**：`SAGE_ROOT=~/tmp/sage-reobs-root pnpm run materialize` 退出 0（生成 generation `4e145a6b…`）；`node scripts/inventory-probe.mjs …` 退出 0——`inventory available: descriptor=urn:sage:runtime-descriptor:sha256:e1c7a8b4… evidence=urn:sage:inventory-evidence:sha256:d127d8bb…`。读法偏离手册一处：`resolveHostRuntime` 入参为 `activeProfile` 字段（探针以真实 API 为准）。
 - **全量读数**：`apps/sage-shell` 全量套件 **205 文件 / 1854 通过 / 1 skip（exit 0）**；`pnpm run gate` **32/32（objects 315/315，0 skip，退出码 0）**——首跑新增的打包测试条目（12→13）与 `ci-workflow` 版本单源检查均在门禁内真实执行。
+- **DR 解析更正（七追加）**：`node packaging-sage/tests/signing-evidence-test.mjs` 退出 0（stdout 正例 / stderr 负例 / 两行 / 空值 / 非零退出五用例）；修复后的 `designatedRequirement()` 对无信任自签身份的**真实**签名件端到端回读成功——`identifier "com.lute.sage" and certificate leaf = H"f969e12f746f89e6c5e525dd92881842b76e4a9c"`（A/B 复刻组 Mini 件）；`node packaging-sage/tests/run-contract-tests.mjs` → `pure contract suite: PASS (10/15 executed)`；`node --test scripts/gates/sage-packaging-contracts.test.mjs` **6/6**。
 - **未运行**：sign/dmg/acceptance（等待用户过 SecurityAgent 的交互步骤）。
