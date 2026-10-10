@@ -18,6 +18,7 @@ import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createMatterCustody } from './matter-custody.js'
+import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
 import { createWorkspaceMutations } from './workspace-mutations.js'
@@ -136,9 +137,12 @@ async function main(paths: SagePaths): Promise<void> {
   const matterCustody = createMatterCustody({ sagePaths: paths })
   app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close() })
 
+  // C2D.2A (ADR-0277): the bundled registry provider supplies the first published snapshot —
+  // the internal-stage empty set — so the inventory provider can now release the descriptor
+  // stage end to end when every other input is real.
+  const bundledRegistry = createBundledCapabilityRegistryProvider()
   // WT-02C.2E.2: one main-owned composition read of the full runtime inventory. It never
-  // blocks startup and emits exactly one stable, non-sensitive stdout line; the registry
-  // port does not exist yet, so production currently reads the stages before it.
+  // blocks startup and emits exactly one stable, non-sensitive stdout line.
   let runtimeInventoryResult: RuntimeInventoryResult | undefined
   const runtimeInventory = createRuntimeInventoryProvider({
     paths,
@@ -159,6 +163,7 @@ async function main(paths: SagePaths): Promise<void> {
     },
     readFileBytes: (path) => readFileSync(path),
     runtimeEffective: { read: () => host.readRuntimeEffective() },
+    registry: { read: () => bundledRegistry.read() },
   })
   void runtimeInventory.read().then((result) => {
     runtimeInventoryResult = result

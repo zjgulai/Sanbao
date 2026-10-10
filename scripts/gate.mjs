@@ -694,6 +694,7 @@ const CHECKS = [
         matterCustodyText: readRepoText('apps/sage-shell/src/main/matter-custody.ts'),
         sessionCoreIdentityText: readRepoText('apps/sage-shell/src/main/session-core-identity.ts'),
         actionAuthorityTableText: readRepoText('apps/sage-shell/src/main/action-authority-table.ts'),
+        capabilityRegistryProviderText: readRepoText('apps/sage-shell/src/security/capability-registry-provider.ts'),
       })
     },
   },

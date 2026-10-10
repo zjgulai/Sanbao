@@ -17,6 +17,7 @@ const baseline = Object.freeze({
   matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
   sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
   actionAuthorityTableText: read('apps/sage-shell/src/main/action-authority-table.ts'),
+  capabilityRegistryProviderText: read('apps/sage-shell/src/security/capability-registry-provider.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -81,6 +82,7 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
   assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)
+  assert.match(result.note, /carries the first published Capability Registry snapshot \(C2D\.2A\)/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -620,6 +622,43 @@ test('the session-family identity step cannot drift from its gated wiring and re
   )
   assert.notEqual(unwiredResolve, baseline.sessionCoreIdentityText)
   expectNamedFailure(check({ sessionCoreIdentityText: unwiredResolve }), 'the session-core assembly and kernel resolve must stay wired')
+})
+
+test('the bundled capability registry wiring cannot drift from its seal and empty-set facts', () => {
+  const unwiredPort = baseline.mainIndexText.replace(
+    'registry: { read: () => bundledRegistry.read() },',
+    '',
+  )
+  assert.notEqual(unwiredPort, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwiredPort }), 'index must wire the bundled registry into the runtime inventory provider')
+
+  const unwiredConstruction = baseline.mainIndexText.replace(
+    'const bundledRegistry = createBundledCapabilityRegistryProvider()',
+    'const bundledRegistry = { read: () => undefined }',
+  )
+  assert.notEqual(unwiredConstruction, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwiredConstruction }), 'index must construct the bundled capability registry provider')
+
+  const unsealed = baseline.capabilityRegistryProviderText.replace(
+    'sealCapabilityRegistrySnapshot(snapshotBody)',
+    'snapshotBody',
+  )
+  assert.notEqual(unsealed, baseline.capabilityRegistryProviderText)
+  expectNamedFailure(check({ capabilityRegistryProviderText: unsealed }), 'the bundled registry provider must seal through the kernel')
+
+  const openRead = baseline.capabilityRegistryProviderText.replace(
+    'if (!sealed.ok) throw new Error',
+    'if (sealed.ok) throw new Error',
+  )
+  assert.notEqual(openRead, baseline.capabilityRegistryProviderText)
+  expectNamedFailure(check({ capabilityRegistryProviderText: openRead }), 'an unsealable bundled registry must fail closed on read')
+
+  const nonEmpty = baseline.capabilityRegistryProviderText.replace(
+    'entries: Object.freeze([] as CapabilityRegistryEntryBodyV1[])',
+    'entries: Object.freeze([{ forged: true }] as never)',
+  )
+  assert.notEqual(nonEmpty, baseline.capabilityRegistryProviderText)
+  expectNamedFailure(check({ capabilityRegistryProviderText: nonEmpty }), 'the bundled first snapshot must stay the empty internal set')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

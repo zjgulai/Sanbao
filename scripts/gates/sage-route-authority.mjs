@@ -491,6 +491,36 @@ function sessionCoreIdentityViolations(input) {
   return violations
 }
 
+function runtimeInventoryRegistryViolations(input) {
+  const violations = []
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  const providerText = typeof input?.capabilityRegistryProviderText === 'string' ? input.capabilityRegistryProviderText : ''
+  if (indexText === '' || providerText === '') {
+    violations.push('runtime inventory registry sources are unavailable')
+    return violations
+  }
+  // C2D.2A: the bundled provider must stay wired into the inventory composition; removing it
+  // would silently return production to the permanent unavailable state before that stage.
+  if (!indexText.includes('const bundledRegistry = createBundledCapabilityRegistryProvider()')) {
+    violations.push('index must construct the bundled capability registry provider')
+  }
+  if (!indexText.includes('registry: { read: () => bundledRegistry.read() },')) {
+    violations.push('index must wire the bundled registry into the runtime inventory provider')
+  }
+  // The provider seals through the kernel and fails closed; the bundled default body stays the
+  // empty internal set (non-empty entries arrive only as new published snapshots).
+  if (!providerText.includes('sealCapabilityRegistrySnapshot(snapshotBody)')) {
+    violations.push('the bundled registry provider must seal through the kernel')
+  }
+  if (!providerText.includes('if (!sealed.ok) throw new Error')) {
+    violations.push('an unsealable bundled registry must fail closed on read')
+  }
+  if (!providerText.includes('entries: Object.freeze([] as CapabilityRegistryEntryBodyV1[])')) {
+    violations.push('the bundled first snapshot must stay the empty internal set')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -649,7 +679,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -674,6 +704,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.sessionCoreIdentityText !== 'string' || typeof input?.actionAuthorityTableText !== 'string') {
     return failAll(discovered, ['session-core identity sources unavailable; the session-family identity step cannot be checked'])
+  }
+  if (typeof input?.capabilityRegistryProviderText !== 'string') {
+    return failAll(discovered, ['capability registry provider source unavailable; the bundled first snapshot cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1023,6 +1056,9 @@ export function checkSageRouteAuthority(input) {
   const identityViolations = sessionCoreIdentityViolations(input)
   for (const violation of identityViolations) failGlobal(violation)
 
+  const registryViolations = runtimeInventoryRegistryViolations(input)
+  for (const violation of registryViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -1033,7 +1069,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }
