@@ -12,6 +12,8 @@ import {
   createBusinessMatter,
   enterEvidence,
   projectBusinessMatter,
+  recordDecision,
+  requestClarification,
   startAttempt,
   succeedAttempt,
 } from '../src/domain/business-matter.js'
@@ -176,6 +178,97 @@ describe('turn-end closure (ADR-0293)', () => {
       expect(after.matter.events.length, kind).toBe(before.matter.events.length)
       expect(projectBusinessMatter(after.matter).activeAttemptId, kind).toBe('attempt:sage.close-1')
     }
+  })
+
+  it('leaves a decision-demanding scope open for the review path (ADR-0295 strategy split)', async () => {
+    const { root, home } = await temporaryRoot('review')
+    const paths = resolveSagePaths({ home, root, platform: process.platform })
+    const store = openBusinessMatterEventStore({
+      sagePaths: paths,
+      maxStreamEvents: 32,
+      maxPayloadBytes: 64 * 1024,
+      busyTimeoutMs: 75,
+      clock: () => '2026-10-12T00:00:00.000Z',
+    })
+    cleanups.push(() => store.close())
+    const created = enterEvidence(createBusinessMatter({
+      matterId: MATTER_ID,
+      eventId: `${MATTER_ID}:created`,
+      occurredAt: '2026-10-10T10:00:00Z',
+      goal: 'Review-gated turn.',
+      responsibleParty: { kind: 'human', roleRef: 'role:owner' },
+    }), {
+      eventId: `${MATTER_ID}:revision-1`,
+      occurredAt: '2026-10-10T10:01:00Z',
+      revisionId: REVISION_ID,
+      changeReason: 'x', scope: 'x', permissionBoundary: 'x', dataDestination: 'x',
+      evidence: [{ evidenceId: 'e1', source: 'user-input', observedAt: '2026-10-10T10:00:30Z', status: 'supported' }],
+      unknowns: [], options: [], dependencies: [], experienceRefs: [],
+      actionPolicies: [{ actionScope: 'session.prompt', effectClass: 'external-write', requiresDecision: true }],
+    })
+    const clarifying = requestClarification(created, {
+      eventId: `${MATTER_ID}:clarify-1`,
+      occurredAt: '2026-10-10T10:01:15Z',
+      revisionId: REVISION_ID,
+      actionScope: 'session.prompt',
+      reason: 'Approve once.',
+    })
+    const approved = recordDecision(clarifying, {
+      eventId: `${MATTER_ID}:decision-1`,
+      occurredAt: '2026-10-10T10:01:30Z',
+      decisionId: 'decision:1',
+      revisionId: REVISION_ID,
+      actionScope: 'session.prompt',
+      outcome: 'approved',
+      actor: { kind: 'human', roleRef: 'role:owner' },
+      reason: 'Approve once.',
+      expiresAt: undefined,
+    })
+    const withAttempt = startAttempt(approved, {
+      eventId: `${MATTER_ID}:attempt-1`,
+      occurredAt: '2026-10-10T10:02:00Z',
+      attemptId: 'attempt:sage.close-1',
+      revisionId: REVISION_ID,
+      actionScopes: ['session.prompt'],
+      decisionIds: ['decision:1'],
+      executionSnapshot: {
+        provider: { identity: 'provider:local', version: '0.2.0-rc.2', digest: 'sha256:x' },
+        model: { identity: 'model:local', version: '0.2.0-rc.2', digest: 'sha256:x' },
+        agent: { identity: 'agent:local', version: '0.2.0-rc.2', digest: 'sha256:x' },
+        preset: { identity: 'preset:local', version: '0.2.0-rc.2', digest: 'sha256:x' },
+        capabilities: [],
+      },
+      compatibility: { outcome: 'equivalent', matrixId: 'urn:sage:compatibility-matrix:sha256:x', reason: 'x' },
+    })
+    const seededReview = store.append({
+      matterId: MATTER_ID,
+      expectedVersion: { kind: 'not-exists' },
+      appendId: 'seed:turn-close-review-1',
+      events: encodeBusinessMatterEvents(withAttempt).map((event) => ({
+        matterId: event.matterId,
+        eventId: event.eventId,
+        eventType: event.eventType,
+        eventSchemaVersion: event.eventSchemaVersion,
+        occurredAt: event.occurredAt,
+        payloadBytes: event.payloadBytes.slice(),
+      })),
+    })
+    expect(seededReview.kind).toBe('appended')
+
+    const { close } = runner(paths)
+    const before = store.load(MATTER_ID)
+    if (before.kind !== 'loaded') throw new Error('expected loaded')
+    await close({ matterRef: MATTER_ID, endKind: 'completed' })
+    const afterCompleted = store.load(MATTER_ID)
+    if (afterCompleted.kind !== 'loaded') throw new Error('expected loaded')
+    expect(afterCompleted.matter.events.length).toBe(before.matter.events.length)
+    expect(projectBusinessMatter(afterCompleted.matter).activeAttemptId).toBe('attempt:sage.close-1')
+
+    // A failure still closes honestly — review gating guards the light path only.
+    await close({ matterRef: MATTER_ID, endKind: 'error' })
+    const afterError = store.load(MATTER_ID)
+    if (afterError.kind !== 'loaded') throw new Error('expected loaded')
+    expect(afterError.matter.events.at(-1)?.type).toBe('attempt-failed')
   })
 
   it('no-ops when no attempt is active or the matter is unknown', async () => {

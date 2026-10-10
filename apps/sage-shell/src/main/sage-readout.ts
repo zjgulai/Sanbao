@@ -15,6 +15,7 @@
  */
 import type { ReadoutDiagnostics, ReadoutPlugins, ReadoutVisibility } from '../appservice/contracts.js'
 import type { RuntimeInventoryResult } from './runtime-inventory-provider.js'
+import { isInventoryObservationCurrent } from './runtime-inventory-currency.js'
 
 const SHORT_DIGEST_LENGTH = 12
 
@@ -46,6 +47,8 @@ export interface HostObservationInput {
   readonly loaderPhase?: 'active'
 }
 
+/** ADR-0295: an available inventory may be listed only for the epoch it was observed in —
+ *  a dead or moved Host epoch makes the rows unavailable, never a mixed-epoch claim. */
 /** The plugin/extension family: installation evidence rows plus the one boot observation. */
 export function classifyPlugins(inventory: RuntimeInventoryResult | undefined, observation: HostObservationInput): ReadoutPlugins {
   const observed = observation.kind === 'active'
@@ -60,6 +63,13 @@ export function classifyPlugins(inventory: RuntimeInventoryResult | undefined, o
   }
   if (inventory.kind === 'unavailable') {
     return { state: 'unavailable', code: inventory.code, components: [], observation: observed }
+  }
+  // ADR-0295: the rows belong to the observed epoch — a gone or moved epoch claims nothing.
+  if (observation.kind !== 'active') {
+    return { state: 'unavailable', code: 'host-epoch-unavailable', components: [], observation: observed }
+  }
+  if (!isInventoryObservationCurrent(inventory.evidence, observation)) {
+    return { state: 'unavailable', code: 'inventory-epoch-stale', components: [], observation: observed }
   }
   const { descriptor } = inventory
   const rows = [descriptor.host, descriptor.harness, descriptor.provider, descriptor.model, descriptor.agent, descriptor.preset]

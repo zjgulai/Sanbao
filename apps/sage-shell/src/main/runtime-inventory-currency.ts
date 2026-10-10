@@ -10,11 +10,13 @@
  *  the snapshot is active AND matches the observation's bootId and runtimeGeneration exactly.
  *  Pure and allocation-free so the per-request observation closure can call it cheaply.
  */
-import type { ShellHostRuntimeSnapshot } from './host-process.js'
-
 export function isInventoryObservationCurrent(
   evidence: { readonly bootId: string; readonly runtimeGeneration: number },
-  snapshot: ShellHostRuntimeSnapshot,
+  snapshot: {
+    readonly kind: string
+    readonly bootId?: string | undefined
+    readonly runtimeGeneration?: number | undefined
+  },
 ): boolean {
   return snapshot.kind === 'active'
     && snapshot.bootId === evidence.bootId

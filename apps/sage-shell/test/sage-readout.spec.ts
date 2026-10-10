@@ -36,7 +36,7 @@ const availableInventory = {
     overlayPolicyDigest: '4'.repeat(64),
     runtimeDescriptorDigest: '5'.repeat(64),
   },
-  evidence: { schemaVersion: 'sage.runtime-inventory-evidence.v2' },
+  evidence: { schemaVersion: 'sage.runtime-inventory-evidence.v2', bootId: 'sage-host:abcdef1234567890', runtimeGeneration: 2 },
 } as unknown as RuntimeInventoryResult
 
 describe('visible scope: verified facts only', () => {
@@ -81,6 +81,20 @@ describe('plugins: installation evidence and one boot observation stay apart', (
     expect(plugins.observation).toEqual({ loaderPhase: 'active', runtimeGeneration: 2, bootIdShort: 'sage-host:ab…' })
     // No availability conclusion can ride along: the projection has no such field.
     expect(JSON.stringify(plugins)).not.toMatch(/available|compatible|mounted|可用|兼容/u)
+  })
+
+  it('lists nothing when the observed epoch is gone or has moved (ADR-0295)', () => {
+    const gone = classifyPlugins(availableInventory as never, { kind: 'unavailable' })
+    expect(gone.state).toBe('unavailable')
+    expect(gone.code).toBe('host-epoch-unavailable')
+    expect(gone.components).toEqual([])
+
+    const moved = classifyPlugins(availableInventory as never, {
+      kind: 'active', bootId: 'sage-host:abcdef1234567890', runtimeGeneration: 3, loaderPhase: 'active',
+    })
+    expect(moved.state).toBe('unavailable')
+    expect(moved.code).toBe('inventory-epoch-stale')
+    expect(moved.components).toEqual([])
   })
 
   it('keeps an unread or unavailable inventory as unavailable with its code, and never as disabled', () => {

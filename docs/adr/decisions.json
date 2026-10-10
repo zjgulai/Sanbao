@@ -9746,6 +9746,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0295",
+      "title": "ADR-0295 · 投影面 epoch 货币化、评审路径分流与两项政策裁决",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "插件投影两道 epoch 门（host-epoch-unavailable / inventory-epoch-stale），复用同一货币性判据。",
+          "constraints": [
+            "dead-epoch rows are never listed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "blocked 保持打开为正式语义；映射留 clarification 整合票。",
+          "constraints": [
+            "no closure event on blocked"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "completed + requiresDecision scope → 保持打开走评审；失败不受门限。",
+          "constraints": [
+            "failures still close via attempt-failed"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "verified 仅五维句级证据 + 独立复核；countsAsVerification 保持 false。",
+          "constraints": [
+            "policy recorded in the T13-A migration record"
+          ]
+        }
+      ]
     }
   ]
 }

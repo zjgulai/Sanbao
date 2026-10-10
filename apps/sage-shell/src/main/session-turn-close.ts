@@ -43,12 +43,21 @@ export function createSessionTurnClose(options: SessionTurnCloseOptions): Sessio
     const readMatter = options.attempts.readMatter(matterRef)
     if (readMatter === undefined || 'denied' in readMatter) return
     let attemptId: string | undefined
+    let reviewRequired = false
     try {
-      attemptId = projectBusinessMatter(readMatter.matter).activeAttemptId
+      const projection = projectBusinessMatter(readMatter.matter)
+      attemptId = projection.activeAttemptId
+      // ADR-0295 strategy split: an attempted scope whose revision policy demands a decision
+      // keeps the review path (artifact/receipt) — a completed turn must NOT light-close it.
+      const attempt = projection.attempts.find((item) => item.attemptId === attemptId)
+      const revision = projection.revisions.find((item) => item.revisionId === projection.currentRevisionId)
+      reviewRequired = revision !== undefined && (attempt?.actionScopes ?? []).some((scope) =>
+        revision.actionPolicies.some((policy) => policy.actionScope === scope && policy.requiresDecision === true))
     } catch {
       return
     }
     if (attemptId === undefined) return
+    if (SUCCESS_KINDS.has(endKind) && reviewRequired) return
 
     const occurredAt = options.now()
     let next

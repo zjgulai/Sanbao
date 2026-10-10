@@ -38,6 +38,7 @@ const baseline = Object.freeze({
   sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
   sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
   runtimeInventoryCurrencyText: read('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
+  sageReadoutText: read('apps/sage-shell/src/main/sage-readout.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -1196,6 +1197,36 @@ test('the host-epoch currency check cannot drift from its guard or its three con
   )
   assert.notEqual(kindDrop, baseline.runtimeInventoryCurrencyText)
   expectNamedFailure(check({ runtimeInventoryCurrencyText: kindDrop }), 'the currency check must require an active snapshot of the same boot and generation')
+})
+
+test('the epoch-gated projection and the review split cannot drift', () => {
+  const staleDrop = baseline.sageReadoutText.replace(
+    'if (!isInventoryObservationCurrent(inventory.evidence, observation)) {',
+    'if (false) {',
+  )
+  assert.notEqual(staleDrop, baseline.sageReadoutText)
+  expectNamedFailure(check({ sageReadoutText: staleDrop }), 'an available inventory must belong to the observed epoch')
+
+  const goneDrop = baseline.sageReadoutText.replace(
+    "if (observation.kind !== 'active') {",
+    'if (false) {',
+  )
+  assert.notEqual(goneDrop, baseline.sageReadoutText)
+  expectNamedFailure(check({ sageReadoutText: goneDrop }), 'a gone Host epoch must make the plugin rows unavailable')
+
+  const reviewDrop = baseline.sessionTurnCloseText.replace(
+    'if (SUCCESS_KINDS.has(endKind) && reviewRequired) return',
+    '',
+  )
+  assert.notEqual(reviewDrop, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: reviewDrop }), 'a completed turn on a decision-demanding scope must stay open for review')
+
+  const detectDrop = baseline.sessionTurnCloseText.replace(
+    'policy.actionScope === scope && policy.requiresDecision === true',
+    'false',
+  )
+  assert.notEqual(detectDrop, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: detectDrop }), 'a completed turn on a decision-demanding scope must stay open for review')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

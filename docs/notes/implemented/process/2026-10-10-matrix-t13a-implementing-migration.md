@@ -118,3 +118,7 @@ evidenceRefs 全部 `countsAsVerification:false`（不升 `verified`）、无 `(
 机械检查：`git diff 70c160e6..HEAD`（第四批提交以来）确认 `apps/sage-shell/src/product/` 与 `test/product-app/` 零改动，desktop 证据面无新增。本批零行迁移、零 JSON 改动、零代码改动，仅追加本节记录。
 
 验证（真实运行）：`node scripts/gen-sage-sanbao-state-matrix.mjs --check` → `sage-sanbao-state-matrix generator check: PASS (206 rows; integrated 0)` exit 0；`node scripts/gates/sage-sanbao-state-matrix.mjs` → `sage-sanbao-state-matrix: PASS (206 rows; integrated 0)` exit 0；`node --test scripts/gates/sage-sanbao-state-matrix.test.mjs` → 13 tests / 13 pass / 0 fail exit 0；`git status` 确认矩阵 JSON 与本 note 之外的仓库改动为零（`.codegraph/`、`packaging-sage/.DS_Store` 为既存未跟踪杂项）。宁少勿假：本批迁 0 行。未闭：implementing→verified 升级政策仍待裁决。
+
+## 裁决落地（2026-10-11）：implementing→verified 升级政策
+
+升级政策已由 [ADR-0295](../../../adr/ADR-0295.md) D4 定案：matrix 行升 `verified` 仅当五维（UI / Application Service / Host / Electron / 视觉）各自句级证据齐备**且**经独立复核；`countsAsVerification` 维持 false；implementing 维持现判据。本文档自此不再重复记录该政策，后续迁移批按 ADR-0295 D4 执行。
