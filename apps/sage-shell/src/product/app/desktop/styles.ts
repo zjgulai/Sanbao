@@ -191,6 +191,12 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 /* ADR-0300: while the side-preview WebContentsView occupies the right edge, the page keeps its
    content left of it (one shared width constant, SAGE_PREVIEW_PANEL_WIDTH). */
 .sage-desktop .session-layout.preview-open { padding-right: ${SAGE_PREVIEW_PANEL_WIDTH}px; }
+/* ADR-0301: the turn process strip — live file activity and the settled footer. */
+.sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .turn-process-label { color: var(--sage-muted); }
+.sage-desktop .turn-process-files summary { cursor: pointer; color: var(--sage-muted); }
+.sage-desktop .turn-process-files ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .sage-desktop .artifact-rail { width: 224px; flex: 0 0 224px; display: flex; flex-direction: column; gap: 10px; padding: 18px 14px; border-left: 1px solid var(--sage-divider); overflow-y: auto; }
 .sage-desktop .artifact-rail-header { font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .artifact-empty { margin: 0; font-size: 12px; color: var(--sage-faint); }

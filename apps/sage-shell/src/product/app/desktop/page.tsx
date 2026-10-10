@@ -501,6 +501,7 @@ export function DesktopPage({
             : <DesktopSessionView title={session.title} execution={session.execution} lastTurnEnd={session.lastTurnEnd}
               paused={session.paused} streamBroken={session.streamBroken} messages={session.messages}
               streaming={streamingText}
+              turnProcess={session.turnProcess}
               {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
               onArtifactOpen={(artifactId) => runArtifactAction(() => openDesktopArtifact(artifactId))}
               onArtifactRetry={() => runArtifactAction(retryDesktopArtifact)}

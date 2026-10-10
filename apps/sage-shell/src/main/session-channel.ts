@@ -85,6 +85,69 @@ interface FoldedUserMessage {
   readonly files: readonly { readonly attachmentId: string, readonly name: string, readonly bytes: number }[]
 }
 
+/** ADR-0301: one write/edit tool run inside the last turn (display facts only). */
+interface FoldTurnItem {
+  readonly callId: string
+  readonly name: string
+  readonly file: string | null
+  readonly state: 'running' | 'done' | 'failed'
+  readonly startedAt: number | null
+  readonly endedAt: number | null
+}
+
+/** ADR-0301: the last turn's process facts the fold accumulates (reset on turn/start). */
+interface FoldTurnProcess {
+  readonly startedAt: number | null
+  readonly endedAt: number | null
+  readonly steps: number
+  readonly items: readonly FoldTurnItem[]
+}
+
+const EMPTY_TURN_PROCESS: FoldTurnProcess = { startedAt: null, endedAt: null, steps: 0, items: [] }
+const WRITE_LIKE_TOOLS = new Set(['write', 'edit', 'apply_patch'])
+const MAX_TURN_ITEMS = 12
+
+/** ADR-0301: the status face of the fold's turn process (bounded, display-only). */
+export function turnProcessView(process: FoldTurnProcess): {
+  readonly durationMs: number | null
+  readonly iterations: number | null
+  readonly fileWrites: readonly {
+    readonly name: string
+    readonly file: string | null
+    readonly state: 'running' | 'done' | 'failed'
+    readonly durationMs: number | null
+  }[]
+} {
+  const durationMs = process.startedAt !== null && process.endedAt !== null && process.endedAt >= process.startedAt
+    ? process.endedAt - process.startedAt
+    : null
+  return {
+    durationMs,
+    iterations: process.steps > 0 ? process.steps : null,
+    fileWrites: process.items.map((item) => ({
+      name: item.name,
+      file: item.file,
+      state: item.state,
+      durationMs: item.startedAt !== null && item.endedAt !== null && item.endedAt >= item.startedAt
+        ? item.endedAt - item.startedAt
+        : null,
+    })),
+  }
+}
+
+/** The log's own millisecond stamp, or null when the record carries none. */
+function eventTime(event: Record<string, unknown>): number | null {
+  return typeof event.time === 'number' && Number.isSafeInteger(event.time) && event.time >= 0 ? event.time : null
+}
+
+/** Display basename only — a machine path never crosses this fold. */
+function baseNameOf(value: unknown): string | null {
+  if (typeof value !== 'string' || value === '') return null
+  const parts = value.split(/[\\/]/u)
+  const name = parts[parts.length - 1]
+  return name === undefined || name === '' ? null : name
+}
+
 interface Fold {
   readonly assistantText: string | null
   readonly cursor: number
@@ -96,9 +159,10 @@ interface Fold {
   readonly unapplied: number
   /** Only attachment-bearing user messages are folded: plain text history rows stayed hidden (005). */
   readonly userMessages: readonly FoldedUserMessage[]
+  readonly turnProcess: FoldTurnProcess
 }
 
-const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [] }
+const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [], turnProcess: EMPTY_TURN_PROCESS }
 
 /** Fold the session log: an open turn is the only "executing" evidence; the final text is the last
  *  `assistant/message`. Unknown frames are counted, never interpreted. */
@@ -161,10 +225,53 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
   const data = event.data
   if (event.type === 'turn/start') {
     const turn = isRecord(data) && typeof data.turn === 'number' ? data.turn : null
-    return { ...fold, cursor: seq, executingTurn: turn, lastTurnEnd: null, lastTurnEndEdge: null }
+    return {
+      ...fold, cursor: seq, executingTurn: turn, lastTurnEnd: null, lastTurnEndEdge: null,
+      turnProcess: { startedAt: eventTime(event), endedAt: null, steps: 0, items: [] },
+    }
   }
   if (event.type === 'turn/end') {
-    return { ...fold, cursor: seq, executingTurn: null, lastTurnEnd: turnEndKind(data), lastTurnEndEdge: `${seq}:${turnEndKind(data)}` }
+    return {
+      ...fold, cursor: seq, executingTurn: null, lastTurnEnd: turnEndKind(data), lastTurnEndEdge: `${seq}:${turnEndKind(data)}`,
+      turnProcess: { ...fold.turnProcess, endedAt: eventTime(event) },
+    }
+  }
+  if (event.type === 'step/start') {
+    // ADR-0301: one model iteration of the turn ("模型迭代").
+    return { ...fold, cursor: seq, turnProcess: { ...fold.turnProcess, steps: fold.turnProcess.steps + 1 } }
+  }
+  if (event.type === 'tool/call') {
+    // ADR-0301: only the write/edit family feeds the file-process list; basename only.
+    const name = isRecord(data) && typeof data.name === 'string' ? data.name : null
+    if (name === null || !WRITE_LIKE_TOOLS.has(name)) return { ...fold, cursor: seq }
+    const callId = isRecord(data) && typeof data.callId === 'string' && data.callId !== '' ? data.callId : null
+    if (callId === null) return { ...fold, cursor: seq }
+    const args = isRecord(data) ? (isRecord(data.arguments) ? data.arguments : undefined) : undefined
+    const file = args === undefined ? null : baseNameOf(args.file_path) ?? baseNameOf(args.path)
+    const item: FoldTurnItem = { callId, name, file, state: 'running', startedAt: eventTime(event), endedAt: null }
+    const items = [...fold.turnProcess.items, item]
+    return {
+      ...fold, cursor: seq,
+      turnProcess: { ...fold.turnProcess, items: items.length > MAX_TURN_ITEMS ? items.slice(items.length - MAX_TURN_ITEMS) : items },
+    }
+  }
+  if (event.type === 'tool/result') {
+    const message = isRecord(data) ? data.message : undefined
+    const callId = isRecord(message) && typeof message.callId === 'string' ? message.callId : null
+    if (callId === null || !fold.turnProcess.items.some((item) => item.callId === callId && item.state === 'running')) {
+      return { ...fold, cursor: seq }
+    }
+    const failed = isRecord(message) && message.isError === true
+    const at = eventTime(event)
+    return {
+      ...fold, cursor: seq,
+      turnProcess: {
+        ...fold.turnProcess,
+        items: fold.turnProcess.items.map((item) => item.callId === callId && item.state === 'running'
+          ? { ...item, state: failed ? 'failed' as const : 'done' as const, endedAt: at }
+          : item),
+      },
+    }
   }
   if (event.type === 'assistant/message') {
     // "Assembled assistant message for one step (derived history uses this)." The message is the
@@ -404,6 +511,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         // Nothing was ever sent for this matter: no session exists, and reading must not create one.
         return {
           state: 'no-session', sessionId: null, execution: 'idle', lastTurnEnd: null, lastTurnEndEdge: null,
+          turnProcess: turnProcessView(EMPTY_TURN_PROCESS),
           reply: { text: null, endKind: null, failed: false, actions: [] },
           transcript: [],
           reconciled: false, streamBroken: false, code: null, records: 0, unapplied: 0,
@@ -447,6 +555,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
             executingTurn: pageFold.executingTurn,
             lastTurnEnd: pageFold.lastTurnEnd,
             lastTurnEndEdge: pageFold.lastTurnEndEdge,
+            turnProcess: pageFold.turnProcess,
             unapplied: fold.unapplied + pageFold.unapplied,
             records: fold.records + page.result.records.length,
             userMessages: appendUserMessages(fold.userMessages, pageFold.userMessages),
@@ -492,6 +601,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         execution: fold.executingTurn === null ? 'idle' : 'executing',
         lastTurnEnd: fold.lastTurnEnd,
         lastTurnEndEdge: fold.lastTurnEndEdge,
+        turnProcess: turnProcessView(fold.turnProcess),
         reply,
         transcript,
         reconciled,

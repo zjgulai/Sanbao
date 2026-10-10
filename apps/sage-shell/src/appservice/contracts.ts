@@ -800,6 +800,20 @@ export interface SessionChannelStatus {
    *  cursor makes two consecutive same-kind turns distinguishable; `lastTurnEnd` stays the bare
    *  kind string for UI branching. */
   readonly lastTurnEndEdge: string | null
+  /** ADR-0301: the last turn's process facts from the durable fold. `durationMs` comes from the
+   *  log's own millisecond timestamps when both ends carry one (null otherwise — never guessed);
+   *  `iterations` counts `step/start` records of that turn; `fileWrites` are the write/edit
+   *  tool runs, with BASENAMES only — a machine path never crosses this projection. */
+  readonly turnProcess: {
+    readonly durationMs: number | null
+    readonly iterations: number | null
+    readonly fileWrites: readonly {
+      readonly name: string
+      readonly file: string | null
+      readonly state: 'running' | 'done' | 'failed'
+      readonly durationMs: number | null
+    }[]
+  }
   readonly transcript: readonly SessionChannelEntry[]
   /** true when the final text was (re)read from history — the post-break reconciliation. */
   readonly reconciled: boolean

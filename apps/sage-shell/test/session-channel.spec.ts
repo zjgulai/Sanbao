@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createSessionChannel, foldSessionFrames } from '../src/main/session-channel.js'
+import { createSessionChannel, foldSessionFrames, turnProcessView } from '../src/main/session-channel.js'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 
@@ -63,6 +63,44 @@ const assistantEvent = (seq: number, text: string) => ({
 const turnStart = (seq: number) => ({ type: 'event', event: { type: 'turn/start', seq, time: 1, data: { turn: 1 } } })
 const turnEnd = (seq: number, reason: string) => ({ type: 'event', event: { type: 'turn/end', seq, time: 1, data: { turn: 1, reason } } })
 const snapshot = (records: readonly unknown[], cursor: number) => ({ type: 'snapshot', header: {}, cursor, records, hasMore: false, projections: {} })
+
+describe('the turn process fold (ADR-0301)', () => {
+  it('folds duration, iterations and write/edit items with basenames only', () => {
+    const fold = foldSessionFrames([
+      snapshot([], 0),
+      { type: 'event', event: { type: 'turn/start', seq: 1, time: 1000, data: { turn: 1 } } },
+      { type: 'event', event: { type: 'step/start', seq: 2, time: 1100, data: { turn: 1, step: 1 } } },
+      { type: 'event', event: { type: 'step/start', seq: 3, time: 1500, data: { turn: 1, step: 2 } } },
+      { type: 'event', event: { type: 'tool/call', seq: 4, time: 1600, data: { turn: 1, step: 2, callId: 'call-1', name: 'write', arguments: { file_path: '/Users/somebody/work/demo.html' } } } },
+      { type: 'event', event: { type: 'tool/result', seq: 5, time: 3500, data: { turn: 1, step: 2, message: { callId: 'call-1', content: [], isError: false } } } },
+      { type: 'event', event: { type: 'tool/call', seq: 6, time: 3600, data: { turn: 1, step: 2, callId: 'call-2', name: 'read', arguments: { file_path: '/w/x.md' } } } },
+      { type: 'event', event: { type: 'turn/end', seq: 7, time: 8000, data: { turn: 1, reason: 'completed' } } },
+    ])
+    const view = turnProcessView(fold.turnProcess)
+    expect(view.durationMs).toBe(7000)
+    expect(view.iterations).toBe(2)
+    // The read tool never enters the file list; only the basename crosses the projection.
+    expect(view.fileWrites).toEqual([{ name: 'write', file: 'demo.html', state: 'done', durationMs: 1900 }])
+    expect(JSON.stringify(view)).not.toContain('/Users/')
+  })
+
+  it('marks a failed tool result and resets the process on the next turn start', () => {
+    const failed = foldSessionFrames([
+      { type: 'event', event: { type: 'turn/start', seq: 1, time: 0, data: { turn: 1 } } },
+      { type: 'event', event: { type: 'tool/call', seq: 2, time: 10, data: { turn: 1, step: 1, callId: 'c', name: 'edit', arguments: { path: 'demo.html' } } } },
+      { type: 'event', event: { type: 'tool/result', seq: 3, time: 20, data: { turn: 1, step: 1, message: { callId: 'c', content: [], isError: true } } } },
+    ])
+    expect(turnProcessView(failed.turnProcess).fileWrites[0]?.state).toBe('failed')
+
+    const next = foldSessionFrames([
+      { type: 'event', event: { type: 'turn/start', seq: 1, time: 0, data: { turn: 1 } } },
+      { type: 'event', event: { type: 'tool/call', seq: 2, time: 10, data: { turn: 1, step: 1, callId: 'c', name: 'write', arguments: { path: 'a.html' } } } },
+      { type: 'event', event: { type: 'turn/start', seq: 3, time: 30, data: { turn: 2 } } },
+    ])
+    expect(turnProcessView(next.turnProcess).fileWrites).toEqual([])
+    expect(turnProcessView(next.turnProcess).iterations).toBeNull()
+  })
+})
 
 describe('followLive: the live half of the follow seam (ADR-0298)', () => {
   async function liveChannel(matterRef: string, script: readonly (readonly unknown[])[]) {

@@ -16,9 +16,24 @@ export interface DesktopSession {
   readonly messages: readonly { readonly role: 'user' | 'assistant'; readonly text: string }[]
   readonly execution: 'idle' | 'executing'
   readonly lastTurnEnd: string | null
+  /** ADR-0301: the last turn's process facts (display-only; tolerant parse below). */
+  readonly turnProcess: DesktopTurnProcess
   readonly paused: boolean
   readonly streamBroken: boolean
   readonly canSubmit: boolean
+}
+
+/** ADR-0301: the last turn's process facts — durations from the log's own stamps when present,
+ *  basenames only. A malformed piece degrades to null/absent; it never invents a value. */
+export interface DesktopTurnProcess {
+  readonly durationMs: number | null
+  readonly iterations: number | null
+  readonly fileWrites: readonly {
+    readonly name: string
+    readonly file: string | null
+    readonly state: 'running' | 'done' | 'failed'
+    readonly durationMs: number | null
+  }[]
 }
 
 export type DesktopSessionAction = { readonly kind: 'send'; readonly text: string } | { readonly kind: 'stop' | 'resume' }
@@ -55,6 +70,32 @@ function reference(value: unknown): value is string {
 
 function generation(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+}
+
+/** ADR-0301: tolerant display-only parse — each invalid piece degrades, never fails the session. */
+function parseTurnProcess(input: unknown): DesktopTurnProcess {
+  const record = isRecord(input) ? input : {}
+  const duration = record.durationMs
+  const iterations = record.iterations
+  const fileWrites = Array.isArray(record.fileWrites)
+    ? (record.fileWrites as unknown[]).flatMap((item) => {
+      if (!isRecord(item) || typeof item.name !== 'string' || item.name === '') return []
+      if (item.file !== null && typeof item.file !== 'string') return []
+      if (item.state !== 'running' && item.state !== 'done' && item.state !== 'failed') return []
+      const itemDuration = item.durationMs
+      return [{
+        name: item.name,
+        file: item.file as string | null,
+        state: item.state as 'running' | 'done' | 'failed',
+        durationMs: typeof itemDuration === 'number' && Number.isSafeInteger(itemDuration) && itemDuration >= 0 ? itemDuration : null,
+      }]
+    })
+    : []
+  return {
+    durationMs: typeof duration === 'number' && Number.isSafeInteger(duration) && duration >= 0 ? duration : null,
+    iterations: typeof iterations === 'number' && Number.isSafeInteger(iterations) && iterations >= 0 ? iterations : null,
+    fileWrites,
+  }
 }
 
 export function parseDesktopSession(input: unknown): DesktopSession | null {
@@ -102,6 +143,7 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
       sessionId: channel.sessionId as string | null,
     },
     title: matter.matter.goal, messages, execution: channel.execution, lastTurnEnd: channel.lastTurnEnd,
+    turnProcess: parseTurnProcess(channel.turnProcess),
     paused: channel.paused, streamBroken: channel.streamBroken,
     canSubmit: matter.actionability === 'allowed' && matter.authorizationState === 'authorized'
       && matter.compatibilityOutcome === 'equivalent' && matter.availabilityState === 'available' && !channel.streamBroken,

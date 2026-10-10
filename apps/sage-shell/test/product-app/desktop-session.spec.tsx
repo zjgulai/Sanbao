@@ -228,6 +228,41 @@ describe('default desktop session submission lifecycle', () => {
     expect(second.container.querySelector('.artifact-rail')).toBeNull()
   })
 
+  it('renders the settled turn process footer and the live write row (ADR-0301)', async () => {
+    const payload = desktopSessionPayload()
+    const settled = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        turnProcess: { durationMs: 12000, iterations: 3, fileWrites: [{ name: 'edit', file: 'demo.html', state: 'done', durationMs: 3000 }] },
+      },
+    })
+    const { container } = await mount(async () => settled)
+    const footer = container.querySelector('.turn-process')
+    expect(footer?.textContent).toContain('已完成')
+    expect(footer?.textContent).toContain('耗时 12s')
+    expect(footer?.textContent).toContain('3 步')
+    const files = container.querySelector('.turn-process-files')
+    expect(files?.querySelector('summary')?.textContent).toBe('执行过程（1）')
+    expect(files?.textContent).toContain('编辑 demo.html · 完成 · 3s')
+
+    // The executing window shows the running write row; the live stream subscription rides along.
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/stream'
+      ? new Response(new ReadableStream<Uint8Array>({ start() { /* stays open */ } }), { headers: { 'content-type': 'text/event-stream' } })
+      : ack())
+    vi.stubGlobal('fetch', fetcher)
+    const executing = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        execution: 'executing', lastTurnEnd: null,
+        turnProcess: { durationMs: null, iterations: null, fileWrites: [{ name: 'write', file: 'demo.html', state: 'running', durationMs: null }] },
+      },
+    })
+    const live = await mount(async () => executing)
+    expect(live.container.querySelector('.process-live')?.textContent).toContain('正在写入 demo.html')
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

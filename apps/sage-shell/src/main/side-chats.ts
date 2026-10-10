@@ -27,7 +27,7 @@ import type {
   SideChatSendOutcome,
   SideChatsStatus,
 } from '../appservice/contracts.js'
-import { foldSessionFrames } from './session-channel.js'
+import { foldSessionFrames, turnProcessView } from './session-channel.js'
 import type { BridgeCaller } from './workspace-adoption.js'
 
 const MAX_TEXT = 16_384
@@ -182,6 +182,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
           executingTurn: pageFold.executingTurn,
           lastTurnEnd: pageFold.lastTurnEnd,
           lastTurnEndEdge: pageFold.lastTurnEndEdge,
+          turnProcess: pageFold.turnProcess,
           unapplied: fold.unapplied + pageFold.unapplied,
           records: fold.records + page.result.records.length,
         }
@@ -215,6 +216,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
       execution: fold.executingTurn === null ? 'idle' : 'executing',
       lastTurnEnd: fold.lastTurnEnd,
       lastTurnEndEdge: fold.lastTurnEndEdge,
+      turnProcess: turnProcessView(fold.turnProcess),
       reply,
       transcript,
       reconciled,

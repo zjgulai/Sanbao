@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { MarkdownText } from '../markdown.js'
 import type { DesktopArtifacts } from './client.js'
+import type { DesktopTurnProcess } from './session.js'
 
 export interface DesktopSessionViewProps {
   readonly title: string
@@ -12,6 +13,8 @@ export interface DesktopSessionViewProps {
   readonly messages: readonly { role: 'user' | 'assistant'; text: string }[]
   /** ADR-0298: the live delta text while the turn executes (null when nothing is streaming). */
   readonly streaming?: string | null
+  /** ADR-0301: the last turn's process facts (footer + live file activity). */
+  readonly turnProcess?: DesktopTurnProcess
   /** ADR-0300: the artifact cards and the one side-preview state (absent = slot omitted). */
   readonly artifacts?: DesktopArtifacts
   readonly onArtifactOpen?: (artifactId: string) => void
@@ -19,6 +22,58 @@ export interface DesktopSessionViewProps {
   readonly onArtifactClose?: () => void
   readonly onArtifactFullscreen?: (on: boolean) => void
   readonly onArtifactWindow?: (action: 'open' | 'close') => void
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return '<1s'
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s`
+  const minutes = Math.floor(ms / 60_000)
+  const seconds = Math.round((ms % 60_000) / 1000)
+  return `${minutes}m${seconds}s`
+}
+
+const TOOL_VERB: Record<string, string> = { write: '写入', edit: '编辑', apply_patch: '编辑' }
+
+/** ADR-0301: the live file activity row — elapsed counts from the moment Sage observed the run. */
+function LiveProcessRow({ item }: { readonly item: DesktopTurnProcess['fileWrites'][number] }): ReactNode {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed((value) => value + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <div className="process-live" role="status">
+    正在{TOOL_VERB[item.name] ?? item.name} {item.file ?? '文件'}… · {elapsed}s
+  </div>
+}
+
+/** ADR-0301: the settled turn's footer — outcome, duration, iterations and the file list. */
+function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
+  readonly lastTurnEnd: string
+  readonly turnProcess: DesktopTurnProcess
+}): ReactNode {
+  const label = lastTurnEnd === 'completed' ? '已完成'
+    : lastTurnEnd === 'error' ? '回合失败'
+      : lastTurnEnd === 'aborted' ? '已停止'
+        : '本轮已结束'
+  const meta: string[] = []
+  if (turnProcess.durationMs !== null && lastTurnEnd !== 'error' && lastTurnEnd !== 'aborted') {
+    meta.push(`耗时 ${formatDuration(turnProcess.durationMs)}`)
+  }
+  if (turnProcess.iterations !== null) meta.push(`${turnProcess.iterations} 步`)
+  return <div className="turn-process" data-turn-end={lastTurnEnd}>
+    <span className="turn-process-label" role="status">{label}{meta.length === 0 ? '' : ` · ${meta.join(' · ')}`}</span>
+    {turnProcess.fileWrites.length > 0
+      ? <details className="turn-process-files">
+        <summary>执行过程（{turnProcess.fileWrites.length}）</summary>
+        <ul>
+          {turnProcess.fileWrites.map((item, index) => <li key={index}>
+            {TOOL_VERB[item.name] ?? item.name} {item.file ?? '文件'} · {item.state === 'done' ? '完成' : item.state === 'failed' ? '失败' : '进行中'}
+            {item.durationMs !== null ? ` · ${formatDuration(item.durationMs)}` : ''}
+          </li>)}
+        </ul>
+      </details>
+      : null}
+  </div>
 }
 
 function bytesLabel(bytes: number | null): string {
@@ -88,8 +143,11 @@ function ArtifactRail({ artifacts, onArtifactOpen, onArtifactRetry, onArtifactCl
 // Sanbao src/pages/SessionPage.tsx:78–86: transcript structure only, without observation-driven content.
 export function DesktopSessionView({
   title, execution, lastTurnEnd, paused, streamBroken, messages, streaming = null,
-  artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
+  turnProcess, artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
 }: DesktopSessionViewProps): ReactNode {
+  const runningWrite = execution === 'executing'
+    ? turnProcess?.fileWrites.find((item) => item.state === 'running')
+    : undefined
   // ADR-0298: the viewport follows the output while it grows, as the observed product does.
   const scroller = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -124,11 +182,15 @@ export function DesktopSessionView({
                 <div className="assistant-heading"><strong>Sage</strong></div>
                 <div className="reply-body"><MarkdownText text={message.text} /></div>
               </div>)}
+          {runningWrite !== undefined ? <LiveProcessRow item={runningWrite} key={runningWrite.file ?? runningWrite.name} /> : null}
           {streaming !== null && streaming !== ''
             ? <div className="assistant-message streaming-message" aria-label="正在生成">
               <div className="assistant-heading"><strong>Sage</strong></div>
               <div className="reply-body"><MarkdownText text={streaming} /></div>
             </div>
+            : null}
+          {lastTurnEnd !== null && turnProcess !== undefined
+            ? <TurnProcessFooter lastTurnEnd={lastTurnEnd} turnProcess={turnProcess} />
             : null}
         </div>
       </div>

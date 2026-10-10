@@ -9986,6 +9986,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0301",
+      "title": "ADR-0301 · 执行模块第三刀：回合过程面（完成元信息与文件活动）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "fold 累积 turnProcess：毫秒戳耗时（缺则 null）、step/start 迭代、write/edit/apply_patch 工具项（basename only，上限 12）。",
+          "constraints": [
+            "duration never guessed",
+            "no machine paths"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "SessionChannelStatus.turnProcess 三构造齐 + pageFold 合并；desktop 宽容解析。",
+          "constraints": [
+            "malformed pieces degrade, never fatal"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "live 写入行（观察起算 ticker）+ 终态 footer 与可折叠执行过程列表；error/aborted 不显示耗时。",
+          "constraints": [
+            "mirror base label semantics"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "查看本次修改入口不接线（A01 diff 未装配）；三行迁 implementing，blocker 明写。",
+          "constraints": [
+            "no placeholder entries"
+          ]
+        }
+      ]
     }
   ]
 }
