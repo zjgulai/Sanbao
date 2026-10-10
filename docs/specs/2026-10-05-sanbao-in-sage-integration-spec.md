@@ -100,4 +100,4 @@ AND applicationService.routeRefs 至少包含一条 route authority matrix 中�
 
 矩阵 gate 必须拒绝：行删除、重复/外部 ID、source/ledger 漂移、summary 篡改、wired 伪升 integrated、ignored/fixture 伪 verified、blocked service + integrated、未决策的 N/A、未知 route ref、缺失验证维度或证据。
 
-矩阵 gate 当前由独立脚本提供；是否接入全局 `pnpm run gate` 是单独串行接点，在完成该接点前不得宣称已纳入全局门禁。206 行关闭也不自动等于 DMG 已签名、公证或发布；打包、签名、公证、安装/升级、第二进程和发布验收必须使用 Sage 自己的新发布链独立完成，旧 DSH DMG 结果不能代替。
+矩阵 gate 已注册于 `scripts/gate.mjs` 的 Sage scope（`sage-sanbao-state-matrix` 与 `-selftest`），2026-10-10 起随 `pnpm run gate` 运行。206 行关闭也不自动等于 DMG 已签名、公证或发布；打包、签名、公证、安装/升级、第二进程和发布验收必须使用 Sage 自己的新发布链独立完成，旧 DSH DMG 结果不能代替。

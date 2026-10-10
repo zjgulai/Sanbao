@@ -108,8 +108,8 @@
         "unreviewed": 206
       },
       "ui": {
-        "implementing": 4,
-        "pending": 202
+        "implementing": 13,
+        "pending": 193
       },
       "applicationService": {
         "blocked": 206
@@ -304,8 +304,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t03",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "candidate-untracked",
+              "ref": ".birdview/evidence/sanbao-desktop-t03-search-2026-10-05/desktop-live-result.json",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "candidate-untracked",
+              "ref": "apps/sage-shell/test/product-app/desktop-search.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -326,7 +337,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "search page posts the real read-only route and renders the production refusal verbatim with zero invented hits (live-verified); real hit/empty-result states need a signed-in session plus the search object resolver (ADR-0268)"
         ]
       }
     },
@@ -509,13 +520,13 @@
           "status": "implementing",
           "evidenceRefs": [
             {
-              "kind": "candidate-untracked",
-              "ref": ".birdview/evidence/sanbao-desktop-t05f-final/desktop-live-result.json",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-page.spec.tsx",
               "countsAsVerification": false
             },
             {
-              "kind": "candidate-untracked",
-              "ref": ".birdview/evidence/sanbao-desktop-t03-2026-10-05/desktop-live-result.json",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
               "countsAsVerification": false
             }
           ]
@@ -539,7 +550,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "default main UI, read policy wiring (T03/A, ADR-0268) and workspace surfaces verified; the real workspace list renders only with a signed-in session - login path awaiting the user decision"
+          "default main UI, read-policy wiring and workspace surfaces are covered by tracked product-app tests; the real workspace list renders only with a signed-in session - login path awaiting the user decision"
         ]
       }
     },
@@ -589,13 +600,18 @@
           "status": "implementing",
           "evidenceRefs": [
             {
-              "kind": "candidate-untracked",
-              "ref": ".birdview/evidence/sanbao-desktop-t05f-final/desktop-live-result.json",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
               "countsAsVerification": false
             },
             {
-              "kind": "candidate-untracked",
-              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts (7/7)",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts",
               "countsAsVerification": false
             }
           ]
@@ -1745,13 +1761,18 @@
           "status": "implementing",
           "evidenceRefs": [
             {
-              "kind": "candidate-untracked",
-              "ref": ".birdview/evidence/sanbao-desktop-t05f-final/desktop-live-result.json",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
               "countsAsVerification": false
             },
             {
-              "kind": "candidate-untracked",
-              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts (7/7)",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts",
               "countsAsVerification": false
             }
           ]
@@ -1824,13 +1845,18 @@
           "status": "implementing",
           "evidenceRefs": [
             {
-              "kind": "candidate-untracked",
-              "ref": ".birdview/evidence/sanbao-desktop-t05f-final/desktop-live-result.json",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
               "countsAsVerification": false
             },
             {
-              "kind": "candidate-untracked",
-              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts (7/7)",
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts",
               "countsAsVerification": false
             }
           ]
@@ -7572,8 +7598,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7594,7 +7631,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7639,8 +7676,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7661,7 +7709,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7706,8 +7754,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7728,7 +7787,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7773,8 +7832,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7795,7 +7865,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7840,8 +7910,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7862,7 +7943,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7907,8 +7988,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7929,7 +8021,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -7974,8 +8066,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7996,7 +8099,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
@@ -8041,8 +8144,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-doc",
+              "ref": "docs/notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -8063,7 +8177,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "desktop appearance page implements the eight native selects with GET/POST authoritative readback (tracked test); packaged DMG-06 first-save/restart acceptance passed; Application Service stays blocked and real settings persistence beyond the packaged acceptance scope awaits T13-B"
         ]
       }
     },
