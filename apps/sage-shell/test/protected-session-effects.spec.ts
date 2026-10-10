@@ -1,11 +1,68 @@
-import { describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createSageAppServiceProviders } from '../src/main/app-service.js'
 import { createActiveMatterContext } from '../src/main/active-matter-context.js'
+import { resolveSagePaths } from '../src/profile/paths.js'
 import type { ServiceProviders } from '../src/appservice/contracts.js'
 import type { SessionCoreProtectedEffectIntent } from '../src/appservice/protected-effect-admission.js'
+
+const cleanups: Array<() => void | Promise<void>> = []
+
+afterEach(async () => {
+  let cleanup = cleanups.pop()
+  while (cleanup !== undefined) {
+    await cleanup()
+    cleanup = cleanups.pop()
+  }
+})
+
+/** T05 first cut: a real instance-local policy file plus the read counter the tests assert on. */
+async function temporaryAuthority(grants: readonly unknown[]): Promise<{
+  readonly wiring: { readonly policyPath: string, readonly readFileBytes: (path: string) => Buffer, readonly now: () => string }
+  readonly reads: () => number
+}> {
+  const container = await mkdtemp(join(tmpdir(), 'sage-session-identity-route-'))
+  const home = join(container, 'home')
+  await mkdir(home, { recursive: true })
+  cleanups.push(() => rm(container, { recursive: true, force: true }))
+  const paths = resolveSagePaths({ home, platform: 'darwin', root: join(container, 'Sage') })
+  await mkdir(paths.root, { recursive: true })
+  await writeFile(paths.organizationPolicyFile, JSON.stringify({
+    schemaVersion: 'sage.organization-policy.v1',
+    organizationId: 'organization:sage',
+    policy: { identity: 'policy:local', version: '1' },
+    validFrom: '2026-10-01T00:00:00Z',
+    expiresAt: '2027-10-01T00:00:00Z',
+    membership: { mode: 'instance-operator', roleRefs: ['role:owner'] },
+    grants,
+  }), 'utf8')
+  let reads = 0
+  return {
+    wiring: {
+      policyPath: paths.organizationPolicyFile,
+      readFileBytes: (path: string) => { reads += 1; return readFileSync(path) },
+      // Inside the assemble() fixture session's window (2026-10-03T00:00Z–01:00Z), so a denial
+      // here can only come from the grant comparison, never from an expired session.
+      now: () => '2026-10-03T00:30:00.000Z',
+    },
+    reads: () => reads,
+  }
+}
+
+const SESSION_SEND_GRANT = {
+  roleRef: 'role:owner',
+  operation: 'session.send',
+  actionScope: 'session.prompt',
+  effectClass: 'external-write',
+  requiresDecision: false,
+} as const
 
 const vault = {
   status: () => 'signed-out' as const,
@@ -194,6 +251,7 @@ function assemble(options: {
   readonly revision?: 'current' | 'stale' | 'unavailable'
   readonly defaultWorkspace?: 'matching' | 'drift' | 'unavailable'
   readonly workspace?: 'matching' | 'drift' | 'unavailable'
+  readonly authority?: { readonly policyPath: string, readonly readFileBytes: (path: string) => Buffer, readonly now: () => string }
 }) {
   let frameRead = 0
   const sessionSend = vi.fn(async () => ({ state: 'accepted' as const, sessionId: 's', requestId: 'r', mode: 'queue' as const }))
@@ -264,6 +322,7 @@ function assemble(options: {
     sessionStop,
     sessionResume,
     ...rawEffects,
+    ...(options.authority === undefined ? {} : { authority: options.authority }),
   })
   return { providers, sessionSend, sessionStop, sessionResume, rawEffects }
 }
@@ -371,6 +430,56 @@ describe('AUTH-02A session-core route admission', () => {
       expect(harness.sessionSend).not.toHaveBeenCalled()
       expectRawEffectsUntouched(harness.rawEffects)
     }
+  })
+})
+
+describe('T05 first cut: the session family evaluates the real identity step (ADR-0275)', () => {
+  it('runs the real policy evaluation and still stops at the missing target authority', async () => {
+    const granted = await temporaryAuthority([SESSION_SEND_GRANT])
+    const harness = assemble({ active: true, authority: granted.wiring })
+
+    const response = await post(harness.providers, '/.sage/session/send', {
+      matterRef: 'matter:active', workspaceRoot: '/renderer/path', text: 'run',
+    })
+    // Past identity now, the chain stops at the still-absent target step: same refusal family,
+    // still zero dispatch — and the policy file was really read for the evaluation.
+    expect(await response.json()).toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(granted.reads()).toBeGreaterThan(0)
+    expect(harness.sessionSend).not.toHaveBeenCalled()
+  })
+
+  it('names a policy without the exact grant as a denial, never as not-ready', async () => {
+    const ungranted = await temporaryAuthority([{ ...SESSION_SEND_GRANT, actionScope: 'session.other' }])
+    const harness = assemble({ active: true, authority: ungranted.wiring })
+
+    expect(await (await post(harness.providers, '/.sage/session/send', {
+      matterRef: 'matter:active', workspaceRoot: '/renderer/path', text: 'run',
+    })).json()).toEqual({ state: 'refused', code: 'protected-effect-denied' })
+    expect(ungranted.reads()).toBeGreaterThan(0)
+    expect(harness.sessionSend).not.toHaveBeenCalled()
+  })
+
+  it('keeps the step absent without the instance authority', async () => {
+    const granted = await temporaryAuthority([SESSION_SEND_GRANT])
+    const harness = assemble({ active: true })
+
+    expect(await (await post(harness.providers, '/.sage/session/send', {
+      matterRef: 'matter:active', workspaceRoot: '/renderer/path', text: 'run',
+    })).json()).toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(granted.reads()).toBe(0)
+    expect(harness.sessionSend).not.toHaveBeenCalled()
+  })
+
+  it('answers not-ready for an unregistered operation before any policy read', async () => {
+    const granted = await temporaryAuthority([SESSION_SEND_GRANT])
+    const harness = assemble({ active: true, authority: granted.wiring })
+
+    // `session.stop` has no registered entry yet: a prerequisite, not a denial — and no read.
+    expect(await (await post(harness.providers, '/.sage/session/stop', {
+      matterRef: 'matter:active',
+    })).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(granted.reads()).toBe(0)
+    expect(harness.sessionStop).not.toHaveBeenCalled()
   })
 })
 

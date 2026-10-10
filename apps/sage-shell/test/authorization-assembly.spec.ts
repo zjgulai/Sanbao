@@ -15,8 +15,9 @@ const INTENT: SageActionIntentV2 = {
 describe('action authority table (WT-02D.2A)', () => {
   it('freezes the registered table and keeps every entry’s mapping pinned', () => {
     // The table grew from the fixture-anchored v1 entry to a second, custody-side entry
-    // (ADR-0201). The pin stays exact on purpose: a new action type must be a deliberate edit here.
-    expect(Object.keys(ACTION_AUTHORITY_TABLE)).toEqual(['start-attempt', 'create-matter'])
+    // (ADR-0201) and a third, session-family entry (ADR-0275). The pin stays exact on purpose:
+    // a new action type must be a deliberate edit here.
+    expect(Object.keys(ACTION_AUTHORITY_TABLE)).toEqual(['start-attempt', 'create-matter', 'session.send'])
     expect(ACTION_AUTHORITY_TABLE['start-attempt']).toEqual({
       requiredRoleRef: 'role:owner',
       operation: 'start-attempt',
@@ -31,9 +32,17 @@ describe('action authority table (WT-02D.2A)', () => {
       effectClass: 'external-write',
       requiresDecision: false,
     })
+    expect(ACTION_AUTHORITY_TABLE['session.send']).toEqual({
+      requiredRoleRef: 'role:owner',
+      operation: 'session.send',
+      actionScope: 'session.prompt',
+      effectClass: 'external-write',
+      requiresDecision: false,
+    })
     expect(Object.isFrozen(ACTION_AUTHORITY_TABLE)).toBe(true)
     expect(Object.isFrozen(ACTION_AUTHORITY_TABLE['start-attempt'])).toBe(true)
     expect(Object.isFrozen(ACTION_AUTHORITY_TABLE['create-matter'])).toBe(true)
+    expect(Object.isFrozen(ACTION_AUTHORITY_TABLE['session.send'])).toBe(true)
   })
 })
 

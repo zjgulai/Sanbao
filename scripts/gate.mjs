@@ -692,6 +692,8 @@ const CHECKS = [
         mainAppServiceText: readRepoText('apps/sage-shell/src/main/app-service.ts'),
         mainIndexText: readRepoText('apps/sage-shell/src/main/index.ts'),
         matterCustodyText: readRepoText('apps/sage-shell/src/main/matter-custody.ts'),
+        sessionCoreIdentityText: readRepoText('apps/sage-shell/src/main/session-core-identity.ts'),
+        actionAuthorityTableText: readRepoText('apps/sage-shell/src/main/action-authority-table.ts'),
       })
     },
   },

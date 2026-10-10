@@ -23,6 +23,7 @@ import type { TokenVault } from './token-vault.js'
 import type { RuntimeInventoryProvider } from './runtime-inventory-provider.js'
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
+import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { loadOrganizationPolicy } from './organization-policy.js'
 import type { StrictRehydratePort } from './matter-rehydrate-port.js'
 import type { CallerBinding } from '../appservice/contracts.js'
@@ -802,6 +803,11 @@ function createSessionCoreProtectedEffectPorts(
         value: { candidateRef: `active:${context.matterRef}:${context.revisionRef}:${context.generation}` },
       }
     },
+    // T05 first cut: the real Identity / Policy step for registered session-family operations.
+    // Without the instance authority option the step stays absent, exactly as before.
+    ...(options.authority === undefined
+      ? {}
+      : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),
   }
 }
 

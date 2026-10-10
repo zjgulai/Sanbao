@@ -8849,6 +8849,57 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0275",
+      "title": "ADR-0275 · 会话族真实 Identity 准入（T05 第一刀）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "登记 session.send（role:owner / session.send / session.prompt / external-write / requiresDecision:false）；登记=让请求可评估，不是授权，放行仍取决于组织策略精确 grant。",
+          "constraints": [
+            "registration is not authorization",
+            "no per-message decision gate",
+            "consumers unchanged"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "assembleSessionCoreAuthorizationRequest 与 assembleAuthorizationRequest 共用同一核心与同一张表。",
+          "constraints": [
+            "one table",
+            "existing assembly behavior unchanged"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "唯一适配器：未登记操作在任何策略读取之前答 unavailable；无会话/策略不可读答 unavailable；非 authorized 答 denied；authorized 产出不透明 actorScopeRef（actor 稳定）与 decisionRef（求值新鲜）。",
+          "constraints": [
+            "no policy read for unregistered operations",
+            "raw issuer handle organization never surface",
+            "denials never lie as not-ready and vice versa"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "接线只在 options.authority 存在时合并；登记只做 session.send 一条，其余操作按各自票据逐条登记。",
+          "constraints": [
+            "absent authority keeps the step absent",
+            "one operation per deliberate edit"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁登记 gated merge、条目与 scope、未登记先于读取、非 authorized→denied、assembly+kernel resolve 五组源码事实，附六条具名突变；计数与分类不变。",
+          "constraints": [
+            "no exemptions added",
+            "counts unchanged",
+            "named mutations per fact"
+          ]
+        }
+      ]
     }
   ]
 }

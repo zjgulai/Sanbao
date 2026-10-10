@@ -34,4 +34,15 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'external-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // T05 first cut (ADR-0275): the session-family prompt is the matter's baseline work, so it is
+  // registered with its own scope and an external-write effect class (user content leaves the
+  // machine for the model). Chat continuation is not a per-message governed decision; a later
+  // policy generation can tighten this without changing the consumers.
+  'session.send': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.send',
+    actionScope: 'session.prompt',
+    effectClass: 'external-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

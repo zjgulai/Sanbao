@@ -21,7 +21,26 @@ export interface AuthorizationAssemblyInput {
 }
 
 export function assembleAuthorizationRequest(input: AuthorizationAssemblyInput): AuthorizationAssembly {
-  const entry = (input.table ?? ACTION_AUTHORITY_TABLE)[input.intent.actionType]
+  return assembleSessionCoreAuthorizationRequest({
+    operation: input.intent.actionType,
+    sessionRef: input.sessionRef,
+    organizationRef: input.organizationRef,
+    ...(input.table === undefined ? {} : { table: input.table }),
+  })
+}
+
+export interface SessionCoreAuthorizationAssemblyInput {
+  /** A session-family operation name (also the table key: `session.send`, `session.stop`, …). */
+  readonly operation: string
+  readonly sessionRef: string | null
+  readonly organizationRef: string | null
+  readonly table?: Readonly<Record<string, ActionAuthorityEntry>>
+}
+
+/** T05 first cut: the same table and shape, keyed by a session-family operation name instead of
+ *  a business actionType. Both entry points share this core so the table cannot split in two. */
+export function assembleSessionCoreAuthorizationRequest(input: SessionCoreAuthorizationAssemblyInput): AuthorizationAssembly {
+  const entry = (input.table ?? ACTION_AUTHORITY_TABLE)[input.operation]
   if (entry === undefined) return { kind: 'invalid' }
   if (input.sessionRef === null || input.organizationRef === null) return { kind: 'unavailable' }
   return {

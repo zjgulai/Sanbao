@@ -15,6 +15,8 @@ const baseline = Object.freeze({
   mainAppServiceText: read('apps/sage-shell/src/main/app-service.ts'),
   mainIndexText: read('apps/sage-shell/src/main/index.ts'),
   matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
+  sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
+  actionAuthorityTableText: read('apps/sage-shell/src/main/action-authority-table.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -78,6 +80,7 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /16 direct-provider bypasses/)
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
+  assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -575,6 +578,48 @@ test('the home-page custodian cannot drift from its scope-bound wiring facts', (
   )
   assert.notEqual(queryDrift, baseline.matterCustodyText)
   expectNamedFailure(check({ matterCustodyText: queryDrift }), 'an unobservable custodian query must stay unknown')
+})
+
+test('the session-family identity step cannot drift from its gated wiring and registration facts', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    [
+      '...(options.authority === undefined',
+      '      ? {}',
+      '      : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),',
+    ].join('\n'),
+    'resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }),',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'session-core identity step must be wired only behind the instance authority option')
+
+  const unregistered = baseline.actionAuthorityTableText.replace("  'session.send': Object.freeze({", '')
+  assert.notEqual(unregistered, baseline.actionAuthorityTableText)
+  expectNamedFailure(check({ actionAuthorityTableText: unregistered }), 'session.send must be registered in the action authority table')
+
+  const scopeDrift = baseline.actionAuthorityTableText.replace("actionScope: 'session.prompt'", "actionScope: 'session.any'")
+  assert.notEqual(scopeDrift, baseline.actionAuthorityTableText)
+  expectNamedFailure(check({ actionAuthorityTableText: scopeDrift }), 'session.send action scope must stay session.prompt')
+
+  const notReadyDrift = baseline.sessionCoreIdentityText.replace(
+    "if (ACTION_AUTHORITY_TABLE[intent.operation] === undefined) return { state: 'unavailable' }",
+    "if (ACTION_AUTHORITY_TABLE[intent.operation] === undefined) return { state: 'denied' }",
+  )
+  assert.notEqual(notReadyDrift, baseline.sessionCoreIdentityText)
+  expectNamedFailure(check({ sessionCoreIdentityText: notReadyDrift }), 'an unregistered session-family operation must answer not-ready before any policy read')
+
+  const denialDrift = baseline.sessionCoreIdentityText.replace(
+    "if (resolution.kind !== 'authorized') return { state: 'denied' }",
+    "if (resolution.kind !== 'authorized') return { state: 'unavailable' }",
+  )
+  assert.notEqual(denialDrift, baseline.sessionCoreIdentityText)
+  expectNamedFailure(check({ sessionCoreIdentityText: denialDrift }), 'a non-authorized resolution must map to a denial')
+
+  const unwiredResolve = baseline.sessionCoreIdentityText.replace(
+    'const resolution = runtime.resolve(assembled.request)',
+    'const resolution = { kind: \'authorized\' as const }',
+  )
+  assert.notEqual(unwiredResolve, baseline.sessionCoreIdentityText)
+  expectNamedFailure(check({ sessionCoreIdentityText: unwiredResolve }), 'the session-core assembly and kernel resolve must stay wired')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

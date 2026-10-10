@@ -453,6 +453,44 @@ function matterCustodyViolations(input) {
   return violations
 }
 
+function sessionCoreIdentityViolations(input) {
+  const violations = []
+  const appServiceText = typeof input?.mainAppServiceText === 'string' ? input.mainAppServiceText : ''
+  const tableText = typeof input?.actionAuthorityTableText === 'string' ? input.actionAuthorityTableText : ''
+  const identityText = typeof input?.sessionCoreIdentityText === 'string' ? input.sessionCoreIdentityText : ''
+  if (appServiceText === '' || tableText === '' || identityText === '') {
+    violations.push('session-core identity source facts are unavailable')
+    return violations
+  }
+  // The step is wired only behind the instance-authority option: ungating it would evaluate
+  // policy for instances that never provisioned one.
+  const gatedMerge = [
+    '...(options.authority === undefined',
+    '      ? {}',
+    '      : { resolveIdentityPolicy: createSessionCoreIdentityPort({ vault: options.vault, authority: options.authority }) }),',
+  ].join('\n')
+  if (!appServiceText.includes(gatedMerge)) {
+    violations.push('session-core identity step must be wired only behind the instance authority option')
+  }
+  if (!tableText.includes("'session.send': Object.freeze({")) {
+    violations.push('session.send must be registered in the action authority table')
+  }
+  if (!tableText.includes("actionScope: 'session.prompt'")) {
+    violations.push('session.send action scope must stay session.prompt')
+  }
+  if (!identityText.includes('if (ACTION_AUTHORITY_TABLE[intent.operation] === undefined) return { state: \'unavailable\' }')) {
+    violations.push('an unregistered session-family operation must answer not-ready before any policy read')
+  }
+  if (!identityText.includes("if (resolution.kind !== 'authorized') return { state: 'denied' }")) {
+    violations.push('a non-authorized resolution must map to a denial')
+  }
+  if (!identityText.includes('const assembled = assembleSessionCoreAuthorizationRequest({')
+    || !identityText.includes('const resolution = runtime.resolve(assembled.request)')) {
+    violations.push('the session-core assembly and kernel resolve must stay wired')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -611,7 +649,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -633,6 +671,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.matterCustodyText !== 'string') {
     return failAll(discovered, ['matter custody module unavailable; the creation-branch custodian cannot be checked'])
+  }
+  if (typeof input?.sessionCoreIdentityText !== 'string' || typeof input?.actionAuthorityTableText !== 'string') {
+    return failAll(discovered, ['session-core identity sources unavailable; the session-family identity step cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -979,6 +1020,9 @@ export function checkSageRouteAuthority(input) {
   const custodyViolations = matterCustodyViolations(input)
   for (const violation of custodyViolations) failGlobal(violation)
 
+  const identityViolations = sessionCoreIdentityViolations(input)
+  for (const violation of identityViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -989,7 +1033,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }
