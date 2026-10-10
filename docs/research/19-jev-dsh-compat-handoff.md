@@ -33,7 +33,7 @@ JEV 提供"判断层"能力（16 条判断 + 脱敏/出境纪律 + 已在真实�
 
 - **形态**：JEV 的 stdio MCP server，server name `jev-judgments`，**恒定两个工具**：`list_judgments` 与 `judge`（JEV ADR-0002：加领域不加工具，控制宿主上下文占用）。env：`JEV_JUDGMENTS_DIR`（默认包内 `judgments/`）、`JEV_STATE_DIR`（默认 `~/.local/state/jev-dsh`）、`TYPESAFE_API_KEY`（缺了直接 `exit 1`，**无 dry-run 模式**）。
 - **现状**：2026-09-19 曾端到端验证；此后 profile 改写中接线丢失（现行 `cordis.patch.yml` 无 `mcp-jev`，09-19 备份也不存在；`~/.dsh/integrations`、`storages/dsh.sqlite`、应用数据目录均无）。本仓 `.scratch/review/2026-09-22-arch-health-top20/HANDOFF-CODEX.md`（[本仓记录](../../.scratch/review/2026-09-22-arch-health-top20/HANDOFF-CODEX.md)）也记过同一缺失（`/6 mcp-jev` insert 丢了、未恢复、无授权）。
-- **重装块（可直接应用，已对现行安装校准）**：在 JEV `tickets/005`「重装 mcp-jev」节（含备份/预飞/验证通道五步）。**三个不可省的细节**：① 必须 `insert:` 包装（否则条目被当"覆盖条目"静默丢弃）；② 凭证必须 **spawn 时 source**（基座会清洗子进程环境里的凭证形状变量）；③ node 用**绝对路径**（Finder 启动的 app 没有 PATH）。基座 `@deepseek-ai/dsh-mcp-client@0.1.5-rc.2` 仍在（profile 与应用侧各一份、同版）。
+- **重装块（可直接应用，已对现行安装校准）**：在 JEV `tickets/005`「重装 mcp-jev」节（含备份/预飞/验证通道五步）。**三个不可省的细节**：① 必须 `insert:` 包装（否则条目被当"覆盖条目"静默丢弃）；② 凭证必须 **spawn 时 source**（基座会清洗子进程环境里的凭证形状变量）；③ node 用**绝对路径**（Finder 启动的 app 没有 PATH）。基座 `@deepseek-ai/dsh-mcp-client@0.1.5-rc.2` 仍在（profile 与应用侧各一份、同版）。**（2026-10-09 环境变更观察，JEV 侧）**：该机 `/Applications` 已无 DSH 应用、`~/.dsh` 共享依赖面（`profiles/node_modules/@deepseek-ai/*` 246 项）全为悬空符号链接 ⇒ **重装块在现状下不能直接照抄执行**；若继续 legacy DSH 侧须先恢复宿主（重装应用或重建依赖树）。Sage 侧不受影响：其装配契约（ADR-0162）与 `mcp-jev` 挂载走 Sage 自有运行时。
 - **验证通道**：进程 `pgrep -f "JEV/src/mcp/main.ts"`；宿主日志（注意数据目录已随 productName 改为 Sanbao）里 `mcp-client(jev)` 零告警；被调过 → `~/.local/state/jev-dsh/egress/payloads-*.jsonl` 出现请求行；端到端调一次 `mcp__jev__list_judgments`（只读）。
 - **给 Sage 的决策**：装在**哪个 runtime**——legacy profile（[AGENTS.md](../../AGENTS.md) 明确"不得把 `~/.dsh` 当作 Sage 运行时"、`~/.dsh` 装配走 ADR-0061 的 profile 本地装配），还是等 Sage 自己的**插件装配契约**（AGENTS.md 自认"尚未建立"）。这是本交接里**第一个该定的事**：它决定后面每一项的落点。
 
@@ -49,10 +49,10 @@ JEV 提供"判断层"能力（16 条判断 + 脱敏/出境纪律 + 已在真实�
 ### 2.4 技能按需加载——机制证据齐、白名单未拍板
 
 - **宿主组件（本仓）**：`packages/contract/dsh-skill-subset`（白名单 + `hideOthers`；`respectFileFlags` 默认 false——**注意：默认值会让文件开关失效**；运行时注册必须带非空 `source`，2026-09-16 有 89 条技能踩过"注册成功、调用即炸"）、`dsh-skill-center-local`（附带逐字保留其余行的原子改写器）、`dsh-preset-lint-local`（preset 校验器）。
-- **关键实测（2026-09-26，工具 `measure-skill-catalog.mjs`，收据 `skill-catalog-baseline.json` 在 JEV 侧）**：`~/.dsh/skills` 下 SKILL.md 共 **1,806**；`disable-model-invocation` 裸 `true` 201 / 裸 `false` 147 / **带引号 `"true"` 1,390** / 带引号 `"false"` 18 / 无键 50 ⇒ **模型可见 1,605、真正关闭 201**。两个解析器都**不认带引号的布尔** ⇒ **1,408 个"想关没关上"的技能今天仍可见**；可见面 description ≈ **217,228 字符**（≈54k tokens）。`user-invocable` 无任何 false。
+- **关键实测（2026-09-26，工具 `measure-skill-catalog.mjs`，收据 `skill-catalog-baseline.json` 在 JEV 侧）**：`~/.dsh/skills` 下 SKILL.md 共 **1,806**；`disable-model-invocation` 裸 `true` 201 / 裸 `false` 147 / **带引号 `"true"` 1,390** / 带引号 `"false"` 18 / 无键 50 ⇒ **模型可见 1,605、真正关闭 201**。两个解析器都**不认带引号的布尔** ⇒ **1,408 个"想关没关上"的技能今天仍可见**；可见面 description ≈ **217,228 字符**（≈54k tokens）。`user-invocable` 无任何 false。**（2026-10-09 口径更正）**：1,605 / 217k 是 `dsh-skill-center` / `dsh-skill-subset` 的**原始文本口径**；默认会话的目录由**原生链**（`dsh-skill-filesystem` → `dsh-skill` → `dsh-tool-skill`）决定，其 YAML 解析后做字符串强转 ⇒ **带引号 `"true"` 被认作关闭**。复算（同 1,806 文件）：**原生口径可见 215 / description ≈35,575 字符；1,390 个带引号 `"true"` 已是关闭态**——三方法互证（源码逐行 + 复算 + 执行级探针；收据与探针均在 JEV 侧：`skill-catalog-native-visibility.json`、`probe-native-visibility-001/receipt.json`）。"想关没关上"只对 **subset 会话 / center 展示与改写路径**成立。
 - **JEV 侧**：影子建议层 `src/intelligence/{skill-suggestion,skill-questions}.ts` + `scripts/intelligence-skills.ts`（只读文件、**恒 dry-run**、无真实调用入口）；preset 路线草案 `009-preset-draft/agent.cordis.yml`（宿主自带校验器正/负控已过：草案 exit 0、乱填技能名被点名拒绝）。两份独立证据：目录测量收据 + 运行时探针 `runtime-skill-probe.json`（0.1.5-rc.2 材料化包：允许/拒绝路径 + dispose 清理）。
-- **杠杆提示**：009 的真正杠杆可能不在"新增白名单 preset"，而在**把 1,408 个带引号布尔改对**（或修解析器）——两条路线的批准范围完全不同。
-- **给 Sage 的决策**：路线（preset 白名单 vs 修写法/解析器）、名单、是否允许写宿主目录、观测窗口与净收益阈值（无净收益即按回滚清单还原）。
+- **杠杆提示（2026-10-09 更正）**：~~009 的真正杠杆可能不在"新增白名单 preset"，而在把 1,408 个带引号布尔改对~~——批量改写法在**默认会话无净收益**（原生链已认引号、这些技能早已关闭）；剩余杠杆场景是 **subset 会话**（55 个 preset 在用 subset，其正则只认裸值——文件开关要在 preset 会话内受尊重须写裸 `true`/`false`，与 `respectFileFlags: true` 相互作用）与 **center 路径**一致性。（完整更正与三方法证据见 JEV `tickets/009`「二·补 口径更正」。）
+- **给 Sage 的决策**：路线（preset 白名单 vs 修写法/解析器——**2026-10-09 口径更正：默认会话原生链已认带引号关闭，"修写法"仅对 subset 会话/center 路径有意义**）、名单、是否允许写宿主目录、观测窗口与净收益阈值（无净收益即按回滚清单还原）。
 
 ### 2.5 闭环 CLI 的宿主入口——三路线待选
 
@@ -76,7 +76,7 @@ JEV 提供"判断层"能力（16 条判断 + 脱敏/出境纪律 + 已在真实�
 - JEV 的降级语义（超时/熔断 → `degraded:true`、无 `value`、`action` 保持 escalate 语义），韧性参数落地于 MCP server 与 CLI。
 - Sage 的 HTTP 客户端、三个 legacy 门、ADR-0138 的出境边界门（含反向测试）。
 - 桥与扩展的**源码级**契约（编号稳定/失效 fail-closed/无 generation/无遮挡检查/快照 version 无人校验）。
-- 技能目录测量（1,806 / 1,605 / 201 / 1,408）。
+- 技能目录测量（1,806 / 1,605 / 201 / 1,408；**2026-10-09 更正：1,605 与 1,408 为原始文本口径，原生口径为 215——见 §2.4**）。
 
 **未证（不要当已有）**：
 - 扩展**真机握手**——本机日志从未出现 `hello.ok`；"安装实例与源码一致"从未对齐验证。
@@ -90,7 +90,7 @@ JEV 提供"判断层"能力（16 条判断 + 脱敏/出境纪律 + 已在真实�
 1. **先定插件装配契约**（AGENTS.md 的"尚未建立"项）——JEV 这类"判断层能力"以什么形态挂进 Sage（MCP client / 本地服务 / 其他）。这一项定了，2~5 的落点才有意义。
 2. **装配 `mcp-jev`**（重装块已在 JEV `tickets/005`，三个坑照抄即可；宿主配置变更要单独批准）。
 3. **浏览器**：定 runtime → 装扩展 → 过 9 项清单 → 跑只读试点（提案现成）。
-4. **技能**：先在"preset 白名单"与"修 1,408 个带引号布尔"之间选路。
+4. **技能**：先在"preset 白名单"与"修 1,408 个带引号布尔"之间选路（**2026-10-09 口径更正后净收益基线已变——见 §2.4**）。
 5. **闭环入口**：A/B/C 三选一；选 A 按 JEV `tickets/005` 的三个设计问题先答后做。
 6. **对表出境/凭据**（§2.6 的三个问题），再谈任何跨仓自动化。
 
