@@ -1,6 +1,7 @@
 {
   "name": "sage-shell-profile",
   "private": true,
+  "packageManager": "pnpm@11.8.0",
   "type": "module",
   "dsh": {
     "profile": {

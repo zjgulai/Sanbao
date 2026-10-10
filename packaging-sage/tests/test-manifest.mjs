@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path'
 
 export const SAGE_PACKAGING_TEST_LAYERS = Object.freeze(['pure', 'platform', 'input', 'live'])
 export const SAGE_PACKAGING_TEST_RUNNERS = Object.freeze(['node', 'node-test', 'bash'])
-export const SAGE_PACKAGING_EXPECTED_TEST_COUNT = 12
+export const SAGE_PACKAGING_EXPECTED_TEST_COUNT = 13
 
 export const SAGE_PACKAGING_CONTRACT_TESTS = Object.freeze([
   Object.freeze({
@@ -54,6 +54,11 @@ export const SAGE_PACKAGING_CONTRACT_TESTS = Object.freeze([
   Object.freeze({
     path: 'packaging-sage/tests/producer-contract-test.mjs',
     layer: 'input',
+    runner: 'node',
+  }),
+  Object.freeze({
+    path: 'packaging-sage/tests/runtime-graph-builtins-test.mjs',
+    layer: 'pure',
     runner: 'node',
   }),
   Object.freeze({

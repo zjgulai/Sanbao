@@ -9056,6 +9056,55 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0279",
+      "title": "ADR-0279 · 内测 DMG 链首跑修复：构建脚本批准确认、pnpm 版本单源、运行时内建识别",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "allowBuilds.esbuild 显式置 true（壳构建链 devDependency，按种子先例格式）；占位符不得留在 manifest。",
+          "constraints": [
+            "no placeholder values in manifests",
+            "match the seed precedent format"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "根/app/seed 三处 manifest 钉 packageManager=pnpm@11.8.0（=CI 钉值）；隔离 HOME 不再回退最新版本。",
+          "constraints": [
+            "same literal in all three manifests",
+            "equals the CI pin"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "ci-workflow 门禁逐字核对 CI PNPM_VERSION 与三处 packageManager；缺字段或不一致具名判红，附突变自测。",
+          "constraints": [
+            "mechanism over review",
+            "named mutations"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "runtime-graph BUILTINS 显式登记运行时超出宿主列表的内建（首发 sqlite）；新增 pure 回归测试并同步打包测试清单 12→13。",
+          "constraints": [
+            "runtime truth not host truth",
+            "regression test in the pure layer",
+            "manifest counts stay consistent"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "store 预取（pnpm fetch）登记为打包操作前置；sign/dmg/acceptance 未跑的步骤照实写未运行。",
+          "constraints": [
+            "no claimed readings without runs",
+            "note is the single source of the run ledger"
+          ]
+        }
+      ]
     }
   ]
 }

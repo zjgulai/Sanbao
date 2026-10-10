@@ -197,6 +197,33 @@ test('变异 15：版本不钉 → 判红（浮动版本 = 平台行为被当常
   expectRed('删掉版本钉住', (text) => text.replace(/^ {2}NODE_VERSION: '[^']*'\n/m, ''), /NODE_VERSION/)
 })
 
+test('版本单源：CI 的 PNPM_VERSION 必须与三处 packageManager 逐字一致', () => {
+  const manifests = {
+    'package.json': readFileSync(join(repoRoot, 'package.json'), 'utf8'),
+    'apps/sage-shell/package.json': readFileSync(join(repoRoot, 'apps/sage-shell', 'package.json'), 'utf8'),
+    'apps/sage-shell/seed/package.json': readFileSync(join(repoRoot, 'apps/sage-shell', 'seed', 'package.json'), 'utf8'),
+  }
+  // 真实三份 manifest 判绿：一个版本事实（CI 钉值）等于每一处 packageManager。
+  const pass = checkCiWorkflow({ workflowText: baseline, packageManagerTexts: manifests })
+  assert.equal(pass.passed, true, pass.violations.join('\n'))
+
+  const drifted = {
+    ...manifests,
+    'apps/sage-shell/seed/package.json': manifests['apps/sage-shell/seed/package.json'].replace('"pnpm@11.8.0"', '"pnpm@12.9.1"'),
+  }
+  assert.notEqual(drifted['apps/sage-shell/seed/package.json'], manifests['apps/sage-shell/seed/package.json'])
+  const fail = checkCiWorkflow({ workflowText: baseline, packageManagerTexts: drifted })
+  assert.equal(fail.passed, false)
+  assert.ok(fail.violations.some((violation) => violation.includes('seed') && violation.includes('PNPM_VERSION')))
+
+  const missing = checkCiWorkflow({
+    workflowText: baseline,
+    packageManagerTexts: { ...manifests, 'package.json': '{ "name": "x" }' },
+  })
+  assert.equal(missing.passed, false)
+  assert.ok(missing.violations.some((violation) => violation.includes('缺 packageManager')))
+})
+
 test('变异 16：quick job 跑 full 模式 → 判红', () => {
   expectRed(
     'quick job 跑 full',

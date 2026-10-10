@@ -15,13 +15,13 @@ import { nodeCommand } from '../lib/real-node.mjs'
 
 const repoRoot = join(dirname(new URL(import.meta.url).pathname), '..', '..')
 
-test('filesystem packaging test manifest covers exactly twelve layered entrypoints', () => {
+test('filesystem packaging test manifest covers exactly thirteen layered entrypoints', () => {
   const result = checkSagePackagingContractManifest(repoRoot)
   assert.equal(result.status, 'pass', result.violations.join('\n'))
-  assert.equal(result.expected, 12)
-  assert.equal(result.discovered, 12)
+  assert.equal(result.expected, 13)
+  assert.equal(result.discovered, 13)
   assert.deepEqual(inspectSagePackagingTestManifest(repoRoot).layers, {
-    pure: 7,
+    pure: 8,
     platform: 4,
     input: 1,
     live: 0,
@@ -44,7 +44,7 @@ test('a filesystem test added without registration fails closed', () => {
     const unregistered = join(temporary, 'packaging-sage', 'tests', 'unregistered-test.mjs')
     writeFileSync(unregistered, '')
     const inspection = inspectSagePackagingTestManifest(temporary)
-    assert.ok(inspection.issues.includes('discovered-count: expected 12, got 13'))
+    assert.ok(inspection.issues.includes('discovered-count: expected 13, got 14'))
     assert.ok(inspection.issues.includes('unregistered-test: packaging-sage/tests/unregistered-test.mjs'))
   } finally {
     rmSync(temporary, { recursive: true, force: true })
@@ -90,7 +90,7 @@ test('quick runner lists only pure tests and never selects input, platform or li
   assert.equal(result.status, 0, result.stderr)
   const report = JSON.parse(result.stdout)
   assert.equal(report.registered, SAGE_PACKAGING_EXPECTED_TEST_COUNT)
-  assert.deepEqual(report.layers, { pure: 7, platform: 4, input: 1, live: 0 })
+  assert.deepEqual(report.layers, { pure: 8, platform: 4, input: 1, live: 0 })
   assert.deepEqual(report.selected, [
     'packaging-sage/scripts/accept-dmg.test.mjs',
     'packaging-sage/tests/dmg-contract-test.mjs',
@@ -98,6 +98,7 @@ test('quick runner lists only pure tests and never selects input, platform or li
     'packaging-sage/tests/local-signing-recovery-test.mjs',
     'packaging-sage/tests/native-inventory-test.mjs',
     'packaging-sage/tests/pnpm-install-artifacts-test.mjs',
+    'packaging-sage/tests/runtime-graph-builtins-test.mjs',
     'packaging-sage/tests/signing-plan-test.mjs',
   ])
 })

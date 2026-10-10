@@ -3,6 +3,7 @@
   "name": "sage-agentic-os",
   "version": "2.0.0",
   "private": true,
+  "packageManager": "pnpm@11.8.0",
   "type": "module",
   "description": "Sage 跨境电商垂类 AgenticOS 桌面产品 monorepo。根包只承载 Sage BASE 门禁与工程脚本，不发布。",
   "luteOrigin": "self",

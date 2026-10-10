@@ -369,7 +369,7 @@ function runLines(step) {
  *   「workflow 合格」必须长得不一样）。
  * @returns {{passed: boolean, violations: string[], facts: Record<string, unknown>}}
  */
-export function checkCiWorkflow({ workflowText, gateNames = [], allowedActionRefs = [] } = {}) {
+export function checkCiWorkflow({ workflowText, gateNames = [], allowedActionRefs = [], packageManagerTexts = {} } = {}) {
   const violations = []
   const facts = { authority: WORKFLOW_CHECK_AUTHORITY }
 
@@ -428,6 +428,34 @@ export function checkCiWorkflow({ workflowText, gateNames = [], allowedActionRef
     }
   }
   facts.pinnedVersions = { node: env.NODE_VERSION ?? null, pnpm: env.PNPM_VERSION ?? null }
+
+  // 3b. 版本事实单源：CI 的 PNPM_VERSION 必须与三处 manifest 的 packageManager 逐字一致。
+  // 隔离安装环境（produce-inputs 的 runtime-dependencies-home、materialize 的临时 HOME）用
+  // corepack 拉起 pnpm；没有 packageManager 时它会回退「最新已知版本」——2026-10-10 首跑实测
+  // 该回退拉到一个布局不兼容的版本，producer 直接失败。四份拷贝（CI + 三个 manifest）漂移
+  // 一次就要用一次真实安装事故来发现，所以由本项逐字守住。
+  const pmPins = []
+  for (const [label, text] of Object.entries(packageManagerTexts)) {
+    if (typeof text !== 'string' || text.trim() === '') {
+      violations.push(`packageManager 事实源读不到：${label}`)
+      continue
+    }
+    let manifest
+    try {
+      manifest = JSON.parse(text)
+    } catch {
+      violations.push(`packageManager 事实源不是合法 JSON：${label}`)
+      continue
+    }
+    const pinned = typeof manifest.packageManager === 'string' ? manifest.packageManager : null
+    pmPins.push({ label, packageManager: pinned })
+    if (pinned === null) {
+      violations.push(`${label} 缺 packageManager——隔离安装环境的 corepack 会回退到「最新已知版本」（P-06：平台行为被当常量）`)
+    } else if (typeof env.PNPM_VERSION === 'string' && pinned !== `pnpm@${env.PNPM_VERSION}`) {
+      violations.push(`${label} 的 packageManager=${pinned} 与 CI 的 PNPM_VERSION=${env.PNPM_VERSION} 不一致——版本事实必须单源`)
+    }
+  }
+  if (pmPins.length > 0) facts.packageManagerPins = pmPins
 
   // 4. 触发器：PR 与 main 都要跑。
   const on = workflow.on

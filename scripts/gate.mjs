@@ -265,6 +265,11 @@ const CHECKS = [
         workflowText,
         gateNames: CHECKS.map((entry) => entry.name),
         allowedActionRefs: ['actions/checkout@', 'actions/setup-node@', 'actions/upload-artifact@', 'pnpm/action-setup@'],
+        packageManagerTexts: {
+          'package.json': readRepoText('package.json'),
+          'apps/sage-shell/package.json': readRepoText('apps/sage-shell/package.json'),
+          'apps/sage-shell/seed/package.json': readRepoText('apps/sage-shell/seed/package.json'),
+        },
       })
       // 交 **canonical** 读数（ADR-0094 的三态 + 守恒账目），不要图省事写 legacy 的
       // `{passed, violations}`：`passed` 一旦与 canonical 字段混在一份对象里，聚合层

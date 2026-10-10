@@ -10,6 +10,11 @@ export const PROVIDED_MODULES = Object.freeze(['electron'])
 const BUILTINS = new Set([
   ...builtinModules,
   ...builtinModules.map(name => `node:${name}`),
+  // Builtins the RUNTIME provides beyond this build host's `builtinModules`: the packaging host
+  // may run an older Node than the packaged Electron runtime (43.3.0 = Node 24.18), and a missed
+  // name would be misread as an npm package the producer then tries to install.
+  'sqlite',
+  'node:sqlite',
 ])
 
 function portable(path) {
