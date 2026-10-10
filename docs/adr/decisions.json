@@ -9400,6 +9400,51 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0286",
+      "title": "ADR-0286 · 第 7 步 registry 准入接线：三重绑定、裁决失败语义与派生规则单一家",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "registry 端口消费同实例快照 + requirement + 观测；评估时点=证据 observedAt；三重绑定（快照代/声明一致/审批态）失配即 unavailable。",
+          "constraints": [
+            "evaluation instant is the evidence observedAt",
+            "no second registry source"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "失败语义：只有 disabled/revoked 答 denied；其余失败答 unavailable；mappingRef 绑定快照 id 与 mapping digest。",
+          "constraints": [
+            "not-provisioned is never dressed as a refusal",
+            "exactly one denied exit in the port"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "capabilityOperationsProjection 与两个摘要派生单一家于 capability-entry-derivation.ts；抽取不得移动既有摘要。",
+          "constraints": [
+            "existing descriptor digests stay byte-identical"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "options-gated 三输入接线；index 传 bundledRegistry 同实例。",
+          "constraints": [
+            "absence keeps the step absent"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "route-authority registry 事实组 + 六条具名突变；note 句 registry 移出 absent 名单。",
+          "constraints": [
+            "mechanism over review"
+          ]
+        }
+      ]
     }
   ]
 }

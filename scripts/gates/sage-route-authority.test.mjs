@@ -22,6 +22,9 @@ const baseline = Object.freeze({
   sessionPromptTargetText: read('apps/sage-shell/src/main/session-prompt-target.ts'),
   publicationBundleText: read('apps/sage-shell/src/main/publication-bundle.ts'),
   sessionPromptCompatibilityText: read('apps/sage-shell/src/main/session-prompt-compatibility.ts'),
+  sessionPromptRegistryText: read('apps/sage-shell/src/main/session-prompt-registry.ts'),
+  capabilityEntryDerivationText: read('apps/sage-shell/src/main/capability-entry-derivation.ts'),
+  runtimeInventoryProviderText: read('apps/sage-shell/src/main/runtime-inventory-provider.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -775,6 +778,57 @@ test('the real compatibility step cannot drift from its gated wiring or evaluati
   )
   assert.notEqual(unadapted, baseline.sessionPromptCompatibilityText)
   expectNamedFailure(check({ sessionPromptCompatibilityText: unadapted }), 'the compatibility port must compose the exact V2 resolve input through the kernel adapters')
+})
+
+test('the real registry step cannot drift from its gated wiring, bindings or denial taxonomy', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    'options.capabilityRegistry === undefined',
+    'false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the registry step must be wired only behind the bundle, the provider and the observation')
+
+  const secondSource = baseline.mainIndexText.replace(
+    'capabilityRegistry: bundledRegistry,',
+    'capabilityRegistry: createBundledCapabilityRegistryProvider(),',
+  )
+  assert.notEqual(secondSource, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: secondSource }), 'index must hand the admission step the SAME published-snapshot provider instance')
+
+  const reSourced = baseline.sessionPromptRegistryText.replace(
+    'parseCapabilityRegistrySnapshot(sealed)',
+    'createBundledCapabilityRegistryProvider(sealed)',
+  )
+  assert.notEqual(reSourced, baseline.sessionPromptRegistryText)
+  expectNamedFailure(check({ sessionPromptRegistryText: reSourced }), 'the registry step must kernel-parse the provider bytes')
+
+  const unbound = baseline.sessionPromptRegistryText.replace(
+    'contentDigestOf(snapshot.snapshotId) !== observation.evidence.registrySnapshotDigest',
+    'false',
+  )
+  assert.notEqual(unbound, baseline.sessionPromptRegistryText)
+  expectNamedFailure(check({ sessionPromptRegistryText: unbound }), 'the registry step must bind the admitted snapshot generation (ADR-0286)')
+
+  const denyDrift = baseline.sessionPromptRegistryText.replace(
+    "if (entry.state === 'disabled' || entry.state === 'revoked') return { state: 'denied' }",
+    "if (entry.state === 'candidate') return { state: 'denied' }",
+  )
+  assert.notEqual(denyDrift, baseline.sessionPromptRegistryText)
+  expectNamedFailure(check({ sessionPromptRegistryText: denyDrift }), 'only disabled / revoked entries may deny; candidate and mismatches answer unavailable')
+
+  const refDrift = baseline.sessionPromptRegistryText.replace(
+    'mapping:${snapshot.snapshotId}:${mappingDigest}',
+    'mapping:${mappingDigest}',
+  )
+  assert.notEqual(refDrift, baseline.sessionPromptRegistryText)
+  expectNamedFailure(check({ sessionPromptRegistryText: refDrift }), 'the mapping ref must bind the sealed snapshot id and the adapter mapping digest')
+
+  const secondForma = baseline.runtimeInventoryProviderText.replace(
+    "from './capability-entry-derivation.js'",
+    "from './capability-entry-derivation-local.js'",
+  )
+  assert.notEqual(secondForma, baseline.runtimeInventoryProviderText)
+  expectNamedFailure(check({ runtimeInventoryProviderText: secondForma }), 'the derivation forma must stay single-sourced across the inventory producer and the registry step')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

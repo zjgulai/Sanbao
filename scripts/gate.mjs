@@ -703,6 +703,9 @@ const CHECKS = [
         sessionPromptPublicationText: readRepoText('apps/sage-shell/src/main/session-prompt-publication.ts'),
         sessionPromptTargetText: readRepoText('apps/sage-shell/src/main/session-prompt-target.ts'),
         sessionPromptCompatibilityText: readRepoText('apps/sage-shell/src/main/session-prompt-compatibility.ts'),
+        sessionPromptRegistryText: readRepoText('apps/sage-shell/src/main/session-prompt-registry.ts'),
+        capabilityEntryDerivationText: readRepoText('apps/sage-shell/src/main/capability-entry-derivation.ts'),
+        runtimeInventoryProviderText: readRepoText('apps/sage-shell/src/main/runtime-inventory-provider.ts'),
         publicationBundleText: readRepoText('apps/sage-shell/src/main/publication-bundle.ts'),
       })
     },

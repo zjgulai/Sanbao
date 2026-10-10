@@ -640,6 +640,59 @@ function sessionCoreCompatibilityViolations(input) {
   return violations
 }
 
+function sessionPromptRegistryViolations(input) {
+  const violations = []
+  const appServiceText = typeof input?.mainAppServiceText === 'string' ? input.mainAppServiceText : ''
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  const registryText = typeof input?.sessionPromptRegistryText === 'string' ? input.sessionPromptRegistryText : ''
+  const derivationText = typeof input?.capabilityEntryDerivationText === 'string' ? input.capabilityEntryDerivationText : ''
+  const inventoryText = typeof input?.runtimeInventoryProviderText === 'string' ? input.runtimeInventoryProviderText : ''
+  if (appServiceText === '' || indexText === '' || registryText === '' || derivationText === '' || inventoryText === '') {
+    violations.push('session-prompt registry sources are unavailable')
+    return violations
+  }
+  // T05-mid step 7 (ADR-0286): the real registry step is wired only when the requirement bundle,
+  // the main-owned registry provider and the last trusted observation all exist.
+  if (!appServiceText.includes('resolveRegistry: createSessionPromptRegistryPort({')
+    || !appServiceText.includes('options.capabilityRegistry === undefined')
+    || !appServiceText.includes('options.runtimeInventoryObservation === undefined')) {
+    violations.push('the registry step must be wired only behind the bundle, the provider and the observation')
+  }
+  if (!indexText.includes('capabilityRegistry: bundledRegistry,')) {
+    violations.push('index must hand the admission step the SAME published-snapshot provider instance')
+  }
+  if (registryText.includes('createBundledCapabilityRegistryProvider')) {
+    violations.push('the registry step must not open a second registry source')
+  }
+  if (!registryText.includes('parseCapabilityRegistrySnapshot(sealed)')) {
+    violations.push('the registry step must kernel-parse the provider bytes')
+  }
+  if (!registryText.includes('contentDigestOf(snapshot.snapshotId) !== observation.evidence.registrySnapshotDigest')) {
+    violations.push('the registry step must bind the admitted snapshot generation (ADR-0286)')
+  }
+  if (!registryText.includes("if (claiming.length !== 1) return { state: 'unavailable' }")) {
+    violations.push('an ambiguous or absent operation mapping must answer unavailable, never a guess')
+  }
+  if ((registryText.match(/state: 'denied'/gu) ?? []).length !== 1
+    || !registryText.includes("if (entry.state === 'disabled' || entry.state === 'revoked') return { state: 'denied' }")) {
+    violations.push('only disabled / revoked entries may deny; candidate and mismatches answer unavailable')
+  }
+  if (!registryText.includes('capability.adapterMappingDigest !== mappingDigest')
+    || !registryText.includes('capability.registryDescriptorDigest !== capabilityRegistryDescriptorDigest(entry)')) {
+    violations.push('the registry step must cross-check the requirement declaration against the snapshot entry')
+  }
+  if (!registryText.includes('mapping:${snapshot.snapshotId}:${mappingDigest}')) {
+    violations.push('the mapping ref must bind the sealed snapshot id and the adapter mapping digest')
+  }
+  if (!derivationText.includes('export function capabilityAdapterMappingDigest')
+    || !derivationText.includes('export function capabilityRegistryDescriptorDigest')
+    || !inventoryText.includes("from './capability-entry-derivation.js'")
+    || !registryText.includes("from './capability-entry-derivation.js'")) {
+    violations.push('the derivation forma must stay single-sourced across the inventory producer and the registry step')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -798,7 +851,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -835,6 +888,11 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.sessionPromptCompatibilityText !== 'string') {
     return failAll(discovered, ['session-prompt compatibility source unavailable; the shipped matrix publication cannot be checked'])
+  }
+  if (typeof input?.sessionPromptRegistryText !== 'string'
+    || typeof input?.capabilityEntryDerivationText !== 'string'
+    || typeof input?.runtimeInventoryProviderText !== 'string') {
+    return failAll(discovered, ['session-prompt registry sources unavailable; the real registry step cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1196,6 +1254,9 @@ export function checkSageRouteAuthority(input) {
   const compatibilityViolations = sessionCoreCompatibilityViolations(input)
   for (const violation of compatibilityViolations) failGlobal(violation)
 
+  const registryStepViolations = sessionPromptRegistryViolations(input)
+  for (const violation of registryStepViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -1206,7 +1267,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) before stopping at the absent registry / preflight / persistence steps. The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — before stopping at the absent preflight / persistence steps. The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

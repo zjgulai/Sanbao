@@ -5,7 +5,6 @@
  * is a named unavailable result — never a placeholder — and both digests are re-derived
  * from their canonical bodies before anything is returned. */
 
-import { createHash } from 'node:crypto'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import {
   LOCAL_PATCH_FILE,
@@ -35,9 +34,15 @@ import type {
 } from './runtime-inventory.js'
 import {
   parseCapabilityRegistrySnapshot,
-  type CapabilityRegistryEntryBodyV1,
   type CapabilityRegistrySnapshotV1,
 } from '../security/capability-registry.js'
+import {
+  capabilityAdapterMappingDigest,
+  capabilityOperationsProjection,
+  capabilityRegistryDescriptorDigest,
+  contentDigestOf,
+  sha256ContentDigest,
+} from './capability-entry-derivation.js'
 import {
   computeInventoryEvidenceDigestV2,
   computeRuntimeDescriptorDigestV2,
@@ -138,19 +143,6 @@ function unavailable(code: RuntimeInventoryUnavailableCode, reason?: string): Ru
 
 function compareStrings(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0
-}
-
-function sha256ContentDigest(content: Uint8Array | string): string {
-  return `sha256:${createHash('sha256').update(content).digest('hex')}`
-}
-
-const SAGE_URN = /^urn:sage:[a-z0-9-]+:sha256:([0-9a-f]{64})$/u
-
-/** Reshape one PMAP/registry digest URN into the V2 content-digest form without rehashing. */
-function contentDigestOf(urn: string): string {
-  const match = SAGE_URN.exec(urn)
-  if (match === null) throw new TypeError('Invalid Sage content digest URN.')
-  return `sha256:${match[1] as string}`
 }
 
 function freezeDeep<T>(value: T): T {
@@ -341,26 +333,6 @@ function isImmutableVersionV2(value: string): boolean {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
-function capabilityOperationsProjection(
-  entry: CapabilityRegistryEntryBodyV1,
-): readonly Record<string, unknown>[] {
-  return [...entry.operations]
-    .sort((left, right) => compareStrings(left.operationId, right.operationId))
-    .map((operation) => ({
-      operationId: operation.operationId,
-      adapter: {
-        identity: operation.adapter.identity,
-        version: operation.adapter.version,
-        digest: operation.adapter.digest,
-      },
-      effectClass: operation.effectClass,
-      dataBoundary: operation.dataBoundary,
-      inputContractDigest: operation.inputContractDigest,
-      outputContractDigest: operation.outputContractDigest,
-      preflight: operation.preflight,
-    }))
-}
-
 /** Approved entries that are effective at the projection instant become V2 capabilities. */
 function buildCapabilityDescriptors(
   snapshot: CapabilityRegistrySnapshotV1,
@@ -393,11 +365,8 @@ function buildCapabilityDescriptors(
         launchContractDigest: asContentDigest(entry.descriptor.launchContractDigest),
         operations,
       })),
-      registryDescriptorDigest: contentDigestOf(entry.descriptor.descriptorDigest),
-      adapterMappingDigest: sha256ContentDigest(JSON.stringify(operations.map((operation) => ({
-        operationId: operation.operationId,
-        adapter: operation.adapter,
-      })))),
+      registryDescriptorDigest: capabilityRegistryDescriptorDigest(entry),
+      adapterMappingDigest: capabilityAdapterMappingDigest(entry),
     }
   })
 }

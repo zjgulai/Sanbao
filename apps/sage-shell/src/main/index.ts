@@ -983,6 +983,9 @@ async function main(paths: SagePaths): Promise<void> {
           ? { descriptor: runtimeInventoryResult.descriptor, evidence: runtimeInventoryResult.evidence }
           : undefined),
         revisionDigest: revisionDigestFor,
+        // T05-mid step 7 (ADR-0286): the registry step reads the SAME published-snapshot provider
+        // instance the inventory observed — one snapshot, one home, no second source.
+        capabilityRegistry: bundledRegistry,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
         // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.

@@ -20,10 +20,11 @@ import type { RuntimeEffectiveObservation } from '../protocol.js'
 import type { IdentityPolicyResolution } from '../security/identity-policy.js'
 import type { OidcAdapter } from './oidc-adapter.js'
 import type { TokenVault } from './token-vault.js'
-import type { RuntimeInventoryProvider } from './runtime-inventory-provider.js'
+import type { RegistrySnapshotPort, RuntimeInventoryProvider } from './runtime-inventory-provider.js'
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
 import {
   createSessionPromptCompatibilityPort,
@@ -107,6 +108,9 @@ export interface SageAppServiceOptions {
   readonly compatibilityPublication?: CompatibilityMatrixPublicationLoad
   readonly runtimeInventoryObservation?: () => RuntimeInventoryObservation | undefined
   readonly revisionDigest?: (matterId: string, revisionId: string) => string | undefined
+  /** T05-mid step 7 (ADR-0286): the main-owned registry provider — the same published snapshot
+   *  instance the runtime inventory observed. Absent keeps the registry step absent (fail closed). */
+  readonly capabilityRegistry?: RegistrySnapshotPort
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -851,6 +855,19 @@ function createSessionCoreProtectedEffectPorts(
             runtimeObservation: options.runtimeInventoryObservation,
             revisionDigest: options.revisionDigest,
             now: options.authority.now,
+          }),
+        }),
+    // T05-mid step 7: the real registry step over the shipped first-party publication (ADR-0286).
+    // Wired only when every main-owned input exists; any missing piece keeps the step absent.
+    ...(options.requirementBundle === undefined
+      || options.capabilityRegistry === undefined
+      || options.runtimeInventoryObservation === undefined
+      ? {}
+      : {
+          resolveRegistry: createSessionPromptRegistryPort({
+            requirementBundle: options.requirementBundle,
+            registryProvider: options.capabilityRegistry,
+            runtimeObservation: options.runtimeInventoryObservation,
           }),
         }),
   }
