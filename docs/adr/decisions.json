@@ -9003,6 +9003,59 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0278",
+      "title": "ADR-0278 · 首个 session.prompt target 发布件：owner 裁决落地（策略文档 + 首发发布计划）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "模型面严格精确钉：组件逐字段取自发布时重观测的 descriptor；模型/行为变化=矩阵键事件→重发布后才可继续 session.prompt（schema 无 range）。",
+          "constraints": [
+            "no ranges or wildcards",
+            "republish on model-face change",
+            "fail closed on pair mismatch"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "策略文档 canonical 化（sage.target-policy-document.v1，固定键序、独立 digest 命名空间），首发两份逐字采用裁决声明；措辞演进=新版本+新摘要。",
+          "constraints": [
+            "statements ship verbatim",
+            "digest binds exactly the canonical bytes",
+            "no placeholder digests"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "首发发布计划固定：requirement:sage-session-prompt v1.0.0、有效窗 2026-10-11–2027-10-11、action 仅 session.prompt（无决定门）、决策三元（decision:sage-t05-first-session-prompt / owner:sage-product / decidedAt 2026-10-10T09:00:00Z）、提议规则 rule:sage-session-prompt-v1。",
+          "constraints": [
+            "decision <= effectiveAt",
+            "action tuple matches the authority table",
+            "plan constants frozen"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "组合路径唯一：buildSessionPromptPublication(descriptor) 经候选线与 C2.2T 内核封存；descriptor 为输入（发布必须重观测）；本批不跑真实观测、不落 bundle、不接端口。",
+          "constraints": [
+            "kernel is the only validation gate",
+            "publication re-observes",
+            "no premature wiring"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁登记 owner 内容事实（两条声明逐字、标识版本、action 元组、决策三元、封存路径）附五条具名突变；route 计数不变。",
+          "constraints": [
+            "no exemptions added",
+            "counts unchanged",
+            "named mutations per fact"
+          ]
+        }
+      ]
     }
   ]
 }

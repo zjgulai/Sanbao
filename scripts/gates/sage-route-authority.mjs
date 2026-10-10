@@ -521,6 +521,37 @@ function runtimeInventoryRegistryViolations(input) {
   return violations
 }
 
+function sessionPromptPublicationViolations(input) {
+  const violations = []
+  const text = typeof input?.sessionPromptPublicationText === 'string' ? input.sessionPromptPublicationText : ''
+  if (text === '') {
+    violations.push('session-prompt publication source is unavailable')
+    return violations
+  }
+  // The owner rulings (2026-10-10) ship verbatim; drift here changes what was approved.
+  if (!text.includes("statement: '实例操作员（role:owner）可发起 session.prompt。',")) {
+    violations.push('the permission policy statement must stay the owner-approved text')
+  }
+  if (!text.includes("statement: '消息文本可发送至用户配置的模型提供方；产物与记录留存本机 Sage 数据根。',")) {
+    violations.push('the data-boundary policy statement must stay the owner-approved text')
+  }
+  if (!text.includes("requirementId: 'requirement:sage-session-prompt',")
+    || !text.includes("requirementVersion: '1.0.0',")) {
+    violations.push('the first requirement identity and version must stay the approved plan')
+  }
+  if (!text.includes("Object.freeze({ actionScope: 'session.prompt', effectClass: 'external-write' as const, requiresDecision: false }),")) {
+    violations.push('the first action requirement must stay the approved session.prompt tuple')
+  }
+  if (!text.includes("decisionId: 'decision:sage-t05-first-session-prompt',")
+    || !text.includes("ownerId: 'owner:sage-product',")) {
+    violations.push('the first publication decision must stay the owner decision')
+  }
+  if (!text.includes('sealCandidateTargetRequirement(candidate, SESSION_PROMPT_PUBLICATION_DECISION)')) {
+    violations.push('the publication must seal through the candidate line and the kernel')
+  }
+  return violations
+}
+
 function extractFunctionBlock(text, functionName) {
   if (typeof text !== 'string') return null
   const marker = `function ${functionName}(`
@@ -679,7 +710,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -707,6 +738,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.capabilityRegistryProviderText !== 'string') {
     return failAll(discovered, ['capability registry provider source unavailable; the bundled first snapshot cannot be checked'])
+  }
+  if (typeof input?.sessionPromptPublicationText !== 'string') {
+    return failAll(discovered, ['session-prompt publication source unavailable; the first publication cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1059,6 +1093,9 @@ export function checkSageRouteAuthority(input) {
   const registryViolations = runtimeInventoryRegistryViolations(input)
   for (const violation of registryViolations) failGlobal(violation)
 
+  const publicationViolations = sessionPromptPublicationViolations(input)
+  for (const violation of publicationViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -1069,7 +1106,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain still stops at the absent target / compatibility / registry steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face). 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

@@ -18,6 +18,7 @@ const baseline = Object.freeze({
   sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
   actionAuthorityTableText: read('apps/sage-shell/src/main/action-authority-table.ts'),
   capabilityRegistryProviderText: read('apps/sage-shell/src/security/capability-registry-provider.ts'),
+  sessionPromptPublicationText: read('apps/sage-shell/src/main/session-prompt-publication.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -83,6 +84,7 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
   assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)
   assert.match(result.note, /carries the first published Capability Registry snapshot \(C2D\.2A\)/)
+  assert.match(result.note, /The first session-prompt target publication \(T05 mid\)/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -659,6 +661,43 @@ test('the bundled capability registry wiring cannot drift from its seal and empt
   )
   assert.notEqual(nonEmpty, baseline.capabilityRegistryProviderText)
   expectNamedFailure(check({ capabilityRegistryProviderText: nonEmpty }), 'the bundled first snapshot must stay the empty internal set')
+})
+
+test('the first session-prompt publication cannot drift from the owner-approved content', () => {
+  const statementDrift = baseline.sessionPromptPublicationText.replace(
+    "statement: '实例操作员（role:owner）可发起 session.prompt。',",
+    "statement: 'anyone may prompt.',",
+  )
+  assert.notEqual(statementDrift, baseline.sessionPromptPublicationText)
+  expectNamedFailure(check({ sessionPromptPublicationText: statementDrift }), 'the permission policy statement must stay the owner-approved text')
+
+  const identityDrift = baseline.sessionPromptPublicationText.replace(
+    "requirementId: 'requirement:sage-session-prompt',",
+    "requirementId: 'requirement:sage-other',",
+  )
+  assert.notEqual(identityDrift, baseline.sessionPromptPublicationText)
+  expectNamedFailure(check({ sessionPromptPublicationText: identityDrift }), 'the first requirement identity and version must stay the approved plan')
+
+  const actionDrift = baseline.sessionPromptPublicationText.replace(
+    "Object.freeze({ actionScope: 'session.prompt', effectClass: 'external-write' as const, requiresDecision: false }),",
+    "Object.freeze({ actionScope: 'session.any', effectClass: 'external-write' as const, requiresDecision: false }),",
+  )
+  assert.notEqual(actionDrift, baseline.sessionPromptPublicationText)
+  expectNamedFailure(check({ sessionPromptPublicationText: actionDrift }), 'the first action requirement must stay the approved session.prompt tuple')
+
+  const decisionDrift = baseline.sessionPromptPublicationText.replace(
+    "decisionId: 'decision:sage-t05-first-session-prompt',",
+    "decisionId: 'decision:sage-tbd',",
+  )
+  assert.notEqual(decisionDrift, baseline.sessionPromptPublicationText)
+  expectNamedFailure(check({ sessionPromptPublicationText: decisionDrift }), 'the first publication decision must stay the owner decision')
+
+  const unsealed = baseline.sessionPromptPublicationText.replace(
+    'sealCandidateTargetRequirement(candidate, SESSION_PROMPT_PUBLICATION_DECISION)',
+    'candidate',
+  )
+  assert.notEqual(unsealed, baseline.sessionPromptPublicationText)
+  expectNamedFailure(check({ sessionPromptPublicationText: unsealed }), 'the publication must seal through the candidate line and the kernel')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {
