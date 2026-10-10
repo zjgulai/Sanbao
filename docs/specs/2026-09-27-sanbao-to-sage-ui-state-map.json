@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 6,
-        "pending": 192,
+        "implementing": 14,
+        "pending": 184,
         "verified": 8
       },
       "applicationService": {
@@ -753,8 +753,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/clarifications.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -775,7 +786,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "澄清卡待答态已由 tracked 测试句级覆盖（待答卡渲染、选项/自定义答案提交、收据只写一次与回读）；回答写路径需 T05/T06 后端与登录会话，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -820,8 +831,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/clarifications.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -842,7 +864,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "自定义答案随同一回答写入（custom 字段同权）已由 tracked 测试句级覆盖；真实回答生效需 T05/T06 后端与登录会话，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -888,8 +910,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-history.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/clarifications.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -910,7 +943,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "回答与选项/自定义文本进入运行历史的只读回读已由 tracked 测试句级覆盖（US-180）；输入区恢复等交互瞬态未单独核验，真实问答链需 T05/T06 后端与登录会话，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -1022,8 +1055,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1044,7 +1083,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "Sage 已实现的回复动作（复制/引用/确定失败重试，只提供已核实动作）与后续建议 chip（只填输入不发送）已由 tracked 测试句级覆盖；原产品观察中的评价/分支/更多操作未实现，不冒充对齐，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -1931,8 +1970,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t01",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-anchors.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1953,7 +2003,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "default home and read refusal only; successful task/session chain remains T02-T06"
+          "锚点短预览与显式定位（一次具名读取、收起浮层）已由 tracked 测试句级覆盖（US-183/184）；原产品浮层视觉形态未对照，真实历史链需 T04/T05 后端与登录会话，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7485,8 +7535,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-region-bridge.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7507,7 +7568,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "Sage 工作台的终端清单与有界输出打开/关闭已由 tracked 测试句级覆盖（只读运行观察、关闭纯本地）；原观察仅证入口按钮可见，面板布局、标签与错误状态未核验，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -9044,8 +9105,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/plan-mode.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9066,7 +9138,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "目标模式激活标记与模式投影读取已由 tracked 测试句级覆盖（当前标记、切换经单一名请求、投影不可用措辞）；真实模式切换需登录会话与 T05/T06 后端，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -9111,8 +9183,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/plan-mode.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9133,7 +9216,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "计划模式激活/待生效标记与切换请求已由 tracked 测试句级覆盖（计划模式（当前）/（下一步生效）两级标记）；只出方案不执行的边界同步核验；真实切换需登录会话与 T05/T06 后端，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
