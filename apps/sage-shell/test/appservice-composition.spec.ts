@@ -207,6 +207,7 @@ describe('matter projection slot (WT-02D.1)', () => {
       'sessionHistoryDetail',
       'sessionHistoryList',
       'sessionPlanModeSwitch',
+      'sessionStream',
       'startActionItem',
       'stopSession',
       'submitCorrection',

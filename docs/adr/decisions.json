@@ -9870,6 +9870,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0298",
+      "title": "ADR-0298 · 执行模块第一刀：活流式输出（SSE follow）与视区跟随",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "followLive：有界重订阅循环，chunk index 去重，turn/end 或 abort 即停；不写、不成史。",
+          "constraints": [
+            "late-subscriber snapshot turn/end exits at once"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "GET /.sage/session/stream（SSE）经统一 read admission；操作 session.stream.follow；abort 取消 body。",
+          "constraints": [
+            "protocol cancel semantics verified on-device only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "renderer 仅在 executing 窗口订阅；live 文本是呈现层，durable fold 是最终事实。",
+          "constraints": [
+            "no forced refresh on close"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "QDR.S01.session.streaming 本轮不迁移：Markdown 渲染依赖待裁决。",
+          "constraints": [
+            "缺口登记于 note"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -137,6 +137,34 @@ describe('default desktop session submission lifecycle', () => {
     expect(input.value).toBe('不能重复的请求')
   })
 
+  it('renders the live stream while the turn executes and clears it when the stream closes (ADR-0298)', async () => {
+    const encoder = new TextEncoder()
+    let streamBody!: ReadableStreamDefaultController<Uint8Array>
+    const fetcher = vi.fn(async (url: string) => {
+      if (url === '/.sage/session/stream') {
+        return new Response(new ReadableStream<Uint8Array>({
+          start(controller) { streamBody = controller },
+        }), { headers: { 'content-type': 'text/event-stream' } })
+      }
+      return ack()
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const executing = classifyDesktopState({
+      ...payload,
+      sessionChannel: { ...payload.sessionChannel, execution: 'executing', lastTurnEnd: null },
+    })
+    const { container } = await mount(async () => executing)
+    expect(fetcher.mock.calls.some(([url]) => url === '/.sage/session/stream')).toBe(true)
+
+    await act(async () => { streamBody.enqueue(encoder.encode('data: {"text":"半句话"}\n\n')) })
+    expect(container.querySelector('.streaming-message')?.textContent).toContain('半句话')
+
+    // The stream ends at the turn end: the live text is presentation only and clears at once.
+    await act(async () => { streamBody.close() })
+    expect(container.querySelector('.streaming-message')).toBeNull()
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)
@@ -165,7 +193,8 @@ describe('default desktop session submission lifecycle', () => {
     await act(async () => { follow.resolve(paused) })
     expect(container.querySelector('[data-session-state="paused"]')).not.toBeNull()
     expect(control(container, '继续会话')).not.toBeNull()
-    expect(paths).toEqual(['/.sage/session/stop'])
+    // ADR-0298: the live-stream subscription rides alongside; the command path is the assertion.
+    expect(paths.filter((path) => path !== '/.sage/session/stream')).toEqual(['/.sage/session/stop'])
   })
 
   it('polls an executing session without creating output or reissuing a command', async () => {
@@ -181,7 +210,8 @@ describe('default desktop session submission lifecycle', () => {
     expect(read).toHaveBeenCalledTimes(2)
     expect(container.querySelector('[aria-label="当前会话"]')).toBeNull()
     expect(container.querySelector('textarea')?.value).toBe('轮询不擦的输入')
-    expect(fetcher).not.toHaveBeenCalled()
+    // ADR-0298: the only permissible transport here is the live-stream subscription.
+    expect(fetcher.mock.calls.filter(([url]) => url !== '/.sage/session/stream')).toEqual([])
   })
 
   it('keeps the rendered session and its stop control while a background poll is still in flight', async () => {

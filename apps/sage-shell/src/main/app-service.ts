@@ -130,6 +130,8 @@ export interface SageAppServiceOptions {
   /** ADR-0297: the read-only attempt-status entry (main-owned matter + fold reads); absent keeps
    *  the route's honest unavailable. */
   readonly sessionAttemptStatus?: () => Promise<SessionAttemptStatus>
+  /** ADR-0298: the live session stream (SSE) builder; absent keeps the route honest. */
+  readonly sessionStream?: () => Promise<Response>
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -1029,6 +1031,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
       : { prepareSessionPrompt: sessionCoreAssembly.prepareSessionPrompt }),
     ...(options.sessionSendReconcile === undefined ? {} : { reconcileSessionAttempt: options.sessionSendReconcile }),
     ...(options.sessionAttemptStatus === undefined ? {} : { sessionAttemptStatus: options.sessionAttemptStatus }),
+    ...(options.sessionStream === undefined ? {} : { sessionStream: options.sessionStream }),
     protectedEffectCorrelation: () => options.callerBinding?.correlation ?? randomUUID(),
     ...(options.fixtureProjection === undefined ? {} : { fixtureProjection: options.fixtureProjection }),
     ...(options.runtimeEffective === undefined ? {} : { runtimeEffective: options.runtimeEffective }),

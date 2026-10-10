@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DesktopRead } from './client.js'
-import { queryDesktopAttemptStatus, submitDesktopSession, type DesktopSessionContext, type DesktopSessionAction } from './session.js'
+import { consumeSessionStream, queryDesktopAttemptStatus, submitDesktopSession, type DesktopSessionContext, type DesktopSessionAction } from './session.js'
 
 export type DesktopReadState = DesktopRead | { readonly kind: 'loading' }
 
@@ -90,6 +90,42 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     return () => clearTimeout(timer)
   }, [state, busy, refresh])
 
+  // ADR-0298: the live stream follows the executing window only — the subscription starts when
+  // a read reports the turn executing and ends (aborted) the moment it reports idle, paused or a
+  // different matter. Presentation only: the durable read still renders the final reply.
+  const [streamingText, setStreamingText] = useState<string | null>(null)
+  const streamingAbort = useRef<AbortController | null>(null)
+  const liveSession = state.kind === 'read' ? state.session : undefined
+  const streamKey = liveSession !== undefined && liveSession.execution === 'executing'
+    ? liveSession.context.matterRef
+    : null
+  useEffect(() => {
+    if (streamKey === null) {
+      streamingAbort.current?.abort()
+      streamingAbort.current = null
+      setStreamingText(null)
+      return
+    }
+    if (streamingAbort.current !== null) return
+    const abort = new AbortController()
+    streamingAbort.current = abort
+    setStreamingText('')
+    void consumeSessionStream(abort.signal, (text) => {
+      if (!mounted.current) return
+      setStreamingText(previous => (previous ?? '') + text)
+    }).finally(() => {
+      if (streamingAbort.current === abort) {
+        streamingAbort.current = null
+        // Presentation only: the live text clears and the next poll renders the durable fold.
+        setStreamingText(null)
+      }
+    })
+    return () => {
+      abort.abort()
+      if (streamingAbort.current === abort) streamingAbort.current = null
+    }
+  }, [streamKey, refresh])
+
   const retry = () => {
     if (inFlight.current !== null || stateRef.current.kind === 'loading') return
     void refresh('foreground')
@@ -173,5 +209,6 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     sequence.current += 1
     void refresh('foreground')
   }
-  return { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, retry, withdraw, actOnSession }
+  return { state, session, draft, changeDraft, notice, setNotice, busy, uncertain,
+    streamingText, retry, withdraw, actOnSession }
 }

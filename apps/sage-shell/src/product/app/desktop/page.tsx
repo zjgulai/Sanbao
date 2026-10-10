@@ -434,7 +434,7 @@ export function DesktopPage({
 }): ReactNode {
   const [page, setPage] = useState<Page>('新任务')
   const [preferencesController] = useState(() => suppliedPreferencesController ?? createDevicePreferencesController())
-  const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, retry, withdraw, actOnSession } = useDesktopSession(readState)
+  const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, streamingText, retry, withdraw, actOnSession } = useDesktopSession(readState)
   const [accountRead, setAccountRead] = useState<DesktopBootstrapRead | { readonly kind: 'loading' }>({ kind: 'loading' })
   const [accountBusy, setAccountBusy] = useState(false)
   const refreshAccount = async () => {
@@ -495,7 +495,8 @@ export function DesktopPage({
         {page === '新任务'
           ? (session === undefined ? <HomeContent navigate={navigate} suggest={suggest} workspace={workspaceSummaryOf(state)} />
             : <DesktopSessionView title={session.title} execution={session.execution} lastTurnEnd={session.lastTurnEnd}
-              paused={session.paused} streamBroken={session.streamBroken} messages={session.messages} />)
+              paused={session.paused} streamBroken={session.streamBroken} messages={session.messages}
+              streaming={streamingText} />)
           : page === '工作区'
             ? <WorkspacePage state={state} retry={retry} navigate={navigate} />
             : page === '搜索'

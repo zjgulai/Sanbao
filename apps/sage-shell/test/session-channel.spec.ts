@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -63,6 +63,76 @@ const assistantEvent = (seq: number, text: string) => ({
 const turnStart = (seq: number) => ({ type: 'event', event: { type: 'turn/start', seq, time: 1, data: { turn: 1 } } })
 const turnEnd = (seq: number, reason: string) => ({ type: 'event', event: { type: 'turn/end', seq, time: 1, data: { turn: 1, reason } } })
 const snapshot = (records: readonly unknown[], cursor: number) => ({ type: 'snapshot', header: {}, cursor, records, hasMore: false, projections: {} })
+
+describe('followLive: the live half of the follow seam (ADR-0298)', () => {
+  async function liveChannel(matterRef: string, script: readonly (readonly unknown[])[]) {
+    const dir = await mkdtemp(join(tmpdir(), 'sage-follow-'))
+    cleanups.push(() => rm(dir, { recursive: true, force: true }))
+    const bindingsFile = join(dir, 'sessions', 'bindings.json')
+    await mkdir(join(dir, 'sessions'), { recursive: true })
+    await writeFile(bindingsFile, JSON.stringify({ [matterRef]: 'session:live' }))
+    const calls: Call[] = []
+    let callIndex = 0
+    const instance = createSessionChannel(
+      async () => ({ ok: true, result: {} }),
+      {
+        bindingsFile,
+        now: () => '2026-10-12T12:00:00.000Z',
+        nextId: () => 'id-1',
+        streamCall: async (endpoint, payload, onFrame) => {
+          calls.push({ endpoint, payload })
+          const frames = script[Math.min(callIndex, script.length - 1)] ?? []
+          callIndex += 1
+          for (const frame of frames) {
+            if (!onFrame(frame)) break
+          }
+          return { ok: true, result: { frames: frames.length } }
+        },
+      },
+    )
+    return { channel: instance, calls }
+  }
+
+  const chunk = (index: number, text: string) => ({ type: 'assistant-stream', frame: { type: 'chunk', index, data: { text } } })
+
+  it('pushes ordered chunks, dedupes a re-subscribe replay, and stops at the turn end', async () => {
+    const { channel, calls } = await liveChannel('matter:live', [
+      [chunk(0, '半句'), chunk(1, '话')],
+      [chunk(0, '半句'), chunk(1, '话'), chunk(2, '，完'), turnEnd(9, 'completed')],
+    ])
+    const deltas: string[] = []
+    await channel.followLive({ matterRef: 'matter:live', signal: new AbortController().signal, onDelta: (text) => deltas.push(text) })
+    // The replayed chunks 0/1 are dropped by index; the turn end ends the loop (no third call).
+    expect(deltas).toEqual(['半句', '话', '，完'])
+    expect(calls).toHaveLength(2)
+    expect(calls.every((call) => call.endpoint === 'session/follow')).toBe(true)
+  })
+
+  it('stops without re-subscribing when the caller aborts', async () => {
+    const { channel, calls } = await liveChannel('matter:abort', [[chunk(0, '甲')]])
+    const abort = new AbortController()
+    const deltas: string[] = []
+    await channel.followLive({ matterRef: 'matter:abort', signal: abort.signal, onDelta: (text) => { deltas.push(text); abort.abort() } })
+    expect(deltas).toEqual(['甲'])
+    expect(calls).toHaveLength(1)
+  })
+
+  it('exits at once when the snapshot already carries the finished turn', async () => {
+    const { channel, calls } = await liveChannel('matter:late', [[snapshot([turnEnd(4, 'completed')], 4)]])
+    const deltas: string[] = []
+    await channel.followLive({ matterRef: 'matter:late', signal: new AbortController().signal, onDelta: (text) => deltas.push(text) })
+    expect(deltas).toEqual([])
+    expect(calls).toHaveLength(1)
+  })
+
+  it('does nothing without a bound session, and never creates one', async () => {
+    const { channel, calls } = await liveChannel('matter:other', [[]])
+    const deltas: string[] = []
+    await channel.followLive({ matterRef: 'matter:none', signal: new AbortController().signal, onDelta: (text) => deltas.push(text) })
+    expect(deltas).toEqual([])
+    expect(calls).toHaveLength(0)
+  })
+})
 
 describe('the fold: an open turn is the only "executing" evidence', () => {
   it('reads a snapshot with an open turn as executing, and a closed turn as ended', () => {

@@ -117,7 +117,7 @@ const TRANSPORT_REFUSALS: Readonly<Record<number, string>> = {
   400: 'invalid-session-request', 403: 'caller-denied', 405: 'method-not-allowed',
   413: 'request-too-large', 415: 'content-type-rejected',
 }
-const PATHS = { send: '/.sage/session/send', stop: '/.sage/session/stop', resume: '/.sage/session/resume', attemptStatus: '/.sage/session/attempt-status' } as const
+const PATHS = { send: '/.sage/session/send', stop: '/.sage/session/stop', resume: '/.sage/session/resume', attemptStatus: '/.sage/session/attempt-status', stream: '/.sage/session/stream' } as const
 const references = (value: unknown): boolean => Array.isArray(value) && value.every(reference)
 
 export async function submitDesktopSession(session: DesktopSession | null, action: DesktopSessionAction): Promise<DesktopSessionOutcome> {
@@ -169,6 +169,45 @@ export async function submitDesktopSession(session: DesktopSession | null, actio
     return settled ? { kind: 'settled', action: action.kind, interrupted: result.state === 'interrupted' } : { kind: 'unknown' }
   } catch {
     return { kind: 'unknown' }
+  }
+}
+
+/** ADR-0298: consume the live session stream (SSE) while a turn runs. Deltas are pushed to the
+ *  caller as they arrive; the stream ends at the turn end or when the caller aborts (the durable
+ *  read remains the final word — this adds live presentation only). Transport failures are
+ *  silent: the durable fold still renders. */
+export async function consumeSessionStream(
+  signal: AbortSignal,
+  onDelta: (text: string) => void,
+): Promise<void> {
+  try {
+    const response = await fetch(PATHS.stream, { method: 'GET', cache: 'no-store', signal })
+    if (!response.ok || response.body === null) return
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) return
+      buffer += decoder.decode(value, { stream: true })
+      let boundary = buffer.indexOf('\n\n')
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary)
+        buffer = buffer.slice(boundary + 2)
+        for (const line of frame.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const payload: unknown = JSON.parse(line.slice(6))
+            if (isRecord(payload) && typeof payload.text === 'string') onDelta(payload.text)
+          } catch {
+            // A malformed frame is skipped, never guessed at.
+          }
+        }
+        boundary = buffer.indexOf('\n\n')
+      }
+    }
+  } catch {
+    // Abort or transport failure: the durable read stays the authority.
   }
 }
 

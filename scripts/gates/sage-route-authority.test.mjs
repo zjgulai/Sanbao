@@ -84,19 +84,19 @@ const cancelCheck = (patch = {}) => checkSageRouteAuthority({
 })
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
-  assert.equal(result.expected, 61)
+  assert.equal(result.expected, 62)
   assert.equal(result.expected, result.checked + result.skipped + result.failed)
   assert.ok(result.violations.some((violation) => violation.includes(needle)), JSON.stringify(result.violations))
 }
 
-test('current 61-route registry matches source without claiming product availability', () => {
+test('current 62-route registry matches source without claiming product availability', () => {
   const result = check()
   assert.equal(result.status, 'pass', JSON.stringify(result))
   assert.deepEqual(
     { expected: result.expected, discovered: result.discovered, checked: result.checked, skipped: result.skipped, failed: result.failed },
-    { expected: 61, discovered: 61, checked: 61, skipped: 0, failed: 0 },
+    { expected: 62, discovered: 62, checked: 62, skipped: 0, failed: 0 },
   )
-  assert.match(result.note, /14 read-only routes enter projection-read admission/)
+  assert.match(result.note, /15 read-only routes enter projection-read admission/)
   assert.match(result.note, /2 local-system routes enter device-local admission/)
   assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
@@ -1303,6 +1303,20 @@ test('the attempt-status reconciliation entry cannot drift (ADR-0297)', () => {
   )
   assert.notEqual(matterReadDrop, baseline.mainIndexText)
   expectNamedFailure(check({ mainIndexText: matterReadDrop }), 'the attempt-status provider must read the matter record and derive the request id')
+})
+
+test('the live session stream cannot drift (ADR-0298)', () => {
+  const operationDrop = baseline.routeSkeletonText.replace("'session.stream.follow',", '')
+  assert.notEqual(operationDrop, baseline.routeSkeletonText)
+  expectNamedFailure(check({ routeSkeletonText: operationDrop }), 'the session stream route must enter the unified read admission with its named operation')
+
+  const dedupeDrop = baseline.sessionChannelText.replace('index > lastChunkIndex', 'index >= 0')
+  assert.notEqual(dedupeDrop, baseline.sessionChannelText)
+  expectNamedFailure(check({ sessionChannelText: dedupeDrop }), 'the live follow must dedupe chunks and stop at the turn end or abort')
+
+  const turnEndDrop = baseline.sessionChannelText.replace('if (sawTurnEnd || input.signal.aborted) return', 'if (input.signal.aborted) return')
+  assert.notEqual(turnEndDrop, baseline.sessionChannelText)
+  expectNamedFailure(check({ sessionChannelText: turnEndDrop }), 'the live follow must dedupe chunks and stop at the turn end or abort')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

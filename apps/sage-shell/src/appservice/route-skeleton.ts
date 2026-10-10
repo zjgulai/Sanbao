@@ -51,6 +51,8 @@ const SAGE_SESSION_QUEUE_PATH = '/.sage/session/queue'
 const SAGE_SESSION_HISTORY_PATH = '/.sage/session/history'
 /** ADR-0297: the read-only attempt-status entry (reconciliation for an unknown send). */
 const SAGE_SESSION_ATTEMPT_STATUS_PATH = '/.sage/session/attempt-status'
+/** ADR-0298: the live session stream (SSE) — assistant chunks while a turn runs. */
+const SAGE_SESSION_STREAM_PATH = '/.sage/session/stream'
 /** Ticket 034: the clarification loop's one named write (the read rides the state poll). */
 const SAGE_SESSION_CLARIFICATION_ANSWER_PATH = '/.sage/session/clarification-answer'
 /** Ticket 035: the message anchors — read the rail / locate one run's message (pure history reads). */
@@ -298,6 +300,19 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
       { kind: 'active-matter' },
       () => deps.providers.sessionHistoryDetail(parsed),
       () => serviceJson({ state: 'missing', runSeq: parsed.runSeq, code: 'session-history-unavailable' }, 200),
+    )
+  }
+
+  if (url.pathname === SAGE_SESSION_STREAM_PATH) {
+    if (request.method !== 'GET') return transportDenial(405, { allow: 'GET' })
+    // ADR-0298: the streaming read returns an SSE Response built inside the admission callback;
+    // the admission still gates establishment, and the caller's abort cancels the stream body.
+    return runProjectionRead(
+      deps,
+      'session.stream.follow',
+      { kind: 'active-matter' },
+      () => deps.providers.sessionStream(),
+      () => serviceJson({ state: 'unavailable', code: 'session-stream-unavailable' }, 200),
     )
   }
 

@@ -36,6 +36,7 @@
     { "roleRef": "role:owner", "operation": "workspace.files.create-reference", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "workspace.files.use-reference", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.attempt.status", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
+    { "roleRef": "role:owner", "operation": "session.stream.follow", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.history.list", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.history.detail", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.anchors.read", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
@@ -74,7 +75,7 @@ sqlite3 "~/Library/Application Support/Sage/data/business-matter/business-matter
 
 期望末段出现 `revision-entered`（ensure authored）。输入首条消息但**不点发送**。
 
-7. **最后一步（需单独授权）**：点发送 → 真实模型回复 → 收脱敏 session/operation 读数。
+7. **最后一步（需单独授权）**：点发送 → 真实模型回复 → 收脱敏 session/operation 读数。发送后同时观察（ADR-0298）：回复文本**逐步出现**（流式）、视区随输出推进、停止按钮全程可用；回复完成后 live 文本由 durable 文本替换；中途切换事项再切回，流式订阅不串台。
 
 ## 已知边界与风险
 

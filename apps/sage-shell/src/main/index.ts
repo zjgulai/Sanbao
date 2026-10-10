@@ -1039,6 +1039,37 @@ async function main(paths: SagePaths): Promise<void> {
         capabilityRegistry: bundledRegistry,
         // T05-mid step 9 (ADR-0288): the persistence step's store handle (same Sage-owned store).
         sessionPromptAttempts,
+        // ADR-0298: the live session stream — an SSE body whose deltas ride the bounded follow
+        // seam. The admission gates establishment; the renderer's abort cancels the body, which
+        // aborts the follow loop. Nothing here writes or closes anything.
+        sessionStream: async (): Promise<Response> => {
+          const matterRef = scopedMatterRef()
+          const abort = new AbortController()
+          const encoder = new TextEncoder()
+          const stream = new ReadableStream<Uint8Array>({
+            start(streamController) {
+              void sessionChannel.followLive({
+                matterRef,
+                signal: abort.signal,
+                onDelta: (text) => {
+                  try {
+                    streamController.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
+                  } catch {
+                    // The consumer went away mid-turn; the loop's abort ends it.
+                  }
+                },
+              }).then(() => {
+                try { streamController.close() } catch { /* already cancelled */ }
+              })
+            },
+            cancel() {
+              abort.abort()
+            },
+          })
+          return new Response(stream, {
+            headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-store' },
+          })
+        },
         // ADR-0297: the attempt-status read — the matter record (active attempt, dispatch-unknown
         // mark, closure baseline) plus the session fold's turn evidence. Read-only: it closes
         // nothing; the observer/reconcile remain the only closure writers.

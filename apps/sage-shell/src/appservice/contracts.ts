@@ -1800,6 +1800,8 @@ export interface ServiceProviders {
   readonly readRunLog: (request: { readonly workspaceRoot: string, readonly path: string, readonly fromLine?: number, readonly expectVersion?: string, readonly expectBytes?: number }) => Promise<Response>
   /** ADR-0297: the read-only attempt-status reconciliation entry (matter-scoped, no input). */
   readonly sessionAttemptStatus: () => Promise<Response>
+  /** ADR-0298: the live session stream (SSE) over the bounded follow seam. */
+  readonly sessionStream: () => Promise<Response>
   /** Ticket 008: edit/remove one still-pending queue occurrence (`queue-item-not-found` honest). */
   readonly updateQueueItem: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
   /** Ticket 009: cold history — the runs list and one run's on-demand detail (page reads only). */

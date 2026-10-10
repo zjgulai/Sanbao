@@ -284,6 +284,14 @@ export interface SessionChannel {
     readonly requestId?: string
   }) => Promise<SessionSendOutcome>
   readonly read: (input: { readonly matterRef: string }) => Promise<SessionChannelStatus>
+  /** ADR-0298: the live half of the same follow stream — assistant chunks are pushed as they
+   *  arrive (bounded re-subscribes until the turn ends or the caller aborts). It never becomes
+   *  history and never writes: the durable fold stays the final word. */
+  readonly followLive: (input: {
+    readonly matterRef: string
+    readonly signal: AbortSignal
+    readonly onDelta: (text: string) => void
+  }) => Promise<void>
   /** Ticket 008 (US-027): edit/remove one still-pending queue occurrence; `queue-item-not-found`
    *  means the base already started processing it. */
   readonly queueItem: (input: { readonly matterRef: string, readonly itemId: string, readonly action: 'edit' | 'remove', readonly text?: string }) => Promise<QueueItemOutcome>
@@ -522,6 +530,51 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         : asAnswer(await callBridge('session/queue-remove', [{ sessionId, itemId: input.itemId }]))
       if (!answer.ok) return { state: 'refused', code: answer.code === 'bridge-queue-item-not-found' ? 'queue-item-not-found' : answer.code }
       return { state: 'ok' }
+    },
+    async followLive(input) {
+      // ADR-0298: bounded re-subscribes over the same session/follow seam the read uses.
+      // Chunk indexes guard against a re-subscribe replaying chunks the consumer already saw;
+      // a turn/start resets the index for the next turn. The loop ends on the first turn/end
+      // (the renderer then reads the durable fold) or on abort (window closed, matter switched).
+      const sessionId = readBindings()[input.matterRef]
+      if (sessionId === undefined) return
+      let lastChunkIndex = -1
+      while (!input.signal.aborted) {
+        let sawTurnEnd = false
+        try {
+          await deps.streamCall('session/follow', [{ sessionId }], (frame) => {
+            if (input.signal.aborted) return false
+            if (isRecord(frame) && frame.type === 'assistant-stream' && isRecord(frame.frame)) {
+              const chunk = frame.frame
+              const index = typeof chunk.index === 'number' && Number.isSafeInteger(chunk.index) ? chunk.index : undefined
+              const data = isRecord(chunk.data) ? chunk.data : undefined
+              const text = data !== undefined && typeof data.text === 'string' ? data.text : undefined
+              if (index !== undefined && text !== undefined && index > lastChunkIndex) {
+                lastChunkIndex = index
+                input.onDelta(text)
+              }
+            } else if (isRecord(frame) && frame.type === 'snapshot' && Array.isArray(frame.records)) {
+              // A late subscriber's snapshot may already carry the finished turn: exit at once
+              // instead of re-subscribing against a turn that is already over.
+              for (const record of frame.records) {
+                const event = eventOf(record)
+                if (event !== undefined && event.type === 'turn/end') sawTurnEnd = true
+              }
+            } else {
+              const event = eventOf(frame)
+              if (event !== undefined && event.type === 'turn/start') lastChunkIndex = -1
+              if (event !== undefined && event.type === 'turn/end') sawTurnEnd = true
+            }
+            return !input.signal.aborted
+          })
+        } catch {
+          // A host hiccup between re-subscribes must not fabricate a delta; the loop retries
+          // below while the caller still wants the stream.
+        }
+        if (sawTurnEnd || input.signal.aborted) return
+        // Breathe between bounded re-subscribes so a dead host is not hammered.
+        await new Promise((resolve) => setTimeout(resolve, 250))
+      }
     },
     async stop(input) {
       const pending = deps.pending

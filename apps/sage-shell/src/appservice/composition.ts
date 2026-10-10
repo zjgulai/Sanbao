@@ -127,6 +127,8 @@ export interface ServiceOptions {
   readonly sessionHistoryDetail?: (request: { readonly runSeq: number }) => Promise<SessionRunDetailOutcome>
   /** ADR-0297: the attempt-status reconciliation read (absent keeps its honest unavailable). */
   readonly sessionAttemptStatus?: () => Promise<SessionAttemptStatus>
+  /** ADR-0298: the live session stream builder (absent keeps its honest unavailable). */
+  readonly sessionStream?: () => Promise<Response>
   /** Ticket 034: the clarification loop — the live pending cards plus the one answer write. */
   readonly sessionClarifications?: () => Promise<ClarificationStatus>
   readonly sessionClarificationAnswer?: (request: { readonly matterRef: string, readonly requestId: string, readonly answers: readonly unknown[] }) => Promise<ClarificationAnswerOutcome>
@@ -778,6 +780,12 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         ? { state: 'unavailable', code: 'session-attempt-status-unavailable' }
         : await run().catch((): SessionAttemptStatus => ({ state: 'unavailable', code: 'session-attempt-status-read-failed' }))
       return serviceJson(outcome, 200)
+    },
+    async sessionStream(): Promise<Response> {
+      const build = options.sessionStream
+      return build === undefined
+        ? serviceJson({ state: 'unavailable', code: 'session-stream-unavailable' }, 200)
+        : await build().catch((): Response => serviceJson({ state: 'unavailable', code: 'session-stream-unavailable' }, 200))
     },
     async sessionHistoryDetail(request: { readonly runSeq: number }): Promise<Response> {
       const run = options.sessionHistoryDetail
