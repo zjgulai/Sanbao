@@ -120,10 +120,11 @@ describe('projection read admission', () => {
       'artifacts.observe',
       'artifacts.open',
       'artifacts.retry',
+      'edit-drafts.create',
       'edit-drafts.diff',
       'run-log.read',
     ])
-    expect(new Set(PROJECTION_READ_OPERATIONS).size).toBe(15)
+    expect(new Set(PROJECTION_READ_OPERATIONS).size).toBe(16)
   })
 
   it('admits one read only after the exact ordered chain and a matching post-read freshness fact', async () => {

@@ -39,7 +39,7 @@ const refs = (bridge: ReturnType<typeof recorder>) => createFileReferences(bridg
 describe('creating a reference reads no content', () => {
   it('calls stat once and never read or list', async () => {
     const bridge = recorder({ 'workspaceFiles/stat': statOf('v1', '/Users/someone/project/notes.md', 12) })
-    const outcome = await refs(bridge).create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' })
+    const outcome = await refs(bridge).create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' })
     expect(outcome.state).toBe('created')
     expect(outcome.reference).toMatchObject({
       workspaceRoot: '/Users/someone/project',
@@ -58,7 +58,7 @@ describe('creating a reference reads no content', () => {
     const bridge = recorder({})
     const store = refs(bridge)
     for (const path of ['/etc/passwd', '../secrets.txt', 'notes/../../outside.md', '', 'notes/./x.md']) {
-      const outcome = await store.create({ workspaceRoot: '/Users/someone/project', path })
+      const outcome = await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path })
       expect(outcome, path).toMatchObject({ state: 'refused', code: 'file-path-outside-workspace', reference: null })
     }
     expect(bridge.calls).toEqual([])
@@ -69,12 +69,12 @@ describe('creating a reference reads no content', () => {
   it('carries the base refusal through and records nothing', async () => {
     const bridge = recorder({ 'workspaceFiles/stat': { ok: false, code: 'bridge-file-not-found' } })
     const store = refs(bridge)
-    expect(await store.create({ workspaceRoot: '/Users/someone/project', path: 'gone.md' }))
+    expect(await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'gone.md' }))
       .toMatchObject({ state: 'refused', code: 'bridge-file-not-found' })
     expect(store.list()).toEqual([])
 
     const shapeless = recorder({ 'workspaceFiles/stat': { ok: true, result: { version: '' } } })
-    expect(await refs(shapeless).create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' }))
+    expect(await refs(shapeless).create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' }))
       .toMatchObject({ state: 'refused', code: 'bridge-answer-unrecognised' })
   })
 })
@@ -86,7 +86,7 @@ describe('using a reference re-checks the version before reading', () => {
       'workspaceFiles/read': { ok: true, result: { absolutePath: '/Users/someone/project/notes.md', version: 'v1', offset: 1, text: 'line one', lines: 1, eof: true } },
     })
     const store = refs(bridge)
-    const created = await store.create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' })
+    const created = await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' })
     const referenceId = created.reference!.referenceId
     const used = await store.use({ referenceId })
     expect(used).toMatchObject({ state: 'live', code: null, text: 'line one' })
@@ -105,7 +105,7 @@ describe('using a reference re-checks the version before reading', () => {
       if (endpoint === 'workspaceFiles/read') return { ok: true, result: { version, text: 'should never be read' } }
       return { ok: false, code: 'bridge-answer-unrecognised' }
     }, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-1' })
-    const created = await store.create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' })
+    const created = await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' })
     version = 'v2'
     const used = await store.use({ referenceId: created.reference!.referenceId })
     expect(used).toMatchObject({ state: 'stale', code: 'source-changed', text: null })
@@ -127,7 +127,7 @@ describe('using a reference re-checks the version before reading', () => {
       if (endpoint === 'workspaceFiles/stat' && listed) return statOf('v1')
       return { ok: false, code: 'bridge-file-not-found' }
     }, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-9' })
-    const live = await store.create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' })
+    const live = await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' })
     listed = false
     const used = await store.use({ referenceId: live.reference!.referenceId })
     expect(used).toMatchObject({ state: 'stale', code: 'source-not-readable', text: null })
@@ -144,7 +144,7 @@ describe('using a reference re-checks the version before reading', () => {
       // The read reports a different version: the content no longer matches the token we hold.
       return { ok: true, result: { originalPath: 'x', version: 'v2', text: 'newer content' } }
     }, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-1' })
-    const created = await store.create({ workspaceRoot: '/Users/someone/project', path: 'notes.md' })
+    const created = await store.create({ matterRef: 'matter:one', workspaceRoot: '/Users/someone/project', path: 'notes.md' })
     const used = await store.use({ referenceId: created.reference!.referenceId })
     expect(used).toMatchObject({ state: 'stale', code: 'source-changed', text: null })
   })
@@ -275,7 +275,7 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
     const store = createFileReferences(bridge.call, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-1' })
     const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, {
       listFileCandidates: createFileCandidates(bridge.call),
-      createFileReference: store.create,
+      createFileReference: (request) => store.create({ ...request, matterRef: 'matter-1' }),
       useFileReference: store.use,
       fileReferences: store.list,
     }))
@@ -283,7 +283,7 @@ describe('the file routes, the state slots and the unavailable-first defaults', 
     expect(created.state).toBe('created')
 
     const state = await (await get('/.sage/state', providers)).json() as Record<string, unknown>
-    expect(state.fileReferences).toEqual([expect.objectContaining({ referenceId: 'ref-1', version: 'v1', lastUse: 'unused' })])
+    expect(state.fileReferences).toEqual([expect.objectContaining({ referenceId: 'ref-1', matterRef: 'matter-1', version: 'v1', lastUse: 'unused' })])
     expect(state.fileReferenceUse).toBeNull()
     expect(state.fileCandidates).toBeNull()
 

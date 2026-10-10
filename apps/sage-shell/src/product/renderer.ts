@@ -2329,7 +2329,7 @@ export function renderSageDocument(): string {
         }
         editDraftLocalNotice = null;
         button.disabled = true;
-        void postEditDraft('/.sage/edit-drafts/create', { referenceId, matterRef }).finally(() => { button.disabled = false; });
+        void postEditDraft('/.sage/edit-drafts/create', { referenceId }).finally(() => { button.disabled = false; });
       });
     }
 

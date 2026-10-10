@@ -169,9 +169,11 @@ export interface FileCandidateStatus {
   readonly path: string
 }
 
-/** One reference record: the source plus the version token it was created at (US-077~082). */
+/** One reference record: the source plus the main-owned matter scope and version token it was created at (US-077~082). */
 export interface FileReferenceRecord {
   readonly referenceId: string
+  /** Main-owned scope binding; a workspace path alone cannot identify an active matter. */
+  readonly matterRef: string
   readonly workspaceRoot: string
   readonly path: string
   readonly absolutePath: string

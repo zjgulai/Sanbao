@@ -218,7 +218,7 @@ describe('linking is a metadata-only act (US-070) and leaves references alone', 
     }, { now: () => '2026-10-02T12:00:00.000Z', nextId: () => 'ref-1' })
 
     links.link({ matterRef: 'receipt:1', workspaceRef: 'ws-1', workspacePath: '/Users/someone/a', actorRef: 'session:verified' })
-    const created = await references.create({ workspaceRoot: '/Users/someone/a', path: 'notes.md' })
+    const created = await references.create({ matterRef: 'receipt:1', workspaceRoot: '/Users/someone/a', path: 'notes.md' })
     expect(created.state).toBe('created')
     const before = created.reference!
     expect(before.workspaceRoot).toBe('/Users/someone/a')

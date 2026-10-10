@@ -501,8 +501,17 @@ function createProjectionReadRunner(options: SageAppServiceOptions): ProjectionR
               ? { state: 'allowed' as const, value: { candidateRef: `matter-workspace:${scope.matterRef}:${scope.workspaceRef}` } }
               : { state: 'denied' as const }
           }
-          // Opaque reference/artifact/draft ids need a main-owned object-to-scope resolver. None
-          // exists yet, so an active-matter grant cannot be stretched to cover them.
+          if (candidate.resource === 'file-reference' && candidate.id !== undefined) {
+            const reference = options.fileReferences?.().find((entry) => entry.referenceId === candidate.id)
+            // An opaque id is only a clue. Unknown and out-of-scope records deliberately share the
+            // unavailable result so the route cannot enumerate references from another matter or root.
+            return reference !== undefined
+              && reference.matterRef === scope.matterRef
+              && reference.workspaceRoot === scope.trustedWorkspaceRoot
+              ? { state: 'allowed' as const, value: { candidateRef: `file-reference:${reference.referenceId}` } }
+              : { state: 'unavailable' as const }
+          }
+          // Artifact, current-artifact and edit-draft ids still need their own main-owned resolver.
           return { state: 'unavailable' as const }
         },
         checkPreReadFreshness: async ({ scope }) => {

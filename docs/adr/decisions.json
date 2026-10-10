@@ -8492,10 +8492,11 @@
       "decisions": [
         {
           "id": "D1",
-          "text": "candidate-match 对 collection 'state' 放行（active-matter 授权覆盖设备聚合读），其余 collection 与 opaque 资源维持 unavailable。",
+          "text": "candidate-match 对 collection 'state' 放行（active-matter 授权覆盖设备聚合读）；file-reference 是当前唯一允许的 opaque resolver，必须同时匹配 fresh scope 的 matterRef 与 trustedWorkspaceRoot；其余 collection 与 opaque 资源维持 unavailable。",
           "constraints": [
             "no other collection resolved",
-            "opaque object reads unchanged"
+            "no other opaque resolver",
+            "unknown and cross-scope references share unavailable"
           ]
         },
         {
@@ -8503,29 +8504,34 @@
           "text": "放行前提全部沿用既有准入链：caller、initial-context、main-owned 读策略（local-read）、fresh scope 全字段匹配、读前后新鲜度；任一不成立仍是 unavailable/denied/stale。",
           "constraints": [
             "no fail-closed relaxation",
-            "no new authority source"
+            "no new authority source",
+            "renderer cannot mint matter or workspace authority"
           ]
         },
         {
           "id": "D3",
-          "text": "route-authority 门禁登记放行事实与负向针，并新增两条具名突变（state→他值、放行一切）。",
+          "text": "route-authority 门禁登记 state 与 file-reference source-read 放行事实及负向针；edit-drafts/create 保持 protected-effect 分类，source read 必须使用 edit-drafts.create、opaque file-reference candidate 和 scope.matterRef 注入。",
           "constraints": [
-            "no exemptions added"
+            "no exemptions added",
+            "source-read admission is not full command authority",
+            "runCommand remains required and false"
           ]
         },
         {
           "id": "D4",
-          "text": "projection-read-production 护栏按决策拆分：state 放行（raw 恰一次）、search 维持 candidate-match unavailable；批-4 的全封禁默认被本条决策取代。",
+          "text": "projection-read-production 护栏覆盖 state 放行、search 维持 candidate-match unavailable、其他 opaque 资源封锁，以及 file-reference 的 matching/unknown/cross-matter/cross-workspace 分支；批-4 的全封禁默认由本条决策取代的范围仅限明确绑定的 resolver。",
           "constraints": [
-            "superseding record kept in ADR"
+            "superseding record kept in ADR",
+            "no existence oracle"
           ]
         },
         {
           "id": "D5",
-          "text": "聚合响应只含 main-owned 投影；设备级槽位随授权对已签入会话可见（A 的已知暴露面，用户接受），窄化（B）如需要另开票。",
+          "text": "聚合响应只含 main-owned 投影；设备级槽位随授权对已签入会话可见（A 的已知暴露面，用户接受），窄化（B）如需要另开票。edit-drafts/create 的本地草案创建仍需后续完整 protected command authority。",
           "constraints": [
             "no renderer/Host passthrough",
-            "B remains available as a future ticket"
+            "B remains available as a future ticket",
+            "T03 source-read convergence is not full live completion"
           ]
         }
       ]

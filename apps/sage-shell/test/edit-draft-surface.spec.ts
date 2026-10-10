@@ -10,7 +10,6 @@ import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import type { FileReferenceRecord } from '../src/appservice/contracts.js'
 import { createEditDrafts } from '../src/main/edit-drafts.js'
 import { renderSageDocument } from '../src/product/renderer.js'
-import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
  * Ticket 027 at the S1 routes (US-140~145).
@@ -51,7 +50,7 @@ function fixture(initial = '一行\n二行\n') {
     return { ok: false, code: 'bridge-answer-unrecognised' }
   }
   const reference: FileReferenceRecord = {
-    referenceId: 'ref-1', workspaceRoot: root, path: 'notes/plan.md', absolutePath: absolute,
+    referenceId: 'ref-1', matterRef: 'matter:1', workspaceRoot: root, path: 'notes/plan.md', absolutePath: absolute,
     version: versionOf(absolute), bytes: statSync(absolute).size,
     createdAt: '2026-10-02T12:00:00.000Z', lastUse: 'unused',
   }
@@ -77,14 +76,19 @@ function harness(options: { readonly wired?: boolean, readonly execute?: (reques
       return options.execute!(request)
     } }),
   })
-  const providers = withProjectionReadTestAdmission(createUnavailableFirstService(null, options.wired === false ? {} : {
+  const providers = createUnavailableFirstService(null, options.wired === false ? {} : {
+    runProjectionRead: async (_intent, read) => read({
+      matterRef: 'matter:1', revisionRef: 'revision:1', workspaceRef: 'workspace:1',
+      trustedWorkspaceRoot: f.root, sessionRef: 'session:1', actorScopeRef: 'actor:1',
+      contextGeneration: 1, frameGeneration: 1,
+    }).then((value) => ({ state: 'read' as const, correlation: 'edit-draft-test', value })),
     editDrafts: editDrafts.list,
     editDraftCreate: editDrafts.create,
     editDraftUpdate: editDrafts.update,
     editDraftDiff: editDrafts.diff,
     editDraftPrepareWriteback: editDrafts.prepareWriteback,
     editDraftWriteback: editDrafts.writeback,
-  }))
+  })
   const post = (path: string, body: unknown) => handleSageServiceRequest(
     new Request(`dsh-app://app${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
     { callerBinding: { correlation: 'c-027' }, providers } as never,
@@ -95,7 +99,7 @@ function harness(options: { readonly wired?: boolean, readonly execute?: (reques
 describe('the edit-draft routes (ticket 027)', () => {
   it('walks create → update → diff → prepare → writeback with the exact bodies, and the write lands only through the executor', async () => {
     const h = harness({ execute: async () => ({ receiptRef: 'wb-1' }) })
-    const created = await (await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1' })).json() as { state: string, draft: { draftId: string } }
+    const created = await (await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1' })).json() as { state: string, draft: { draftId: string } }
     expect(created.state).toBe('created')
     const draftId = created.draft.draftId
 
@@ -124,7 +128,7 @@ describe('the edit-draft routes (ticket 027)', () => {
 
   it('without a confirmation nothing reaches the executor and the file keeps its bytes', async () => {
     const h = harness({ execute: async () => ({ receiptRef: 'wb-1' }) })
-    const created = await (await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1' })).json() as { draft: { draftId: string } }
+    const created = await (await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1' })).json() as { draft: { draftId: string } }
     await h.post('/.sage/edit-drafts/update', { draftId: created.draft.draftId, proposedText: '一行\n二行改了\n' })
     await h.post('/.sage/edit-drafts/prepare-writeback', { draftId: created.draft.draftId })
     const before = readFileSync(h.f.absolute).toString('base64')
@@ -137,7 +141,7 @@ describe('the edit-draft routes (ticket 027)', () => {
   it('keeps an unwired family honest: each verb refuses with its own code and the slot is unavailable', async () => {
     const h = harness({ wired: false })
     const cases: Array<[string, unknown]> = [
-      ['/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1' }],
+      ['/.sage/edit-drafts/create', { referenceId: 'ref-1' }],
       ['/.sage/edit-drafts/update', { draftId: 'draft-1', proposedText: 'x' }],
       ['/.sage/edit-drafts/diff', { draftId: 'draft-1' }],
       ['/.sage/edit-drafts/prepare-writeback', { draftId: 'draft-1' }],
@@ -153,8 +157,8 @@ describe('the edit-draft routes (ticket 027)', () => {
   it('parses every body exactly: extra keys, empty ids and mistyped fields are refused 400', async () => {
     const h = harness()
     const bad: Array<[string, unknown]> = [
-      ['/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1', extra: true }],
-      ['/.sage/edit-drafts/create', { referenceId: '', matterRef: 'matter:1' }],
+      ['/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1' }],
+      ['/.sage/edit-drafts/create', { referenceId: '' }],
       ['/.sage/edit-drafts/update', { draftId: 'draft-1', proposedText: 7 }],
       ['/.sage/edit-drafts/update', { draftId: 'draft-1', proposedText: 'x', extra: 1 }],
       ['/.sage/edit-drafts/diff', { draftId: '' }],
@@ -173,7 +177,7 @@ describe('the edit-draft routes (ticket 027)', () => {
 
   it('projects controlled information only: no machine root, no snapshot bytes, no payload fields', async () => {
     const h = harness()
-    await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1', matterRef: 'matter:1' })
+    await h.post('/.sage/edit-drafts/create', { referenceId: 'ref-1' })
     const state = await (await h.providers.readState()).json() as { editDrafts: unknown }
     const text = JSON.stringify(state.editDrafts)
     expect(text).not.toContain(h.f.root)

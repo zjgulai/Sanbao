@@ -36,6 +36,7 @@ const readout = {
 
 const reference = {
   referenceId: 'ref-1',
+  matterRef: 'matter:one',
   workspaceRoot: '/Users/someone/project',
   path: 'notes/plan.md',
   absolutePath: '/Users/someone/project/notes/plan.md',

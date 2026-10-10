@@ -3,7 +3,7 @@ import { readdirSync, statSync, writeFileSync } from 'node:fs'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createDraftStore, type DraftStore } from '../src/main/draft-store.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../src/appservice/composition.js'
@@ -284,6 +284,50 @@ describe('the draft routes and the confirm path through the pipeline (ticket 002
       { callerBinding: { correlation: 'c-002' }, providers: gated } as never,
     )
     expect(await refused.json()).toEqual({ state: 'refused', draftId: 'draft-1', code: 'draft-already-converted' })
+  })
+
+  it('keeps a real draft editing when custody is absent, without touching local execution rehydrate', async () => {
+    const { store } = await freshStore()
+    const created = store.create('输入', true)
+    const draftId = created?.state === 'ready' ? created.drafts[0]!.draftId : ''
+    store.update(draftId, { fields: { goal: 'g', deliverable: 'd', responsibility: 'r' } }, true)
+    const commit = vi.fn()
+    const strictRehydrate = vi.fn(() => undefined)
+    const providers = createUnavailableFirstService(null, {
+      draftPrepareConversion: (request) => store.prepareConversion(request.draftId, true),
+      draftBeginAttempt: (request) => { store.beginAttempt(request.draftId, request.correlation) },
+      draftNoteAttempt: (request) => { store.noteAttempt(request.draftId, request.correlation, request.state) },
+      draftCommitConversion: commit,
+      commandPorts: {
+        ...PRODUCTION_FAIL_CLOSED_PORTS,
+        resolveIdentityPolicy: () => ({ kind: 'authorized' as const, actor: {}, authoritySnapshot: {} }),
+        // This is the execution-side read port. A create request must not reach it (ADR-0201 D3).
+        strictRehydrate,
+      },
+    })
+
+    const response = await handleSageServiceRequest(
+      new Request('dsh-app://app/.sage/draft/convert', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draftId }),
+      }),
+      { callerBinding: { correlation: 'c-002-real-draft' }, providers } as never,
+    )
+
+    expect(await response.json()).toMatchObject({
+      state: 'denied',
+      draftId,
+      code: 'persistence-unavailable',
+      stage: 'create',
+      retryable: true,
+    })
+    expect(commit).not.toHaveBeenCalled()
+    expect(strictRehydrate).not.toHaveBeenCalled()
+
+    const reread = store.list(true)
+    const draft = reread.state === 'ready' ? reread.drafts.find((entry) => entry.draftId === draftId) : undefined
+    expect(draft).toMatchObject({ status: 'editing', matterRef: null, attempt: { state: 'failed' } })
   })
 })
 

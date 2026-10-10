@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ProjectionReadCandidate } from '../src/appservice/contracts.js'
+import { createActionConfirmationStore } from '../src/appservice/action-confirmations.js'
+import type { FileReferenceRecord, ProjectionReadCandidate } from '../src/appservice/contracts.js'
 import type { ProjectionReadIntent, ProjectionReadScope } from '../src/appservice/projection-read-admission.js'
+import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createSageAppServiceProviders, type SageAppServiceOptions } from '../src/main/app-service.js'
 import { createActiveMatterContext, type ActiveMatterContext } from '../src/main/active-matter-context.js'
+import { createEditDrafts } from '../src/main/edit-drafts.js'
 import { projectionReadScope } from '../src/main/projection-read-scope.js'
 import { createTokenVault, type TokenVault } from '../src/main/token-vault.js'
 
@@ -88,6 +91,35 @@ function productionOptions(overrides: Partial<SageAppServiceOptions> = {}): {
     ...overrides,
   }
   return { options, context, matterRehydrate, workspaceList }
+}
+
+function bridgeBackedEditDrafts(references: readonly FileReferenceRecord[]) {
+  const calls = { stat: 0, read: 0 }
+  let nextDraftId = 0
+  const callBridge = async (endpoint: string): Promise<unknown> => {
+    if (endpoint === 'workspaceFiles/stat') {
+      calls.stat += 1
+      return { ok: true, result: { version: 'v1', bytes: 11 } }
+    }
+    if (endpoint === 'workspaceFiles/read') {
+      calls.read += 1
+      return { ok: true, result: { version: 'v1', text: 'source text', lines: 1, eof: true } }
+    }
+    return { ok: false, code: 'bridge-answer-unrecognised' }
+  }
+  const store = createEditDrafts(callBridge, {
+    now: () => '2026-10-03T00:00:00.000Z',
+    nextId: () => `draft:production-${nextDraftId += 1}`,
+    references: () => references,
+    confirmations: {
+      store: createActionConfirmationStore({
+        now: () => '2026-10-03T00:00:00.000Z',
+        nextId: () => `confirmation:production-${nextDraftId += 1}`,
+      }),
+      facts: () => ({ environmentRef: null }),
+    },
+  })
+  return { calls, store }
 }
 
 function run(
@@ -186,6 +218,167 @@ describe('production projection-read assembly', () => {
 
     expect(result).toMatchObject({ state: 'unavailable', stage: 'candidate-match' })
     expect(raw).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { label: 'unknown', reference: undefined },
+    {
+      label: 'another matter',
+      reference: {
+        referenceId: 'ref:other-matter',
+        matterRef: 'matter:other',
+        workspaceRoot: ACTIVE_SCOPE.trustedWorkspaceRoot,
+      },
+    },
+    {
+      label: 'another workspace',
+      reference: {
+        referenceId: 'ref:other-workspace',
+        matterRef: ACTIVE_SCOPE.matterId,
+        workspaceRoot: '/trusted/other-workspace',
+      },
+    },
+  ])('keeps a $label file reference out of the raw provider', async ({ reference }) => {
+    const { options } = productionOptions(reference === undefined ? {} : {
+      fileReferences: () => [{
+        ...reference,
+        absolutePath: `${reference.workspaceRoot}/notes.md`,
+        path: 'notes.md',
+        version: 'v1',
+        createdAt: '2026-10-03T00:00:00.000Z',
+        lastUse: 'unused' as const,
+      }],
+    })
+    const raw = vi.fn(async () => Response.json({ raw: true }))
+
+    const result = await run(options, {
+      operation: 'workspace.files.use-reference',
+      candidate: { kind: 'opaque', resource: 'file-reference', id: reference?.referenceId ?? 'ref:unknown' },
+    }, raw)
+
+    expect(result).toMatchObject({ state: 'unavailable', stage: 'candidate-match' })
+    expect(raw).not.toHaveBeenCalled()
+  })
+
+  it('admits one file reference only when its main-owned binding matches the fresh scope', async () => {
+    const record = {
+      referenceId: 'ref:one',
+      matterRef: ACTIVE_SCOPE.matterId,
+      workspaceRoot: ACTIVE_SCOPE.trustedWorkspaceRoot,
+      path: 'notes.md',
+      absolutePath: `${ACTIVE_SCOPE.trustedWorkspaceRoot}/notes.md`,
+      version: 'v1',
+      createdAt: '2026-10-03T00:00:00.000Z',
+      lastUse: 'unused' as const,
+    }
+    const { options } = productionOptions({ fileReferences: () => [record] })
+    let callbackScope: ProjectionReadScope | undefined
+    const raw = vi.fn(async (scope: ProjectionReadScope) => {
+      callbackScope = projectionReadScope.current()
+      expect(callbackScope).toEqual(scope)
+      return Response.json({ text: 'read after admission' })
+    })
+
+    const result = await run(options, {
+      operation: 'workspace.files.use-reference',
+      candidate: { kind: 'opaque', resource: 'file-reference', id: record.referenceId },
+    }, raw)
+
+    expect(result.state).toBe('read')
+    expect(raw).toHaveBeenCalledTimes(1)
+    expect(callbackScope).toMatchObject({
+      matterRef: ACTIVE_SCOPE.matterId,
+      trustedWorkspaceRoot: ACTIVE_SCOPE.trustedWorkspaceRoot,
+    })
+  })
+
+  it('admits edit-draft creation only for a matching file-reference scope', async () => {
+    const record: FileReferenceRecord = {
+      referenceId: 'ref:edit-draft',
+      matterRef: ACTIVE_SCOPE.matterId,
+      workspaceRoot: ACTIVE_SCOPE.trustedWorkspaceRoot,
+      path: 'notes.md',
+      absolutePath: `${ACTIVE_SCOPE.trustedWorkspaceRoot}/notes.md`,
+      version: 'v1',
+      createdAt: '2026-10-03T00:00:00.000Z',
+      lastUse: 'unused',
+    }
+    const { calls, store } = bridgeBackedEditDrafts([record])
+    const { options } = productionOptions({
+      fileReferences: () => [record],
+      editDraftCreate: store.create,
+    })
+    const providers = createSageAppServiceProviders(options)
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/edit-drafts/create', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ referenceId: record.referenceId }),
+    }), { callerBinding: { correlation: 'caller:one' }, providers })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      state: 'created',
+      draft: { matterRef: ACTIVE_SCOPE.matterId, proposedText: 'source text' },
+    })
+    expect(calls).toEqual({ stat: 1, read: 1 })
+    expect(store.list()).toMatchObject({ state: 'read', drafts: [{ matterRef: ACTIVE_SCOPE.matterId }] })
+  })
+
+  it.each([
+    { label: 'unknown', references: [] },
+    {
+      label: 'another matter',
+      references: [{
+        referenceId: 'ref:other-matter', matterRef: 'matter:other', workspaceRoot: ACTIVE_SCOPE.trustedWorkspaceRoot,
+      }],
+    },
+    {
+      label: 'another workspace',
+      references: [{
+        referenceId: 'ref:other-workspace', matterRef: ACTIVE_SCOPE.matterId, workspaceRoot: '/trusted/other-workspace',
+      }],
+    },
+  ])('blocks $label edit-draft creation before any provider read', async ({ references }) => {
+    const records: FileReferenceRecord[] = references.map((reference) => ({
+      ...reference,
+      path: 'notes.md',
+      absolutePath: `${reference.workspaceRoot}/notes.md`,
+      version: 'v1',
+      createdAt: '2026-10-03T00:00:00.000Z',
+      lastUse: 'unused' as const,
+    }))
+    const { calls, store } = bridgeBackedEditDrafts(records)
+    const { options } = productionOptions({
+      fileReferences: () => records,
+      editDraftCreate: store.create,
+    })
+    const providers = createSageAppServiceProviders(options)
+    const referenceId = records[0]?.referenceId ?? 'ref:unknown'
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/edit-drafts/create', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ referenceId }),
+    }), { callerBinding: { correlation: 'caller:one' }, providers })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ state: 'refused', code: 'edit-draft-unavailable' })
+    expect(calls).toEqual({ stat: 0, read: 0 })
+    expect(store.list()).toEqual({ state: 'read', drafts: [] })
+  })
+
+  it('rejects a renderer-supplied matterRef before edit-draft admission', async () => {
+    const createEditDraft = vi.fn(async () => Response.json({ state: 'created' }))
+    const { options } = productionOptions({ editDraftCreate: createEditDraft })
+    const providers = createSageAppServiceProviders(options)
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/edit-drafts/create', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ referenceId: 'ref:one', matterRef: ACTIVE_SCOPE.matterId }),
+    }), { callerBinding: { correlation: 'caller:one' }, providers })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: 'invalid-edit-draft-request', stage: 'intent' })
+    expect(createEditDraft).not.toHaveBeenCalled()
   })
 
   it('drops a value when ActiveContext changes during the raw read', async () => {

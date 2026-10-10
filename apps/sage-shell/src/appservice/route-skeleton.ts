@@ -573,7 +573,16 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
     if (parsed === undefined) {
       return serviceJson({ code: 'invalid-edit-draft-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
     }
-    if (url.pathname === SAGE_EDIT_DRAFTS_CREATE_PATH) return deps.providers.createEditDraft(parsed as { referenceId: string, matterRef: string })
+    if (url.pathname === SAGE_EDIT_DRAFTS_CREATE_PATH) {
+      const create = parsed as { referenceId: string }
+      return runProjectionRead(
+        deps,
+        'edit-drafts.create',
+        { kind: 'opaque', resource: 'file-reference', id: create.referenceId },
+        (scope) => deps.providers.createEditDraft({ referenceId: create.referenceId, matterRef: scope.matterRef }),
+        () => serviceJson({ state: 'refused', code: 'edit-draft-unavailable' }, 200),
+      )
+    }
     if (url.pathname === SAGE_EDIT_DRAFTS_UPDATE_PATH) return deps.providers.updateEditDraft(parsed as { draftId: string, proposedText: string })
     if (url.pathname === SAGE_EDIT_DRAFTS_DIFF_PATH) {
       const diff = parsed as { draftId: string }
@@ -1384,9 +1393,8 @@ function parseEditDraftRequest(body: string, pathname: string): unknown {
   const keys = Object.keys(record)
   const boundedRef = (candidate: unknown): candidate is string => typeof candidate === 'string' && candidate !== '' && candidate.length <= 256
   if (pathname.endsWith('/create')) {
-    if (keys.length !== 2 || !keys.every((key) => ['referenceId', 'matterRef'].includes(key))) return undefined
-    if (!boundedRef(record.referenceId) || !boundedRef(record.matterRef)) return undefined
-    return { referenceId: record.referenceId, matterRef: record.matterRef }
+    if (keys.length !== 1 || !boundedRef(record.referenceId)) return undefined
+    return { referenceId: record.referenceId }
   }
   if (pathname.endsWith('/update')) {
     if (keys.length !== 2 || !keys.every((key) => ['draftId', 'proposedText'].includes(key))) return undefined

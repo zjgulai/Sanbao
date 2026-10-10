@@ -26,6 +26,37 @@
 - 门禁持续以源码事实锁住接线形态；新的每请求重建或回退钉死都会具名红。
 - T04/T05/T06 与登录链路仍按各自票据验收，本接线不宣称成功聊天链。
 
+## 追加（2026-10-10）：edit-drafts/create 源读取边界收敛
+
+### Problem
+
+`/.sage/edit-drafts/create` 同时读取 file-reference 的源内容并创建本地 edit-draft。原 route parser 接受 renderer 自报的 `matterRef`，随后直接调用 create provider；这绕过了 T03 已建立的 file-reference candidate resolver，知道其他事项的 referenceId 就可能把跨 matter 或跨 workspace 的源内容带入草案。简单把 route 改成 read-only 会错误改变 route authority matrix 的 protected-effect 分类，因为本地草案创建仍是一个效果。
+
+### Decision
+
+- parser 只接受 `{ referenceId }`，renderer 自报 `matterRef` 在 intent 阶段返回 400。
+- route 使用独立 operation `edit-drafts.create` 和 `{ kind: 'opaque', resource: 'file-reference', id: referenceId }` candidate。
+- create provider 只能在 projection-read runner callback 内执行，`matterRef` 从 fresh `ProjectionReadScope` 注入。
+- production resolver 只在 reference 的 main-owned `matterRef` 与 `workspaceRoot` 同时匹配 fresh scope 时放行；unknown、cross-matter、cross-workspace 共享 unavailable 结果，raw provider 不被调用。
+- `file-reference` 是当前唯一允许的 opaque resolver；artifact、current-artifact、edit-draft、search 继续 unavailable。
+- route 仍标记 protected-effect，source-read admission 只证明源读取边界已收敛，不证明完整 command `runCommand` authority。
+
+### Alternatives considered
+
+- 继续把 renderer `matterRef` 作为 create request authority：拒绝，renderer 字段不能铸造事项边界。
+- 将 create route 改为普通 read-only：拒绝，会抹掉本地 edit-draft creation effect 并改变 authority matrix 分类。
+- 对所有 opaque resource 一并开放：拒绝，其他对象缺少等价 main-owned resolver 与独立 anti-oracle 合同。
+
+### Consequences
+
+- matching file-reference 可在真实 production assembly 中进入 create provider，provider 收到的 matterRef 只能来自 fresh scope。
+- unknown、跨事项、跨 workspace reference 在 candidate-match 阶段被稳定拒绝，避免 stat/read 和存在性泄漏。
+- `edit-drafts/create` 仍需 T05/完整 protected command authority 的后续工作，T03 不因此标记为完整 live acceptance。
+
+### Verification
+
+证据（2026-10-10）：门禁自测 `node --test scripts/gates/sage-route-authority.test.mjs` 36/36（新增 `edit-drafts/create source-read admission cannot drift from its scope-bound resolver facts`，五条具名红：缺 `sourceReadAdmission`、operation 漂移、`scope.matterRef` 漂移、workspaceRoot 绑定漂移、parser 键数漂移）；`apps/sage-shell` typecheck 0；聚焦 13 个改动 spec 186/186；全量套件 199 文件 / 1820 通过 / 1 skip（exit 0）；`pnpm run gate` 32/32（objects 313/313，0 skip，退出码 0）。未运行：`gate:full`（推送前契约）与实机探针——该边界由 production assembly 级 spec 覆盖，真实会话探针属登录链路 T04/T05 前置。附带修复 `scripts/test.mjs`：原从 `node:util` 导入 `convertProcessSignalToExitCode`（本机 Node 22.22 无此导出，runner 启动即崩溃），改为 `node:os` 常量本地换算。
+
 ## Verification
 
 证据：门禁自测 `node --test scripts/gates/sage-route-authority.test.mjs` 32/32（含新 T03 用例 4 突变具名红）；`pnpm run gate` 27/27（objects 85/85）；`apps/sage-shell` typecheck 0；全量套件 193 文件全部通过（读数见回报）；实机探针（隔离根、无登录）确认 state 读仍诚实 unavailable、writes=0、0 异常，证据目录 `.birdview/evidence/sanbao-desktop-t03-2026-10-05/`。

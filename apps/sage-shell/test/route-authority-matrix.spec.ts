@@ -17,6 +17,7 @@ interface RouteAuthorityRow {
   readonly runtimeLevel: string
   readonly runCommand: { readonly required: boolean, readonly actual: boolean }
   readonly protectedAdmission?: { readonly required: boolean, readonly actual: boolean }
+  readonly sourceReadAdmission?: { readonly required: boolean, readonly actual: boolean }
   readonly contextSelection?: { readonly required: boolean, readonly actual: boolean }
   readonly localSystemAdmission?: { readonly required: boolean, readonly actual: boolean }
   readonly unsupportedOperations: readonly string[]
@@ -87,7 +88,7 @@ describe('route authority truth matrix', () => {
     ])
   })
 
-  it('records two runCommand routes, thirteen admitted protected routes, one context selection route, and 22 remaining bypasses', () => {
+  it('records two runCommand routes, thirteen admitted protected routes, one source-read-admitted route, one context selection route, and 22 remaining bypasses', () => {
     const protectedRoutes = matrix.routes.filter((route) => route.classification === 'protected-effect')
     const throughRunCommand = protectedRoutes.filter((route) => route.runCommand.actual)
     const throughProtectedAdmission = protectedRoutes.filter((route) => route.protectedAdmission?.actual === true)
@@ -121,7 +122,11 @@ describe('route authority truth matrix', () => {
       && route.currentAuthority.mode === 'active-context-selection-unavailable-first')).toBe(true)
     expect(bypasses).toHaveLength(22)
     expect(bypasses.every((route) => route.runCommand.required && route.currentAuthority.status === 'violation')).toBe(true)
-    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(17)
+    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(16)
+    expect(matrix.routes.find((route) => route.path === '/.sage/edit-drafts/create')).toMatchObject({
+      sourceReadAdmission: { required: true, actual: true },
+      currentAuthority: { status: 'violation', mode: 'protected-effect-source-read-admitted' },
+    })
   })
 
   it('records the local-system bootstrap route as admitted while keeping its facts device-local', () => {

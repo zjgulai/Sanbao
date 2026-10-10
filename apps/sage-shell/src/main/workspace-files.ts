@@ -89,7 +89,7 @@ export function createFileCandidates(callBridge: BridgeCaller) {
 
 export interface FileReferenceStore {
   readonly list: () => readonly FileReferenceRecord[]
-  readonly create: (request: { readonly workspaceRoot: string, readonly path: string }) => Promise<FileReferenceOutcome>
+  readonly create: (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly path: string }) => Promise<FileReferenceOutcome>
   readonly use: (request: { readonly referenceId: string }) => Promise<FileReferenceUse>
 }
 
@@ -123,6 +123,7 @@ export function createFileReferences(callBridge: BridgeCaller, options: {
       if (!stat.ok) return { state: 'refused', code: stat.code, reference: null }
       const reference: FileReferenceRecord = {
         referenceId: options.nextId(),
+        matterRef: request.matterRef,
         workspaceRoot: request.workspaceRoot,
         path: request.path,
         absolutePath: stat.absolutePath,

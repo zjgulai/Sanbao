@@ -74,7 +74,8 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /2 local-system routes enter device-local admission/)
   assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
-  assert.match(result.note, /17 direct-provider bypasses/)
+  assert.match(result.note, /16 direct-provider bypasses/)
+  assert.match(result.note, /file-reference is the only admitted opaque resolver/)
 })
 
 test('malformed or missing matrix fails closed', () => {
@@ -494,6 +495,40 @@ test('the matrix cannot omit or falsely disable read admission', () => {
   const disabled = JSON.parse(baseline.matrixText)
   disabled.routes.find((route) => route.path === '/.sage/run-log').projectionReadAdmission.actual = false
   expectNamedFailure(check({ matrixText: JSON.stringify(disabled) }), '/.sage/run-log')
+})
+
+test('edit-drafts/create source-read admission cannot drift from its scope-bound resolver facts', () => {
+  const missing = JSON.parse(baseline.matrixText)
+  delete missing.routes.find((route) => route.path === '/.sage/edit-drafts/create').sourceReadAdmission
+  expectNamedFailure(check({ matrixText: JSON.stringify(missing) }), '/.sage/edit-drafts/create')
+
+  const operationDrift = baseline.routeSkeletonText.replace(
+    "        'edit-drafts.create',\n        { kind: 'opaque', resource: 'file-reference', id: create.referenceId },",
+    "        'edit-drafts.open',\n        { kind: 'opaque', resource: 'file-reference', id: create.referenceId },",
+  )
+  assert.notEqual(operationDrift, baseline.routeSkeletonText)
+  expectNamedFailure(check({ routeSkeletonText: operationDrift }), 'edit-drafts/create must use operation edit-drafts.create')
+
+  const scopeDrift = baseline.routeSkeletonText.replace(
+    'matterRef: scope.matterRef',
+    'matterRef: create.referenceId',
+  )
+  assert.notEqual(scopeDrift, baseline.routeSkeletonText)
+  expectNamedFailure(check({ routeSkeletonText: scopeDrift }), 'edit-drafts/create provider matterRef must come from the admitted scope')
+
+  const workspaceBindingDrift = baseline.mainAppServiceText.replace(
+    '&& reference.workspaceRoot === scope.trustedWorkspaceRoot',
+    '',
+  )
+  assert.notEqual(workspaceBindingDrift, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: workspaceBindingDrift }), 'file-reference resolver must bind workspaceRoot to trusted scope')
+
+  const parserDrift = baseline.routeSkeletonText.replace(
+    "if (keys.length !== 1 || !boundedRef(record.referenceId)) return undefined",
+    "if (keys.length !== 2 || !boundedRef(record.referenceId)) return undefined",
+  )
+  assert.notEqual(parserDrift, baseline.routeSkeletonText)
+  expectNamedFailure(check({ routeSkeletonText: parserDrift }), 'edit-drafts/create parser must accept exactly one key')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

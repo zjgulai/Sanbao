@@ -18,7 +18,7 @@ const workspaces = {
 }
 
 const reference = {
-  referenceId: 'ref-1', workspaceRoot: '/Users/someone/project', path: 'notes/plan.md',
+  referenceId: 'ref-1', matterRef: 'matter:1', workspaceRoot: '/Users/someone/project', path: 'notes/plan.md',
   absolutePath: '/Users/someone/project/notes/plan.md', version: 'v1000:12', bytes: 12,
   createdAt: '2026-10-02T12:00:00.000Z', lastUse: 'unused',
 }
@@ -65,7 +65,7 @@ describe('opening an edit draft from a reference (US-140)', () => {
     setLinkSelection('matter:1', '')
     harness.node('file-references').dispatch('click', { target: draftButton })
     await harness.settle()
-    expect(harness.requests).toEqual([{ path: '/.sage/edit-drafts/create', body: { referenceId: 'ref-1', matterRef: 'matter:1' } }])
+    expect(harness.requests).toEqual([{ path: '/.sage/edit-drafts/create', body: { referenceId: 'ref-1' } }])
   })
 
   it('renders the shelf, the based version, the source state and the working copy', async () => {

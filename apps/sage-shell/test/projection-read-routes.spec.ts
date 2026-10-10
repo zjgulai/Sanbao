@@ -29,6 +29,7 @@ const cases: readonly RouteCase[] = [
   { name: 'artifact observe', path: '/.sage/artifacts/observe', operation: 'artifacts.observe', provider: 'observeArtifacts', body: { matterRef: 'matter-1', workspaceRoot: '/workspace' }, blockedCode: 'artifact-store-unavailable' },
   { name: 'artifact open', path: '/.sage/artifacts/open', operation: 'artifacts.open', provider: 'openArtifact', body: { artifactId: 'artifact-1' }, blockedCode: 'artifact-preview-unavailable' },
   { name: 'artifact retry', path: '/.sage/artifacts/retry', operation: 'artifacts.retry', provider: 'retryArtifact', body: {}, blockedCode: 'artifact-preview-unavailable' },
+  { name: 'edit draft create', path: '/.sage/edit-drafts/create', operation: 'edit-drafts.create', provider: 'createEditDraft', body: { referenceId: 'reference-1' }, blockedCode: 'edit-draft-unavailable' },
   { name: 'edit draft diff', path: '/.sage/edit-drafts/diff', operation: 'edit-drafts.diff', provider: 'diffEditDraft', body: { draftId: 'draft-1' }, blockedCode: 'edit-draft-unavailable' },
   { name: 'run log', path: '/.sage/run-log', operation: 'run-log.read', provider: 'readRunLog', body: { workspaceRoot: '/workspace', path: 'run.log' }, blockedCode: 'run-log-unavailable' },
 ]

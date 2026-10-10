@@ -817,13 +817,14 @@
       "policyProfile": "business-command",
       "operations": ["create"],
       "callerBinding": "CB1",
-      "activeContext": "caller matterRef and artifactRef",
+      "activeContext": "fresh file-reference projection-read scope binds matterRef and trustedWorkspaceRoot; local edit-draft creation remains a separate protected effect",
       "providers": ["createEditDraft"],
       "persistence": "run-local edit-draft store",
-      "runtimeLevel": "L3 local edit seam",
+      "runtimeLevel": "L3 local edit seam; source read is admitted, complete protected command authority remains unavailable",
       "runCommand": { "required": true, "actual": false },
+      "sourceReadAdmission": { "required": true, "actual": true },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": { "status": "violation", "mode": "protected-effect-source-read-admitted" }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_UPDATE_PATH",

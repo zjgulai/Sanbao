@@ -55,7 +55,7 @@ const BLOCKED_CANDIDATES_RECEIPT = {
   path: '',
 }
 
-/** The instance policy file the whole path re-reads. Three local-read grants, no decision
+/** The instance policy file the whole path re-reads. Four local-read grants, no decision
  *  requirement — one selection grant and the canonical projection grants for this read family. */
 function policyDocument(overrides: {
   readonly grants?: readonly Record<string, unknown>[]
@@ -72,6 +72,7 @@ function policyDocument(overrides: {
       { roleRef: 'role:owner', operation: 'matter.read', actionScope: 'matter.read', effectClass: 'local-read', requiresDecision: false },
       { roleRef: 'role:owner', operation: 'workspace.files.list-candidates', actionScope: 'projection.read', effectClass: 'local-read', requiresDecision: false },
       { roleRef: 'role:owner', operation: 'state.read', actionScope: 'projection.read', effectClass: 'local-read', requiresDecision: false },
+      { roleRef: 'role:owner', operation: 'edit-drafts.create', actionScope: 'projection.read', effectClass: 'local-read', requiresDecision: false },
     ],
   }
 }

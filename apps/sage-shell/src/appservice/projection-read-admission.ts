@@ -21,6 +21,7 @@ export const PROJECTION_READ_OPERATIONS = [
   'artifacts.observe',
   'artifacts.open',
   'artifacts.retry',
+  'edit-drafts.create',
   'edit-drafts.diff',
   'run-log.read',
 ] as const

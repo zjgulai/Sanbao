@@ -63,6 +63,7 @@ function fixture(initial: string, relative = 'notes/plan.md') {
   }
   const reference = (overrides: Partial<FileReferenceRecord> = {}): FileReferenceRecord => ({
     referenceId: 'ref-1',
+    matterRef: 'matter:1',
     workspaceRoot: root,
     path: relative,
     absolutePath: absolute,

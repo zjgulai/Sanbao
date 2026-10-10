@@ -75,6 +75,12 @@ const PROTECTED_ADMISSION_PATHS = new Set([
   '/.sage/corrections',
 ])
 
+const EDIT_DRAFT_CREATE_PATH = '/.sage/edit-drafts/create'
+const EDIT_DRAFT_CREATE_AUTHORITY = Object.freeze({
+  status: 'violation',
+  mode: 'protected-effect-source-read-admitted',
+})
+
 const CORRECTION_PATH = '/.sage/corrections'
 const CORRECTION_ACTIVE_CONTEXT = 'request matterRef is a candidate only; renderer workspaceRoot is not authority'
 const ATTACHMENT_UPLOAD_PATH = '/.sage/attachments/upload'
@@ -160,6 +166,7 @@ function authorityFor(path, classification) {
   if (classification === 'local-system') return { status: 'compliant', mode: 'local-system-admission-unavailable-first' }
   if (classification === 'read-only') return { status: 'compliant', mode: 'projection-read-admission-unavailable-first' }
   if (classification === 'local-preference') return { status: 'partial', mode: 'local-main-with-partial-caller-binding' }
+  if (path === EDIT_DRAFT_CREATE_PATH) return EDIT_DRAFT_CREATE_AUTHORITY
   if (RUN_COMMAND_PATHS.has(path)) return { status: 'compliant', mode: 'runCommand' }
   if (PROTECTED_ADMISSION_PATHS.has(path)) return { status: 'compliant', mode: 'protected-effect-admission-unavailable-first' }
   if (CONTEXT_SELECTION_PATHS.has(path)) return { status: 'compliant', mode: 'active-context-selection-unavailable-first' }
@@ -337,6 +344,67 @@ function providerUsesContextSelection(compositionText, providers) {
   return providers.some((provider) =>
     provider === 'selectActiveMatter'
     && extractMethodBlock(compositionText, provider)?.includes('options.selectActiveMatter') === true)
+}
+
+function editDraftCreateSourceViolations(routeSkeletonText, mainAppServiceText) {
+  const violations = []
+  const routeStart = typeof routeSkeletonText === 'string'
+    ? routeSkeletonText.indexOf("if (url.pathname === SAGE_EDIT_DRAFTS_CREATE_PATH)")
+    : -1
+  const routeEnd = routeStart < 0 ? -1 : routeSkeletonText.indexOf("if (url.pathname === SAGE_EDIT_DRAFTS_UPDATE_PATH)", routeStart)
+  const routeBlock = routeStart < 0 || routeEnd < 0 ? null : routeSkeletonText.slice(routeStart, routeEnd)
+  if (routeBlock === null) {
+    violations.push('edit-drafts/create source-read route block is missing')
+  } else {
+    if (!routeBlock.includes("'edit-drafts.create'")) violations.push('edit-drafts/create must use operation edit-drafts.create')
+    if (!routeBlock.includes("{ kind: 'opaque', resource: 'file-reference', id: create.referenceId }")) {
+      violations.push('edit-drafts/create candidate must be the opaque file-reference id')
+    }
+    if (!routeBlock.includes('matterRef: scope.matterRef')) {
+      violations.push('edit-drafts/create provider matterRef must come from the admitted scope')
+    }
+    if (!routeBlock.includes('runProjectionRead(')) violations.push('edit-drafts/create must enter projection-read admission')
+    if (routeBlock.includes('parsed as { referenceId: string, matterRef: string }')) {
+      violations.push('edit-drafts/create must not accept renderer matterRef')
+    }
+  }
+
+  const parserStart = typeof routeSkeletonText === 'string'
+    ? routeSkeletonText.indexOf('function parseEditDraftRequest(')
+    : -1
+  const parserEnd = parserStart < 0 ? -1 : routeSkeletonText.indexOf('\n/** Ticket 028:', parserStart)
+  const parserBlock = parserStart < 0 || parserEnd < 0 ? null : routeSkeletonText.slice(parserStart, parserEnd)
+  if (parserBlock === null) {
+    violations.push('edit-drafts/create parser source block is missing')
+  } else {
+    const createStart = parserBlock.indexOf("if (pathname.endsWith('/create'))")
+    const createEnd = createStart < 0 ? -1 : parserBlock.indexOf("if (pathname.endsWith('/update'))", createStart)
+    const createParser = createStart < 0 || createEnd < 0 ? '' : parserBlock.slice(createStart, createEnd)
+    if (!createParser.includes('keys.length !== 1')) violations.push('edit-drafts/create parser must accept exactly one key')
+    if (!createParser.includes('boundedRef(record.referenceId)')) violations.push('edit-drafts/create parser must validate referenceId')
+    if (createParser.includes('record.matterRef')) violations.push('edit-drafts/create parser must not read renderer matterRef')
+  }
+
+  const runnerStart = typeof mainAppServiceText === 'string'
+    ? mainAppServiceText.indexOf('function createProjectionReadRunner(')
+    : -1
+  const runnerEnd = runnerStart < 0 ? -1 : mainAppServiceText.indexOf('\n/** T02:', runnerStart)
+  const runnerBlock = runnerStart < 0 || runnerEnd < 0 ? null : mainAppServiceText.slice(runnerStart, runnerEnd)
+  if (runnerBlock === null) {
+    violations.push('projection-read runner source block is missing')
+  } else {
+    if (!runnerBlock.includes("candidate.resource === 'file-reference'")) violations.push('file-reference resolver is missing')
+    if (!runnerBlock.includes('reference.matterRef === scope.matterRef')) violations.push('file-reference resolver must bind matterRef to scope')
+    if (!runnerBlock.includes('reference.workspaceRoot === scope.trustedWorkspaceRoot')) {
+      violations.push('file-reference resolver must bind workspaceRoot to trusted scope')
+    }
+    if (!runnerBlock.includes('// Artifact, current-artifact and edit-draft ids still need their own main-owned resolver.')) {
+      violations.push('artifact/current-artifact/edit-draft opaque resources must remain explicitly blocked')
+    }
+    if (!runnerBlock.includes("candidate.collection === 'state'")) violations.push('state collection source fact is missing')
+    if (!runnerBlock.includes(": { state: 'unavailable' as const }")) violations.push('unresolved collections and opaque resources must remain unavailable')
+  }
+  return violations
 }
 
 function extractFunctionBlock(text, functionName) {
@@ -737,6 +805,21 @@ export function checkSageRouteAuthority(input) {
       failRoute(path, 'projectionReadAdmission is only valid for read-only routes')
     }
 
+    const expectedSourceRead = path === EDIT_DRAFT_CREATE_PATH
+    if (expectedSourceRead) {
+      if (!isRecord(rawRoute.sourceReadAdmission)) {
+        failRoute(path, 'sourceReadAdmission object is required')
+      } else {
+        if (rawRoute.sourceReadAdmission.required !== true) failRoute(path, 'sourceReadAdmission.required must be true')
+        if (rawRoute.sourceReadAdmission.actual !== true) failRoute(path, 'sourceReadAdmission.actual must be true')
+        const sourceViolations = editDraftCreateSourceViolations(input.routeSkeletonText, input.mainAppServiceText)
+        for (const violation of sourceViolations) failRoute(path, violation)
+        if (sourceViolations.length !== 0) failRoute(path, 'sourceReadAdmission source facts are incomplete')
+      }
+    } else if (rawRoute.sourceReadAdmission !== undefined) {
+      failRoute(path, 'sourceReadAdmission is only valid for edit-drafts/create')
+    }
+
     const mixed = MIXED_POLICY.get(path)
     const expectedUnsupported = mixed?.unsupportedOperations ?? []
     if (!sameStrings(rawRoute.unsupportedOperations, expectedUnsupported)) {
@@ -830,8 +913,8 @@ export function checkSageRouteAuthority(input) {
   }
 
   const directProviderBypasses = protectedBypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')
-  if (directProviderBypasses.length !== 17) {
-    failGlobal(`expected 17 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
+  if (directProviderBypasses.length !== 16) {
+    failGlobal(`expected 16 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
   }
 
   const admittedProtectedRoutes = matrix.routes.filter((route) => isRecord(route)
@@ -854,7 +937,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A) while search and opaque-object reads still need main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 17 direct-provider bypasses. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

@@ -706,7 +706,12 @@ async function main(paths: SagePaths): Promise<void> {
     nextId: () => randomUUID(),
   })
   const createFileReferenceWiring = {
-    createFileReference: fileReferences.create,
+    // The route body supplies only the candidate workspace/path. The admitted projection scope
+    // supplies the main-owned matter binding; callers cannot choose it in the request.
+    createFileReference: (request: { readonly workspaceRoot: string, readonly path: string }) => fileReferences.create({
+      ...request,
+      matterRef: scopedMatterRef(),
+    }),
     useFileReference: fileReferences.use,
     fileReferences: fileReferences.list,
   }
