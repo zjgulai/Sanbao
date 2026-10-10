@@ -132,7 +132,16 @@ openssl req -x509 -newkey rsa:3072 -sha256 -days 2 -nodes \
   -out "$certificate"
 certificate_sha256="$(node "$PACKAGING_SAGE_ROOT/scripts/signing-certificate-fingerprint.mjs" "$certificate" "$identity")"
 
-openssl pkcs12 -export \
+# OpenSSL 3 writes PKCS#12 with AES-256-CBC/SHA-256 by default, which macOS `security import`
+# refuses ("MAC verification failed during PKCS12 import"); only the traditional PBE set is
+# accepted by Security.framework. LibreSSL (macOS /usr/bin/openssl) is legacy already and has no
+# `-legacy` flag, so gate the flag on the actual version instead of assuming one implementation.
+pkcs12_legacy=''
+if openssl version 2>/dev/null | grep -q '^OpenSSL 3\.'; then
+  pkcs12_legacy='-legacy'
+fi
+# shellcheck disable=SC2086 # intentional word-splitting: empty = no flag, set = one fixed flag.
+openssl pkcs12 -export $pkcs12_legacy \
   -inkey "$private_key" \
   -in "$certificate" \
   -name "$identity" \

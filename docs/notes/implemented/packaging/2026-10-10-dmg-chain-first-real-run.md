@@ -33,6 +33,8 @@
 
 用户执行 `sign-local.sh` 时崩于 line 37：macOS 自带 `/bin/bash` 3.2 在 `set -u` 下对**空数组**的 `"${arr[@]}"` 展开报 `unbound variable`——正常首跑没有 stale 恢复目录，恰好走空数组路径。全链 9 处同类展开（`sign-local.sh` / `assemble.sh` / `produce-inputs.sh` / `sign.sh`）统一改 bash 3.2 安全惯用法 `${arr[@]+"${arr[@]}"}`，四个脚本 `bash -n` 通过；新增纯合同守卫 `shell-scripts-bash32-safety-test.mjs`（扫描全部打包 shell 脚本的未防护 `[@]` 展开；负控实证：注入坏模式判红并点名 file:line，移除转绿）——打包清单 13→14、层级计数与自测同步。修复后由用户重跑签发命令，签发/DMG/验收读数以本页后续为准。
 
+**再追加（2026-10-10 晚，第二次重跑）**：越过空数组路径后，签发崩于 `security import`：`MAC verification failed during PKCS12 import`。最小复现实证——PATH 上的 Homebrew OpenSSL 3.6.2 默认以 AES-256-CBC/SHA-256 写 PKCS#12，macOS `security import` 拒收（`modern.p12` 复现同一报错）；`openssl pkcs12 -export -legacy` 产物 `1 identity imported.`（exit 0）。修复：`sign-local.sh` 按版本门控 `-legacy`（LibreSSL 主机本就传统算法且无该旗标，不做假设）。
+
 ## Verification
 
 证据（2026-10-10，全部真实执行；未跑的步骤照实写）：
