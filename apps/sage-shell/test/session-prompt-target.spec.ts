@@ -20,8 +20,8 @@ import { resolveSagePaths } from '../src/profile/paths.js'
 import type { ServiceProviders } from '../src/appservice/contracts.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const SNAPSHOT_ID = 'urn:sage:compatibility-target-requirement-snapshot:sha256:521b87ace95e8556de898c62973a02fd0f402efca20b1d529d18f5eff892394f'
-const REQUIREMENT_DIGEST = 'urn:sage:compatibility-target-requirement:sha256:c7583d07f88f6326c32d5e1339cf908e300034d8ca55812f1136cd6f3705f2eb'
+const SNAPSHOT_ID = 'urn:sage:compatibility-target-requirement-snapshot:sha256:1b398a3763ec13e26d3dffe39168c73d4a7622894d5d5cceda6a6b359386d561'
+const REQUIREMENT_DIGEST = 'urn:sage:compatibility-target-requirement:sha256:a00e6303de08108bef77445d2e912438a0a0515b65cab0ad689c0ebfbc4cb2c0'
 /** Inside the requirement window (2026-10-11 → 2027-10-11) and the session/policy windows. */
 const IN_WINDOW = '2026-10-12T00:30:00.000Z'
 /** Before the published effectiveAt — identity still passes, the target must not. */
@@ -179,7 +179,7 @@ describe('the shipped session-prompt requirement bundle (ADR-0282)', () => {
     const text = readFileSync(join(APP_ROOT, SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH), 'utf8')
     await writeFile(
       join(container, SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH),
-      text.replace(REQUIREMENT_DIGEST, REQUIREMENT_DIGEST.replace('c7583d07', 'c7583d08')),
+      text.replace(REQUIREMENT_DIGEST, `${REQUIREMENT_DIGEST.slice(0, 8)}${REQUIREMENT_DIGEST[8] === '0' ? '1' : '0'}${REQUIREMENT_DIGEST.slice(9)}`),
       'utf8',
     )
     const tampered = loadSessionPromptRequirementBundle({ baseDir: container })

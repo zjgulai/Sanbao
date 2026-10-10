@@ -64,7 +64,17 @@
         "contractDigest": "sha256:7808cab40e5d4d9c41957c2739ffb3e8ce13d9172f6695fcdcea4cbfd93b7cfb",
         "behaviorConfigurationDigest": "sha256:f86bd7329485d5a720a444c8a3e4869a73cf465e27afc811982ea287a5bcb823"
       },
-      "capabilities": [],
+      "capabilities": [
+        {
+          "identity": "capability:sage.session-prompt",
+          "version": "1.0.0",
+          "artifactDigest": "sha256:89b0d1ef4a8a3c15617cd294de72d04f6f81dd16b3e3276b3b300f217c590e02",
+          "contractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
+          "behaviorConfigurationDigest": "sha256:1e7215bbd17a13222027f98a67e7383a015ba9470d1a5d201f85f00e00c3302c",
+          "registryDescriptorDigest": "sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b",
+          "adapterMappingDigest": "sha256:0b6e398d0a88bf9a82dcfd00c2753cee99b5fd5e6dca64b950f917add7087c25"
+        }
+      ],
       "ownerDecision": {
         "decisionId": "decision:sage-t05-first-session-prompt",
         "ownerId": "owner:sage-product",
@@ -73,8 +83,9 @@
       },
       "effectiveAt": "2026-10-11T00:00:00Z",
       "expiresAt": "2027-10-11T00:00:00Z",
-      "requirementDigest": "urn:sage:compatibility-target-requirement:sha256:c7583d07f88f6326c32d5e1339cf908e300034d8ca55812f1136cd6f3705f2eb"
+      "requirementDigest": "urn:sage:compatibility-target-requirement:sha256:a00e6303de08108bef77445d2e912438a0a0515b65cab0ad689c0ebfbc4cb2c0"
     }
   ],
-  "snapshotId": "urn:sage:compatibility-target-requirement-snapshot:sha256:521b87ace95e8556de898c62973a02fd0f402efca20b1d529d18f5eff892394f"
+  "supersedesSnapshotId": "urn:sage:compatibility-target-requirement-snapshot:sha256:521b87ace95e8556de898c62973a02fd0f402efca20b1d529d18f5eff892394f",
+  "snapshotId": "urn:sage:compatibility-target-requirement-snapshot:sha256:1b398a3763ec13e26d3dffe39168c73d4a7622894d5d5cceda6a6b359386d561"
 }

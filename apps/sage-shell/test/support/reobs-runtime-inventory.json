@@ -6,14 +6,14 @@
     "host": {
       "identity": "host:sage-shell-host",
       "version": "5.0.0",
-      "artifactDigest": "sha256:ec83c9b09cff564d692caf2b0baeaa6c81264d6955fec3f702bf04136e9cbb37",
+      "artifactDigest": "sha256:692994b96d08575eed05759a4eaaa43012130ec870eeefdb62a77686efe141c3",
       "contractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
       "behaviorConfigurationDigest": "sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460"
     },
     "harness": {
       "identity": "harness:@deepseek-ai/dsh",
       "version": "0.2.0-rc.2",
-      "artifactDigest": "sha256:ec83c9b09cff564d692caf2b0baeaa6c81264d6955fec3f702bf04136e9cbb37",
+      "artifactDigest": "sha256:692994b96d08575eed05759a4eaaa43012130ec870eeefdb62a77686efe141c3",
       "contractDigest": "sha256:bb9a215829ec1c2ffb4a6b7ade0d9a874d41310d24f048c4bae054f9f1e40d29",
       "behaviorConfigurationDigest": "sha256:642abe72fbb12606116cbc8035364cb3715055d15baa87e4fb0cf7d3a02b9f29"
     },
@@ -45,29 +45,39 @@
       "contractDigest": "sha256:7808cab40e5d4d9c41957c2739ffb3e8ce13d9172f6695fcdcea4cbfd93b7cfb",
       "behaviorConfigurationDigest": "sha256:f86bd7329485d5a720a444c8a3e4869a73cf465e27afc811982ea287a5bcb823"
     },
-    "capabilities": [],
+    "capabilities": [
+      {
+        "identity": "capability:sage.session-prompt",
+        "version": "1.0.0",
+        "artifactDigest": "sha256:89b0d1ef4a8a3c15617cd294de72d04f6f81dd16b3e3276b3b300f217c590e02",
+        "contractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
+        "behaviorConfigurationDigest": "sha256:1e7215bbd17a13222027f98a67e7383a015ba9470d1a5d201f85f00e00c3302c",
+        "registryDescriptorDigest": "sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b",
+        "adapterMappingDigest": "sha256:0b6e398d0a88bf9a82dcfd00c2753cee99b5fd5e6dca64b950f917add7087c25"
+      }
+    ],
     "protocolContractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
     "launchPolicyDigest": "sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460",
     "overlayPolicyDigest": "sha256:642abe72fbb12606116cbc8035364cb3715055d15baa87e4fb0cf7d3a02b9f29",
-    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b"
+    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:208b273e6da4f94a351a4c78d0800a09d2c85baf1c5f3ec6791b685cfb746e9b"
   },
   "evidence": {
     "schemaVersion": "sage.runtime-inventory-evidence.v2",
     "canonicalizationVersion": "sage.compatibility-canonical-json.v2",
-    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b",
-    "activeGeneration": "4e145a6b-0cfb-4206-b231-edb435c14be0",
-    "receiptDigest": "sha256:566c9d8c47779f4a79e3f7ee812cc58de786b677751a31bf611bc76e63386d92",
-    "materializationInstanceDigest": "sha256:c2fdb3ac20e705729178e0156078144683337c989b56a5db0dbfbdef5c183267",
-    "artifactAttestationDigest": "sha256:89b0d1ef4a8a3c15617cd294de72d04f6f81dd16b3e3276b3b300f217c590e02",
-    "registrySnapshotDigest": "sha256:0e3c5511db8328316cf8bb97c7d550087715e8339421c2fd37ffbaae95a1ebcf",
-    "bootId": "sage-host:52d0790f-30c3-44a5-9817-b0f3d19389c7",
+    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:208b273e6da4f94a351a4c78d0800a09d2c85baf1c5f3ec6791b685cfb746e9b",
+    "activeGeneration": "0b6d6f26-1177-4ca5-90d5-82864282d61e",
+    "receiptDigest": "sha256:9a058122d92bab4ced688d02249668db5585446d538957b8386e1a75e43a898c",
+    "materializationInstanceDigest": "sha256:906a34a596efe320030c7bbb161bae19e7c693f906d3ba842bac7974a6fd1a60",
+    "artifactAttestationDigest": "sha256:790f9cffb413fb2dcd91e1677123044831c964094774dc9dce6b0bdf8c89dd29",
+    "registrySnapshotDigest": "sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411",
+    "bootId": "sage-host:a7800d93-69d7-415a-af2b-e0f8f7ef5abb",
     "runtimeGeneration": 1,
-    "observedAt": "2026-10-10T08:26:22.540Z",
-    "expiresAt": "2026-10-10T08:26:52.540Z",
-    "healthObservationDigest": "sha256:3f80d4f90e7d1fbf8c00349dcb31cb0bcb66712d7d9908fd995555e09776717d",
-    "livenessObservationDigest": "sha256:a6ff57725cb98de22c16389ab40c5b2be519a42db142854c622ace2d8b694b7a",
-    "instanceAuthorityDigest": "sha256:23e98b8b8de955182200d8d4858cd13c324fba53c90b2e2f563f163e1371a58a",
-    "mainObservationProvenanceDigest": "sha256:c7c9ec39a556315591fcc41536e917dc23654083ad792a87c7b35ac0beea55f6",
-    "inventoryEvidenceDigest": "urn:sage:inventory-evidence:sha256:d127d8bbbcd43a5d35f5c6b0b9d34c0595428f320bcc4e240b335577af754836"
+    "observedAt": "2026-10-10T14:59:39.366Z",
+    "expiresAt": "2026-10-10T15:00:09.366Z",
+    "healthObservationDigest": "sha256:ea69276f6eb1778fd1bb5a9ecf4034a414cc8b223e21b3b0d19f10b72b73a064",
+    "livenessObservationDigest": "sha256:98a2fe4406d4ba20da3302c7036f0306afff21571f38383476f57400c2de7b23",
+    "instanceAuthorityDigest": "sha256:dafca4143931629f413f9ce398a2611e30dda16f81362547927702df145397ab",
+    "mainObservationProvenanceDigest": "sha256:85f0349a684f9d7dca17612e4174a72ab2d9c0c0f49e5c1d1a5443ec42ab303a",
+    "inventoryEvidenceDigest": "urn:sage:inventory-evidence:sha256:764a98562d530177d0dfddc3e1dba8ea19ce54e46b126d0639024f6653ccbb42"
   }
 }

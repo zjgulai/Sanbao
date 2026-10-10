@@ -35,10 +35,10 @@ import {
 } from '../src/security/compatibility-matrix-provider.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:ddeea6b8accff5f9d315a8dedcd1befe87561e20006e117b17c10cfe9cd52a78'
-const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:1f054011902eeca3a68e969e11f97d2f230a0bb99a05f6260439bc1ceb243554'
+const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:304c124f0d1de11b1cdcb6431e6cadddc4d7a23588e87f0e65be25868a1158bf'
+const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:b2967eb3cf86585beebb77c932590876bc9b7acf1b9dea46b9f296c9079c041e'
 const REVOCATION_SOURCE_ID = 'urn:sage:compatibility-matrix-revocation-source:sha256:9837c233d165e19c205a31c80962917102b16768475ecef3e03bd5806ae2d5a1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:3da420a7c9d9cd15895a744a13fa4695c9d4082a15325518e6873ee1eb36540f'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:a9a0feb0d94e9937b02145dae15cb4ba2107476039a55d48b35827d7a6488319'
 
 const reobs = JSON.parse(readFileSync(new URL('./support/reobs-runtime-inventory.json', import.meta.url), 'utf8')) as {
   kind: string
@@ -46,7 +46,7 @@ const reobs = JSON.parse(readFileSync(new URL('./support/reobs-runtime-inventory
   evidence: RuntimeInventoryEvidenceV2
 }
 const observation = { descriptor: reobs.descriptor, evidence: reobs.evidence }
-/** Inside the real evidence window [2026-10-10T08:26:22.540Z, 2026-10-10T08:26:52.540Z). */
+/** Inside the real evidence window of the v2 re-observation (2026-10-10T14:58:57.454Z). */
 const EVALUATED_AT = '2026-10-10T08:26:30.000Z'
 
 const cleanups: Array<() => Promise<void>> = []
@@ -201,16 +201,23 @@ describe('the shipped compatibility matrix publication (ADR-0284)', () => {
 describe('the semantic rebuild agrees with the published pair', () => {
   it('recomputes the exact digest the shipped matrix rule pairs', () => {
     const rebuilt = computeTargetSemanticFromRequirement(realEntry(), reobs.descriptor)
-    expect(rebuilt.ok).toBe(true)
-    if (!rebuilt.ok) throw new Error(rebuilt.reason)
-    expect(rebuilt.semantic.targetSemanticDigest).toBe(TARGET_SEMANTIC_DIGEST)
+    expect(rebuilt.targetSemanticDigest).toBe(TARGET_SEMANTIC_DIGEST)
   })
 
-  it('refuses to rebuild a requirement that declares capabilities', () => {
+  it('carries the seven-key capability face into the rebuilt semantic (ADR-0285)', () => {
     const cloned = structuredClone(realEntry()) as { capabilities: unknown[] }
-    cloned.capabilities = [{ identity: 'capability:fixture' }]
+    const digest = `sha256:${'e'.repeat(64)}`
+    cloned.capabilities = [{
+      identity: 'capability:sage.fixture',
+      version: '1.0.0',
+      artifactDigest: digest,
+      contractDigest: digest,
+      behaviorConfigurationDigest: digest,
+      registryDescriptorDigest: digest,
+      adapterMappingDigest: digest,
+    }]
     const rebuilt = computeTargetSemanticFromRequirement(cloned as never, reobs.descriptor)
-    expect(rebuilt.ok).toBe(false)
+    expect(rebuilt.capabilities).toEqual(cloned.capabilities)
   })
 })
 
