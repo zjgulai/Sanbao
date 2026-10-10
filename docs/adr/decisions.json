@@ -8900,6 +8900,58 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0276",
+      "title": "ADR-0276 · T05 中段：session.prompt 首发 target 的候选生成与发布流程（第一刀）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "候选=机械推导：四组件与 capabilities 逐字段复制观测 descriptor；protocol/launch/overlay 取自 descriptor；permission/data-destination 摘要按域分离 canonical 清单计算（顺序即边界）；actionPolicies 由调用方 actionRequirements 转换。",
+          "constraints": [
+            "no product decisions cast by the module",
+            "policy list order is part of the declared boundary",
+            "revision must declare the same action tuple at evaluation time"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "候选容器 sage.target-requirement-candidate.v1 携带 observedRuntimeDescriptorDigest 且不含 ownerDecision；seal 只在 owner 裁决后经 C2.2T 内核执行，内核校验是唯一门。",
+          "constraints": [
+            "candidate is not a published snapshot",
+            "no duplicated or hidden validation",
+            "no fixture substitute for publication"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "发布流程：候选生成（E 线 descriptor + 物化 profile）→ owner 裁决 → seal requirement + seal matrix（配对重观测的 descriptor digest）→ 随壳加载 → providers 装配 → 撤销源管理；descriptor 移动即候选作废。",
+          "constraints": [
+            "publication re-observes, never trusts the recorded digest",
+            "pairing is binding, not endorsement",
+            "no fallback on mismatch"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "首发范围 session.prompt（external-write / 无决定门）且 capabilities 为空；owner 数据裁决清单（标识时窗、策略清单、组件与模型面、矩阵文案与有效期、撤销节奏）逐项交付由用户裁决。",
+          "constraints": [
+            "owner data decisions stay with the user",
+            "no external capabilities in the first scope"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "本刀不接准入端口、不改 route 事实、不宣称 target/compat 已接；模块为发布工具线，真实数值与接线属后续票。",
+          "constraints": [
+            "no route authority facts changed",
+            "no placeholder wiring",
+            "no completion claim for T05"
+          ]
+        }
+      ]
     }
   ]
 }
