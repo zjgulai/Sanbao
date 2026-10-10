@@ -9620,6 +9620,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0291",
+      "title": "ADR-0291 · 选择流前置 ensure：全新 matter 全流程闭合与「先判后栅」写入核心",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "选择内核新序：ensure 在 read-authorization 后、current-revision 读前；refused → revision-ensure-refused 且 CAS 不跑；缺省端口=旧行为。",
+          "constraints": [
+            "the CAS binds the ensured revision",
+            "repeats are idempotent"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "写入核心先判后栅：decide（读库+current-policy，先于 authority）→ identity 栅 → write（域 authored + 幂等 append）；两入口复用。",
+          "constraints": [
+            "an already-prepared matter never demands the prepare grant"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "见证：selection=user-selection；send=user-input。",
+          "constraints": [
+            "main-owned promoters only"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "index 装配 ensure 并接入选择端口；门禁：顺序 pin + 拒绝停选择 pin + decide-先于栅 pin + 三条突变。",
+          "constraints": [
+            "mechanism over review"
+          ]
+        }
+      ]
     }
   ]
 }

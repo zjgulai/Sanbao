@@ -18,9 +18,11 @@ import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
+import { createSessionPromptPrepareEnsure } from './session-prompt-prepare.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
 import { createMatterCustody } from './matter-custody.js'
+import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { loadSessionPromptCapabilityRegistry, loadSessionPromptCompatibilityPublication, loadSessionPromptRequirementBundle } from './publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
@@ -884,6 +886,21 @@ async function main(paths: SagePaths): Promise<void> {
   // WT-02B.2C: the identity registry mints runtime-only internal handles for verified
   // (issuer, subject); handles never persist and never reach renderer/Host/logs.
   const vault = createTokenVault({ mintSessionRef: () => randomBytes(32).toString('base64url') })
+  // T05 prepare (ADR-0291): the selection-time ensure shares the front identity port factory.
+  const prepareEnsure = createSessionPromptPrepareEnsure({
+    identityPolicy: createSessionCoreIdentityPort({
+      vault,
+      authority: {
+        policyPath: paths.organizationPolicyFile,
+        readFileBytes: (path: string) => readFileSync(path),
+        now: () => new Date().toISOString(),
+      },
+    }),
+    attempts: sessionPromptAttempts,
+    requirementBundle,
+    correlation: 'caller:session-core',
+    now: () => new Date().toISOString(),
+  })
   // T03: one read-policy object for selection-time and projection reads. The bound-scope ledger
   // must outlive individual requests, so it is created once and memoized; `paths` is resolved
   // synchronously below before the first request can arrive.
@@ -955,6 +972,9 @@ async function main(paths: SagePaths): Promise<void> {
                     }
               },
               snapshotFramePolicy: () => framePolicy.snapshot(),
+              // ADR-0291: the governed ensure runs after read authorization, before the current
+              // revision read — the CAS then binds the ensured revision.
+              ensureRunnableRevision: prepareEnsure,
             },
           })
           if (result.ok) {

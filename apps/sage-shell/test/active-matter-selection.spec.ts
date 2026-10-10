@@ -29,6 +29,7 @@ interface PortHarnessOptions {
   readonly defaultWorkspace?: unknown
   readonly workspaceFold?: unknown
   readonly frame?: unknown
+  readonly ensure?: unknown
   readonly throwAt?: string
   readonly beforeFrame?: () => void
 }
@@ -71,6 +72,14 @@ function portHarness(options: PortHarnessOptions = {}) {
       state: 'read',
       entries: [{ workspaceId: 'workspace:new', path: '/trusted/new' }],
     })) as never,
+    ...(Object.prototype.hasOwnProperty.call(options, 'ensure')
+      ? {
+          ensureRunnableRevision: (request: { readonly matterId: string }) => {
+            expect(request).toEqual({ matterId: 'matter:new' })
+            return invoke('revision-ensure', options.ensure) as never
+          },
+        }
+      : {}),
     snapshotFramePolicy: () => {
       options.beforeFrame?.()
       return invoke('frame-policy', configured('frame', {
@@ -84,6 +93,67 @@ function portHarness(options: PortHarnessOptions = {}) {
 }
 
 describe('explicit active matter selection', () => {
+  it('runs the governed ensure between read authorization and the current-revision read', async () => {
+    const context = activeContext()
+    const { ports, calls } = portHarness({ ensure: { state: 'ready' } })
+    const result = await selectActiveMatter({
+      candidate: { matterId: 'matter:new', expectedContextGeneration: 1 },
+      context,
+      ports,
+    })
+    expect(result.ok).toBe(true)
+    expect(calls).toEqual([
+      'identity-session',
+      'read-access',
+      'revision-ensure',
+      'current-revision',
+      'default-workspace',
+      'workspace-fold',
+      'frame-policy',
+    ])
+  })
+
+  it('stops the selection when the ensure refuses, is malformed or throws — the CAS never runs', async () => {
+    for (const ensure of [
+      { state: 'refused', code: 'session-prepare-declined' },
+      { state: 'bogus' },
+      { state: 'refused' },
+    ]) {
+      const context = activeContext()
+      const { ports } = portHarness({ ensure })
+      const result = await selectActiveMatter({
+        candidate: { matterId: 'matter:new', expectedContextGeneration: 1 },
+        context,
+        ports,
+      })
+      expect(result).toEqual({ ok: false, code: 'revision-ensure-refused' })
+      // The CAS never ran: the previously active context is untouched.
+      expect(context.projection()?.matterId).toBe('matter:old')
+    }
+
+    const context = activeContext()
+    const { ports } = portHarness({ ensure: null, throwAt: 'revision-ensure' })
+    const result = await selectActiveMatter({
+      candidate: { matterId: 'matter:new', expectedContextGeneration: 1 },
+      context,
+      ports,
+    })
+    expect(result).toEqual({ ok: false, code: 'revision-ensure-refused' })
+    expect(context.projection()?.matterId).toBe('matter:old')
+  })
+
+  it('keeps the old order when no ensure port is wired', async () => {
+    const context = activeContext()
+    const { ports, calls } = portHarness()
+    const result = await selectActiveMatter({
+      candidate: { matterId: 'matter:new', expectedContextGeneration: 1 },
+      context,
+      ports,
+    })
+    expect(result.ok).toBe(true)
+    expect(calls).not.toContain('revision-ensure')
+  })
+
   it('resolves trusted facts in the fixed order and atomically switches matters', async () => {
     const context = activeContext()
     const { ports, calls } = portHarness()

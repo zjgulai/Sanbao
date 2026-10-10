@@ -49,6 +49,11 @@ export interface ReadyFrameFact {
   readonly contaminated: boolean
 }
 
+export type RunnableRevisionEnsureFact =
+  | { readonly state: 'ready' }
+  | { readonly state: 'not-needed' }
+  | { readonly state: 'refused', readonly code: string }
+
 /**
  * Ports may be sync or async. Their implementations own I/O, freshness and time bounds; this
  * module only validates the returned narrow facts and never reaches around a port.
@@ -67,6 +72,12 @@ export interface ActiveMatterSelectionPorts {
   }) => MaybePromise<DefaultMatterWorkspaceFact | null | undefined>
   readonly readFreshWorkspaceFold: () => MaybePromise<FreshWorkspaceFoldFact | null | undefined>
   readonly snapshotFramePolicy: () => MaybePromise<ReadyFrameFact | null | undefined>
+  /** T05 prepare (ADR-0291): the governed ensure-right-before-binding write. Runs after the read
+   *  authorization and before the current-revision read, so the CAS binds the ensured revision.
+   *  Repeats are naturally idempotent: an ensured current revision answers not-needed. */
+  readonly ensureRunnableRevision?: (request: {
+    readonly matterId: string
+  }) => MaybePromise<RunnableRevisionEnsureFact | null | undefined>
 }
 
 export type ActiveMatterSelectionRefusalCode =
@@ -86,6 +97,7 @@ export type ActiveMatterSelectionRefusalCode =
   | 'frame-unavailable'
   | 'frame-not-ready'
   | 'frame-contaminated'
+  | 'revision-ensure-refused'
   | 'context-selection-unavailable'
 
 export type ActiveMatterSelectionResult =
@@ -203,6 +215,16 @@ function parseFrame(value: unknown): ReadyFrameFact | undefined {
   return { generation: frameGeneration, ready: record.values.ready, contaminated: record.values.contaminated }
 }
 
+function parseEnsure(value: unknown): RunnableRevisionEnsureFact | undefined {
+  const record = plainRecord(value)
+  if (record === undefined) return undefined
+  if (record.values.state === 'ready') return { state: 'ready' }
+  if (record.values.state === 'not-needed') return { state: 'not-needed' }
+  if (record.values.state !== 'refused') return undefined
+  const code = nonBlank(record.values.code)
+  return code === undefined ? undefined : { state: 'refused', code }
+}
+
 function parseSafely<T>(parser: (value: unknown) => T | undefined, value: unknown): T | undefined {
   try {
     return parser(value)
@@ -239,6 +261,14 @@ export async function selectActiveMatter(request: ActiveMatterSelectionRequest):
   const authorization = authorizationRead.ok ? parseSafely(parseAuthorization, authorizationRead.value) : undefined
   if (authorization === undefined) return refused('read-access-unavailable')
   if (authorization.state === 'denied') return refused('read-access-denied')
+
+  // The governed ensure runs before the current-revision read: after this point the CAS must
+  // bind the revision that actually ran (or will run). An absent port keeps the old behaviour.
+  const ensureRead = request.ports.ensureRunnableRevision === undefined
+    ? { ok: true as const, value: { state: 'not-needed' as RunnableRevisionEnsureFact['state'] } }
+    : await readPort(() => request.ports.ensureRunnableRevision!({ matterId: candidate.matterId }))
+  const ensured = ensureRead.ok ? parseSafely(parseEnsure, ensureRead.value) : undefined
+  if (ensured === undefined || ensured.state === 'refused') return refused('revision-ensure-refused')
 
   const revisionRead = await readPort(() => request.ports.resolveCurrentRevision({ matterId: candidate.matterId }))
   const revision = revisionRead.ok ? parseSafely(parseCurrentRevision, revisionRead.value) : undefined

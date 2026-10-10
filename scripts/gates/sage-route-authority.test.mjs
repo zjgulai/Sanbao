@@ -33,6 +33,7 @@ const baseline = Object.freeze({
   sessionPromptDispatchText: read('apps/sage-shell/src/main/session-prompt-dispatch.ts'),
   protectedEffectAdmissionText: read('apps/sage-shell/src/appservice/protected-effect-admission.ts'),
   sessionPromptPrepareText: read('apps/sage-shell/src/main/session-prompt-prepare.ts'),
+  activeMatterSelectionText: read('apps/sage-shell/src/main/active-matter-selection.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -1002,11 +1003,11 @@ test('the governed prepare write cannot drift from its registration, witness, or
   expectNamedFailure(check({ actionAuthorityTableText: unregistered }), 'session.prepare must be registered in the action authority table as a local write')
 
   const witnessDrift = baseline.sessionPromptPrepareText.replace(
-    "source: 'user-input',",
-    "source: 'ui-reported',",
+    "{ source: 'user-input' }",
+    "{ source: 'ui-reported' }",
   )
   assert.notEqual(witnessDrift, baseline.sessionPromptPrepareText)
-  expectNamedFailure(check({ sessionPromptPrepareText: witnessDrift }), 'the user explicit input is the prepare witness')
+  expectNamedFailure(check({ sessionPromptPrepareText: witnessDrift }), 'the user explicit input and selection are the prepare witnesses')
 
   const policyDrop = baseline.sessionPromptPrepareText.replace(
     'requirement.actionRequirements.map(',
@@ -1022,12 +1023,19 @@ test('the governed prepare write cannot drift from its registration, witness, or
   assert.notEqual(orderBreak, baseline.sessionPromptPrepareText)
   expectNamedFailure(check({ sessionPromptPrepareText: orderBreak }), 'the prepare runner must run the front ports in their chain order')
 
-  const familyFlat = baseline.sessionPromptPrepareText.replace(
+  const familyFlat = baseline.sessionPromptPrepareText.replaceAll(
     'code: FAILURE_CODES[step.state]',
     'code: FAILURE_CODES.unavailable',
   )
   assert.notEqual(familyFlat, baseline.sessionPromptPrepareText)
   expectNamedFailure(check({ sessionPromptPrepareText: familyFlat }), 'port failures must keep their per-state protected-effect refusal family')
+
+  const overGating = baseline.sessionPromptPrepareText.replace(
+    'const decision = decideRunRevision(options, matterRef)',
+    'const decision = { state: ' + "'needed'" + ' } as never',
+  )
+  assert.notEqual(overGating, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: overGating }), 'the prepare decision must run before the guard sequence')
 
   const declineSwallow = baseline.sessionPromptPrepareText.replace(
     "return { state: 'refused', code: 'session-prepare-declined' }",
@@ -1049,6 +1057,40 @@ test('the governed prepare write cannot drift from its registration, witness, or
   )
   assert.notEqual(hookRemoval, baseline.compositionText)
   expectNamedFailure(check({ compositionText: hookRemoval }), 'the send route must run the prepare runner first and stop on its refusal')
+})
+
+test('the selection-time ensure cannot drift from its order, refusal, grant check or wiring', () => {
+  const orderBreak = baseline.activeMatterSelectionText.replace(
+    'request.ports.ensureRunnableRevision!({ matterId: candidate.matterId })',
+    'request.ports.resolveCurrentRevision({ matterId: candidate.matterId })',
+  )
+  assert.notEqual(orderBreak, baseline.activeMatterSelectionText)
+  expectNamedFailure(check({ activeMatterSelectionText: orderBreak }), 'the ensure must run after read authorization and before the current-revision read')
+
+  const refusalSwallow = baseline.activeMatterSelectionText.replace(
+    "if (ensured === undefined || ensured.state === 'refused') return refused('revision-ensure-refused')",
+    "if (false) return refused('revision-ensure-refused')",
+  )
+  assert.notEqual(refusalSwallow, baseline.activeMatterSelectionText)
+  expectNamedFailure(check({ activeMatterSelectionText: refusalSwallow }), 'an ensure refusal must stop the selection, never bind it')
+
+  const grantBypass = baseline.sessionPromptPrepareText.replace(
+    'identityPolicy({ intent, correlation: options.correlation }',
+    'identityPolicy({ intent }',
+  )
+  assert.notEqual(grantBypass, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: grantBypass }), 'the selection ensure must re-check the prepare grant through the identity port')
+
+  const selectionWitnessDrift = baseline.sessionPromptPrepareText.replace(
+    "{ source: 'user-selection' }",
+    "{ source: 'user-input' }",
+  )
+  assert.notEqual(selectionWitnessDrift, baseline.sessionPromptPrepareText)
+  expectNamedFailure(check({ sessionPromptPrepareText: selectionWitnessDrift }), 'the user explicit input and selection are the prepare witnesses')
+
+  const unwire = baseline.mainIndexText.replace('ensureRunnableRevision: prepareEnsure,', '')
+  assert.notEqual(unwire, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: unwire }), 'index must hand the selection kernel the governed ensure')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

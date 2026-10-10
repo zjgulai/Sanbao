@@ -738,8 +738,9 @@ function sessionPromptPrepareViolations(input) {
   if (order.some((index) => index < 0) || order.some((index, i) => i > 0 && index < order[i - 1])) {
     violations.push('the prepare runner must run the front ports in their chain order')
   }
-  if (!prepareText.includes("source: 'user-input',")) {
-    violations.push('the user explicit input is the prepare witness')
+  if (!prepareText.includes("{ source: 'user-input' }")
+    || !prepareText.includes("{ source: 'user-selection' }")) {
+    violations.push('the user explicit input and selection are the prepare witnesses')
   }
   if (!prepareText.includes('actionPolicies: requirement.actionRequirements.map((action) => ({')) {
     violations.push("the revision's run policies must project the requirement declaration")
@@ -747,10 +748,17 @@ function sessionPromptPrepareViolations(input) {
   if (!prepareText.includes('code: FAILURE_CODES[step.state]')) {
     violations.push('port failures must keep their per-state protected-effect refusal family')
   }
+  // Read-before-policy: the decision must run before the guard sequence, so an already-prepared
+  // matter never demands the prepare grant (the over-gating defect caught by the step-10 E2E).
+  const decideIndex = prepareText.indexOf('const decision = decideRunRevision(options, matterRef)')
+  const guardIndex = prepareText.indexOf('options.ports.verifyCaller!(')
+  if (decideIndex < 0 || guardIndex < 0 || decideIndex > guardIndex) {
+    violations.push('the prepare decision must run before the guard sequence')
+  }
   if (!prepareText.includes("'session-prepare-declined'")) {
     violations.push('a domain decline must answer honestly, never as prepared')
   }
-  if (!prepareText.includes('session-prepare:${intent.requestId}')) {
+  if (!prepareText.includes('session-prepare:${requestId}')) {
     violations.push('the prepare append must be idempotent per service-issued request identity')
   }
   for (const forbidden of ['options.sessionSend', 'resolveCompatibility', 'appendWithCompatibilityEvidence', 'startAttempt(']) {
@@ -763,6 +771,28 @@ function sessionPromptPrepareViolations(input) {
   if (!compositionText.includes('options.prepareSessionPrompt !== undefined')
     || !compositionText.includes("prepared.state === 'refused'")) {
     violations.push('the send route must run the prepare runner first and stop on its refusal')
+  }
+  // ADR-0291: the selection-time ensure — ordered hook, honest refusal, shared identity check.
+  const selectionText = typeof input?.activeMatterSelectionText === 'string' ? input.activeMatterSelectionText : ''
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  if (selectionText === '' || indexText === '') {
+    violations.push('session-prompt selection ensure sources are unavailable')
+    return violations
+  }
+  const ensureIndex = selectionText.indexOf('request.ports.ensureRunnableRevision!({ matterId: candidate.matterId })')
+  const revisionIndex = selectionText.indexOf('request.ports.resolveCurrentRevision({ matterId: candidate.matterId })')
+  if (ensureIndex < 0 || revisionIndex < 0 || ensureIndex > revisionIndex) {
+    violations.push('the ensure must run after read authorization and before the current-revision read')
+  }
+  if (!selectionText.includes("if (ensured === undefined || ensured.state === 'refused') return refused('revision-ensure-refused')")) {
+    violations.push('an ensure refusal must stop the selection, never bind it')
+  }
+  if (!prepareText.includes('createSessionPromptPrepareEnsure(')
+    || !prepareText.includes('identityPolicy({ intent, correlation: options.correlation }')) {
+    violations.push('the selection ensure must re-check the prepare grant through the identity port')
+  }
+  if (!indexText.includes('ensureRunnableRevision: prepareEnsure,')) {
+    violations.push('index must hand the selection kernel the governed ensure')
   }
   return violations
 }
@@ -1091,7 +1121,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null, activeMatterSelectionText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -1146,6 +1176,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.sessionPromptPrepareText !== 'string') {
     return failAll(discovered, ['session-prompt prepare source unavailable; the preparation write cannot be checked'])
+  }
+  if (typeof input?.activeMatterSelectionText !== 'string') {
+    return failAll(discovered, ['active matter selection source unavailable; the governed ensure cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1532,7 +1565,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) and the real persistence step — pre-write re-verification plus the atomic attempt and evaluation-evidence append over the Sage-owned store (T05 mid step 9, ADR-0288) — the real dispatch step — shared re-verification, cheap port re-runs, then the sole channel call with its own outcome detail (T05 mid step 10, ADR-0289) — and the governed first-revision prepare over the same front ports (T05 prepare, ADR-0290). The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) and the real persistence step — pre-write re-verification plus the atomic attempt and evaluation-evidence append over the Sage-owned store (T05 mid step 9, ADR-0288) — the real dispatch step — shared re-verification, cheap port re-runs, then the sole channel call with its own outcome detail (T05 mid step 10, ADR-0289) — the governed first-revision prepare over the same front ports (T05 prepare, ADR-0290) — where the selection kernel ensures the runnable revision before its CAS, so the bound context names the revision that runs (ADR-0291). The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

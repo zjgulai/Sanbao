@@ -1,7 +1,7 @@
 # 「进入 revision」流设计裁决
 
 - 日期：2026-10-11
-- 状态：proposed（用户已裁决七项；实现第一批——runner/注册/钩子——已落地并挂 [ADR-0290](../../../adr/ADR-0290.md)；选择流编排与全新 matter 端到端属下一刀）
+- 状态：proposed（用户已裁决七项；实现已落地两批——[ADR-0290](../../../adr/ADR-0290.md) runner/注册/钩子 + [ADR-0291](../../../adr/ADR-0291.md) 选择流前置 ensure，含全新 matter 全流程 E2E；本 note 的余项仅剩「批内的余项」细节已在两 ADR 内落定）
 - 来源：R1 只读侦察报告（2026-10-11）＋ 用户裁决
 - 相关：[ADR-0288](../../../adr/ADR-0288.md)、[ADR-0289](../../../adr/ADR-0289.md)、[Application Service 边界](2026-09-30-application-service-boundary.md)
 

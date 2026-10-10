@@ -712,6 +712,7 @@ const CHECKS = [
         sessionPromptDispatchText: readRepoText('apps/sage-shell/src/main/session-prompt-dispatch.ts'),
         protectedEffectAdmissionText: readRepoText('apps/sage-shell/src/appservice/protected-effect-admission.ts'),
         sessionPromptPrepareText: readRepoText('apps/sage-shell/src/main/session-prompt-prepare.ts'),
+        activeMatterSelectionText: readRepoText('apps/sage-shell/src/main/active-matter-selection.ts'),
         capabilityEntryDerivationText: readRepoText('apps/sage-shell/src/main/capability-entry-derivation.ts'),
         runtimeInventoryProviderText: readRepoText('apps/sage-shell/src/main/runtime-inventory-provider.ts'),
         publicationBundleText: readRepoText('apps/sage-shell/src/main/publication-bundle.ts'),
