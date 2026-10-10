@@ -115,6 +115,28 @@ describe('WT-02C.2T compatibility target requirement kernel', () => {
     expect(Object.isFrozen(sealed.provider)).toBe(true)
   })
 
+  it('names the real runtime identities verbatim and still rejects garbage', () => {
+    // First real publication run (2026-10-10): the runtime side carries these exact identities,
+    // so the requirement must accept them character for character.
+    const real = sealCompatibilityTargetRequirement({
+      ...BASE_BODY,
+      provider: { ...BASE_BODY.provider, identity: 'provider:deepseek-official' },
+      model: { ...BASE_BODY.model, identity: 'model:deepseek-official/deepseek-flash' },
+      agent: { ...BASE_BODY.agent, identity: 'agent:@deepseek-ai/dsh-agent' },
+      preset: { ...BASE_BODY.preset, identity: 'preset:set' },
+    })
+    expect(real.ok, JSON.stringify(real)).toBe(true)
+    if (!real.ok) return
+    expect(parseCompatibilityTargetRequirement(real.value).ok).toBe(true)
+
+    for (const identity of ['Provider:deepseek', 'provider:', 'provider: DeepSeek', 'provider:DeepSeek']) {
+      expectFailure(
+        sealCompatibilityTargetRequirement({ ...BASE_BODY, provider: { ...BASE_BODY.provider, identity } } as never),
+        'requirement-entry-invalid',
+      )
+    }
+  })
+
   it('rejects ranges, aliases, unknown fields, revision leakage and duplicate semantics', () => {
     expectFailure(
       sealCompatibilityTargetRequirement({ ...BASE_BODY, requirementVersion: '^1.0.0' } as never),

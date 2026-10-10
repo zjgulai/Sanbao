@@ -161,7 +161,13 @@ const REQUIREMENT_DIGEST = /^urn:sage:compatibility-target-requirement:sha256:[0
 const SNAPSHOT_ID = /^urn:sage:compatibility-target-requirement-snapshot:sha256:[0-9a-f]{64}$/u
 const CONTENT_DIGEST = /^sha256:[0-9a-f]{64}$/u
 const REQUIREMENT_ID = /^requirement:sage(?:[._-][a-z0-9][a-z0-9._-]*)?$/u
-const COMPONENT_IDENTITY = /^[a-z][a-z0-9._-]{0,31}:sage(?:[._-][a-z0-9][a-z0-9._-]*)?$/u
+// Component identities mirror the RUNTIME side's identities verbatim — the requirement must be
+// able to name exactly what the sealed descriptor names (`provider:deepseek-official`,
+// `model:deepseek-official/deepseek-flash`, `agent:@deepseek-ai/dsh-agent`, `preset:set`). The
+// fixture era's `:sage…`-only grammar rejected every real identity; the asymmetry surfaced on the
+// first real publication composition (2026-10-10) because the V2 descriptor side has always
+// accepted bare strings. Garbage stays rejected: lowercase kind, bounded token remainder.
+const COMPONENT_IDENTITY = /^[a-z][a-z0-9._-]{0,31}:@?[a-z0-9][a-z0-9._@/-]*$/u
 const POLICY_IDENTITY = /^[a-z][a-z0-9._-]{0,31}:sage(?:[._-][a-z0-9][a-z0-9._-]*)?$/u
 const ACTION_SCOPE = /^[a-z][a-z0-9._:-]{0,127}$/u
 const DECISION_ID = /^decision:sage(?:[._-][a-z0-9][a-z0-9._-]*)?$/u

@@ -9105,6 +9105,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0280",
+      "title": "ADR-0280 · target requirement 组件身份语法对齐运行时（首个真实发布件封存）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "COMPONENT_IDENTITY 对齐运行时身份语法（小写 kind + @? 有界余段，含 / 与 @）；垃圾仍拒绝。",
+          "constraints": [
+            "must accept every sealed descriptor identity verbatim",
+            "bounded length and charset",
+            "garbage still rejected"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "POLICY_IDENTITY 保持 sage 治理命名空间不变；两类身份的语法差异在注释登记。",
+          "constraints": [
+            "published policy documents stay valid",
+            "difference documented in code"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "首个真实发布件以真实重观测 descriptor 封存；稳定对 target-semantic 3da420a7… × runtime-descriptor e1c7a8b4…；产物仓外留存，bundle/端口属后续票。",
+          "constraints": [
+            "publication re-observed, never fixture",
+            "no bundle or port wiring in this cut"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "requirement spec 新增真实身份接受与垃圾拒绝用例。",
+          "constraints": [
+            "fixtures may not mask runtime-identity assumptions"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "首发 effectiveAt 保持 2026-10-11T00:00:00Z；生效前求值答 requirement-not-effective 属设计。",
+          "constraints": [
+            "no plan constants changed"
+          ]
+        }
+      ]
     }
   ]
 }
