@@ -9,6 +9,7 @@ import { createDevicePreferencesController, type DevicePreferencesController } f
 import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import { DesktopSessionView } from './session-view.js'
+import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
 
 // Sanbao b861d04: ProductPages.tsx:31–36,73–75 and Controls.tsx:199–234.
 // Keep the research desktop's structure, not its routes, fixtures or optimistic send/clear behavior.
@@ -434,7 +435,10 @@ export function DesktopPage({
 }): ReactNode {
   const [page, setPage] = useState<Page>('新任务')
   const [preferencesController] = useState(() => suppliedPreferencesController ?? createDevicePreferencesController())
-  const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, streamingText, retry, withdraw, actOnSession } = useDesktopSession(readState)
+  const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, streamingText, refreshNow, retry, withdraw, actOnSession } = useDesktopSession(readState)
+  // ADR-0300: one action path for the artifact rail — the route answers, then the projection
+  // is re-read; a refusal leaves the surface as-is (the card state still tells the truth).
+  const runArtifactAction = (action: () => Promise<boolean>) => { void action().then(() => refreshNow()) }
   const [accountRead, setAccountRead] = useState<DesktopBootstrapRead | { readonly kind: 'loading' }>({ kind: 'loading' })
   const [accountBusy, setAccountBusy] = useState(false)
   const refreshAccount = async () => {
@@ -496,7 +500,13 @@ export function DesktopPage({
           ? (session === undefined ? <HomeContent navigate={navigate} suggest={suggest} workspace={workspaceSummaryOf(state)} />
             : <DesktopSessionView title={session.title} execution={session.execution} lastTurnEnd={session.lastTurnEnd}
               paused={session.paused} streamBroken={session.streamBroken} messages={session.messages}
-              streaming={streamingText} />)
+              streaming={streamingText}
+              {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
+              onArtifactOpen={(artifactId) => runArtifactAction(() => openDesktopArtifact(artifactId))}
+              onArtifactRetry={() => runArtifactAction(retryDesktopArtifact)}
+              onArtifactClose={() => runArtifactAction(closeDesktopArtifact)}
+              onArtifactFullscreen={(on) => runArtifactAction(() => setDesktopArtifactFullscreen(on))}
+              onArtifactWindow={(action) => runArtifactAction(() => setDesktopArtifactWindow(action))} />)
           : page === '工作区'
             ? <WorkspacePage state={state} retry={retry} navigate={navigate} />
             : page === '搜索'

@@ -33,6 +33,7 @@ describe('desktop service response classification', () => {
       activeContext: { state: 'unavailable', contextGeneration: null },
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
+      artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
     })
     expect(JSON.stringify(result)).not.toContain('private-runtime-canary')
   })
@@ -80,6 +81,7 @@ describe('desktop service response classification', () => {
       activeContext: { state: 'unavailable', contextGeneration: null },
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
+      artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
     })
   })
 

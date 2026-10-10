@@ -169,6 +169,65 @@ describe('default desktop session submission lifecycle', () => {
     expect(container.querySelector('.streaming-message')).toBeNull()
   })
 
+  it('renders the artifact rail, posts the chosen action, and re-reads (ADR-0300)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ state: 'opened', preview: { state: 'ready', artifactId: 'artifact:one', name: '清单.html', kind: 'html', version: 'v1', expanded: false, window: false } }))
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withCard = classifyDesktopState({
+      ...payload,
+      artifacts: { state: 'read', cards: [{ artifactId: 'artifact:one', name: '清单.html', kind: 'html', bytes: 2048, state: 'ready', source: 'changes-observed', observedAt: '2026-10-11T00:00:00Z', version: 'v1' }], preview: { state: 'closed' } },
+    })
+    const read = vi.fn(async () => withCard)
+    const { container } = await mount(read)
+    expect(container.querySelector('.artifact-rail')).not.toBeNull()
+    expect(container.querySelector('.artifact-name')?.textContent).toBe('清单.html')
+    const calls = read.mock.calls.length
+    await click(control(container, '面板打开 清单.html'))
+    const openCall = fetcher.mock.calls.find(([url]) => url === '/.sage/artifacts/open')
+    expect(openCall).toBeDefined()
+    expect(JSON.parse(String(openCall?.[1]?.body))).toEqual({ artifactId: 'artifact:one' })
+    // The action answers through its own route; the projection is then re-read.
+    expect(read.mock.calls.length).toBeGreaterThan(calls)
+  })
+
+  it('shows the open preview status with its controls and avoids the panel edge (ADR-0300)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ state: 'closed' }))
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withPreview = classifyDesktopState({
+      ...payload,
+      artifacts: { state: 'read', cards: [], preview: { state: 'ready', artifactId: 'artifact:one', name: '清单.html', kind: 'html', version: 'v1', expanded: false, window: false } },
+    })
+    const { container } = await mount(async () => withPreview)
+    // Cards are empty but the preview keeps the rail alive; the layout avoids the fixed panel.
+    expect(container.querySelector('.artifact-rail')).not.toBeNull()
+    expect(container.querySelector('.session-layout.preview-open')).not.toBeNull()
+    expect(container.querySelector('[data-artifact-preview="ready"]')?.textContent).toContain('清单.html')
+    await click(control(container, '关闭预览'))
+    const closeCall = fetcher.mock.calls.find(([url]) => url === '/.sage/artifacts/close')
+    expect(closeCall).toBeDefined()
+    expect(JSON.parse(String(closeCall?.[1]?.body))).toEqual({})
+  })
+
+  it('offers retry on a failed preview and omits a malformed artifact slot (ADR-0300)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ state: 'opened', preview: { state: 'ready' } }))
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const failed = classifyDesktopState({
+      ...payload,
+      artifacts: { state: 'read', cards: [], preview: { state: 'failed', artifactId: 'artifact:one', name: '清单.html', code: 'artifact-version-moved', retryable: true } },
+    })
+    const { container } = await mount(async () => failed)
+    await click(control(container, '重试打开'))
+    expect(fetcher.mock.calls.some(([url]) => url === '/.sage/artifacts/retry')).toBe(true)
+
+    // A malformed slot is omitted entirely: no rail, no crash.
+    const malformed = classifyDesktopState({ ...payload, artifacts: { state: 'read', cards: [{ artifactId: 'x' }], preview: { state: 'closed' } } })
+    expect('artifacts' in malformed).toBe(false)
+    const second = await mount(async () => malformed)
+    expect(second.container.querySelector('.artifact-rail')).toBeNull()
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

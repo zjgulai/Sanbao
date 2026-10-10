@@ -1,3 +1,5 @@
+import { SAGE_PREVIEW_PANEL_WIDTH } from '../../contracts.js'
+
 // Geometry adapted from clean Sanbao b861d04 src/styles/prototype.css:1,7,
 // session.css:1 (950/700px breakpoints), composer-context.css:1–14 and context-menu.css:1–2.
 // Palette, focus, shadow and motion remain owned by Sage product/theme-tokens.ts.
@@ -186,6 +188,24 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .session-state[data-session-state="paused"] { color: var(--sage-warning); }
 .sage-desktop .session-state[data-session-state="interrupted"] { color: var(--sage-danger); }
 .sage-desktop .session-layout { display: flex; flex: 1; min-width: 0; min-height: 0; }
+/* ADR-0300: while the side-preview WebContentsView occupies the right edge, the page keeps its
+   content left of it (one shared width constant, SAGE_PREVIEW_PANEL_WIDTH). */
+.sage-desktop .session-layout.preview-open { padding-right: ${SAGE_PREVIEW_PANEL_WIDTH}px; }
+.sage-desktop .artifact-rail { width: 224px; flex: 0 0 224px; display: flex; flex-direction: column; gap: 10px; padding: 18px 14px; border-left: 1px solid var(--sage-divider); overflow-y: auto; }
+.sage-desktop .artifact-rail-header { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .artifact-empty { margin: 0; font-size: 12px; color: var(--sage-faint); }
+.sage-desktop .artifact-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 10px; }
+.sage-desktop .artifact-card-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.sage-desktop .artifact-name { font-size: 12px; color: var(--sage-ink); overflow-wrap: anywhere; }
+.sage-desktop .artifact-kind { font-size: 10px; color: var(--sage-muted); border: 1px solid var(--sage-border); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.sage-desktop .artifact-card-meta { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .artifact-card-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.sage-desktop .artifact-menu { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .artifact-menu summary { cursor: pointer; list-style: none; }
+.sage-desktop .artifact-menu summary::-webkit-details-marker { display: none; }
+.sage-desktop .artifact-menu-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 6px; }
+.sage-desktop .artifact-preview-status { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px dashed var(--sage-border); border-radius: 10px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .artifact-preview-status p { margin: 0; }
 .sage-desktop .conversation { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .sage-desktop .message-scroll { overflow: auto; flex: 1; min-width: 0; min-height: 0; max-height: 60dvh; padding: 29px 30px 25px; }
 .sage-desktop .message-scroll:focus-visible { outline: 2px solid var(--sage-focus); outline-offset: -2px; }

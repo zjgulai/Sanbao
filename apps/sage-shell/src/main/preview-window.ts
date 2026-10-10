@@ -12,6 +12,8 @@
  * The artifact's own HTML runs offline-interactive inside this surface (scripts allowed — that is
  * the point of the separate container); everything else about it stays unreachable.
  */
+import { SAGE_PREVIEW_PANEL_WIDTH } from '../product/contracts.js'
+
 import { BrowserWindow, WebContentsView, session } from 'electron'
 import { randomUUID } from 'node:crypto'
 
@@ -19,7 +21,7 @@ import type { PreviewContainer, PreviewLoad } from './artifact-preview.js'
 
 const PREVIEW_PARTITION = 'sage-preview'
 const PREVIEW_SCHEME = 'sage-preview://'
-const PREVIEW_PANEL_WIDTH = 512
+const PREVIEW_PANEL_WIDTH = SAGE_PREVIEW_PANEL_WIDTH
 const PREVIEW_PANEL_TOPBAR = 64
 
 let protocolRegistered = false

@@ -34,7 +34,10 @@ export function desktopSessionPayload() {
     reconciled: true, streamBroken: false, code: null, records: 2, unapplied: 0,
     paused: false, pending: [], queue: { state: 'read', occurrences: [] },
   } satisfies SessionChannelStatus
+  // ADR-0300: the artifact slot rides the same envelope; the default fixture carries none.
+  const artifacts = { state: 'read', cards: [] as const, preview: { state: 'closed' as const } }
   return {
+    artifacts,
     service: { status: 'unavailable', reason: 'authenticated', auth: { status: 'signed-in', displayName: null }, correlation: 'response:one', command: null },
     runtime: { status: 'ready', message: 'private-actor', retryable: true },
     activeContext, matter, workspaces, matterLinks, sessionChannel,

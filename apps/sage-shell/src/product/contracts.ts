@@ -15,6 +15,10 @@ export const SAGE_ACTIONS_PATH = '/.sage/actions' as const
 export const SAGE_APP_ORIGIN = 'dsh-app://app' as const
 
 /** A stalled host request must resolve to the renderer's recoverable state rather than hang the page. */
+/** ADR-0300: the side preview's fixed width — one home for the main-owned WebContentsView
+ *  placement and the renderer's layout avoidance of the same panel. */
+export const SAGE_PREVIEW_PANEL_WIDTH = 512
+
 export const SAGE_REQUEST_TIMEOUT_MS = 5_000
 
 /**

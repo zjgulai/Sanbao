@@ -9943,6 +9943,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0300",
+      "title": "ADR-0300 · 执行模块第二刀：产物卡右栏与受控预览接线",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "desktop 闭合解析 artifacts 槽（malformed 省略）；展示面零机器路径。",
+          "constraints": [
+            "slot omitted on malformed input"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "右栏 artifact-rail：卡片 + 更多操作菜单 + preview 状态块。",
+          "constraints": [
+            "rail stays visible left of the panel"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "SAGE_PREVIEW_PANEL_WIDTH 单一常量上移 product/contracts；preview-open 布局避让。",
+          "constraints": [
+            "one home for the width"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "desktop/artifacts.ts 薄动作封装 + refreshNow 重读；零本地事实。",
+          "constraints": [
+            "no local state invented"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "地址栏/两层标签不复刻（受控容器无导航面）；两行迁 implementing 并登记差异。",
+          "constraints": [
+            "difference recorded in blockers"
+          ]
+        }
+      ]
     }
   ]
 }

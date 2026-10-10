@@ -13,7 +13,31 @@ export type DesktopRead =
       readonly workspaces?: DesktopWorkspaceList
       readonly matterLinks?: DesktopMatterLinks
       readonly activeContext?: DesktopActiveContext
+      /** ADR-0300: the artifact slot (cards + the one side-preview state). */
+      readonly artifacts?: DesktopArtifacts
     }
+
+/** ADR-0300: one artifact card as the observed feed reports it (display facts only). */
+export interface DesktopArtifactCard {
+  readonly artifactId: string
+  readonly name: string
+  readonly kind: string
+  readonly bytes: number | null
+  readonly state: 'ready' | 'absent' | 'unconfirmed'
+}
+
+/** ADR-0300: the side-preview state; the panel itself is the main-owned WebContentsView. */
+export type DesktopArtifactPreview =
+  | { readonly state: 'closed' }
+  | { readonly state: 'opening'; readonly artifactId: string; readonly name: string }
+  | { readonly state: 'ready'; readonly artifactId: string; readonly name: string; readonly expanded: boolean; readonly window: boolean }
+  | { readonly state: 'failed'; readonly artifactId: string; readonly name: string; readonly code: string; readonly retryable: boolean }
+
+export interface DesktopArtifacts {
+  readonly state: 'read' | 'unavailable'
+  readonly cards: readonly DesktopArtifactCard[]
+  readonly preview: DesktopArtifactPreview
+}
 
 /** T03: one workspace row as folded from the base's `workspace/follow` stream. */
 export interface DesktopWorkspaceEntry {
@@ -185,6 +209,7 @@ export function classifyDesktopState(input: unknown): DesktopRead {
   const workspaces = parseWorkspaces(input.workspaces)
   const matterLinks = parseMatterLinks(input.matterLinks)
   const activeContext = parseActiveContext(input.activeContext)
+  const artifacts = parseArtifacts(input.artifacts)
   return {
     kind: 'read',
     runtime: { status: runtime.status, message: RUNTIME_MESSAGES[runtime.status], retryable: runtime.retryable },
@@ -192,7 +217,48 @@ export function classifyDesktopState(input: unknown): DesktopRead {
     ...(workspaces === null ? {} : { workspaces }),
     ...(matterLinks === null ? {} : { matterLinks }),
     ...(activeContext === null ? {} : { activeContext }),
+    ...(artifacts === null ? {} : { artifacts }),
   }
+}
+
+/** ADR-0300: closed-world parse; a malformed slot is omitted (never displayed half-read). */
+function parseArtifacts(input: unknown): DesktopArtifacts | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (!Array.isArray(input.cards)) return null
+  const cards: DesktopArtifactCard[] = []
+  for (const card of input.cards) {
+    if (!isRecord(card)
+      || typeof card.artifactId !== 'string' || card.artifactId === ''
+      || typeof card.name !== 'string' || card.name === ''
+      || typeof card.kind !== 'string' || card.kind === ''
+      || (card.bytes !== null && (typeof card.bytes !== 'number' || !Number.isSafeInteger(card.bytes) || card.bytes < 0))
+      || (card.state !== 'ready' && card.state !== 'absent' && card.state !== 'unconfirmed')) return null
+    cards.push({ artifactId: card.artifactId, name: card.name, kind: card.kind, bytes: card.bytes, state: card.state })
+  }
+  const preview = input.preview
+  if (!isRecord(preview) || typeof preview.state !== 'string') return null
+  let parsedPreview: DesktopArtifactPreview
+  if (preview.state === 'closed') {
+    parsedPreview = { state: 'closed' }
+  } else if (preview.state === 'opening'
+    && typeof preview.artifactId === 'string' && preview.artifactId !== ''
+    && typeof preview.name === 'string' && preview.name !== '') {
+    parsedPreview = { state: 'opening', artifactId: preview.artifactId, name: preview.name }
+  } else if (preview.state === 'ready'
+    && typeof preview.artifactId === 'string' && preview.artifactId !== ''
+    && typeof preview.name === 'string' && preview.name !== ''
+    && typeof preview.expanded === 'boolean' && typeof preview.window === 'boolean') {
+    parsedPreview = { state: 'ready', artifactId: preview.artifactId, name: preview.name, expanded: preview.expanded, window: preview.window }
+  } else if (preview.state === 'failed'
+    && typeof preview.artifactId === 'string' && preview.artifactId !== ''
+    && typeof preview.name === 'string' && preview.name !== ''
+    && typeof preview.code === 'string' && preview.code !== ''
+    && typeof preview.retryable === 'boolean') {
+    parsedPreview = { state: 'failed', artifactId: preview.artifactId, name: preview.name, code: preview.code, retryable: preview.retryable }
+  } else {
+    return null
+  }
+  return { state: input.state, cards, preview: parsedPreview }
 }
 
 export async function readDesktopState(): Promise<DesktopRead> {

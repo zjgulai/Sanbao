@@ -130,6 +130,9 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     if (inFlight.current !== null || stateRef.current.kind === 'loading') return
     void refresh('foreground')
   }
+  /** ADR-0300: artifact actions answer through their own routes; the caller pulls the fresh
+   *  projection without clearing the surface. */
+  const refreshNow = useCallback(() => { void refresh('background') }, [refresh])
 
   const actOnSession = async (kind: DesktopSessionAction['kind']): Promise<void> => {
     if (inFlight.current !== null || (kind === 'send' && draftRef.current.text.trim() === '')) return
@@ -210,5 +213,5 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     void refresh('foreground')
   }
   return { state, session, draft, changeDraft, notice, setNotice, busy, uncertain,
-    streamingText, retry, withdraw, actOnSession }
+    streamingText, refreshNow, retry, withdraw, actOnSession }
 }
