@@ -1,9 +1,14 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { convertProcessSignalToExitCode } from 'node:util'
+import { constants as osConstants } from 'node:os'
 
 import electronPath from 'electron'
+
+const convertProcessSignalToExitCode = (signal) => {
+  const number = osConstants.signals[signal]
+  return typeof number === 'number' ? 128 + number : undefined
+}
 
 const require = createRequire(import.meta.url)
 const vitestPath = join(dirname(require.resolve('vitest/package.json')), 'vitest.mjs')
