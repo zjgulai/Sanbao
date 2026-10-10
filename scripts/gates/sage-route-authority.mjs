@@ -495,14 +495,22 @@ function runtimeInventoryRegistryViolations(input) {
   const violations = []
   const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
   const providerText = typeof input?.capabilityRegistryProviderText === 'string' ? input.capabilityRegistryProviderText : ''
-  if (indexText === '' || providerText === '') {
+  const bundleText = typeof input?.publicationBundleText === 'string' ? input.publicationBundleText : ''
+  if (indexText === '' || providerText === '' || bundleText === '') {
     violations.push('runtime inventory registry sources are unavailable')
     return violations
   }
-  // C2D.2A: the bundled provider must stay wired into the inventory composition; removing it
-  // would silently return production to the permanent unavailable state before that stage.
-  if (!indexText.includes('const bundledRegistry = createBundledCapabilityRegistryProvider()')) {
-    violations.push('index must construct the bundled capability registry provider')
+  // C2D.2A + ADR-0285: the bundled provider must stay wired into the inventory composition, the
+  // default body stays the empty internal set, and a non-empty published snapshot only ever
+  // arrives through the loader with the seal round trip proven — never as an edited constant.
+  if (!indexText.includes('const capabilityRegistryPublication = loadSessionPromptCapabilityRegistry()')
+    || !indexText.includes('capabilityRegistryPublication.ok ? capabilityRegistryPublication.snapshotBody : undefined')) {
+    violations.push('index must load the published registry snapshot and pass its body to the bundled factory')
+  }
+  if (!bundleText.includes('loadSessionPromptCapabilityRegistry')
+    || !bundleText.includes('parseCapabilityRegistrySnapshot(file.value)')
+    || !bundleText.includes('resealed.value.snapshotId !== snapshot.snapshotId')) {
+    violations.push('the registry publication loader must kernel-parse and prove the seal round trip')
   }
   if (!indexText.includes('registry: { read: () => bundledRegistry.read() },')) {
     violations.push('index must wire the bundled registry into the runtime inventory provider')
@@ -1198,7 +1206,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) before stopping at the absent registry / preflight / persistence steps. The runtime inventory composition carries the first published Capability Registry snapshot (C2D.2A): the bundled internal-stage empty set, sealed through the kernel on every read, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) before stopping at the absent registry / preflight / persistence steps. The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

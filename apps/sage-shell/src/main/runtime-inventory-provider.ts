@@ -373,19 +373,24 @@ function buildCapabilityDescriptors(
       && (entry.expiresAt === undefined || evaluated < Date.parse(entry.expiresAt)))
     .sort((left, right) => compareStrings(left.capabilityId, right.capabilityId))
   return entries.map((entry) => {
+    const source = entry.descriptor.source
     if (!isImmutableVersionV2(entry.capabilityVersion)
       || entry.descriptor.verification !== 'verified'
-      || entry.descriptor.source !== 'c2c5') {
-      throw new TypeError('Approved capability entry is not a verified C2C.5 descriptor.')
+      || (source !== 'c2c5' && source !== 'first-party')) {
+      throw new TypeError('Approved capability entry is not a verified descriptor (C2C.5 or Sage first-party, ADR-0285).')
     }
+    // C2C.5 artifact digests arrive as `urn:sage:external-capability-…` URNs and are unwrapped to
+    // content digests; first-party (ADR-0285) values are content digests already. The remaining
+    // two fields are URN digests on both paths.
+    const asContentDigest = (value: string): string => (source === 'first-party' ? value : contentDigestOf(value))
     const operations = capabilityOperationsProjection(entry)
     return {
       identity: entry.capabilityId,
       version: entry.capabilityVersion,
-      artifactDigest: contentDigestOf(entry.descriptor.artifactSubjectDigest),
-      contractDigest: contentDigestOf(entry.descriptor.toolContractDigest),
+      artifactDigest: asContentDigest(entry.descriptor.artifactSubjectDigest),
+      contractDigest: asContentDigest(entry.descriptor.toolContractDigest),
       behaviorConfigurationDigest: sha256ContentDigest(JSON.stringify({
-        launchContractDigest: contentDigestOf(entry.descriptor.launchContractDigest),
+        launchContractDigest: asContentDigest(entry.descriptor.launchContractDigest),
         operations,
       })),
       registryDescriptorDigest: contentDigestOf(entry.descriptor.descriptorDigest),

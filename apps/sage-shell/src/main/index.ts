@@ -20,7 +20,7 @@ import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_ST
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
 import { createMatterCustody } from './matter-custody.js'
-import { loadSessionPromptCompatibilityPublication, loadSessionPromptRequirementBundle } from './publication-bundle.js'
+import { loadSessionPromptCapabilityRegistry, loadSessionPromptCompatibilityPublication, loadSessionPromptRequirementBundle } from './publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
 import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
@@ -140,10 +140,16 @@ async function main(paths: SagePaths): Promise<void> {
   const matterCustody = createMatterCustody({ sagePaths: paths })
   app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); revisionDigestStore?.close() })
 
-  // C2D.2A (ADR-0277): the bundled registry provider supplies the first published snapshot —
-  // the internal-stage empty set — so the inventory provider can now release the descriptor
-  // stage end to end when every other input is real.
-  const bundledRegistry = createBundledCapabilityRegistryProvider()
+  // C2D.2A (ADR-0277) + first-party publication (ADR-0285): the bundled default stays the honest
+  // empty set; a shipped published snapshot (kernel-valid and re-seal-proven) supersedes it for
+  // this instance. Non-empty entries only ever arrive as published snapshots, never as constants.
+  const capabilityRegistryPublication = loadSessionPromptCapabilityRegistry()
+  if (!capabilityRegistryPublication.ok) {
+    process.stdout.write(`sage shell: capability registry publication unavailable: ${capabilityRegistryPublication.reason}\n`)
+  }
+  const bundledRegistry = createBundledCapabilityRegistryProvider(
+    capabilityRegistryPublication.ok ? capabilityRegistryPublication.snapshotBody : undefined,
+  )
   // WT-02C.2E.2: one main-owned composition read of the full runtime inventory. It never
   // blocks startup and emits exactly one stable, non-sensitive stdout line.
   let runtimeInventoryResult: RuntimeInventoryResult | undefined

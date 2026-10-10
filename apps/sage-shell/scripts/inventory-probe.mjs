@@ -17,6 +17,7 @@ import { createHostLiveInventoryProjectionProvider } from '../lib/main/runtime-i
 import { createRuntimeInventoryProvider } from '../lib/main/runtime-inventory-provider.js'
 import { readActiveProfile, resolveSagePaths } from '../lib/profile/paths.js'
 import { createBundledCapabilityRegistryProvider } from '../lib/security/capability-registry-provider.js'
+import { loadSessionPromptCapabilityRegistry } from '../lib/main/publication-bundle.js'
 
 const root = process.env.SAGE_ROOT
 const outputPath = process.argv[2]
@@ -32,6 +33,7 @@ if (activeProfile === null) {
   process.exit(1)
 }
 
+const capabilityRegistryPublication = loadSessionPromptCapabilityRegistry()
 const runtime = resolveHostRuntime({ execPath: electronPath, paths, activeProfile, env: process.env })
 const host = new ShellHostProcess(runtime)
 try {
@@ -55,7 +57,11 @@ try {
     },
     readFileBytes: (path) => readFileSync(path),
     runtimeEffective: { read: () => host.readRuntimeEffective() },
-    registry: { read: () => createBundledCapabilityRegistryProvider().read() },
+    // Mirror the production composition (ADR-0285): the shipped published registry snapshot, if
+    // present and kernel-valid, supersedes the bundled empty default — same as main/index.ts.
+    registry: { read: () => createBundledCapabilityRegistryProvider(
+      capabilityRegistryPublication.ok ? capabilityRegistryPublication.snapshotBody : undefined,
+    ).read() },
   })
   const result = await inventory.read()
   writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 })

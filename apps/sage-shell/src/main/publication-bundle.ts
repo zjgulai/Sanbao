@@ -22,12 +22,19 @@ import {
   parseCompatibilityMatrixRevocationSourceV2,
   type CompatibilityMatrixProviderV2,
 } from '../security/compatibility-matrix-provider.js'
+import {
+  parseCapabilityRegistrySnapshot,
+  sealCapabilityRegistrySnapshot,
+  type CapabilityRegistrySnapshotBodyV1,
+} from '../security/capability-registry.js'
 
 /** The first shipped publication (ADR-0278 bytes, sealed through the C2.2T kernel). */
 export const SESSION_PROMPT_REQUIREMENT_BUNDLE_REL_PATH = 'publications/session-prompt.requirement-snapshot.json'
 /** The first shipped matrix pair publication (ADR-0284 bytes, sealed through the C2 matrix kernel). */
 export const SESSION_PROMPT_MATRIX_BUNDLE_REL_PATH = 'publications/session-prompt.compatibility-matrix-bundle.json'
 export const SESSION_PROMPT_MATRIX_REVOCATION_REL_PATH = 'publications/session-prompt.matrix-revocation-source.json'
+/** The first non-empty published registry snapshot (ADR-0285): the approved first-party entry. */
+export const SESSION_PROMPT_CAPABILITY_REGISTRY_REL_PATH = 'publications/session-prompt.capability-registry.json'
 
 export type RequirementBundleLoad =
   | {
@@ -44,6 +51,14 @@ export type CompatibilityMatrixPublicationLoad =
       readonly bundleId: string
       readonly matrixId: string
       readonly revocationSourceId: string
+    }
+  | { readonly ok: false; readonly reason: string }
+
+export type CapabilityRegistryPublicationLoad =
+  | {
+      readonly ok: true
+      readonly snapshotId: string
+      readonly snapshotBody: CapabilityRegistrySnapshotBodyV1
     }
   | { readonly ok: false; readonly reason: string }
 
@@ -72,6 +87,37 @@ export function loadSessionPromptRequirementBundle(
     return { ok: false, reason: `requirement bundle rejected by the kernel: ${parsed.code}: ${parsed.reason}` }
   }
   return { ok: true, snapshotId: parsed.value.snapshotId, snapshot: parsed.value }
+}
+
+/** Load the published registry snapshot and prove it re-seals to the same snapshot id before it
+ *  may supersede the bundled empty default (ADR-0285). The body — not the sealed object's extra
+ *  key — is what the bundled provider factory accepts, so the round trip is the load contract. */
+export function loadSessionPromptCapabilityRegistry(
+  options: { readonly baseDir?: string } = {},
+): CapabilityRegistryPublicationLoad {
+  const baseDir = options.baseDir ?? fileURLToPath(new URL('../../', import.meta.url))
+  const file = readJsonFile(baseDir, SESSION_PROMPT_CAPABILITY_REGISTRY_REL_PATH)
+  if (!file.ok) return { ok: false, reason: `capability registry publication: ${file.reason}` }
+  const parsed = parseCapabilityRegistrySnapshot(file.value)
+  if (!parsed.ok) {
+    return { ok: false, reason: `capability registry publication rejected by the kernel: ${parsed.code}: ${parsed.reason}` }
+  }
+  const snapshot = parsed.value
+  const snapshotBody: CapabilityRegistrySnapshotBodyV1 = {
+    schemaVersion: snapshot.schemaVersion,
+    canonicalizationVersion: snapshot.canonicalizationVersion,
+    createdAt: snapshot.createdAt,
+    entries: snapshot.entries,
+    ...(snapshot.supersedesSnapshotId === undefined ? {} : { supersedesSnapshotId: snapshot.supersedesSnapshotId }),
+  }
+  const resealed = sealCapabilityRegistrySnapshot(snapshotBody)
+  if (!resealed.ok) {
+    return { ok: false, reason: `capability registry publication does not re-seal: ${resealed.code}: ${resealed.reason}` }
+  }
+  if (resealed.value.snapshotId !== snapshot.snapshotId) {
+    return { ok: false, reason: 'capability registry publication snapshot id drifted across the seal round trip' }
+  }
+  return { ok: true, snapshotId: snapshot.snapshotId, snapshotBody }
 }
 
 export function loadSessionPromptCompatibilityPublication(

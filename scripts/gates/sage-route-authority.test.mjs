@@ -86,7 +86,7 @@ test('current 60-route registry matches source without claiming product availabi
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
   assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)
-  assert.match(result.note, /carries the first published Capability Registry snapshot \(C2D\.2A\)/)
+  assert.match(result.note, /carries the Capability Registry at its kernel-sealed published face \(C2D\.2A; first-party publication, ADR-0285\)/)
   assert.match(result.note, /The first session-prompt target publication \(T05 mid\)/)
 })
 
@@ -638,11 +638,18 @@ test('the bundled capability registry wiring cannot drift from its seal and empt
   expectNamedFailure(check({ mainIndexText: unwiredPort }), 'index must wire the bundled registry into the runtime inventory provider')
 
   const unwiredConstruction = baseline.mainIndexText.replace(
-    'const bundledRegistry = createBundledCapabilityRegistryProvider()',
-    'const bundledRegistry = { read: () => undefined }',
+    'loadSessionPromptCapabilityRegistry()',
+    'undefined',
   )
   assert.notEqual(unwiredConstruction, baseline.mainIndexText)
-  expectNamedFailure(check({ mainIndexText: unwiredConstruction }), 'index must construct the bundled capability registry provider')
+  expectNamedFailure(check({ mainIndexText: unwiredConstruction }), 'index must load the published registry snapshot and pass its body to the bundled factory')
+
+  const loaderDrift = baseline.publicationBundleText.replace(
+    'resealed.value.snapshotId !== snapshot.snapshotId',
+    'false',
+  )
+  assert.notEqual(loaderDrift, baseline.publicationBundleText)
+  expectNamedFailure(check({ publicationBundleText: loaderDrift }), 'the registry publication loader must kernel-parse and prove the seal round trip')
 
   const unsealed = baseline.capabilityRegistryProviderText.replace(
     'sealCapabilityRegistrySnapshot(snapshotBody)',

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "sage.capability-registry.v1",
+  "canonicalizationVersion": "sage.capability-registry-canonical-json.v1",
+  "createdAt": "2026-10-10T09:00:00.000Z",
+  "entries": [
+    {
+      "schemaVersion": "sage.capability-registry-entry.v1",
+      "canonicalizationVersion": "sage.capability-registry-canonical-json.v1",
+      "capabilityId": "capability:sage.session-prompt",
+      "capabilityVersion": "1.0.0",
+      "state": "approved",
+      "descriptor": {
+        "descriptorDigest": "urn:sage:runtime-descriptor:sha256:e1c7a8b41a9e9f480c2b793b837bd2d01dce41b204f7115455a707940de02d8b",
+        "artifactSubjectDigest": "sha256:89b0d1ef4a8a3c15617cd294de72d04f6f81dd16b3e3276b3b300f217c590e02",
+        "launchContractDigest": "sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460",
+        "toolContractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
+        "verification": "verified",
+        "source": "first-party",
+        "evidenceDigest": "urn:sage:first-party-capability-evidence:sha256:9ec8da8b60a2d16462688b91b1456c9a2f39cf26b79fb0340a5cec975112092d"
+      },
+      "operations": [
+        {
+          "operationId": "session.send",
+          "adapter": {
+            "identity": "adapter:sage.session-channel",
+            "version": "1.0.0",
+            "digest": "sha256:055a86e2e5796db67d776974ac4201e084d07ff1849f56b5d4d036d4055550d1"
+          },
+          "effectClass": "external-write",
+          "dataBoundary": "sage.model-egress",
+          "inputContractDigest": "sha256:eb7376dec8d4fc05be3f1603f64ecc6f9be952aacd8f4ab3a5d579b832ba93c4",
+          "outputContractDigest": "sha256:6216478abb8ae41eb4ee49832e447cd668b8257de3090f40ded8e73331cff21d",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        }
+      ],
+      "approvals": [
+        {
+          "decisionId": "decision:sage.first-party-registry-session-prompt",
+          "ownerId": "owner:sage.product",
+          "decidedAt": "2026-10-10T09:00:00.000Z",
+          "reason": "用户裁决（ADR-0283 D4）自证等价路线；条目字节按 ADR-0285 批准。"
+        }
+      ],
+      "effectiveAt": "2026-10-10T09:00:00.000Z",
+      "expiresAt": "2027-10-11T00:00:00.000Z"
+    }
+  ],
+  "snapshotId": "urn:sage:capability-registry:sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411"
+}
