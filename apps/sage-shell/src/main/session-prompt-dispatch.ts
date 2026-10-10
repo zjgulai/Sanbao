@@ -24,12 +24,31 @@ import { ACTION_AUTHORITY_TABLE } from './action-authority-table.js'
 import { verifyAdmittedFactsStillHold, type SessionPromptReverifyReads } from './session-prompt-reverify.js'
 
 export type SessionSendPort = (
-  request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' },
+  request: {
+    readonly matterRef: string
+    readonly workspaceRoot: string
+    readonly text: string
+    readonly mode?: 'queue' | 'steer'
+    /** ADR-0296 D5: the caller-minted channel request id (the host log's `source.rpcId`). */
+    readonly requestId?: string
+  },
 ) => Promise<SessionSendOutcome>
+
+/** ADR-0296 D5: the channel request id is DERIVED from the attempt identity (service-issued,
+ *  unique per attempt) — no second identity to mint, persist or reconcile against. The host
+ *  session log's `source.rpcId` can be re-derived from the matter record at any time. */
+export function sessionRequestIdForAttempt(attemptId: string): string {
+  return `req-${attemptId.replace(/^attempt:/u, '')}`
+}
 
 export interface SessionPromptDispatchOptions extends SessionPromptReverifyReads {
   /** The real channel adapter — the product's existing session-send port. */
   readonly sessionSend: SessionSendPort
+  /** ADR-0296 D4: the durable note for an outcome-unknown dispatch (best-effort, never throws). */
+  readonly recordDispatchUnknown: (request: {
+    readonly matterRef: string
+    readonly attemptId: string
+  }) => Promise<void>
   /** The same cheap real ports the admission chain ran; re-invoked at this instant. */
   readonly resolveTarget: NonNullable<ProtectedEffectAdmissionPorts['resolveTarget']>
   readonly resolveRegistry: NonNullable<ProtectedEffectAdmissionPorts['resolveRegistry']>
@@ -47,6 +66,9 @@ export function createSessionPromptDispatchPort(
 
     const evidence = compatibility.evidence
     if (evidence === undefined || typeof evidence.revisionDigest !== 'string') return { state: 'not-dispatched' }
+    // ADR-0296 D5: the attempt identity rides the admitted evidence; without it no request id
+    // can be derived and the channel call stays not-dispatched (the effect provably did not run).
+    if (typeof evidence.attemptId !== 'string' || evidence.attemptId === '') return { state: 'not-dispatched' }
 
     const text = intent.payload.text
     if (typeof text !== 'string' || text.length === 0 || text.length > 16_384) return { state: 'not-dispatched' }
@@ -78,8 +100,12 @@ export function createSessionPromptDispatchPort(
         workspaceRoot,
         text,
         ...(mode === undefined ? {} : { mode }),
+        requestId: sessionRequestIdForAttempt(evidence.attemptId),
       })
     } catch {
+      // ADR-0296 D4: the unknown is durable before it is answered — best-effort note, then the
+      // same outcome the product already speaks.
+      await options.recordDispatchUnknown({ matterRef: context.matterRef, attemptId: evidence.attemptId })
       return { state: 'outcome-unknown' }
     }
 

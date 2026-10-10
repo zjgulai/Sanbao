@@ -37,6 +37,7 @@ const baseline = Object.freeze({
   sessionTurnCloseText: read('apps/sage-shell/src/main/session-turn-close.ts'),
   sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
   sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
+  sessionDispatchUnknownText: read('apps/sage-shell/src/main/session-dispatch-unknown.ts'),
   runtimeInventoryCurrencyText: read('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
   sageReadoutText: read('apps/sage-shell/src/main/sage-readout.ts'),
 })
@@ -1255,6 +1256,36 @@ test('the closure baseline cannot drift (ADR-0296)', () => {
   const edgeDrop = baseline.sessionSendReconcileText.replace(', edge: fold.lastTurnEndEdge })', ' })')
   assert.notEqual(edgeDrop, baseline.sessionSendReconcileText)
   expectNamedFailure(check({ sessionSendReconcileText: edgeDrop }), 'the reconcile must reuse the closure runner, never a second write path')
+})
+
+test('the dispatch unknown marker and derived request id cannot drift (ADR-0296 D4/D5)', () => {
+  const requestIdDrop = baseline.sessionPromptDispatchText.replace(
+    'requestId: sessionRequestIdForAttempt(evidence.attemptId),',
+    '',
+  )
+  assert.notEqual(requestIdDrop, baseline.sessionPromptDispatchText)
+  expectNamedFailure(check({ sessionPromptDispatchText: requestIdDrop }), 'the dispatch must derive the request id and mark the unknown durably')
+
+  const markerDrop = baseline.sessionPromptDispatchText.replace(
+    'await options.recordDispatchUnknown({ matterRef: context.matterRef, attemptId: evidence.attemptId })',
+    '',
+  )
+  assert.notEqual(markerDrop, baseline.sessionPromptDispatchText)
+  expectNamedFailure(check({ sessionPromptDispatchText: markerDrop }), 'the dispatch must derive the request id and mark the unknown durably')
+
+  const derivationDrift = baseline.sessionPromptDispatchText.replace(
+    "return `req-${attemptId.replace(/^attempt:/u, '')}`",
+    'return attemptId',
+  )
+  assert.notEqual(derivationDrift, baseline.sessionPromptDispatchText)
+  expectNamedFailure(check({ sessionPromptDispatchText: derivationDrift }), 'the channel request id must derive from the attempt identity')
+
+  const recorderDrift = baseline.sessionDispatchUnknownText.replace(
+    'attempt-unknown:${attemptId}',
+    'attempt-unknown',
+  )
+  assert.notEqual(recorderDrift, baseline.sessionDispatchUnknownText)
+  expectNamedFailure(check({ sessionDispatchUnknownText: recorderDrift }), 'the unknown marker must be domain-authored and idempotent per attempt')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

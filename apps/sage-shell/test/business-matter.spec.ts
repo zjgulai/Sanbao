@@ -5,6 +5,7 @@ import {
   createBusinessMatter,
   enterEvidence,
   failAttempt,
+  markDispatchUnknown,
   projectBusinessMatter,
   reconfirmRevision,
   recordArtifact,
@@ -845,6 +846,40 @@ describe('BusinessMatter WT-01 domain kernel', () => {
       'invalid-transition',
     )
     expect(projectBusinessMatter(failed).receipts).toEqual([])
+  })
+
+  it('marks a dispatch-unknown note on the active attempt without closing it (ADR-0296 D4)', () => {
+    const running = startReadyAttempt()
+    const marked = markDispatchUnknown(running, {
+      eventId: 'event:dispatch-unknown',
+      occurredAt: '2026-09-27T00:02:30Z',
+      attemptId: 'attempt:1',
+    })
+    const projection = projectBusinessMatter(marked)
+    expect(projection.attempts[0]?.dispatchUnknown).toBe(true)
+    // A note only: the attempt stays running and active; nothing else moves.
+    expect(projection.attempts[0]?.status).toBe('running')
+    expect(projection.activeAttemptId).toBe('attempt:1')
+    expect(projection.stage).toBe('running')
+
+    // Only the active running attempt may be marked: once it has failed, the mark is refused.
+    const failed = failAttempt(running, {
+      eventId: 'event:failed',
+      occurredAt: '2026-09-27T00:03:00Z',
+      attemptId: 'attempt:1',
+      source: 'runtime',
+      reason: 'Turn ended in error.',
+      impact: 'The attempt is closed.',
+    })
+    expectDomainError(
+      () =>
+        markDispatchUnknown(failed, {
+          eventId: 'event:late-mark',
+          occurredAt: '2026-09-27T00:04:00Z',
+          attemptId: 'attempt:1',
+        }),
+      'invalid-transition',
+    )
   })
 
   it('records an explicit stopped conclusion only from failure/retry', () => {

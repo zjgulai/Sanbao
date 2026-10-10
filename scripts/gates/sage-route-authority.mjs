@@ -648,15 +648,23 @@ function sessionPromptDispatchViolations(input) {
   const admissionText = typeof input?.protectedEffectAdmissionText === 'string' ? input.protectedEffectAdmissionText : ''
   const compositionText = typeof input?.compositionText === 'string' ? input.compositionText : ''
   const dispatchText = typeof input?.sessionPromptDispatchText === 'string' ? input.sessionPromptDispatchText : ''
-  if (appServiceText === '' || admissionText === '' || compositionText === '' || dispatchText === '') {
+  const recorderText = typeof input?.sessionDispatchUnknownText === 'string' ? input.sessionDispatchUnknownText : ''
+  if (appServiceText === '' || admissionText === '' || compositionText === '' || dispatchText === '' || recorderText === '') {
     violations.push('session-prompt dispatch sources are unavailable')
     return violations
   }
   // T05-mid step 10 (ADR-0289): dispatch is wired only when the channel port and every
   // re-verification input exist.
   if (!appServiceText.includes('dispatch: createSessionPromptDispatchPort({')
-    || !appServiceText.includes('|| options.matterLinks === undefined')) {
+    || !appServiceText.includes('|| options.matterLinks === undefined')
+    || !appServiceText.includes('|| options.sessionPromptAttempts === undefined\n      || options.authority === undefined')) {
     violations.push('the dispatch step must be wired only behind the channel and every re-verification input')
+  }
+  // ADR-0296 D4: the durable unknown marker is a separate main-owned recorder over the same
+  // store handle — dispatch itself still writes no closure events inline.
+  if (!appServiceText.includes('recordDispatchUnknown: createSessionDispatchUnknownRecorder({')
+    || !appServiceText.includes('attempts: options.sessionPromptAttempts,')) {
+    violations.push('the unknown marker recorder must be wired from the same store handle')
   }
   // The admitted evidence must survive the admission seam; dropping it fails every real send
   // closed at persistence (the ADR-0288 defect the step-10 end-to-end spec caught).
@@ -699,6 +707,21 @@ function sessionPromptDispatchViolations(input) {
   }
   if (dispatchText.includes('startAttempt(') || dispatchText.includes('failAttempt(') || dispatchText.includes('recordReceipt(')) {
     violations.push('dispatch v1 writes no domain closure events (turn-close is the registered ticket)')
+  }
+  // ADR-0296 D4/D5: the request id derives from the attempt identity (one identity, no second
+  // mint), and the unknown is marked durably before it is answered.
+  if (!dispatchText.includes("if (typeof evidence.attemptId !== 'string' || evidence.attemptId === '') return { state: 'not-dispatched' }")
+    || !dispatchText.includes('requestId: sessionRequestIdForAttempt(evidence.attemptId),')
+    || !dispatchText.includes('await options.recordDispatchUnknown({ matterRef: context.matterRef, attemptId: evidence.attemptId })')) {
+    violations.push('the dispatch must derive the request id and mark the unknown durably')
+  }
+  if (!dispatchText.includes("return `req-${attemptId.replace(/^attempt:/u, '')}`")) {
+    violations.push('the channel request id must derive from the attempt identity')
+  }
+  // The recorder: domain-authored payload, idempotent marker append, best-effort only.
+  if (!recorderText.includes('markDispatchUnknown(readMatter.matter, {')
+    || !recorderText.includes('attempt-unknown:${attemptId}')) {
+    violations.push('the unknown marker must be domain-authored and idempotent per attempt')
   }
   return violations
 }

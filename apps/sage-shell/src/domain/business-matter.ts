@@ -140,6 +140,9 @@ export interface AttemptProjection {
    *  recorded (`null` = observed, none existed; absent = a legacy record with no baseline).
    *  A turn-end edge may close the attempt only when it differs from this baseline. */
   readonly observedTurnEndEdge?: string | null | undefined
+  /** ADR-0296 D4: the dispatch concluded outcome-unknown (the marker event was recorded).
+   *  Orthogonal to status: the attempt stays running until real closure evidence arrives. */
+  readonly dispatchUnknown?: boolean | undefined
   readonly status: 'running' | 'blocked' | 'failed' | 'succeeded'
   readonly startedAt: string
   readonly endedAt: string | undefined
@@ -233,7 +236,7 @@ interface AttemptStartedEvent {
   readonly occurredAt: string
   readonly attempt: Omit<
     AttemptProjection,
-    'status' | 'startedAt' | 'endedAt' | 'terminationReason'
+    'status' | 'startedAt' | 'endedAt' | 'terminationReason' | 'dispatchUnknown'
   >
 }
 
@@ -258,6 +261,16 @@ interface AttemptFailedEvent {
  *  ready for the next attempt in the same revision. */
 interface AttemptSucceededEvent {
   readonly type: 'attempt-succeeded'
+  readonly eventId: string
+  readonly matterId: string
+  readonly occurredAt: string
+  readonly attemptId: string
+}
+
+/** ADR-0296 D4: the dispatch call threw — the effect may or may not have run. The mark is a
+ *  durable note for later reconciliation; it changes no status and closes nothing. */
+interface AttemptDispatchUnknownEvent {
+  readonly type: 'attempt-dispatch-unknown'
   readonly eventId: string
   readonly matterId: string
   readonly occurredAt: string
@@ -308,6 +321,7 @@ export type BusinessMatterEvent =
   | AttemptStartedEvent
   | AttemptFailedEvent
   | AttemptSucceededEvent
+  | AttemptDispatchUnknownEvent
   | RevisionReconfirmedEvent
   | ArtifactRecordedEvent
   | ReceiptRecordedEvent
@@ -887,6 +901,10 @@ export function projectBusinessMatter(
         pendingClarification = undefined
         stage = 'evidence'
         break
+      case 'attempt-dispatch-unknown':
+        // ADR-0296 D4: a durable note only — status, stage and the active attempt all stay.
+        replaceAttempt(attempts, event.attemptId, (attempt) => ({ ...attempt, dispatchUnknown: true }))
+        break
       case 'revision-reconfirmed':
         pendingClarification = undefined
         stage = 'evidence'
@@ -1421,6 +1439,36 @@ export function succeedAttempt(
 
   return appendEvents(matter, {
     type: 'attempt-succeeded',
+    eventId: input.eventId,
+    matterId: state.matterId,
+    occurredAt: input.occurredAt,
+    attemptId: input.attemptId,
+  })
+}
+
+export interface MarkDispatchUnknownInput {
+  readonly eventId: string
+  readonly occurredAt: string
+  readonly attemptId: string
+}
+
+/** ADR-0296 D4: record that the dispatch of the active attempt concluded outcome-unknown. Only
+ *  the active running attempt may be marked; the mark closes nothing and changes no status. */
+export function markDispatchUnknown(
+  matter: BusinessMatter,
+  input: MarkDispatchUnknownInput,
+): BusinessMatter {
+  const state = projectBusinessMatter(matter)
+  assertNoConclusion(state)
+  if (state.stage !== 'running' || state.activeAttemptId !== input.attemptId) {
+    error('invalid-transition', 'Only the active running attempt may be marked dispatch-unknown.')
+  }
+  assertNonBlank(input.eventId, 'eventId')
+  assertIsoTimestamp(input.occurredAt, 'occurredAt')
+  assertNonBlank(input.attemptId, 'attemptId')
+
+  return appendEvents(matter, {
+    type: 'attempt-dispatch-unknown',
     eventId: input.eventId,
     matterId: state.matterId,
     occurredAt: input.occurredAt,

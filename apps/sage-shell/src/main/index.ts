@@ -448,7 +448,7 @@ async function main(paths: SagePaths): Promise<void> {
       return { state: 'read', rows: classified.components.map((component) => ({ identity: component.identity, version: component.version, digestShort: component.artifactDigestShort })) }
     },
   })
-  const sendWithSelections = async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer', readonly attachments?: readonly SessionAttachmentInput[] }) => {
+  const sendWithSelections = async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer', readonly attachments?: readonly SessionAttachmentInput[], readonly requestId?: string }) => {
     // Ticket 038: this request's carried skill/plugin references ride as a bounded prefix; only
     // an accepted/deferred request consumes them (a refusal keeps the selection for a retry).
     const prefix = inputSelections.carryPrefix(request.matterRef)
@@ -662,7 +662,7 @@ async function main(paths: SagePaths): Promise<void> {
     },
     // Ticket 014: the next send carries this matter's stored-but-unsent attachments; only a
     // confirmed acceptance marks them sent — the receipt was staged on this same session.
-    sessionSend: async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer' }) => {
+    sessionSend: async (request: { readonly matterRef: string, readonly workspaceRoot: string, readonly text: string, readonly mode?: 'queue' | 'steer', readonly requestId?: string }) => {
       const stored = attachments.storedFor(request.matterRef)
       const outcome = await sendWithSelections({
         ...request,

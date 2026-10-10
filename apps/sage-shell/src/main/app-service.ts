@@ -27,6 +27,7 @@ import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
+import { createSessionDispatchUnknownRecorder } from './session-dispatch-unknown.js'
 import { createSessionPromptPrepareRunner, type SessionPrepareRunner } from './session-prompt-prepare.js'
 import type { SessionSendReconcile } from './session-send-reconcile.js'
 import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
@@ -965,6 +966,8 @@ function createSessionCoreProtectedEffectPorts(
     ...(reverifyReads === undefined
       || options.sessionSend === undefined
       || options.matterLinks === undefined
+      || options.sessionPromptAttempts === undefined
+      || options.authority === undefined
       || targetPort === undefined
       || registryPort === undefined
       || preflightPort === undefined
@@ -973,6 +976,11 @@ function createSessionCoreProtectedEffectPorts(
           dispatch: createSessionPromptDispatchPort({
             ...reverifyReads,
             sessionSend: options.sessionSend,
+            // ADR-0296 D4: the same store handle the revertify reads hold, plus trusted clock.
+            recordDispatchUnknown: createSessionDispatchUnknownRecorder({
+              attempts: options.sessionPromptAttempts,
+              now: options.authority.now,
+            }),
             resolveTarget: targetPort,
             resolveRegistry: registryPort,
             preflight: preflightPort,

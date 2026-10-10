@@ -11,6 +11,7 @@ import { createSessionPromptAttemptStore } from '../src/main/session-prompt-atte
 import {
   createBusinessMatter,
   enterEvidence,
+  markDispatchUnknown as markDispatchUnknownNote,
   projectBusinessMatter,
   recordDecision,
   requestClarification,
@@ -33,7 +34,7 @@ afterEach(async () => {
   }
 })
 
-async function seeded(root: string, home: string, startAttemptNow: boolean, observedTurnEndEdge: string | null | 'legacy' = null) {
+async function seeded(root: string, home: string, startAttemptNow: boolean, observedTurnEndEdge: string | null | 'legacy' = null, markDispatchUnknown = false) {
   const paths = resolveSagePaths({ home, root, platform: process.platform })
   const store = openBusinessMatterEventStore({
     sagePaths: paths,
@@ -77,11 +78,18 @@ async function seeded(root: string, home: string, startAttemptNow: boolean, obse
         ...(observedTurnEndEdge === 'legacy' ? {} : { observedTurnEndEdge }),
       })
     : created
+  const marked = startAttemptNow && markDispatchUnknown
+    ? markDispatchUnknownNote(withAttempt, {
+        eventId: `${MATTER_ID}:attempt-1-unknown`,
+        occurredAt: '2026-10-10T10:02:30Z',
+        attemptId: 'attempt:sage.close-1',
+      })
+    : withAttempt
   const seeded = store.append({
     matterId: MATTER_ID,
     expectedVersion: { kind: 'not-exists' },
     appendId: 'seed:turn-close-1',
-    events: encodeBusinessMatterEvents(withAttempt).map((event) => ({
+    events: encodeBusinessMatterEvents(marked).map((event) => ({
       matterId: event.matterId,
       eventId: event.eventId,
       eventType: event.eventType,
@@ -301,6 +309,27 @@ describe('turn-end closure (ADR-0293)', () => {
     const afterLegacy = legacyCase.store.load(MATTER_ID)
     if (afterLegacy.kind !== 'loaded') throw new Error('expected loaded')
     expect(projectBusinessMatter(afterLegacy.matter).activeAttemptId).toBe('attempt:sage.close-1')
+  })
+
+  it('closes an attempt marked dispatch-unknown once a newer edge is observed (ADR-0296 D3)', async () => {
+    // The ruling: the durable mark changes no closure semantics — an edge newer than the start
+    // baseline is evidence about this attempt's turn, whether or not the dispatch was unknown.
+    const { root, home } = await temporaryRoot('dispatch-unknown')
+    const { paths, store } = await seeded(root, home, true, '9:completed', true)
+    const { close } = runner(paths)
+
+    // The stale edge still refuses (the mark is not evidence).
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '9:completed' })
+    const afterStale = store.load(MATTER_ID)
+    if (afterStale.kind !== 'loaded') throw new Error('expected loaded')
+    expect(projectBusinessMatter(afterStale.matter).activeAttemptId).toBe('attempt:sage.close-1')
+
+    // A new edge closes it like any other attempt.
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '12:completed' })
+    const afterClose = store.load(MATTER_ID)
+    if (afterClose.kind !== 'loaded') throw new Error('expected loaded')
+    expect(afterClose.matter.events.at(-1)?.type).toBe('attempt-succeeded')
+    expect(projectBusinessMatter(afterClose.matter).activeAttemptId).toBeUndefined()
   })
 
   it('no-ops when no attempt is active or the matter is unknown', async () => {

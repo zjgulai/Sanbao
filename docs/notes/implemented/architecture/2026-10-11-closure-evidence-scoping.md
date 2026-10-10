@@ -37,3 +37,14 @@ C2 侦察确认已出货缺陷（f069e97e 起的 reconcile 兜底与 ADR-0293 ob
 
 - 联合回归：`node scripts/test.mjs run test/session-turn-close.spec.ts test/session-send-reconcile.spec.ts test/session-prompt-persistence.spec.ts test/session-prompt-dispatch.spec.ts` → **4 files / 22 tests passed**。新增红绿测试：turn-close「refuses a stale edge or an attempt with no recorded baseline」（等值拒绝→新边沿收口→无基线拒绝）、reconcile「refuses to close on the stale edge the attempt already started with」、persistence「unreadable fold → unavailable」与基线载荷断言、assembly 门新增 `turnEndEdgeRead` 缺省不构造 case。
 - 门禁自测：`node --test scripts/gates/sage-route-authority.test.mjs` → **53 tests / 53 pass / 0 fail**（新增 ADR-0296 组 + 五条具名突变：守卫删除、等值比较退化、fail-closed 删除、index 接线漂移、reconcile 边沿卸载；三条既存突变文本随源码同步）。
+
+## 实施增补（2026-10-11）：第 13 型标记与派生 requestId
+
+ADR-0296 D4/D5 已实施：
+
+1. 域第 13 型 `attempt-dispatch-unknown`：`markDispatchUnknown` 仅活跃 running attempt 可标记，零状态变动；投影 `dispatchUnknown: true`；codec 校验/重放齐。
+2. recorder（`session-dispatch-unknown.ts`）：读 matter → 域撰写 → 一条 `appendRevision`（appendId `attempt-unknown:<attemptId>` 幂等）；best-effort 不抛，失败即回到「未标记的活跃 attempt」保守态。
+3. dispatch：`evidence.attemptId` 缺失 → not-dispatched（先于通道调用）；通道调用携带 `requestId: sessionRequestIdForAttempt(evidence.attemptId)`；捕获抛错后**先落标记再返回** outcome-unknown。
+4. app-service：dispatch 门新增 `sessionPromptAttempts` / `authority` 必需；recorder 用同一 store 手柄与受信时钟。
+
+验证（真实运行 2026-10-11）：`node scripts/test.mjs run test/business-matter.spec.ts test/session-turn-close.spec.ts test/session-prompt-dispatch.spec.ts` → **3 files / 45 tests passed**（含 unknown 标记断言、无身份 not-dispatched、13 型域守卫、D3「unknown 标记 + 陈旧边沿拒绝 + 新边沿收口」）；门禁自测 → **54 tests / 54 pass / 0 fail**（新增四条具名突变：requestId 卸载、标记卸载、派生漂移、appendId 漂移）。

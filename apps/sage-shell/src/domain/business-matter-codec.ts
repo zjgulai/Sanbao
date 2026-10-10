@@ -3,6 +3,7 @@ import {
   createBusinessMatter,
   enterEvidence,
   failAttempt,
+  markDispatchUnknown,
   succeedAttempt,
   projectBusinessMatter,
   reconfirmRevision,
@@ -79,6 +80,7 @@ const EVENT_TYPES = new Set<BusinessMatterEvent['type']>([
   'attempt-started',
   'attempt-failed',
   'attempt-succeeded',
+  'attempt-dispatch-unknown',
   'revision-reconfirmed',
   'artifact-recorded',
   'receipt-recorded',
@@ -582,6 +584,9 @@ function assertEventRuntimeShape(
     case 'attempt-succeeded':
       required.push('attemptId')
       break
+    case 'attempt-dispatch-unknown':
+      required.push('attemptId')
+      break
     case 'revision-reconfirmed':
       required.push('revisionId', 'compatibility', 'reason')
       break
@@ -626,6 +631,9 @@ function assertEventRuntimeShape(
       assertAttempt(value.attempt, 'payload.attempt', context)
       break
     case 'attempt-succeeded':
+      payloadString(value.attemptId, 'payload.attemptId', context)
+      break
+    case 'attempt-dispatch-unknown':
       payloadString(value.attemptId, 'payload.attemptId', context)
       break
     case 'attempt-failed':
@@ -1030,6 +1038,12 @@ function replayEvent(
       })
     case 'attempt-succeeded':
       return succeedAttempt(matter, {
+        eventId: event.eventId,
+        occurredAt: event.occurredAt,
+        attemptId: event.attemptId,
+      })
+    case 'attempt-dispatch-unknown':
+      return markDispatchUnknown(matter, {
         eventId: event.eventId,
         occurredAt: event.occurredAt,
         attemptId: event.attemptId,

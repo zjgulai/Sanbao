@@ -69,11 +69,12 @@ const CONTEXT = {
   revisionRef: REVISION_ID,
   generation: '7',
 }
-const EVIDENCE = { revisionDigest: `sha256:${'d'.repeat(64)}` }
+const EVIDENCE = { revisionDigest: `sha256:${'d'.repeat(64)}`, attemptId: 'attempt:sage.dispatch-fixture-1' }
 
 function dispatchHarness(options: {
   readonly text?: unknown
   readonly sessionSend?: unknown
+  readonly recordDispatchUnknown?: unknown
   readonly readContext?: () => unknown
   readonly readWorkspaceRoot?: (matterRef: string) => string | undefined
   readonly targetRef?: string
@@ -86,8 +87,10 @@ function dispatchHarness(options: {
     requestId: 'channel:request-1',
     mode: 'queue' as const,
   }))) as never
+  const recordDispatchUnknown = (options.recordDispatchUnknown ?? vi.fn(async () => undefined)) as never
   const port = createSessionPromptDispatchPort({
     sessionSend: sessionSend as never,
+    recordDispatchUnknown: recordDispatchUnknown as never,
     resolveTarget: vi.fn(async () => ({ state: 'allowed' as const, value: { targetRef: options.targetRef ?? 'target:admitted' } })) as never,
     resolveRegistry: vi.fn(async () => ({ state: 'allowed' as const, value: { mappingRef: options.registryRef ?? 'mapping:admitted' } })) as never,
     preflight: vi.fn(async () => ({ state: 'allowed' as const, value: { preflightRef: options.preflightRef ?? 'urn:sage:preflight:v1:admitted' } })) as never,
@@ -124,7 +127,12 @@ function dispatchHarness(options: {
     operationRef: 'operation:sage.dispatch-fixture-1',
     dispatchRef: 'dispatch:sage.dispatch-fixture-1',
   } as never
-  return { port, sessionSend: sessionSend as unknown as ReturnType<typeof vi.fn>, request }
+  return {
+    port,
+    sessionSend: sessionSend as unknown as ReturnType<typeof vi.fn>,
+    recordDispatchUnknown: recordDispatchUnknown as unknown as ReturnType<typeof vi.fn>,
+    request,
+  }
 }
 
 describe('the real dispatch step (ADR-0289)', () => {
@@ -146,6 +154,8 @@ describe('the real dispatch step (ADR-0289)', () => {
       workspaceRoot: '/trusted/workspace',
       text: 'run',
       mode: 'queue',
+      // ADR-0296 D5: the channel request id derives from the attempt identity, not a second mint.
+      requestId: 'req-sage.dispatch-fixture-1',
     })
 
     const deferred = dispatchHarness({
@@ -168,6 +178,25 @@ describe('the real dispatch step (ADR-0289)', () => {
       sessionSend: vi.fn(async () => { throw new Error('probe') }),
     })
     expect(await thrown.port(thrown.request)).toEqual({ state: 'outcome-unknown' })
+    // ADR-0296 D4: the unknown is durable before it is answered — the marker recorder saw the
+    // attempt; the determinate and accepted cases above recorded nothing.
+    expect(thrown.recordDispatchUnknown).toHaveBeenCalledWith({
+      matterRef: MATTER_ID,
+      attemptId: 'attempt:sage.dispatch-fixture-1',
+    })
+    expect(thrown.recordDispatchUnknown).toHaveBeenCalledTimes(1)
+    expect(refused.recordDispatchUnknown).not.toHaveBeenCalled()
+  })
+
+  it('answers not-dispatched when the admitted evidence carries no attempt identity', async () => {
+    const harness = dispatchHarness({})
+    const request = {
+      ...(harness.request as Record<string, unknown>),
+      compatibility: { evaluationRef: 'urn:sage:compatibility-evaluation:v1:fixture', outcome: 'equivalent', evidence: { revisionDigest: EVIDENCE.revisionDigest } },
+    } as never
+    expect(await harness.port(request)).toEqual({ state: 'not-dispatched' })
+    expect(harness.sessionSend).not.toHaveBeenCalled()
+    expect(harness.recordDispatchUnknown).not.toHaveBeenCalled()
   })
 
   it('answers not-dispatched before the channel when any guard or re-run drifts', async () => {
