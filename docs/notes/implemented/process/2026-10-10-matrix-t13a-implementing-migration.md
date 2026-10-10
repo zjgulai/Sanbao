@@ -100,3 +100,21 @@ ADR-0283 D3 重述入口语义（账号菜单 → 外观与显示表单，无独
 evidenceRefs 全部 `countsAsVerification:false`（不升 `verified`）、无 `(N/N)` 后缀；blocker 改写为与 implementing 相称的余留项（快捷外观子菜单未复刻、菜单键盘导航源码存在但 tracked 测试未逐项断言、applicationService 仍 blocked、hostIntegration/visualAcceptance 仍 pending），未自造已解决事实。`summary.delivery.ui` 由生成器 `deriveSummary` 原函数重算写回（18→19 implementing、180→179 pending、verified 8 不变）；写回方式与前批一致：程序化改 1 行三字段后 `node scripts/gen-sage-sanbao-state-matrix.mjs --source-root vendor/sanbao-prototype --write`（源根 HEAD `b861d046` 与 PIN 一致），随后 `--check-source` PASS。与迁移前快照 diff 审计确认：改动仅限 1 行的 `delivery.ui.status`/`delivery.ui.evidenceRefs`/`delivery.blockers` 与派生 summary 的 delivery 段；`source`/`prototype`/`legacyUi00Review`/`policy`/`migration`/行序/其余 205 行逐字节不变。
 
 验证：`node scripts/gen-sage-sanbao-state-matrix.mjs --check` → `sage-sanbao-state-matrix generator check: PASS (206 rows; integrated 0)` exit 0；`node scripts/gates/sage-sanbao-state-matrix.mjs` → `sage-sanbao-state-matrix: PASS (206 rows; integrated 0)` exit 0；`node --test scripts/gates/sage-sanbao-state-matrix.test.mjs` → 13 tests / 13 pass / 0 fail exit 0；被引用 2 个路径逐一 `git ls-files --error-unmatch` 通过（`desktop-page.spec.tsx`、`2026-10-10-dmg06-v2-acceptance-result.json`）。宁少勿假：本批只迁 1 行。未闭：implementing→verified 升级政策仍待裁决。
+
+## 第六批（2026-10-11）：全量复核零迁移——179 行 pending 无一行存在未登记的句级证据
+
+对第五批余下的 179 行 pending 做穷举复核：先按家族剥离（55 行 `scope.unexpanded`、23 行 `P06.settings.*.entry`、27 行 `P06.settings.*` 子页、20 行 `P04`、11 行 `O08`、13 行 `OBS02`、4 行 `OBS03`、8 行 `OBS04.appearance.*`），再对剥离后剩余 38 行逐行打开行语义并对照 desktop 出货面（`serveDesktopDocument` 优先服务 `page.tsx` 12 页 + 8 项外观 select + 账号菜单 + 上下文菜单 + 搜索页 + 会话区，legacy renderer 文档经 `createAssetHandler` 挂载但被 `main/index.ts` 的 `serveDesktopDocument(request) ?? host.fetch(request)` 短路，不构成出货证据面）与 DMG-06 v2/v3 两份 live 读数逐条比对。结论：**零行可迁**，179 行全部维持 pending。
+
+核实要点与跳过原因（本批新核或理由纠偏）：
+
+1. shortcuts/voice/models 子状态 19 行（`P06.settings.shortcuts.search.*` 4 行、`voice.*` 6 行、`models.*` 9 行）——desktop 设置面只有 `settings-view.tsx` 的 8 项外观 select；快捷键搜索/录制弹窗、音色/语速菜单、模型供应商表单在出货面无任何实现，`settings-leaves.spec.ts` 的 legacy 叶子卡按第五批结论仍不构成同一被引面。行内断言（如 `models.discard.open` 的「放弃未保存配置确认」、`voice.tone.open` 的七项音色清单）在 desktop 页零命中。
+2. `QDR.P06.settings.mobile.partial`——第四批把它挂在「快捷外观子菜单」名下属理由错位，本批纠正：本行语义是原产品**移动端设置页**（查看 Agent 进度、处理审批、远程控制桌面/保持唤醒开关），Sage 仓库中的 320px 断言是桌面页 reflow 几何（`desktop-live-check.mjs` 的 settings geometry）与 fixture-projection 密度主题测试（`sage-fixture-projection-window.spec.ts` batch-11），均非「移动端设置页」面，同名近似不成立，维持 pending。
+3. `QDR.M01.reply.completed`——plan-region 的执行结果句是「步骤执行未接线（step-execution-unavailable）：没有伪造运行」，无「成功、耗时和模型迭代信息」完成态断言，第三批结论复核成立。
+4. `QDR.S10.context.usage`——run-monitor context 轴只有「压缩不得泄漏私有侧聊」措辞与 unknown 预算断言，无占用百分比数值面，第三批结论复核成立。
+5. `QDR.A02.output.html`——artifact 卡断言为 md/txt/json/xlsx/bin 五类 type-shaped 状态词（office/binary 明示「本版无内置预览」「不支持该格式」），无「选择打开方式」面，且 artifact region 挂在 legacy 文档上，第三批结论复核成立。
+6. `QDR.P14.sidepanel.entry`、`QDR.OBS02.knowledge.entry`、`QDR.OBS03.sites.entry`、`QDR.O02.files.menu.open`、`QDR.P03.*`、`QDR.P13.*`、`QDR.S01.session.streaming`、`QDR.P16.review.summary`、`QDR.OBS01.usage.open`、`QDR.M02.*`、`QDR.A01.*`、`QDR.P14.preview.html`——第三/四批逐行结论复核成立（outstanding 占位、入口落占位页、无流式/回顾/用量/工具过程/差异审阅面），无新证据。
+7. 第五批之后新增的测试（`session-prompt-prepare/dispatch/selection-ensure.spec.ts`、`active-matter-selection.spec.ts`）全部是 Application Service 域层测试，无 renderer 句级断言，且本批不动 `applicationService` 维度，不构成任何 pending 行的 UI 证据。
+
+机械检查：`git diff 70c160e6..HEAD`（第四批提交以来）确认 `apps/sage-shell/src/product/` 与 `test/product-app/` 零改动，desktop 证据面无新增。本批零行迁移、零 JSON 改动、零代码改动，仅追加本节记录。
+
+验证（真实运行）：`node scripts/gen-sage-sanbao-state-matrix.mjs --check` → `sage-sanbao-state-matrix generator check: PASS (206 rows; integrated 0)` exit 0；`node scripts/gates/sage-sanbao-state-matrix.mjs` → `sage-sanbao-state-matrix: PASS (206 rows; integrated 0)` exit 0；`node --test scripts/gates/sage-sanbao-state-matrix.test.mjs` → 13 tests / 13 pass / 0 fail exit 0；`git status` 确认矩阵 JSON 与本 note 之外的仓库改动为零（`.codegraph/`、`packaging-sage/.DS_Store` 为既存未跟踪杂项）。宁少勿假：本批迁 0 行。未闭：implementing→verified 升级政策仍待裁决。
