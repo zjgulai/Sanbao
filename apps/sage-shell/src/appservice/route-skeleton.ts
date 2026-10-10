@@ -49,6 +49,8 @@ const SAGE_SESSION_PENDING_PATH = '/.sage/session/pending'
 const SAGE_SESSION_QUEUE_PATH = '/.sage/session/queue'
 /** Ticket 009: cold history — list the runs / read one run's detail (pure page reads). */
 const SAGE_SESSION_HISTORY_PATH = '/.sage/session/history'
+/** ADR-0297: the read-only attempt-status entry (reconciliation for an unknown send). */
+const SAGE_SESSION_ATTEMPT_STATUS_PATH = '/.sage/session/attempt-status'
 /** Ticket 034: the clarification loop's one named write (the read rides the state poll). */
 const SAGE_SESSION_CLARIFICATION_ANSWER_PATH = '/.sage/session/clarification-answer'
 /** Ticket 035: the message anchors — read the rail / locate one run's message (pure history reads). */
@@ -296,6 +298,24 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
       { kind: 'active-matter' },
       () => deps.providers.sessionHistoryDetail(parsed),
       () => serviceJson({ state: 'missing', runSeq: parsed.runSeq, code: 'session-history-unavailable' }, 200),
+    )
+  }
+
+  if (url.pathname === SAGE_SESSION_ATTEMPT_STATUS_PATH) {
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
+    const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    if (contentType !== 'application/json') return transportDenial(415)
+    const body = await readActionBodyWithinLimit(request)
+    if (body === undefined) return transportDenial(413)
+    if (!isAttemptStatusRequest(body)) {
+      return serviceJson({ code: 'invalid-session-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
+    }
+    return runProjectionRead(
+      deps,
+      'session.attempt.status',
+      { kind: 'active-matter' },
+      () => deps.providers.sessionAttemptStatus(),
+      () => serviceJson({ state: 'unavailable', code: 'session-attempt-status-unavailable' }, 200),
     )
   }
 
@@ -878,6 +898,17 @@ function parseSessionControlRequest(body: string, pathname: string): unknown {
 }
 
 /** Ticket 009: `{action:'list'[, beforeSeq]}` | `{action:'detail', runSeq}` — exact members. */
+/** ADR-0297: `{}` exactly — the attempt read carries no caller input beyond the request itself. */
+function isAttemptStatusRequest(body: string): boolean {
+  try {
+    const value: unknown = JSON.parse(body)
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+      && Object.keys(value as Record<string, unknown>).length === 0
+  } catch {
+    return false
+  }
+}
+
 function parseSessionHistoryRequest(body: string):
   | { readonly action: 'list', readonly beforeSeq?: number }
   | { readonly action: 'detail', readonly runSeq: number }

@@ -9832,6 +9832,44 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0297",
+      "title": "ADR-0297 · 核对入口第一刀：attempt-status 只读查询与不确定门解封",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新增 /.sage/session/attempt-status 只读路由，操作名 session.attempt.status 入封闭表，走统一 projection-read admission。",
+          "constraints": [
+            "no new fixture bypass",
+            "grant row added to the walkthrough policy draft"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "provider 只读 matter 记录 + 会话 fold；requestId 由 attempt 身份派生；evidence 三态；永不写。",
+          "constraints": [
+            "closure stays observer/reconcile-only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "renderer 不确定门仅在 read + matterRef 匹配 + active === null 时解封；其余维持封锁。",
+          "constraints": [
+            "positive evidence only",
+            "reentrancy-guarded, rides background reads"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "SessionAttemptStatus 为唯一共享合同；refusal 合同不变。",
+          "constraints": [
+            "no correlation round-trip"
+          ]
+        }
+      ]
     }
   ]
 }

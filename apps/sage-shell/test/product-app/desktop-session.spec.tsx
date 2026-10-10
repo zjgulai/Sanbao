@@ -102,7 +102,11 @@ describe('default desktop session submission lifecycle', () => {
   })
 
   it('locks an unknown operation across successful rereads instead of resubmitting it', async () => {
-    const fetcher = vi.fn(async () => Response.json({ state: 'refused', code: 'protected-effect-outcome-unknown' }))
+    // ADR-0297: the reconciliation read fires alongside the rereads — an unavailable answer
+    // (no read policy in this fixture) keeps the gate exactly as locked as before.
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/attempt-status'
+      ? Response.json({ state: 'unavailable', code: 'session-attempt-status-unavailable' })
+      : Response.json({ state: 'refused', code: 'protected-effect-outcome-unknown' }))
     vi.stubGlobal('fetch', fetcher)
     const { container } = await mount(async () => snapshot())
     const input = write(container, '不能重复的请求')
@@ -112,7 +116,25 @@ describe('default desktop session submission lifecycle', () => {
     await click(control(container, '重新读取状态'))
     await click(control(container, '发送任务'))
     expect(input.value).toBe('不能重复的请求')
-    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/.sage/session/send')).toHaveLength(1)
+  })
+
+  it('settles the uncertainty gate only when the reconciliation read shows no active attempt (ADR-0297)', async () => {
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/attempt-status'
+      ? Response.json({
+          state: 'read', matterRef: 'matter:one', active: null,
+          last: { attemptId: 'attempt:one', status: 'succeeded' },
+        })
+      : Response.json({ state: 'refused', code: 'protected-effect-outcome-unknown' }))
+    vi.stubGlobal('fetch', fetcher)
+    const { container } = await mount(async () => snapshot())
+    const input = write(container, '不能重复的请求')
+    await click(control(container, '发送任务'))
+    // The post-action background read carries the reconciliation: no active attempt answers,
+    // so the gate settles with the settlement named — and the kept draft is sendable again.
+    expect(container.textContent).toContain('已核对：上一条发送已结算（成功）')
+    expect(control(container, '发送任务').disabled).toBe(false)
+    expect(input.value).toBe('不能重复的请求')
   })
 
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {

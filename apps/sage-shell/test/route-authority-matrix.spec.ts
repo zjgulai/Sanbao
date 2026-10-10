@@ -37,21 +37,21 @@ interface RouteAuthorityMatrix {
 const matrix = JSON.parse(readFileSync(new URL('../src/appservice/route-authority-matrix.json', import.meta.url), 'utf8')) as RouteAuthorityMatrix
 
 describe('route authority truth matrix', () => {
-  it('pins the full 60-route denominator and five policy classes', () => {
+  it('pins the full 61-route denominator and five policy classes', () => {
     expect(matrix.schemaVersion).toBe(1)
     expect(matrix.sourceCommit).toBe('eeff8967190815c7b5018f7d11b748818d487d37')
     expect(matrix.denominator).toEqual({
-      expected: 60,
+      expected: 61,
       sourcePath: 'apps/sage-shell/src/appservice/route-skeleton.ts',
       constantPattern: '^const SAGE_.*_PATH',
     })
-    expect(matrix.routes).toHaveLength(60)
-    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(60)
-    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(60)
+    expect(matrix.routes).toHaveLength(61)
+    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(61)
+    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(61)
     expect(Object.fromEntries(['read-only', 'local-preference', 'local-system', 'protected-effect', 'unsupported'].map((classification) => [
       classification,
       matrix.routes.filter((route) => route.classification === classification).length,
-    ]))).toEqual({ 'read-only': 13, 'local-preference': 5, 'local-system': 2, 'protected-effect': 38, unsupported: 2 })
+    ]))).toEqual({ 'read-only': 14, 'local-preference': 5, 'local-system': 2, 'protected-effect': 38, unsupported: 2 })
   })
 
   it('records every authority dimension instead of treating route presence as authority', () => {

@@ -25,6 +25,7 @@ const cases: readonly RouteCase[] = [
   { name: 'anchors read', path: '/.sage/session/anchors', operation: 'session.anchors.read', provider: 'sessionAnchorsRead', body: { action: 'read' }, blockedCode: 'session-anchors-unavailable' },
   { name: 'anchors locate', path: '/.sage/session/anchors', operation: 'session.anchors.locate', provider: 'sessionAnchorLocate', body: { action: 'locate', runSeq: 1 }, blockedCode: 'session-anchors-unavailable' },
   { name: 'terminal read', path: '/.sage/session/terminal-read', operation: 'session.terminal.read', provider: 'terminalRead', body: { terminalId: 'terminal-1' }, blockedCode: 'terminals-provider-unavailable' },
+  { name: 'attempt status', path: '/.sage/session/attempt-status', operation: 'session.attempt.status', provider: 'sessionAttemptStatus', body: {}, blockedCode: 'session-attempt-status-unavailable' },
   { name: 'search', path: '/.sage/search', operation: 'search.query', provider: 'search', body: { query: 'roadmap' }, blockedCode: 'search-unavailable' },
   { name: 'artifact observe', path: '/.sage/artifacts/observe', operation: 'artifacts.observe', provider: 'observeArtifacts', body: { matterRef: 'matter-1', workspaceRoot: '/workspace' }, blockedCode: 'artifact-store-unavailable' },
   { name: 'artifact open', path: '/.sage/artifacts/open', operation: 'artifacts.open', provider: 'openArtifact', body: { artifactId: 'artifact-1' }, blockedCode: 'artifact-preview-unavailable' },

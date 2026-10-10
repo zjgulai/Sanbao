@@ -84,19 +84,19 @@ const cancelCheck = (patch = {}) => checkSageRouteAuthority({
 })
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
-  assert.equal(result.expected, 60)
+  assert.equal(result.expected, 61)
   assert.equal(result.expected, result.checked + result.skipped + result.failed)
   assert.ok(result.violations.some((violation) => violation.includes(needle)), JSON.stringify(result.violations))
 }
 
-test('current 60-route registry matches source without claiming product availability', () => {
+test('current 61-route registry matches source without claiming product availability', () => {
   const result = check()
   assert.equal(result.status, 'pass', JSON.stringify(result))
   assert.deepEqual(
     { expected: result.expected, discovered: result.discovered, checked: result.checked, skipped: result.skipped, failed: result.failed },
-    { expected: 60, discovered: 60, checked: 60, skipped: 0, failed: 0 },
+    { expected: 61, discovered: 61, checked: 61, skipped: 0, failed: 0 },
   )
-  assert.match(result.note, /13 read-only routes enter projection-read admission/)
+  assert.match(result.note, /14 read-only routes enter projection-read admission/)
   assert.match(result.note, /2 local-system routes enter device-local admission/)
   assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
   assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
@@ -1286,6 +1286,23 @@ test('the dispatch unknown marker and derived request id cannot drift (ADR-0296 
   )
   assert.notEqual(recorderDrift, baseline.sessionDispatchUnknownText)
   expectNamedFailure(check({ sessionDispatchUnknownText: recorderDrift }), 'the unknown marker must be domain-authored and idempotent per attempt')
+})
+
+test('the attempt-status reconciliation entry cannot drift (ADR-0297)', () => {
+  const operationDrop = baseline.routeSkeletonText.replace("'session.attempt.status',", '')
+  assert.notEqual(operationDrop, baseline.routeSkeletonText)
+  expectNamedFailure(check({ routeSkeletonText: operationDrop }), 'the attempt-status route must enter the unified read admission with its named operation')
+
+  const requestIdDrop = baseline.mainIndexText.replace('requestId: sessionRequestIdForAttempt(attempt.attemptId),', '')
+  assert.notEqual(requestIdDrop, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: requestIdDrop }), 'the attempt-status provider must read the matter record and derive the request id')
+
+  const matterReadDrop = baseline.mainIndexText.replace(
+    'const readMatter = sessionPromptAttempts.readMatter(matterRef)',
+    'const readMatter = undefined',
+  )
+  assert.notEqual(matterReadDrop, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: matterReadDrop }), 'the attempt-status provider must read the matter record and derive the request id')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

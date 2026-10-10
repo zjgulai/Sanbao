@@ -17,6 +17,7 @@ export const PROJECTION_READ_OPERATIONS = [
   'session.anchors.read',
   'session.anchors.locate',
   'session.terminal.read',
+  'session.attempt.status',
   'search.query',
   'artifacts.observe',
   'artifacts.open',

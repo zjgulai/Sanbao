@@ -105,7 +105,7 @@ function withoutPort(
 }
 
 describe('projection read admission', () => {
-  it('covers the 15 read operations represented by the 13 read-only routes', () => {
+  it('covers the 16 read operations represented by the 14 read-only routes', () => {
     expect(PROJECTION_READ_OPERATIONS).toEqual([
       'state.read',
       'workspace.files.list-candidates',
@@ -116,6 +116,7 @@ describe('projection read admission', () => {
       'session.anchors.read',
       'session.anchors.locate',
       'session.terminal.read',
+      'session.attempt.status',
       'search.query',
       'artifacts.observe',
       'artifacts.open',
@@ -124,7 +125,7 @@ describe('projection read admission', () => {
       'edit-drafts.diff',
       'run-log.read',
     ])
-    expect(new Set(PROJECTION_READ_OPERATIONS).size).toBe(16)
+    expect(new Set(PROJECTION_READ_OPERATIONS).size).toBe(17)
   })
 
   it('admits one read only after the exact ordered chain and a matching post-read freshness fact', async () => {

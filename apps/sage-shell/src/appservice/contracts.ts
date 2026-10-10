@@ -835,6 +835,31 @@ export type SessionSendOutcome =
   | { readonly state: 'deferred', readonly itemId: string }
   | { readonly state: 'refused', readonly code: string }
 
+/** ADR-0297: one read-only look at the active matter's attempt state — the reconciliation entry
+ *  for an outcome-unknown send. Every fact derives from the matter record (attempt identity,
+ *  dispatch-unknown mark, closure baseline) and the session fold's turn evidence; nothing here
+ *  closes, retries or rewrites anything. */
+export type SessionAttemptStatus =
+  | {
+      readonly state: 'read'
+      /** The matter the answer belongs to — the request-scoped active matter, echoed so the
+       *  caller can bind the answer to the context it asked about. */
+      readonly matterRef: string
+      /** The currently active attempt, or null when none is active. */
+      readonly active: {
+        readonly attemptId: string
+        /** ADR-0296 D5: the derived channel request id (the host log's `source.rpcId`). */
+        readonly requestId: string
+        /** ADR-0296 D4: dispatch concluded outcome-unknown for this attempt. */
+        readonly dispatchUnknown: boolean
+        /** Turn evidence relative to the attempt's recorded closure baseline. */
+        readonly evidence: 'turn-running' | 'turn-ended' | 'awaiting-evidence'
+      } | null
+      /** The most recently closed attempt, so a settled unknown send can be told apart. */
+      readonly last: { readonly attemptId: string, readonly status: 'succeeded' | 'failed' | 'blocked' } | null
+    }
+  | { readonly state: 'unavailable', readonly code: string }
+
 /** Ticket 008 (US-027): one queue-item mutation. `queue-item-not-found` is the consumption race's
  *  honest name — the item left the queue because the base started processing it. */
 export type QueueItemOutcome = { readonly state: 'ok' } | { readonly state: 'refused', readonly code: string }
@@ -1773,6 +1798,8 @@ export interface ServiceProviders {
   readonly assignMatterGroup: (request: { readonly groupId: string, readonly operation: 'add' | 'remove', readonly targets: readonly string[] }) => Promise<Response>
   /** Ticket 031: one bounded read of a workspace run-log page (never conversation sync). */
   readonly readRunLog: (request: { readonly workspaceRoot: string, readonly path: string, readonly fromLine?: number, readonly expectVersion?: string, readonly expectBytes?: number }) => Promise<Response>
+  /** ADR-0297: the read-only attempt-status reconciliation entry (matter-scoped, no input). */
+  readonly sessionAttemptStatus: () => Promise<Response>
   /** Ticket 008: edit/remove one still-pending queue occurrence (`queue-item-not-found` honest). */
   readonly updateQueueItem: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
   /** Ticket 009: cold history — the runs list and one run's on-demand detail (page reads only). */

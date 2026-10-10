@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "sourceCommit": "eeff8967190815c7b5018f7d11b748818d487d37",
   "denominator": {
-    "expected": 60,
+    "expected": 61,
     "sourcePath": "apps/sage-shell/src/appservice/route-skeleton.ts",
     "constantPattern": "^const SAGE_.*_PATH"
   },
@@ -439,6 +439,23 @@
       "providers": ["sessionHistoryList", "sessionHistoryDetail"],
       "persistence": "local bindings plus host history",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
+      "runCommand": { "required": false, "actual": false },
+      "projectionReadAdmission": { "required": true, "actual": true },
+      "unsupportedOperations": [],
+      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+    },
+    {
+      "sourceConstant": "SAGE_SESSION_ATTEMPT_STATUS_PATH",
+      "path": "/.sage/session/attempt-status",
+      "method": "POST",
+      "classification": "read-only",
+      "policyProfile": "projection-read",
+      "operations": ["status"],
+      "callerBinding": "CB1",
+      "activeContext": "request-scoped ActiveContext owned by projectionReadScope; no draft-recency fallback",
+      "providers": ["sessionAttemptStatus"],
+      "persistence": "none; read-only over the matter event store and the session fold",
+      "runtimeLevel": "L3 read seam behind unified admission; production read policy unavailable-first",
       "runCommand": { "required": false, "actual": false },
       "projectionReadAdmission": { "required": true, "actual": true },
       "unsupportedOperations": [],

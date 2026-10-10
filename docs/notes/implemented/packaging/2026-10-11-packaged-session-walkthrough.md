@@ -35,6 +35,7 @@
     { "roleRef": "role:owner", "operation": "workspace.files.list-candidates", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "workspace.files.create-reference", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "workspace.files.use-reference", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
+    { "roleRef": "role:owner", "operation": "session.attempt.status", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.history.list", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.history.detail", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },
     { "roleRef": "role:owner", "operation": "session.anchors.read", "actionScope": "projection.read", "effectClass": "local-read", "requiresDecision": false },

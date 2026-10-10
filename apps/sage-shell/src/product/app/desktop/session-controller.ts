@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DesktopRead } from './client.js'
-import { submitDesktopSession, type DesktopSessionContext, type DesktopSessionAction } from './session.js'
+import { queryDesktopAttemptStatus, submitDesktopSession, type DesktopSessionContext, type DesktopSessionAction } from './session.js'
 
 export type DesktopReadState = DesktopRead | { readonly kind: 'loading' }
 
@@ -29,6 +29,26 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     draftRef.current = { text, revision: draftRef.current.revision + 1 }
     setDraft(text)
   }
+  // ADR-0297: one read-only reconciliation query per background read while the matter is
+  // uncertain. It settles the gate ONLY on positive evidence — no active attempt answers — and
+  // anything else (unavailable, another matter, still active) keeps the conservative block.
+  const resolvingUncertainty = useRef(false)
+  const resolveUncertainty = useCallback(async (matterRef: string): Promise<void> => {
+    if (resolvingUncertainty.current) return
+    resolvingUncertainty.current = true
+    try {
+      const status = await queryDesktopAttemptStatus()
+      if (!mounted.current || status.kind !== 'read' || status.matterRef !== matterRef) return
+      if (status.active !== null || !uncertainMatters.current.has(matterRef)) return
+      uncertainMatters.current.delete(matterRef)
+      setUncertaintyRevision(value => value + 1)
+      setNotice(status.last === null
+        ? '已核对：没有进行中的发送。'
+        : `已核对：上一条发送已结算（${status.last.status === 'failed' ? '失败' : '成功'}），以会话记录为准。`)
+    } finally {
+      resolvingUncertainty.current = false
+    }
+  }, [])
   const publish = useCallback((next: DesktopReadState) => {
     stateRef.current = next
     setState(next)
@@ -49,8 +69,12 @@ export function useDesktopSession(readState: () => Promise<DesktopRead>) {
     }
     if (!mounted.current || capturedEpoch !== epoch.current || request !== sequence.current) return null
     publish(result)
+    if (result.kind === 'read' && result.session !== undefined
+      && uncertainMatters.current.has(result.session.context.matterRef)) {
+      void resolveUncertainty(result.session.context.matterRef)
+    }
     return result
-  }, [readState, publish])
+  }, [readState, publish, resolveUncertainty])
 
   useEffect(() => {
     mounted.current = true

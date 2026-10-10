@@ -199,6 +199,7 @@ describe('matter projection slot (WT-02D.1)', () => {
       'sessionAnchorsRead',
       'sessionApprovalAnswer',
       'sessionApprovalWithdraw',
+      'sessionAttemptStatus',
       'sessionClarificationAnswer',
       'sessionEditsResend',
       'sessionEditsSave',

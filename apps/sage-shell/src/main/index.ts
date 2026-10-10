@@ -18,8 +18,11 @@ import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
 import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
+import { projectBusinessMatter } from '../domain/business-matter.js'
 import { createSessionTurnClose } from './session-turn-close.js'
 import { createSessionSendReconcile } from './session-send-reconcile.js'
+import { sessionRequestIdForAttempt } from './session-prompt-dispatch.js'
+import type { SessionAttemptStatus } from '../appservice/contracts.js'
 import { isInventoryObservationCurrent } from './runtime-inventory-currency.js'
 import { createSessionPromptPrepareEnsure } from './session-prompt-prepare.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
@@ -1036,6 +1039,66 @@ async function main(paths: SagePaths): Promise<void> {
         capabilityRegistry: bundledRegistry,
         // T05-mid step 9 (ADR-0288): the persistence step's store handle (same Sage-owned store).
         sessionPromptAttempts,
+        // ADR-0297: the attempt-status read — the matter record (active attempt, dispatch-unknown
+        // mark, closure baseline) plus the session fold's turn evidence. Read-only: it closes
+        // nothing; the observer/reconcile remain the only closure writers.
+        sessionAttemptStatus: async (): Promise<SessionAttemptStatus> => {
+          const matterRef = scopedMatterRef()
+          const readMatter = sessionPromptAttempts.readMatter(matterRef)
+          if (readMatter === undefined || 'denied' in readMatter) {
+            return { state: 'unavailable', code: 'session-attempt-status-unavailable' }
+          }
+          let projection
+          try {
+            projection = projectBusinessMatter(readMatter.matter)
+          } catch {
+            return { state: 'unavailable', code: 'session-attempt-status-unavailable' }
+          }
+          const closed = projection.attempts.filter((item) => item.status !== 'running')
+          const lastClosed = closed.length === 0
+            ? null
+            : { attemptId: closed[closed.length - 1]!.attemptId, status: closed[closed.length - 1]!.status as 'succeeded' | 'failed' | 'blocked' }
+          // The fold is the turn-evidence home; an unreadable fold still answers the matter side
+          // with awaiting-evidence rather than inventing a turn state.
+          let foldEdge: string | null | undefined
+          let execution: 'idle' | 'executing' | undefined
+          try {
+            const status = await sessionChannel.read({ matterRef })
+            if (status.state === 'read') {
+              foldEdge = status.lastTurnEndEdge
+              execution = status.execution
+            } else if (status.state === 'no-session') {
+              foldEdge = null
+              execution = 'idle'
+            }
+          } catch {
+            // Fold unreadable: evidence stays awaiting.
+          }
+          const attempt = projection.activeAttemptId === undefined
+            ? undefined
+            : projection.attempts.find((item) => item.attemptId === projection.activeAttemptId)
+          if (attempt === undefined) {
+            return { state: 'read', matterRef, active: null, last: lastClosed }
+          }
+          const evidence = execution === 'executing'
+            ? 'turn-running' as const
+            : foldEdge !== undefined && foldEdge !== null
+                && attempt.observedTurnEndEdge !== undefined
+                && foldEdge !== attempt.observedTurnEndEdge
+              ? 'turn-ended' as const
+              : 'awaiting-evidence' as const
+          return {
+            state: 'read',
+            matterRef,
+            active: {
+              attemptId: attempt.attemptId,
+              requestId: sessionRequestIdForAttempt(attempt.attemptId),
+              dispatchUnknown: attempt.dispatchUnknown === true,
+              evidence,
+            },
+            last: lastClosed,
+          }
+        },
         // ADR-0296: the persist step's closure baseline — the raw channel read (no observer side
         // effects); an unreadable fold yields undefined and the step fails closed.
         readObservedTurnEndEdge: async (matterRef: string) => {

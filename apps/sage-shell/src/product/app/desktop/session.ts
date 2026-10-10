@@ -29,6 +29,22 @@ export type DesktopSessionOutcome =
   | { readonly kind: 'refused'; readonly code: string }
   | { readonly kind: 'unknown' }
 
+/** ADR-0297: the reconciliation answer for an outcome-unknown send. `read` carries the facts the
+ *  uncertainty gate may settle on; anything else keeps the conservative block. */
+export type DesktopAttemptStatus =
+  | {
+      readonly kind: 'read'
+      readonly matterRef: string
+      readonly active: {
+        readonly attemptId: string
+        readonly requestId: string
+        readonly dispatchUnknown: boolean
+        readonly evidence: 'turn-running' | 'turn-ended' | 'awaiting-evidence'
+      } | null
+      readonly last: { readonly attemptId: string; readonly status: 'succeeded' | 'failed' | 'blocked' } | null
+    }
+  | { readonly kind: 'unavailable' }
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -101,7 +117,7 @@ const TRANSPORT_REFUSALS: Readonly<Record<number, string>> = {
   400: 'invalid-session-request', 403: 'caller-denied', 405: 'method-not-allowed',
   413: 'request-too-large', 415: 'content-type-rejected',
 }
-const PATHS = { send: '/.sage/session/send', stop: '/.sage/session/stop', resume: '/.sage/session/resume' } as const
+const PATHS = { send: '/.sage/session/send', stop: '/.sage/session/stop', resume: '/.sage/session/resume', attemptStatus: '/.sage/session/attempt-status' } as const
 const references = (value: unknown): boolean => Array.isArray(value) && value.every(reference)
 
 export async function submitDesktopSession(session: DesktopSession | null, action: DesktopSessionAction): Promise<DesktopSessionOutcome> {
@@ -153,5 +169,51 @@ export async function submitDesktopSession(session: DesktopSession | null, actio
     return settled ? { kind: 'settled', action: action.kind, interrupted: result.state === 'interrupted' } : { kind: 'unknown' }
   } catch {
     return { kind: 'unknown' }
+  }
+}
+
+/** ADR-0297: one read-only attempt-status query — the reconciliation entry an unknown send's
+ *  uncertainty gate uses. It asks; it never sends, retries or closes anything. */
+export async function queryDesktopAttemptStatus(): Promise<DesktopAttemptStatus> {
+  try {
+    const response = await fetch(PATHS.attemptStatus, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+      cache: 'no-store', signal: AbortSignal.timeout(SAGE_REQUEST_TIMEOUT_MS),
+    })
+    if (!response.ok) return { kind: 'unavailable' }
+    const result: unknown = await response.json()
+    if (!isRecord(result)) return { kind: 'unavailable' }
+    if (result.state === 'unavailable') return { kind: 'unavailable' }
+    if (result.state !== 'read' || !reference(result.matterRef)) return { kind: 'unavailable' }
+    const active = result.active
+    type ActiveView = { readonly attemptId: string; readonly requestId: string; readonly dispatchUnknown: boolean; readonly evidence: 'turn-running' | 'turn-ended' | 'awaiting-evidence' } | null
+    let activeView: ActiveView
+    if (active === null) {
+      activeView = null
+    } else if (isRecord(active) && reference(active.attemptId) && reference(active.requestId)
+      && typeof active.dispatchUnknown === 'boolean'
+      && (active.evidence === 'turn-running' || active.evidence === 'turn-ended' || active.evidence === 'awaiting-evidence')) {
+      activeView = {
+        attemptId: active.attemptId as string,
+        requestId: active.requestId as string,
+        dispatchUnknown: active.dispatchUnknown,
+        evidence: active.evidence,
+      }
+    } else {
+      return { kind: 'unavailable' }
+    }
+    const last = result.last
+    let lastView: { readonly attemptId: string; readonly status: 'succeeded' | 'failed' | 'blocked' } | null
+    if (last === null) {
+      lastView = null
+    } else if (isRecord(last) && reference(last.attemptId)
+      && (last.status === 'succeeded' || last.status === 'failed' || last.status === 'blocked')) {
+      lastView = { attemptId: last.attemptId as string, status: last.status }
+    } else {
+      return { kind: 'unavailable' }
+    }
+    return { kind: 'read', matterRef: result.matterRef, active: activeView, last: lastView }
+  } catch {
+    return { kind: 'unavailable' }
   }
 }

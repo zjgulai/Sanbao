@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
-import type { QueueItemOutcome, SessionHistoryStatus, SessionRunDetailOutcome, SessionRunListOutcome, SageServiceState, ServiceCommandOutcome, ServiceCommandStatus, ServiceProviders, CapabilityStatus, ModelConfigStatus, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftConvertOutcome, DraftReconcileOutcome, DraftStatus, DraftView, MatterLinkState, PreferencesSaveOutcome, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, ClarificationAnswerOutcome, ClarificationStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionAnchorsStatus, SessionEditRecordView, SessionEditResendOutcome, SessionEditSaveOutcome, SessionEditsStatus, SessionEditVerifyOutcome, InputPluginView, InputSelectionOutcome, InputSelectionsStatus, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SettingsLeaf, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ExternalLinkOutcome, ToolResultsStatus, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ActionConfirmationPrepareOutcome, DraftConfirmationOutcome, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, ArtifactWindowOutcome } from './contracts.js'
+import type { QueueItemOutcome, SessionHistoryStatus, SessionRunDetailOutcome, SessionRunListOutcome, SageServiceState, ServiceCommandOutcome, ServiceCommandStatus, ServiceProviders, CapabilityStatus, ModelConfigStatus, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftConvertOutcome, DraftReconcileOutcome, DraftStatus, DraftView, MatterLinkState, PreferencesSaveOutcome, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, SessionAttemptStatus, ClarificationAnswerOutcome, ClarificationStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionAnchorsStatus, SessionEditRecordView, SessionEditResendOutcome, SessionEditSaveOutcome, SessionEditsStatus, SessionEditVerifyOutcome, InputPluginView, InputSelectionOutcome, InputSelectionsStatus, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SettingsLeaf, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ExternalLinkOutcome, ToolResultsStatus, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ActionConfirmationPrepareOutcome, DraftConfirmationOutcome, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, ArtifactWindowOutcome } from './contracts.js'
 import { DEFAULT_DISPLAY_PREFERENCE_VALUES } from './contracts.js'
 import type {
   ActiveMatterContextStatus,
@@ -125,6 +125,8 @@ export interface ServiceOptions {
   readonly sessionHistory?: () => SessionHistoryStatus
   readonly sessionHistoryList?: (request: { readonly beforeSeq?: number }) => Promise<SessionRunListOutcome>
   readonly sessionHistoryDetail?: (request: { readonly runSeq: number }) => Promise<SessionRunDetailOutcome>
+  /** ADR-0297: the attempt-status reconciliation read (absent keeps its honest unavailable). */
+  readonly sessionAttemptStatus?: () => Promise<SessionAttemptStatus>
   /** Ticket 034: the clarification loop — the live pending cards plus the one answer write. */
   readonly sessionClarifications?: () => Promise<ClarificationStatus>
   readonly sessionClarificationAnswer?: (request: { readonly matterRef: string, readonly requestId: string, readonly answers: readonly unknown[] }) => Promise<ClarificationAnswerOutcome>
@@ -768,6 +770,13 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       const outcome: SessionRunListOutcome = run === undefined
         ? { state: 'refused', code: 'session-history-unavailable' }
         : await run(request).catch((): SessionRunListOutcome => ({ state: 'refused', code: 'session-history-failed' }))
+      return serviceJson(outcome, 200)
+    },
+    async sessionAttemptStatus(): Promise<Response> {
+      const run = options.sessionAttemptStatus
+      const outcome: SessionAttemptStatus = run === undefined
+        ? { state: 'unavailable', code: 'session-attempt-status-unavailable' }
+        : await run().catch((): SessionAttemptStatus => ({ state: 'unavailable', code: 'session-attempt-status-read-failed' }))
       return serviceJson(outcome, 200)
     },
     async sessionHistoryDetail(request: { readonly runSeq: number }): Promise<Response> {
