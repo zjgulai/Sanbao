@@ -142,16 +142,22 @@ async function screenshot(name, fullPage = false) {
   writeFileSync(join(out, name), Buffer.from(data, 'base64'))
 }
 async function chooseNativeSelect(selector, value) {
-  const optionIndex = await evaluate(`(() => {
+  // macOS Chromium ignores arrow keys on a CLOSED native select (probe, 2026-10-10: Home and
+  // ArrowDown left the value unchanged in both plain and code/native-keyCode event shapes), and
+  // its OS popup cannot be driven by CDP input at all. The portable mechanism — the same one
+  // Playwright's selectOption uses — is the native value setter plus bubbling input/change
+  // events, which is what a real selection ultimately delivers to the product handler.
+  await evaluate(`(() => {
     const control = document.querySelector(${JSON.stringify(selector)})
     if (!(control instanceof HTMLSelectElement)) throw new Error('Missing native select')
-    const index = [...control.options].findIndex(option => option.value === ${JSON.stringify(value)})
-    if (index < 0) throw new Error('Missing target option')
-    control.focus()
-    return index
+    if (![...control.options].some(option => option.value === ${JSON.stringify(value)})) {
+      throw new Error('Missing target option')
+    }
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(control), 'value').set
+    setter.call(control, ${JSON.stringify(value)})
+    control.dispatchEvent(new Event('input', { bubbles: true }))
+    control.dispatchEvent(new Event('change', { bubbles: true }))
   })()`)
-  await key('Home', 36)
-  for (let index = 0; index < optionIndex; index += 1) await key('ArrowDown', 40)
   await waitFor(`document.querySelector(${JSON.stringify(selector)})?.value === ${JSON.stringify(value)}`)
 }
 function assertDevicePreferences(value) {
@@ -247,7 +253,7 @@ try {
   await waitFor("!!document.querySelector('[role=menu][aria-label=\"账号菜单\"]')")
   await click('button[aria-label="账号与设置页"]')
   await waitFor("document.querySelectorAll('.settings-appearance select').length === 8")
-  await waitFor(`[...document.querySelectorAll('.settings-appearance select')].every(control => ${JSON.stringify(requestedPreferences)}[control.name] === control.value)`)
+  await waitFor(`[...document.querySelectorAll('.settings-appearance select')].every(control => (${JSON.stringify(requestedPreferences)})[control.name] === control.value)`)
   evidence.reads.settings = await evaluate(`({
     heading: document.querySelector('.settings-appearance h2')?.textContent,
     selects: [...document.querySelectorAll('.settings-appearance select')].map(control => ({ id: control.id, name: control.name, value: control.value, disabled: control.disabled })),

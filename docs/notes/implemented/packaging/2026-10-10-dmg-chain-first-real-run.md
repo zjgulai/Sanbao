@@ -2,7 +2,7 @@
 
 - 日期：2026-10-10
 - 决策：[ADR-0279](../../../adr/ADR-0279.md)
-- 状态：producer/装配/签发已真实通过（第八、九次重跑）；**首个真实内测 DMG 已产出**（十追加）；DMG-06 验收识别并修复两枚判据缺陷（十一追加，C2A canonicalization v2 + pristine 同步判定），待 v2 链重跑后重验。
+- 状态：**DMG-06 验收通过**——producer/装配/签发/dmg/验收全链真实走通（第八至十二追加；v2 DMG `sha256:122d4625…`，`sage.packaged-acceptance.v1 passed=true`）。
 
 ## Problem
 
@@ -62,6 +62,8 @@
 - **验收轮 2 与生产直启实验**：app 真实启动（DevTools listening）但 bootstrap 拒装。两枚判据缺陷：
   1. **pristine 竞态 (#11)**：`--remote-debugging-port` 使 Chromium 在 async install 的 pristine 检查前写入 `electron/session-data/DevToolsActivePort`；无 flag 直启复现同类竞态（`Local State`，本次恰晚于检查落盘——同一个竞态两面）。修复：pristine 判定改**同步**、置于 `configureElectronPaths` 之前、以「无 active 指针」为门（`assertBundledProfileAdmissibleSync`），install 事务不再异步重检；回归测试含「admission 后写入 DevToolsActivePort 不阻断 install」。
   2. **C2A attestation 与签名冲突 (#12)**：`RuntimeArtifactAttestationError: installed runtime artifact set no longer matches its attestation`。全树逐文件对照（27,716 文件）证明差异**恰好** 13 个被重签 Mach-O；走 [ADR-0281](../../../adr/ADR-0281.md)（canonicalization v2：机器码摘要吸收签名变换 + `__LINKEDIT.vmsize` 归零），真实全树终验两侧 `artifactSetDigest` 相等（`sha256:09c1ae99…`）。**内测链因此必须重跑 produce→assemble→sign 记录 v2 摘要**；v1 摘要的既有 DMG 保留为历史读数。
+
+**十二追加（2026-10-10 晚，DMG-06 验收通过）**：v2 链（produce→assemble→第十次签发）产出 v2 DMG（`sha256:122d4625…`），`accept-dmg` 全链验收 **`sage.packaged-acceptance.v1 passed=true`**：挂载/卷清单/回拷逐字段核对（mounted==installed `020c980d…`）→ fresh root 首启（`bundled profile installed` → `host ready` → 8 项设备偏好首存 + 写后 GET 权威读数 + 1440/660/320 三档 geometry 与截图）→ 同 root 重启（`existing`、不重装、零偏好 POST、`savedAt` 逐字段保持、profile/preferences 指纹不变、三档截图）→ 进程组空 ×2、CDP 端口关闭 ×2、DMG detach、回执落盘。验收同时抓出 `desktop-live-check.mjs` 两枚「写了但从没跑到」缺陷（该文件首次真实执行）：① `waitFor` 注入表达式 `control => {json}[name]` 对象字面量未加括号——箭头函数体被解析为块语句（`SyntaxError`，且检查器只留 `exceptionDetails.text='Uncaught'`、丢弃真因）；② macOS Chromium 闭合原生 `<select>` 不响应方向键（探测：Home/ArrowDown 的两种 CDP 事件形态均零效果），OS 弹层无法被 CDP 驱动——驱动改 native value setter + 冒泡 `input`/`change`（Playwright `selectOption` 同机制）。修复后首存相位隔离复现全绿，完整验收一次通过。
 
 ## Verification
 
