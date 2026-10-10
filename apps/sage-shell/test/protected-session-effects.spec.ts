@@ -496,7 +496,7 @@ describe('AUTH-02B session-family admission', () => {
 
     expect(harness.observed).toEqual(thirdBatchCases.map((item) => ({
       family: 'session-core',
-      requestId: 'correlation:recorded',
+      requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u),
       operation: item.operation,
       candidate: item.candidate,
       payload: item.payload,
@@ -612,7 +612,7 @@ describe('AUTH-02D attachment upload admission', () => {
       .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(harness.observed).toEqual([{
       family: 'session-core',
-      requestId: 'correlation:recorded',
+      requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u),
       operation: attachmentUploadCase.operation,
       candidate: attachmentUploadCase.candidate,
       payload: attachmentUploadCase.payload,
@@ -687,7 +687,7 @@ describe('AUTH-02E attachment cancel admission', () => {
       .toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(harness.observed).toEqual([{
       family: 'session-core',
-      requestId: 'correlation:recorded',
+      requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u),
       operation: attachmentCancelCase.operation,
       candidate: attachmentCancelCase.candidate,
       payload: attachmentCancelCase.payload,

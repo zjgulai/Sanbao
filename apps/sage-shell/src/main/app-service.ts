@@ -21,9 +21,11 @@ import type { IdentityPolicyResolution } from '../security/identity-policy.js'
 import type { OidcAdapter } from './oidc-adapter.js'
 import type { TokenVault } from './token-vault.js'
 import type { RegistrySnapshotPort, RuntimeInventoryProvider } from './runtime-inventory-provider.js'
+import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-store.js'
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
 import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
 import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
 import { createSessionPromptTargetPort } from './session-prompt-target.js'
@@ -112,6 +114,9 @@ export interface SageAppServiceOptions {
   /** T05-mid step 7 (ADR-0286): the main-owned registry provider — the same published snapshot
    *  instance the runtime inventory observed. Absent keeps the registry step absent (fail closed). */
   readonly capabilityRegistry?: RegistrySnapshotPort
+  /** T05-mid step 9 (ADR-0288): the persist step's store handle over the matter event store.
+   *  Absent keeps the persistence step absent (fail closed). */
+  readonly sessionPromptAttempts?: SessionPromptAttemptStorePort
   /** Ticket 030: main-owned read of the live runtime roster (the same observation the inventory
    *  provider uses); absent keeps the capability surface at 未核验 rather than inventing rows. */
   readonly runtimeEffective?: () => RuntimeEffectiveObservation | undefined
@@ -879,6 +884,37 @@ function createSessionCoreProtectedEffectPorts(
           preflight: createSessionPromptPreflightPort({
             requirementBundle: options.requirementBundle,
             runtimeEffective: options.runtimeEffective,
+          }),
+        }),
+    // T05-mid step 9: the persistence step — pre-write re-verification plus the atomic
+    // attempt + evaluation-evidence append (ADR-0288). Every main-owned input must exist.
+    ...(options.authority === undefined
+      || options.requirementBundle === undefined
+      || options.compatibilityPublication === undefined
+      || options.runtimeEffective === undefined
+      || options.sessionPromptAttempts === undefined
+      || options.activeMatterContext === undefined
+      || options.framePolicySnapshot === undefined
+      ? {}
+      : {
+          persist: createSessionPromptPersistencePort({
+            requirementBundle: options.requirementBundle,
+            publication: options.compatibilityPublication,
+            attempts: options.sessionPromptAttempts,
+            readContext: () => {
+              const snapshot = options.activeMatterContext?.snapshot()
+              if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) return null
+              return {
+                sessionRef: snapshot.sessionRef,
+                matterRef: snapshot.matterId,
+                revisionRef: snapshot.revisionId,
+                contextGeneration: snapshot.contextGeneration,
+              }
+            },
+            readIdentitySession: () => options.vault.identitySession(),
+            readFrame: () => options.framePolicySnapshot?.(),
+            runtimeEffective: options.runtimeEffective,
+            now: options.authority.now,
           }),
         }),
   }

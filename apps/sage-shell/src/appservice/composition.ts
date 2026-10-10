@@ -306,7 +306,10 @@ async function admitSessionCoreProtectedEffect(
   return admitProtectedEffect({
     intent: {
       family: 'session-core',
-      requestId: correlation,
+      // ADR-0288: the operation identity is service-issued and per-request unique. The caller
+      // correlation stays the correlation (it may be a constant binding ref); reusing it as the
+      // requestId would mint the same attempt identity for every request of one caller.
+      requestId: randomUUID(),
       operation,
       candidate,
       payload,

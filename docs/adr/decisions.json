@@ -9489,6 +9489,50 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0288",
+      "title": "ADR-0288 · 第 9 步 persistence：评估证据入链、域 authored attempt 与同事务原子落盘",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "兼容事实扩携带封存证据；评估时刻封存；字段逐项有家；发布件装载面同字节暴露 bundle/revocation。",
+          "constraints": [
+            "no post-hoc evidence reconstruction",
+            "evidence optional in the contract, required by persist"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "attempt 载荷由域 startAttempt authored；事件 + 证据同事务 appendWithCompatibilityEvidence；refs = attemptId 重命名空间。",
+          "constraints": [
+            "executionSnapshot digest column is artifactDigest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "写入前再核验（context/identity/frame/digest/current/availability）；移动=stale 缺失=unavailable；全量重跑留在 host-lifecycle 票。",
+          "constraints": [
+            "no blocking re-observation on the request path"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "requestId 服务签发每请求唯一（randomUUID）；correlation 保持原义。",
+          "constraints": [
+            "reverting to the caller correlation is a named gate failure"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "commit-unknown 等一律 unavailable 绝不派发；replayed 幂等 allowed；门禁事实组 + 七条突变。",
+          "constraints": [
+            "no dispatch without a proven commit"
+          ]
+        }
+      ]
     }
   ]
 }

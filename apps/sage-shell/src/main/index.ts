@@ -17,6 +17,7 @@ import { handleSageServiceRequest, isSageServicePath } from '../appservice/route
 import { ShellHostProcess, type ShellHostRuntimeSnapshot } from './host-process.js'
 import { isRuntimeEffectiveObservation } from '../protocol.js'
 import { MATTER_STORE_BUSY_TIMEOUT_MS, MATTER_STORE_MAX_PAYLOAD_BYTES, MATTER_STORE_MAX_STREAM_EVENTS, createMatterRehydratePort } from './matter-rehydrate-port.js'
+import { createSessionPromptAttemptStore } from './session-prompt-attempt-store.js'
 import { createRevisionDigestReader } from './revision-digest-reader.js'
 import { openBusinessMatterEventStore } from '../persistence/business-matter-event-store.js'
 import { createMatterCustody } from './matter-custody.js'
@@ -138,7 +139,9 @@ async function main(paths: SagePaths): Promise<void> {
   const matterRehydrate = createMatterRehydratePort({ sagePaths: paths })
   // T04: the creation half of the same store — the custodian for home-page matter creation.
   const matterCustody = createMatterCustody({ sagePaths: paths })
-  app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); revisionDigestStore?.close() })
+  // ADR-0288: the persist step's own store handle; mirrors the rehydrate port's lazy-open shape.
+  const sessionPromptAttempts = createSessionPromptAttemptStore({ sagePaths: paths })
+  app.on('will-quit', () => { matterRehydrate.close(); matterCustody.close(); sessionPromptAttempts.close(); revisionDigestStore?.close() })
 
   // C2D.2A (ADR-0277) + first-party publication (ADR-0285): the bundled default stays the honest
   // empty set; a shipped published snapshot (kernel-valid and re-seal-proven) supersedes it for
@@ -986,6 +989,8 @@ async function main(paths: SagePaths): Promise<void> {
         // T05-mid step 7 (ADR-0286): the registry step reads the SAME published-snapshot provider
         // instance the inventory observed — one snapshot, one home, no second source.
         capabilityRegistry: bundledRegistry,
+        // T05-mid step 9 (ADR-0288): the persistence step's store handle (same Sage-owned store).
+        sessionPromptAttempts,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the
         // producer's own bytes here instead of trusting the caller (P-56); anything else stays 未核验.

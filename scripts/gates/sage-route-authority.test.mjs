@@ -26,6 +26,9 @@ const baseline = Object.freeze({
   capabilityEntryDerivationText: read('apps/sage-shell/src/main/capability-entry-derivation.ts'),
   runtimeInventoryProviderText: read('apps/sage-shell/src/main/runtime-inventory-provider.ts'),
   sessionPromptPreflightText: read('apps/sage-shell/src/main/session-prompt-preflight.ts'),
+  sessionPromptPersistenceText: read('apps/sage-shell/src/main/session-prompt-persistence.ts'),
+  sessionPromptAttemptStoreText: read('apps/sage-shell/src/main/session-prompt-attempt-store.ts'),
+  sessionPromptEvaluationEvidenceText: read('apps/sage-shell/src/main/session-prompt-evaluation-evidence.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -753,7 +756,7 @@ test('the real target step cannot drift from its gated wiring or unavailable-fir
 
 test('the real compatibility step cannot drift from its gated wiring or evaluation instant', () => {
   const ungated = baseline.mainAppServiceText.replace(
-    'options.compatibilityPublication === undefined',
+    'options.revisionDigest === undefined',
     'false',
   )
   assert.notEqual(ungated, baseline.mainAppServiceText)
@@ -874,6 +877,58 @@ test('the real preflight step cannot drift from its gated wiring, live validatio
   )
   assert.notEqual(domainDrift, baseline.sessionPromptPreflightText)
   expectNamedFailure(check({ sessionPromptPreflightText: domainDrift }), 'the preflight ref must carry its own domain-separated namespace')
+})
+
+test('the real persistence step cannot drift from its wiring, identity, re-verification or atomic append', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    'options.sessionPromptAttempts === undefined',
+    'false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the persistence step must be wired only behind the store handle and every main-owned input')
+
+  // Re-introducing the pre-ADR-0288 defect: the constant caller correlation as the requestId.
+  const identityDrift = baseline.compositionText.replace(
+    'requestId: randomUUID(),',
+    'requestId: correlation,',
+  )
+  assert.notEqual(identityDrift, baseline.compositionText)
+  expectNamedFailure(check({ compositionText: identityDrift }), 'the operation identity must be service-issued per request, never the caller correlation')
+
+  const evidenceDrop = baseline.sessionPromptCompatibilityText.replace(
+    'evidence: built.evidence,',
+    'evidence: undefined,',
+  )
+  assert.notEqual(evidenceDrop, baseline.sessionPromptCompatibilityText)
+  expectNamedFailure(check({ sessionPromptCompatibilityText: evidenceDrop }), 'the compatibility step must seal and carry the evaluation evidence it admitted')
+
+  const digestDrift = baseline.sessionPromptPersistenceText.replace(
+    'storeRevisionDigest !== evidence.revisionDigest',
+    'false',
+  )
+  assert.notEqual(digestDrift, baseline.sessionPromptPersistenceText)
+  expectNamedFailure(check({ sessionPromptPersistenceText: digestDrift }), 'the persistence step must re-verify current context, frame and the store-validated revision digest')
+
+  const domainBypass = baseline.sessionPromptPersistenceText.replace(
+    'startAttempt(rehydrated.matter, {',
+    'buildAttemptPayload(rehydrated.matter, {',
+  )
+  assert.notEqual(domainBypass, baseline.sessionPromptPersistenceText)
+  expectNamedFailure(check({ sessionPromptPersistenceText: domainBypass }), 'the attempt event payload must be authored by the domain kernel')
+
+  const unknownAllowed = baseline.sessionPromptPersistenceText.replace(
+    "      case 'appended':",
+    "      case 'commit-unknown':\n      case 'appended':",
+  )
+  assert.notEqual(unknownAllowed, baseline.sessionPromptPersistenceText)
+  expectNamedFailure(check({ sessionPromptPersistenceText: unknownAllowed }), 'commit-unknown must fail closed, never proceed to dispatch')
+
+  const secondWrite = baseline.sessionPromptPersistenceText.replace(
+    'options.attempts.appendAttempt(',
+    'options.attempts.append(',
+  )
+  assert.notEqual(secondWrite, baseline.sessionPromptPersistenceText)
+  expectNamedFailure(check({ sessionPromptPersistenceText: secondWrite }), 'the persistence step must append through the store handle, never a second write path')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

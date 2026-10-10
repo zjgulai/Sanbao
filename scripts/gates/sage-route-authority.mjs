@@ -611,6 +611,7 @@ function sessionCoreCompatibilityViolations(input) {
   // T05-mid step 6 (ADR-0284): the real compatibility step is wired only when every main-owned
   // input exists (matrix publication + observation + revision digest + requirement + authority).
   if (!appServiceText.includes('resolveCompatibility: createSessionPromptCompatibilityPort({')
+    || !appServiceText.includes('options.revisionDigest === undefined')
     || !appServiceText.includes('options.compatibilityPublication === undefined')
     || !appServiceText.includes('options.runtimeInventoryObservation === undefined')
     || !appServiceText.includes('options.revisionDigest === undefined')) {
@@ -636,6 +637,75 @@ function sessionCoreCompatibilityViolations(input) {
   if (!bundleText.includes('loadSessionPromptCompatibilityPublication')
     || !bundleText.includes('createBundledCompatibilityMatrixProviderV2(')) {
     violations.push('the publication loader must kernel-parse and assemble the bundled matrix provider')
+  }
+  return violations
+}
+
+function sessionPromptPersistenceViolations(input) {
+  const violations = []
+  const appServiceText = typeof input?.mainAppServiceText === 'string' ? input.mainAppServiceText : ''
+  const indexText = typeof input?.mainIndexText === 'string' ? input.mainIndexText : ''
+  const compositionText = typeof input?.compositionText === 'string' ? input.compositionText : ''
+  const persistText = typeof input?.sessionPromptPersistenceText === 'string' ? input.sessionPromptPersistenceText : ''
+  const attemptStoreText = typeof input?.sessionPromptAttemptStoreText === 'string' ? input.sessionPromptAttemptStoreText : ''
+  const evidenceBuilderText = typeof input?.sessionPromptEvaluationEvidenceText === 'string' ? input.sessionPromptEvaluationEvidenceText : ''
+  const compatibilityText = typeof input?.sessionPromptCompatibilityText === 'string' ? input.sessionPromptCompatibilityText : ''
+  if (appServiceText === '' || indexText === '' || compositionText === '' || persistText === ''
+    || attemptStoreText === '' || evidenceBuilderText === '' || compatibilityText === '') {
+    violations.push('session-prompt persistence sources are unavailable')
+    return violations
+  }
+  // T05-mid step 9 (ADR-0288): the persistence step is wired only when every main-owned input
+  // exists, over the store handle index opened under the Sage-owned paths.
+  if (!appServiceText.includes('persist: createSessionPromptPersistencePort({')
+    || !appServiceText.includes('options.sessionPromptAttempts === undefined')) {
+    violations.push('the persistence step must be wired only behind the store handle and every main-owned input')
+  }
+  if (!indexText.includes('const sessionPromptAttempts = createSessionPromptAttemptStore({ sagePaths: paths })')
+    || !indexText.includes('sessionPromptAttempts,')
+    || !indexText.includes('sessionPromptAttempts.close()')) {
+    violations.push('index must open the attempt store on the Sage-owned paths, hand it over, and close it on quit')
+  }
+  // The operation identity is service-issued and per-request unique; reusing the caller
+  // correlation (possibly a constant binding ref) would mint one attempt identity for every
+  // request of a caller — the pre-ADR-0288 defect.
+  if (!compositionText.includes('requestId: randomUUID(),')
+    || compositionText.includes('requestId: correlation,')) {
+    violations.push('the operation identity must be service-issued per request, never the caller correlation')
+  }
+  // What is written is exactly the evidence the compatibility step admitted; without it nothing
+  // is written. The event payload is authored by the domain kernel, and the append is atomic.
+  if (!compatibilityText.includes('buildSessionPromptEvaluationEvidence({')
+    || !compatibilityText.includes('evidence: built.evidence,')) {
+    violations.push('the compatibility step must seal and carry the evaluation evidence it admitted')
+  }
+  if (!evidenceBuilderText.includes('sealCompatibilityEvaluationEvidence(body)')
+    || !evidenceBuilderText.includes('matrixBytesReference(input.matrixResult.canonicalMatrix)')) {
+    violations.push('the evidence builder must seal through the codec and share the canonical-matrix forma')
+  }
+  if (!persistText.includes('if (evidence === undefined || typeof evidence.evidenceDigest !== \'string\') return { state: \'unavailable\' }')) {
+    violations.push('the persistence step must refuse without the admitted evidence')
+  }
+  if (!persistText.includes('if (!rehydrated.current) return { state: \'stale\' }')
+    || !persistText.includes('storeRevisionDigest !== evidence.revisionDigest')
+    || !persistText.includes("if (String(frame.generation) !== context.generation) return { state: 'stale' }")) {
+    violations.push('the persistence step must re-verify current context, frame and the store-validated revision digest')
+  }
+  if (!persistText.includes('startAttempt(rehydrated.matter, {')) {
+    violations.push('the attempt event payload must be authored by the domain kernel')
+  }
+  if (!persistText.includes('options.attempts.appendAttempt(')
+    || persistText.includes('.appendWithCompatibilityEvidence(')) {
+    violations.push('the persistence step must append through the store handle, never a second write path')
+  }
+  if (!persistText.includes('session-prompt-attempt:${evidence.attemptId}')) {
+    violations.push('the attempt append must be idempotent per service-issued attempt identity')
+  }
+  if (!attemptStoreText.includes('return database.appendWithCompatibilityEvidence({')) {
+    violations.push('the attempt store must append event and evidence in one transaction')
+  }
+  if (persistText.includes("case 'commit-unknown'")) {
+    violations.push('commit-unknown must fail closed, never proceed to dispatch')
   }
   return violations
 }
@@ -889,7 +959,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -934,6 +1004,11 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.sessionPromptPreflightText !== 'string') {
     return failAll(discovered, ['session-prompt preflight source unavailable; the real preflight step cannot be checked'])
+  }
+  if (typeof input?.sessionPromptPersistenceText !== 'string'
+    || typeof input?.sessionPromptAttemptStoreText !== 'string'
+    || typeof input?.sessionPromptEvaluationEvidenceText !== 'string') {
+    return failAll(discovered, ['session-prompt persistence sources unavailable; the real persistence step cannot be checked'])
   }
   if (typeof input?.matrixText !== 'string') {
     return failAll(discovered, ['route authority matrix unavailable'])
@@ -1301,6 +1376,9 @@ export function checkSageRouteAuthority(input) {
   const preflightViolations = sessionPromptPreflightViolations(input)
   for (const violation of preflightViolations) failGlobal(violation)
 
+  const persistenceViolations = sessionPromptPersistenceViolations(input)
+  for (const violation of persistenceViolations) failGlobal(violation)
+
   if (violations.length === 0) {
     return {
       status: 'pass',
@@ -1311,7 +1389,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — and the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) before stopping at the absent persistence / dispatch steps. The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
+      note: '13 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) and the real persistence step — pre-write re-verification plus the atomic attempt and evaluation-evidence append over the Sage-owned store (T05 mid step 9, ADR-0288) — before stopping at the absent dispatch step. The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }
