@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -172,6 +172,27 @@ test('orchestrator contains no broad process-name cleanup', () => {
   assert.match(source, /process\.kill\(-pgid,/u)
   assert.match(source, /detached: true/u)
   assert.doesNotMatch(source, /\bopen\s+-a\b/u)
+})
+
+test('every codesign --extract-certificates call attaches its value with =', () => {
+  // First packaged acceptance (2026-10-10): the space-separated form does NOT consume the next
+  // argv element as the option value — codesign reads it as a positional file argument and
+  // reports "<prefix>: No such file or directory" with zero certificates written. Only the
+  // `--extract-certificates=<prefix>` form produces `<prefix>0`.
+  const offenders = []
+  for (const root of [scriptsRoot, join(scriptsRoot, '..')]) {
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isFile() || !/\.(?:mjs|sh)$/u.test(entry.name)) continue
+      if (entry.name === 'accept-dmg.test.mjs') continue
+      const source = readFileSync(join(root, entry.name), 'utf8')
+      for (const [index, line] of source.split('\n').entries()) {
+        if (line.includes('--extract-certificates') && !line.includes('--extract-certificates=')) {
+          offenders.push(`${entry.name}:${index + 1}`)
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, [])
 })
 
 test('packaged live phases make renderer console errors blocking', () => {

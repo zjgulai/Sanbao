@@ -591,7 +591,7 @@ async function accept(options, result) {
     )
     run('/usr/bin/codesign', ['--verify', '--deep', '--strict', installedApp])
     const certificatePrefix = join(options.evidence, 'installed', 'embedded-certificate-')
-    run('/usr/bin/codesign', ['--display', '--extract-certificates', certificatePrefix, installedApp])
+    run('/usr/bin/codesign', ['--display', `--extract-certificates=${certificatePrefix}`, installedApp])
     const leafCertificatePath = `${certificatePrefix}0`
     assertRegularFile(leafCertificatePath, 'installed app embedded leaf certificate')
     const leafCertificate = new X509Certificate(readFileSync(leafCertificatePath))

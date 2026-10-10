@@ -347,17 +347,18 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
       .toBe('sha256:bb9a215829ec1c2ffb4a6b7ade0d9a874d41310d24f048c4bae054f9f1e40d29')
 
     // Seven provenance digests of the full evidence (re-anchored from the real producer,
-    // 2026-10-02, WT-02C.2E.3 protocol v5 + default-preset marking).
+    // 2026-10-02, WT-02C.2E.3 protocol v5 + default-preset marking；2026-10-10 又因 C2A
+    // canonicalization v2（ADR-0281）改变 fixture 的 attestation 摘要而重新锚定——同一批七条).
     expect(result.evidence.receiptDigest)
-      .toBe('sha256:651d9fc4f60b74295e662dad18486bd94a256f167c1f958460a1194f08c2c1c9')
+      .toBe('sha256:0774bac955d1857ef06dd10aba3feb96c47e7a56444ad62bad806ca4b16b7116')
     expect(result.evidence.materializationInstanceDigest)
-      .toBe('sha256:a764add1b99bc14f3af94847b540dd14c2e1b0517e17dcb79bd03fd58b5cddb9')
+      .toBe('sha256:8d19b458fff68ae759b176544a65bb75b123cd0f7e0d8481814ac4832dcc3aa9')
     expect(result.evidence.instanceAuthorityDigest)
-      .toBe('sha256:f89a0aa2f9c988c289db5da1d187845f2b47d774a9364bf2e6e2f275fe297dc1')
+      .toBe('sha256:2c791c7a1c0f9486361ae5e46a7334ac4a1905f525c9093c2466508e171562f4')
     expect(result.evidence.mainObservationProvenanceDigest)
-      .toBe('sha256:eb16c88352dac1cd0455b09118e5b5945e73bcd43122f81a4552410c999d514d')
+      .toBe('sha256:5f14d636d4b14bbacc279e2229a5e7e33ffd0a4b02f4d3d07792badebb9ebe1b')
     expect(result.evidence.healthObservationDigest)
-      .toBe('sha256:b8e770a07c0c6b8289c571c040ac4f1f792f144530c59a47b0ca6e5903a2caba')
+      .toBe('sha256:f0f6c350c60813bda88b60f9082b016b4f69989f1d4326165fee327ab1731fa0')
     expect(result.evidence.livenessObservationDigest)
       .toBe('sha256:4dc75ed73e8cd2a1d17ecf68852a244cd889b5435ffcaf8286fb16ba2c6d82ec')
     expect(result.evidence.registrySnapshotDigest)
@@ -365,9 +366,9 @@ describe('WT-02C.2E.2 RuntimeInventoryProvider composition', () => {
 
     // The stable pair itself is frozen: any silent field change breaks these literals.
     expect(result.descriptor.runtimeDescriptorDigest)
-      .toBe('urn:sage:runtime-descriptor:sha256:58c7d9997ac65ef90bc1cff5814b83e3e34562a0b53d6d94f560c91e53b83910')
+      .toBe('urn:sage:runtime-descriptor:sha256:1203c7009d2f81882992eb3402d36b53cdda5b61982cd8b0023b7aeeed50e7ed')
     expect(result.evidence.inventoryEvidenceDigest)
-      .toBe('urn:sage:inventory-evidence:sha256:6ec53b31e8d211c22c3759b46563aa2234237854ad0f406fa2624b7a42bab1a9')
+      .toBe('urn:sage:inventory-evidence:sha256:3b0d27f30b790aff49dbbe11fd2398879332839f153c74a151c3903d940232dc')
   })
 })
 

@@ -286,7 +286,7 @@ async function validateProfile(input) {
     'artifactAttestationDigest',
   ], 'runtime artifact attestation')
   if (attestation.schemaVersion !== 'sage.runtime-artifact-attestation.v1'
-    || attestation.canonicalizationVersion !== 'sage.runtime-artifact-attestation-canonical-json.v1'
+    || attestation.canonicalizationVersion !== 'sage.runtime-artifact-attestation-canonical-json.v2'
     || attestation.producerContractVersion !== 'sage.runtime-artifact-attestation-producer.v1'
     || attestation.generation !== template.generation
     || attestation.ownedProfileDigest !== template.ownedProfileDigest

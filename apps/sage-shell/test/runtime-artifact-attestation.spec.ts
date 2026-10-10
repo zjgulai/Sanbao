@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import {
   chmodSync,
+  copyFileSync,
   linkSync,
   lstatSync,
   mkdirSync,
@@ -12,6 +13,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -126,7 +128,7 @@ describe('runtime artifact attestation canonical contract', () => {
   it('canonicalizes a portable InstalledArtifactSetV1 without mutating caller input', () => {
     const set: InstalledArtifactSetV1 = {
       schemaVersion: 'sage.installed-artifact-set.v1',
-      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v1',
+      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v2',
       rootPackage: { path: 'package.json', sha256: `sha256:${'1'.repeat(64)}` },
       rootLockfile: { path: 'pnpm-lock.yaml', sha256: `sha256:${'2'.repeat(64)}` },
       entries: [
@@ -138,7 +140,7 @@ describe('runtime artifact attestation canonical contract', () => {
 
     const canonical = canonicalizeInstalledArtifactSet(set)
 
-    expect(canonical).toBe(`{"schemaVersion":"sage.installed-artifact-set.v1","canonicalizationVersion":"sage.runtime-artifact-attestation-canonical-json.v1","rootPackage":{"path":"package.json","sha256":"sha256:${'1'.repeat(64)}"},"rootLockfile":{"path":"pnpm-lock.yaml","sha256":"sha256:${'2'.repeat(64)}"},"entries":[{"kind":"file","path":"node_modules/a.js","sha256":"sha256:${'3'.repeat(64)}","executable":false},{"kind":"symlink","path":"node_modules/z-link","target":".pnpm/z@1/node_modules/z/index.js"}]}`)
+    expect(canonical).toBe(`{"schemaVersion":"sage.installed-artifact-set.v1","canonicalizationVersion":"sage.runtime-artifact-attestation-canonical-json.v2","rootPackage":{"path":"package.json","sha256":"sha256:${'1'.repeat(64)}"},"rootLockfile":{"path":"pnpm-lock.yaml","sha256":"sha256:${'2'.repeat(64)}"},"entries":[{"kind":"file","path":"node_modules/a.js","sha256":"sha256:${'3'.repeat(64)}","executable":false},{"kind":"symlink","path":"node_modules/z-link","target":".pnpm/z@1/node_modules/z/index.js"}]}`)
     expect(set).toEqual(before)
     expect(computeInstalledArtifactSetDigest(set)).toBe(sha256(canonical))
   })
@@ -150,7 +152,7 @@ describe('runtime artifact attestation canonical contract', () => {
 
     expect(inspection.artifactSet).toMatchObject({
       schemaVersion: 'sage.installed-artifact-set.v1',
-      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v1',
+      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v2',
       rootPackage: { path: 'package.json', sha256: sha256(readFileSync(fixture.packageFile, 'utf8')) },
       rootLockfile: { path: 'pnpm-lock.yaml', sha256: sha256(readFileSync(fixture.lockfile, 'utf8')) },
     })
@@ -191,6 +193,48 @@ describe('runtime artifact attestation canonical contract', () => {
     expect(equivalent).toEqual(first)
   })
 
+  it('canonicalizes Mach-O signature bytes so a re-signed native keeps one content identity', async () => {
+    const fixture = createProfileFixture('macho')
+    const nativePath = 'node_modules/.pnpm/tool@1.0.0/node_modules/tool/tool.node'
+    const native = join(fixture.profileDir, nativePath)
+    // Production trees are thin arm64 (validate-mach-o); the runner's own executable carries that
+    // exact shape (the Electron launcher under this suite's Electron test runner) — no external
+    // fixture bytes, and the size stays small enough for the suite.
+    const archs = execFileSync('/usr/bin/lipo', ['-archs', process.execPath], { encoding: 'utf8' }).trim().split(/\s+/u)
+    expect(archs).toContain('arm64')
+    if (archs.length === 1) {
+      copyFileSync(process.execPath, native)
+    } else {
+      execFileSync('/usr/bin/lipo', ['-thin', 'arm64', process.execPath, native])
+    }
+    chmodSync(native, 0o755)
+    // Start from the unsigned canonical form: re-signing an already ad-hoc-signed copy with the
+    // same flags is byte-deterministic and would pass vacuously (first cut of this fixture,
+    // 2026-10-10). The bytes-changed assertion below pins that the transform really ran.
+    execFileSync('/usr/bin/codesign', ['--remove-signature', native], { stdio: 'ignore' })
+
+    const baseline = await inspectInstalledArtifactSet(fixture.profileDir)
+    const baselineEntry = baseline.artifactSet.entries.find(row => row.path === nativePath)
+    expect(baselineEntry).toMatchObject({ kind: 'file', executable: true })
+    const baselineBytes = readFileSync(native)
+
+    // Signing writes the signature bytes and may shift __LINKEDIT vmsize; the canonical identity
+    // must absorb both — the packaged template is ALWAYS re-signed after production (2026-10-10:
+    // exactly the 13 re-signed natives failed the fresh scan otherwise).
+    execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', native], { stdio: 'ignore' })
+    expect(readFileSync(native).equals(baselineBytes)).toBe(false)
+    const signed = await inspectInstalledArtifactSet(fixture.profileDir)
+    expect(signed.artifactSet.entries.find(row => row.path === nativePath)).toEqual(baselineEntry)
+    expect(signed.artifactSetDigest).toBe(baseline.artifactSetDigest)
+
+    // Content away from the signature stays authoritative.
+    const tampered = readFileSync(native)
+    tampered[8] ^= 0x01
+    writeFileSync(native, tampered)
+    const drifted = await inspectInstalledArtifactSet(fixture.profileDir)
+    expect(drifted.artifactSetDigest).not.toBe(baseline.artifactSetDigest)
+  })
+
   it('keeps exact machine metadata outside the portable subject while binding it separately', async () => {
     const fixture = createProfileFixture('metadata')
     const before = await inspectInstalledArtifactSet(fixture.profileDir)
@@ -218,7 +262,7 @@ describe('runtime artifact attestation lifecycle', () => {
     expect(persisted).toEqual(createdAttestation)
     expect(createdAttestation).toMatchObject({
       schemaVersion: 'sage.runtime-artifact-attestation.v1',
-      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v1',
+      canonicalizationVersion: 'sage.runtime-artifact-attestation-canonical-json.v2',
       producerContractVersion: 'sage.runtime-artifact-attestation-producer.v1',
       generation: 'fixture-generation',
       ownedProfileDigest: OWNED_PROFILE_DIGEST,

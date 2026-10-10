@@ -8,13 +8,17 @@ import { constants, type BigIntStats } from 'node:fs'
 import {
   chmod,
   lstat,
+  mkdtemp,
   open,
   readFile,
   readdir,
   readlink,
   realpath,
+  rm,
 } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { types as utilTypes } from 'node:util'
 
@@ -22,7 +26,7 @@ export const RUNTIME_ARTIFACT_ATTESTATION_FILE = 'runtime-artifact-attestation.j
 
 const INSTALLED_ARTIFACT_SET_SCHEMA = 'sage.installed-artifact-set.v1'
 const ATTESTATION_SCHEMA = 'sage.runtime-artifact-attestation.v1'
-const CANONICALIZATION_VERSION = 'sage.runtime-artifact-attestation-canonical-json.v1'
+const CANONICALIZATION_VERSION = 'sage.runtime-artifact-attestation-canonical-json.v2'
 const PRODUCER_CONTRACT_VERSION = 'sage.runtime-artifact-attestation-producer.v1'
 const INSTALLER_METADATA_SCHEMA = 'sage.installer-metadata-set.v1'
 const GENERATION = /^[a-z0-9][a-z0-9-]{0,63}$/u
@@ -48,6 +52,7 @@ export type RuntimeArtifactAttestationErrorCode =
   | 'generation-binding-mismatch'
   | 'owned-profile-binding-mismatch'
   | 'artifact-attestation-write-failed'
+  | 'artifact-normalize-failed'
 
 export class RuntimeArtifactAttestationError extends Error {
   readonly code: RuntimeArtifactAttestationErrorCode
@@ -371,7 +376,78 @@ function sameSnapshot(left: BigIntStats, right: BigIntStats): boolean {
     && left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs
 }
 
-async function hashRegularFile(path: string): Promise<{ readonly sha256: string; readonly executable: boolean }> {
+const MH_MAGIC_64 = 0xfeedfacf
+const LC_SEGMENT_64 = 0x19
+/** LC_SEGMENT_64 layout: cmd(4) cmdsize(4) segname(16) vmaddr(8) vmsize(8). */
+const SEGMENT_VMSIZE_OFFSET = 32
+
+const CODESIGN_ENV = Object.freeze({ LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin:/usr/sbin:/sbin' })
+
+/**
+ * Byte offset of `__LINKEDIT`'s `vmsize` in a thin 64-bit little-endian Mach-O. `codesign
+ * --remove-signature` restores every other signed byte but leaves this field at the layout
+ * computed while the file WAS signed; hashing the signature-stripped image without zeroing it
+ * makes the digest depend on which signature a file happens to carry. Packaging-sage's
+ * signing-normalized tree digest implements the identical rule (2026-10-10 DMG chain, ADR-0281);
+ * both implementations are pinned by their own tests.
+ */
+export function linkeditVmsizeOffset(bytes: Uint8Array): number | null {
+  const view = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes)
+  if (view.length < 32 || view.readUInt32LE(0) !== MH_MAGIC_64) {
+    throw new RuntimeArtifactAttestationError(
+      'artifact-normalize-failed',
+      'sage shell: Mach-O normalization requires a thin 64-bit little-endian image',
+    )
+  }
+  const ncmds = view.readUInt32LE(16)
+  let offset = 32
+  for (let index = 0; index < ncmds; index += 1) {
+    if (offset + 8 > view.length) {
+      throw new RuntimeArtifactAttestationError('artifact-normalize-failed', 'sage shell: Mach-O load commands run past the end of the file')
+    }
+    const command = view.readUInt32LE(offset)
+    const commandSize = view.readUInt32LE(offset + 4)
+    if (commandSize < 8 || offset + commandSize > view.length) {
+      throw new RuntimeArtifactAttestationError('artifact-normalize-failed', 'sage shell: Mach-O load command has an invalid size')
+    }
+    if (command === LC_SEGMENT_64
+      && view.toString('latin1', offset + 8, offset + 24).replace(/\0+$/u, '') === '__LINKEDIT') {
+      return offset + SEGMENT_VMSIZE_OFFSET
+    }
+    offset += commandSize
+  }
+  return null
+}
+
+function withoutCodeSignature(tempPath: string): void {
+  const result = spawnSync('/usr/bin/codesign', ['--remove-signature', tempPath], {
+    encoding: 'utf8',
+    env: CODESIGN_ENV,
+    timeout: 30_000,
+    killSignal: 'SIGKILL',
+    maxBuffer: 4 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  if (result.error !== undefined) {
+    throw new RuntimeArtifactAttestationError(
+      'artifact-normalize-failed',
+      `sage shell: could not normalize an installed Mach-O signature: ${result.error.message}`,
+      result.error,
+    )
+  }
+  if (result.status === 0) return
+  const detail = `${result.stdout}\n${result.stderr}`
+  if (/code object is not signed at all/iu.test(detail)) return
+  throw new RuntimeArtifactAttestationError(
+    'artifact-normalize-failed',
+    `sage shell: could not normalize an installed Mach-O signature: ${detail.trim() || `exit ${String(result.status)}`}`,
+  )
+}
+
+async function hashRegularFile(
+  path: string,
+  normalizeRoot: string,
+): Promise<{ readonly sha256: string; readonly executable: boolean }> {
   const before = await lstat(path, { bigint: true })
   if (before.isSymbolicLink() || !before.isFile()) {
     throw new RuntimeArtifactAttestationError(
@@ -380,6 +456,8 @@ async function hashRegularFile(path: string): Promise<{ readonly sha256: string;
     )
   }
   let handle: Awaited<ReturnType<typeof open>> | undefined
+  let normalizeHandle: Awaited<ReturnType<typeof open>> | undefined
+  let normalizePath: string | undefined
   try {
     handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW)
     const openedBefore = await handle.stat({ bigint: true })
@@ -391,10 +469,33 @@ async function hashRegularFile(path: string): Promise<{ readonly sha256: string;
     }
     const hash = createHash('sha256')
     const buffer = Buffer.allocUnsafe(64 * 1024)
+    let probe = Buffer.alloc(0)
     while (true) {
       const { bytesRead } = await handle.read(buffer, 0, buffer.byteLength, null)
       if (bytesRead === 0) break
-      hash.update(buffer.subarray(0, bytesRead))
+      const chunk = buffer.subarray(0, bytesRead)
+      if (normalizeHandle !== undefined) {
+        await normalizeHandle.write(chunk)
+        continue
+      }
+      if (chunk.length + probe.length < 4) {
+        probe = Buffer.concat([probe, chunk])
+        continue
+      }
+      const head = probe.length === 0 ? chunk : Buffer.concat([probe, chunk])
+      if (head.readUInt32LE(0) !== MH_MAGIC_64) {
+        hash.update(head)
+        probe = Buffer.alloc(0)
+        continue
+      }
+      // A thin 64-bit Mach-O: hash a private, signature-stripped copy instead of the raw bytes.
+      // The packaged profile template is re-signed per build, so raw bytes can never match the
+      // pre-signing attestation the template was produced with (first packaged acceptance,
+      // 2026-10-10: exactly the 13 re-signed natives drifted).
+      normalizePath = join(normalizeRoot, createHash('sha1').update(path).digest('hex'))
+      normalizeHandle = await open(normalizePath, 'wx', 0o600)
+      await normalizeHandle.write(head)
+      probe = Buffer.alloc(0)
     }
     const openedAfter = await handle.stat({ bigint: true })
     const pathAfter = await lstat(path, { bigint: true })
@@ -404,11 +505,31 @@ async function hashRegularFile(path: string): Promise<{ readonly sha256: string;
         `sage shell: installed artifact changed while it was being read: ${path}`,
       )
     }
+    if (normalizeHandle !== undefined) {
+      await normalizeHandle.close()
+      normalizeHandle = undefined
+      withoutCodeSignature(normalizePath as string)
+      const bytes = await readFile(normalizePath as string)
+      const vmsizeOffset = linkeditVmsizeOffset(bytes)
+      if (vmsizeOffset === null) {
+        throw new RuntimeArtifactAttestationError(
+          'artifact-normalize-failed',
+          `sage shell: installed Mach-O image has no __LINKEDIT segment: ${path}`,
+        )
+      }
+      bytes.writeBigUInt64LE(0n, vmsizeOffset)
+      return {
+        sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+        executable: (openedAfter.mode & 0o111n) !== 0n,
+      }
+    }
+    if (probe.length > 0) hash.update(probe)
     return {
       sha256: `sha256:${hash.digest('hex')}`,
       executable: (openedAfter.mode & 0o111n) !== 0n,
     }
   } finally {
+    await normalizeHandle?.close()
     await handle?.close()
   }
 }
@@ -480,6 +601,15 @@ async function inspectSymlink(
 }
 
 async function scanOnce(profileDir: string): Promise<ScanResult> {
+  const normalizeRoot = await mkdtemp(join(tmpdir(), 'sage-attestation-normalize-'))
+  try {
+    return await scanPaths(profileDir, normalizeRoot)
+  } finally {
+    await rm(normalizeRoot, { recursive: true, force: true })
+  }
+}
+
+async function scanPaths(profileDir: string, normalizeRoot: string): Promise<ScanResult> {
   const rootPackagePath = join(profileDir, 'package.json')
   const rootLockfilePath = join(profileDir, 'pnpm-lock.yaml')
   const nodeModulesRoot = join(profileDir, 'node_modules')
@@ -511,8 +641,8 @@ async function scanOnce(profileDir: string): Promise<ScanResult> {
   }
 
   const [rootPackage, rootLockfile] = await Promise.all([
-    hashRegularFile(rootPackagePath),
-    hashRegularFile(rootLockfilePath),
+    hashRegularFile(rootPackagePath, normalizeRoot),
+    hashRegularFile(rootLockfilePath, normalizeRoot),
   ])
   const entries: InstalledArtifactEntryV1[] = []
   const installerMetadata: InstallerMetadataFileV1[] = []
@@ -539,7 +669,7 @@ async function scanOnce(profileDir: string): Promise<ScanResult> {
       if (entry.isDirectory()) {
         await visit(path)
       } else if (entry.isFile()) {
-        const hashed = await hashRegularFile(path)
+        const hashed = await hashRegularFile(path, normalizeRoot)
         if (INSTALLER_METADATA_PATHS.has(artifactPath)) {
           installerMetadata.push({ path: artifactPath, sha256: hashed.sha256 })
         } else {

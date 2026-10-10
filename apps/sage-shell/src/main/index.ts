@@ -1,6 +1,6 @@
 /** Sage Electron shell: custom protocol, one window, host child lifecycle. */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createProjectionReadPolicy, type ProjectionReadPolicy } from './projection-read-policy.js'
 import { readdir, realpath, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { app, dialog, nativeTheme, protocol, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
-import { installBundledProfileTemplate } from '../profile/bundled-profile.js'
+import { assertBundledProfileAdmissibleSync, installBundledProfileTemplate } from '../profile/bundled-profile.js'
 import type { SageViewState } from '../product/contracts.js'
 import type { DraftRecord } from './draft-store.js'
 import type { DraftStatus, WorkspaceListStatus } from '../appservice/contracts.js'
@@ -1086,6 +1086,13 @@ async function bootstrap(): Promise<void> {
   // `setPath('sessionData')` has to occur before Electron's ready event. This
   // safe synchronous setup is deliberately before the first await in bootstrap().
   ensureSageDirectoriesSync(paths)
+  // Pristine admission must be decided BEFORE configureElectronPaths: once Chromium knows the
+  // session directory it writes its own runtime files (DevToolsActivePort, Local State) while the
+  // async install transaction is still awaiting, which would fail the check nondeterministically
+  // (first packaged acceptance, 2026-10-10). A valid existing pointer skips admission entirely.
+  if (app.isPackaged && !existsSync(paths.activeProfileFile)) {
+    assertBundledProfileAdmissibleSync(paths)
+  }
   configureElectronPaths(paths)
   // A packaged first launch cannot depend on pnpm or the network. The build-time materialized,
   // app-signature-covered template is admitted only into a completely pristine Sage root; an

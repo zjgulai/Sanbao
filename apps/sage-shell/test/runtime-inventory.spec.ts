@@ -34,8 +34,10 @@ import {
 const OWNED_PROFILE_DIGEST = `sha256:${'a'.repeat(64)}`
 const OBSERVED_AT = '2026-09-28T10:00:00.000Z'
 const BOOT_ID = 'sage-host:11111111-1111-4111-8111-111111111111'
-const GOLDEN_PROJECTION_CANONICAL = '{"schemaVersion":"sage.host-live-inventory-projection.v1","canonicalizationVersion":"sage.host-live-inventory-projection-canonical-json.v1","bootId":"sage-host:11111111-1111-4111-8111-111111111111","runtimeGeneration":7,"activeGeneration":"available-generation","manifestSha256":"4ae54e6de609b169b6606d66e450c0eedfec533e04955b77bf5f005c4f120d8c","loaderPhase":"active","hostProtocolVersion":"5","harnessVersion":"0.2.0-rc.2","ownedProfileDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","artifactSetDigest":"sha256:651b1d68a8100af294b8c4ba87fb1fb0e23052c6807e94521a13abb0618a1830","installerMetadataDigest":"sha256:30c8d2783ad5dc230db30d328df67a36d2dcde7accc94b389acf2c3eea20e9f3","artifactAttestationDigest":"sha256:f7f25298e1b1d67470669a9272ccb1e840799efeecdcf36e8a044ac07cc511a9","observedAt":"2026-09-28T10:00:00.000Z","expiresAt":"2026-09-28T10:00:30.000Z"}'
-const GOLDEN_PROJECTION_DIGEST = 'sha256:98b254b7d40edffe596d989c4f78396a37b8c43b13c260c9bce48fdc9649f6d3'
+// Re-anchored 2026-10-10 after C2A canonicalization v2 (ADR-0281): the fixture's attestation
+// digests legitimately changed, so every value chained from them did too.
+const GOLDEN_PROJECTION_CANONICAL = '{"schemaVersion":"sage.host-live-inventory-projection.v1","canonicalizationVersion":"sage.host-live-inventory-projection-canonical-json.v1","bootId":"sage-host:11111111-1111-4111-8111-111111111111","runtimeGeneration":7,"activeGeneration":"available-generation","manifestSha256":"9655f73e44ad0669e6f4c9dbf4b6c1d3ef9811b7ac0d41590aba592aead9182c","loaderPhase":"active","hostProtocolVersion":"5","harnessVersion":"0.2.0-rc.2","ownedProfileDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","artifactSetDigest":"sha256:b9a73368af128224b1317ce0c6e8b3dc0e6a41a0e76aba0eb9325cf06e7e42f6","installerMetadataDigest":"sha256:30c8d2783ad5dc230db30d328df67a36d2dcde7accc94b389acf2c3eea20e9f3","artifactAttestationDigest":"sha256:a90327decf4b6755e4c21e81edc5f184e82672e5e3d42f48f43d9d88f39d623e","observedAt":"2026-09-28T10:00:00.000Z","expiresAt":"2026-09-28T10:00:30.000Z"}'
+const GOLDEN_PROJECTION_DIGEST = 'sha256:c4f5968eb91e9586c8738d4c52b5164d65b2844ce9538825795ddb336dcafcd4'
 const created: string[] = []
 
 function temporary(label: string): string {

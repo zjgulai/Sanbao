@@ -9152,6 +9152,51 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0281",
+      "title": "ADR-0281 · C2A canonicalization v2：机器码 artifact 摘要吸收签名变换（含归零 `__LINKEDIT` vmsize）",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "canonicalizationVersion 升 v2；v1 attestation 在 v2 解析下 fail closed，打包链重跑 producer。",
+          "constraints": [
+            "versioned seam is the canonicalizationVersion field",
+            "old digests are rejected loudly, never silently mismatched"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "Mach-O 文件摘要 = remove-signature 私有副本 + __LINKEDIT.vmsize 归零后哈希；非 Mach-O 原样；executable/path/symlink/metadata 语义不变。",
+          "constraints": [
+            "source tree is never modified",
+            "TOCTOU snapshot checks preserved"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "非薄片 64 位 LE Mach-O 抛 artifact-normalize-failed，不跳过。",
+          "constraints": [
+            "fail closed on unknown image shapes"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "packaging 与 sage-shell 两份归一化实现语义逐字相同，各自测试钉住。",
+          "constraints": [
+            "no shared package exists; semantics pinned per package"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "回归夹具必须真实改变签名字节（先清零基线 + 断言字节已变），禁止同种重签的字节确定假绿。",
+          "constraints": [
+            "bytes-changed assertion before digest invariance"
+          ]
+        }
+      ]
     }
   ]
 }

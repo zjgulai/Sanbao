@@ -8,9 +8,10 @@ import { materializeProfile } from '../src/profile/materialize.js'
 import {
   BUNDLED_PROFILE_TEMPLATE_MANIFEST,
   BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR,
+  assertBundledProfileAdmissibleSync,
   installBundledProfileTemplate,
 } from '../src/profile/bundled-profile.js'
-import { generationProfileDir, readActiveProfile, resolveSagePaths } from '../src/profile/paths.js'
+import { ensureSageDirectoriesSync, generationProfileDir, readActiveProfile, resolveSagePaths } from '../src/profile/paths.js'
 import { RUNTIME_ARTIFACT_ATTESTATION_FILE } from '../src/profile/runtime-artifact-attestation.js'
 
 const realShellRoot = join(import.meta.dirname, '..')
@@ -111,16 +112,30 @@ describe('installBundledProfileTemplate', () => {
     expect(existsSync(generationProfileDir(paths, template.generation))).toBe(true)
   })
 
-  it('rejects a missing-pointer root that contains any prior state or partial transaction', async () => {
-    const template = await createTemplate('nonpristine')
+  it('rejects a missing-pointer root that contains any prior state at admission time', () => {
     const paths = testPaths('nonpristine-target')
-    mkdirSync(paths.draftsDir, { recursive: true })
+    ensureSageDirectoriesSync(paths)
+    expect(() => assertBundledProfileAdmissibleSync(paths)).not.toThrow()
     writeFileSync(join(paths.draftsDir, 'existing.json'), '{}\n')
+    expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
+  })
 
-    await expect(installBundledProfileTemplate({ paths, templateRoot: template.templateRoot }))
-      .rejects.toThrow(/not pristine/u)
-    expect(existsSync(paths.activeProfileFile)).toBe(false)
-    expect(existsSync(generationProfileDir(paths, template.generation))).toBe(false)
+  it('installs after admission even though Chromium writes its session files in between', async () => {
+    const template = await createTemplate('session-race')
+    const paths = testPaths('session-race-target')
+    ensureSageDirectoriesSync(paths)
+    assertBundledProfileAdmissibleSync(paths)
+    // Exactly the first packaged acceptance race (2026-10-10): the debugging launch writes
+    // DevToolsActivePort into the configured session directory while the async install
+    // transaction is still awaiting. Admission is a pre-configure decision, not a re-check.
+    writeFileSync(join(paths.sessionDataDir, 'DevToolsActivePort'), '12345\n')
+
+    const result = await installBundledProfileTemplate({
+      paths,
+      templateRoot: template.templateRoot,
+      now: () => '2026-10-05T12:00:00.000Z',
+    })
+    expect(result).toMatchObject({ state: 'installed', profile: { generation: template.generation } })
   })
 
   it('rejects tampered template bytes before activating a generation', async () => {

@@ -1,8 +1,8 @@
 /** Installs the signed, build-time materialized profile on a packaged first run. */
 
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
-import { cp, lstat, mkdir, open, readFile, readdir, rename, rm } from 'node:fs/promises'
+import { existsSync, readdirSync } from 'node:fs'
+import { cp, lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import { writeActivePointer } from './materialize.js'
 import {
@@ -105,20 +105,26 @@ function expectedEmptyDirectories(paths: SagePaths): Set<string> {
   ].map(path => relative(paths.root, path)).filter(path => path !== ''))
 }
 
-/** A missing pointer is installable only when the owned root contains no prior state or partial transaction. */
-async function assertPristineOwnedRoot(paths: SagePaths): Promise<void> {
+/**
+ * A missing pointer is admissible only when the owned root contains no prior state or partial
+ * transaction. This check is synchronous and MUST run before `configureElectronPaths`: Chromium
+ * writes its own runtime files (DevToolsActivePort with remote debugging, Local State otherwise)
+ * into the configured session directory while the async install transaction is still awaiting, so
+ * any post-await re-check is a race (first packaged acceptance, 2026-10-10).
+ */
+export function assertBundledProfileAdmissibleSync(paths: SagePaths): void {
   const expected = expectedEmptyDirectories(paths)
-  const visit = async (directory: string): Promise<void> => {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name)
       const portable = relative(paths.root, path)
       if (!isInside(paths.root, path) || entry.isSymbolicLink() || !entry.isDirectory() || !expected.has(portable)) {
         throw new Error('sage shell: refusing bundled profile install because the Sage data root is not pristine')
       }
-      await visit(path)
+      visit(path)
     }
   }
-  await visit(paths.root)
+  visit(paths.root)
 }
 
 async function writeVerificationPointer(path: string, manifest: BundledProfileTemplateManifest, activatedAt: string): Promise<void> {
@@ -138,7 +144,10 @@ async function writeVerificationPointer(path: string, manifest: BundledProfileTe
 
 /**
  * Install a signed profile template exactly once. Existing valid activations win; a malformed
- * pointer, non-pristine root, invalid receipt, or attestation drift fails closed without replacement.
+ * pointer, invalid receipt, or attestation drift fails closed without replacement. Pristine
+ * admission of the data root is asserted by the boot path via `assertBundledProfileAdmissibleSync`
+ * before any Electron path is configured — this transaction must not re-check it asynchronously,
+ * because Chromium's own session files land in the root while these awaits yield.
  */
 export async function installBundledProfileTemplate(input: {
   readonly paths: SagePaths
@@ -148,7 +157,6 @@ export async function installBundledProfileTemplate(input: {
   await ensureSageDirectories(input.paths)
   const existing = await readActiveProfile(input.paths)
   if (existing !== null) return { state: 'existing', profile: existing }
-  await assertPristineOwnedRoot(input.paths)
 
   const manifest = await readTemplateManifest(input.templateRoot)
   const source = join(input.templateRoot, BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR)

@@ -2,7 +2,7 @@
 
 - 日期：2026-10-10
 - 决策：[ADR-0279](../../../adr/ADR-0279.md)
-- 状态：producer/装配/签发已真实通过（第八次重跑完成整条签发事务，见八追加）；dmg.sh 首执行暴露签名归一化残留（九追加，已修复，待重装配重签）；DMG 生成与 DMG-06 验收以本页后续读数为准。
+- 状态：producer/装配/签发已真实通过（第八、九次重跑）；**首个真实内测 DMG 已产出**（十追加）；DMG-06 验收识别并修复两枚判据缺陷（十一追加，C2A canonicalization v2 + pristine 同步判定），待 v2 链重跑后重验。
 
 ## Problem
 
@@ -53,6 +53,15 @@
 **八追加（2026-10-10 晚，第八次重跑；签发链完成）**：DR 读流修复生效，**完整签发事务首次真实走通**：28 个 Mach-O 全部签名 → 候选计划复核 → 回执 `sage.local-signing-receipt.v2`（DR = `identifier "com.lute.sage" and certificate leaf = H"bb67cd1c…"`）→ `verify-signing-receipt`（逐 target 抽取 leaf cert 比对 SHA-256/SHA-1/CN、拒绝 runtime/timestamp/sandbox、plan digest 与 signed tree digest 复核）→ `signer verified: Sage Local Code Signing sha256:307f66ca…` → signed manifest → 原子换入 → 信任移除 + 临时钥匙串销毁 + 搜索列表还原（`signed … removed its trust and keychain`）。staging 落盘：签名 `Sage.app` + receipt + plan + manifest；无 `.sign.*`/`.local-signing.*` 残留；搜索列表 = `login.keychain-db`。
 
 **九追加（2026-10-10 晚，dmg.sh 首执行；签名归一化残留）**：`dmg.sh --execute` 在 `verify-bundle` 的 **embedded profile template signing-normalized tree digest** 判据红：期望 `d21014e7…`（装配期从输入树记录），观测 `5e137a26…`（已签嵌入树）。根因（无信任复刻 + 对全部 13 个 profile-template 原生件逐一分类）：`codesign --remove-signature` 恢复签名外所有字节，但把 `__LINKEDIT` 的 `vmsize` 留在**签名期间的布局值**（签名尺寸参与该段的映射尺寸声明）；10/13 文件与输入仅此一字段有差（1–2 字节，可升可降；3 个恰好无差），文件尺寸恒等——旧归一化器只做 remove-signature 就哈希，于是「签名归一化摘要」在真实重签下不成立；原回归测试的合成夹具（`/usr/bin/true`，恰好不触发 vmsize 偏移）从未复现此形态（P-56 同族）。修复：归一化器在 remove-signature 后解析薄片 64 位 LE 的 Mach-O load commands，把 `__LINKEDIT.vmsize` 归零再哈希（fail-closed：非薄片/无 `__LINKEDIT` 直接拒绝；新增导出 `linkeditVmsizeOffset`）。**真实故障现场终验**：修复后 `digest(input/profile-template) == digest(已签嵌入式树)`（`1d766edd…`）、app runtime 两侧相等——dmg 判据的失败形态已消除；测试同步改薄 arm64 夹具（`process.execPath`）+ 新增「钉小 vmsize → 签名 → 移除，断言字段确实移动且摘要吸收之」用例。**注意**：元数据里的装配摘要由旧归一化器所写，修复后必须**重新装配**（记录新摘要）再重签，dmg 才可能通过。
+
+**十追加（2026-10-10 晚，dmg.sh 成功；首个真实内测 DMG）**：重装配 + 第九次签发后 `dmg.sh --execute` 退出 0——verify-bundle（vmsize 修复生效）→ verify-signing-receipt（`signer verified … sha256:0f068f63…`）→ UDZO 生成且 `hdiutil verify` 校验和 VALID → 只读挂载 → 卷清单 → 从挂载卷回拷 → 回拷复核（29901 文件可重定位、signer 复验）→ 回执 → 事务换入。落盘：`release/Sage-0.1.0-internal-arm64.dmg`（404,018,428 bytes，sha256 `ad175e60…`）＋ `sage.dmg-receipt.v1` manifest（绑定 app treeSha256、身份、卷 entries/treeSha256）＋ `staging/installed-copy/`。
+
+**十一追加（2026-10-10 晚，DMG-06 首验两枚缺陷）**：
+
+- **验收轮 1（启动前红）**：`accept-dmg.mjs:594` 的 `codesign --display --extract-certificates <prefix>` **空格形态**把下一个参数当位置文件（`<prefix>: No such file or directory`、0 个证书）；本地实证 `=` 形态才产出 `<prefix>0`（`verify-signing-receipt` 一直用 `=` 形态，故从未暴露）。修复 + `accept-dmg.test.mjs` 新增「全打包脚本 argv 形态扫描」守卫；轮 2 通过该步（mounted 树/卷 entries/回执逐字段核对、codesign --verify 均过）。
+- **验收轮 2 与生产直启实验**：app 真实启动（DevTools listening）但 bootstrap 拒装。两枚判据缺陷：
+  1. **pristine 竞态 (#11)**：`--remote-debugging-port` 使 Chromium 在 async install 的 pristine 检查前写入 `electron/session-data/DevToolsActivePort`；无 flag 直启复现同类竞态（`Local State`，本次恰晚于检查落盘——同一个竞态两面）。修复：pristine 判定改**同步**、置于 `configureElectronPaths` 之前、以「无 active 指针」为门（`assertBundledProfileAdmissibleSync`），install 事务不再异步重检；回归测试含「admission 后写入 DevToolsActivePort 不阻断 install」。
+  2. **C2A attestation 与签名冲突 (#12)**：`RuntimeArtifactAttestationError: installed runtime artifact set no longer matches its attestation`。全树逐文件对照（27,716 文件）证明差异**恰好** 13 个被重签 Mach-O；走 [ADR-0281](../../../adr/ADR-0281.md)（canonicalization v2：机器码摘要吸收签名变换 + `__LINKEDIT.vmsize` 归零），真实全树终验两侧 `artifactSetDigest` 相等（`sha256:09c1ae99…`）。**内测链因此必须重跑 produce→assemble→sign 记录 v2 摘要**；v1 摘要的既有 DMG 保留为历史读数。
 
 ## Verification
 
