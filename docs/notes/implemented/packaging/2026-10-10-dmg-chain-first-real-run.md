@@ -2,7 +2,7 @@
 
 - 日期：2026-10-10
 - 决策：[ADR-0279](../../../adr/ADR-0279.md)
-- 状态：producer 与装配已真实通过；签发（等待用户过 SecurityAgent 信任弹窗）、DMG 生成与 DMG-06 验收以本页后续读数为准。
+- 状态：producer/装配/签发已真实通过（第八次重跑完成整条签发事务，见八追加）；dmg.sh 首执行暴露签名归一化残留（九追加，已修复，待重装配重签）；DMG 生成与 DMG-06 验收以本页后续读数为准。
 
 ## Problem
 
@@ -50,6 +50,10 @@
 
 修复：`signing-evidence.mjs` 改读 stdout（保留 `{ run }` 注入点）；新增纯回归测试 `signing-evidence-test.mjs`（钉住：stderr 上的 DR 行必须不满足读取、两行判 2、空值判非法、参数保持 `-d -r-` 形态）；打包清单 14→15（pure 9→10），两处计数钉子同步。待用户第八次重跑读数；证据见 Verification。
 
+**八追加（2026-10-10 晚，第八次重跑；签发链完成）**：DR 读流修复生效，**完整签发事务首次真实走通**：28 个 Mach-O 全部签名 → 候选计划复核 → 回执 `sage.local-signing-receipt.v2`（DR = `identifier "com.lute.sage" and certificate leaf = H"bb67cd1c…"`）→ `verify-signing-receipt`（逐 target 抽取 leaf cert 比对 SHA-256/SHA-1/CN、拒绝 runtime/timestamp/sandbox、plan digest 与 signed tree digest 复核）→ `signer verified: Sage Local Code Signing sha256:307f66ca…` → signed manifest → 原子换入 → 信任移除 + 临时钥匙串销毁 + 搜索列表还原（`signed … removed its trust and keychain`）。staging 落盘：签名 `Sage.app` + receipt + plan + manifest；无 `.sign.*`/`.local-signing.*` 残留；搜索列表 = `login.keychain-db`。
+
+**九追加（2026-10-10 晚，dmg.sh 首执行；签名归一化残留）**：`dmg.sh --execute` 在 `verify-bundle` 的 **embedded profile template signing-normalized tree digest** 判据红：期望 `d21014e7…`（装配期从输入树记录），观测 `5e137a26…`（已签嵌入树）。根因（无信任复刻 + 对全部 13 个 profile-template 原生件逐一分类）：`codesign --remove-signature` 恢复签名外所有字节，但把 `__LINKEDIT` 的 `vmsize` 留在**签名期间的布局值**（签名尺寸参与该段的映射尺寸声明）；10/13 文件与输入仅此一字段有差（1–2 字节，可升可降；3 个恰好无差），文件尺寸恒等——旧归一化器只做 remove-signature 就哈希，于是「签名归一化摘要」在真实重签下不成立；原回归测试的合成夹具（`/usr/bin/true`，恰好不触发 vmsize 偏移）从未复现此形态（P-56 同族）。修复：归一化器在 remove-signature 后解析薄片 64 位 LE 的 Mach-O load commands，把 `__LINKEDIT.vmsize` 归零再哈希（fail-closed：非薄片/无 `__LINKEDIT` 直接拒绝；新增导出 `linkeditVmsizeOffset`）。**真实故障现场终验**：修复后 `digest(input/profile-template) == digest(已签嵌入式树)`（`1d766edd…`）、app runtime 两侧相等——dmg 判据的失败形态已消除；测试同步改薄 arm64 夹具（`process.execPath`）+ 新增「钉小 vmsize → 签名 → 移除，断言字段确实移动且摘要吸收之」用例。**注意**：元数据里的装配摘要由旧归一化器所写，修复后必须**重新装配**（记录新摘要）再重签，dmg 才可能通过。
+
 ## Verification
 
 证据（2026-10-10，全部真实执行；未跑的步骤照实写）：
@@ -62,4 +66,6 @@
 - **重观测**：`SAGE_ROOT=~/tmp/sage-reobs-root pnpm run materialize` 退出 0（生成 generation `4e145a6b…`）；`node scripts/inventory-probe.mjs …` 退出 0——`inventory available: descriptor=urn:sage:runtime-descriptor:sha256:e1c7a8b4… evidence=urn:sage:inventory-evidence:sha256:d127d8bb…`。读法偏离手册一处：`resolveHostRuntime` 入参为 `activeProfile` 字段（探针以真实 API 为准）。
 - **全量读数**：`apps/sage-shell` 全量套件 **205 文件 / 1854 通过 / 1 skip（exit 0）**；`pnpm run gate` **32/32（objects 315/315，0 skip，退出码 0）**——首跑新增的打包测试条目（12→13）与 `ci-workflow` 版本单源检查均在门禁内真实执行。
 - **DR 解析更正（七追加）**：`node packaging-sage/tests/signing-evidence-test.mjs` 退出 0（stdout 正例 / stderr 负例 / 两行 / 空值 / 非零退出五用例）；修复后的 `designatedRequirement()` 对无信任自签身份的**真实**签名件端到端回读成功——`identifier "com.lute.sage" and certificate leaf = H"f969e12f746f89e6c5e525dd92881842b76e4a9c"`（A/B 复刻组 Mini 件）；`node packaging-sage/tests/run-contract-tests.mjs` → `pure contract suite: PASS (10/15 executed)`；`node --test scripts/gates/sage-packaging-contracts.test.mjs` **6/6**。
-- **未运行**：sign/dmg/acceptance（等待用户过 SecurityAgent 的交互步骤）。
+- **签发射出（第八次重跑，真实签名）**：28 个 Mach-O 及全部嵌套 bundle 签名完成 → 回执 → `signer verified: Sage Local Code Signing sha256:307f66ca…`（逐 target leaf cert、plan digest、signed tree digest 全核）→ signed manifest → 原子换入 → 信任移除 + 钥匙串销毁 + 搜索列表还原（退出 0）；DR 回读 `identifier "com.lute.sage" and certificate leaf = H"bb67cd1c…"` 与回执逐字一致。
+- **归一化修复真实验证（九追加）**：`digest(input/profile-template) == digest(已签嵌入式树)`（`1d766edd…`）、app runtime 两侧相等；`node packaging-sage/tests/signing-normalized-tree-test.mjs` 退出 0（含 vmsize 残留用例）；`--replace` 重装配后（29892 文件，旧 receipt/plan 由事务清除）`node scripts/verify-bundle.mjs staging/Sage.app` 退出 0——新元数据 ↔ 输入树一致。
+- **未运行**：dmg 生成与 DMG-06 验收（重签后执行）。
