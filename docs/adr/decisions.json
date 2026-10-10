@@ -9533,6 +9533,50 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0289",
+      "title": "ADR-0289 · 第 10 步 dispatch：契约三态、共享再核验、廉价端口重跑与端到端闭合",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "dispatch 结果四态（receipt+detail / refused 码 / not-dispatched 可重试 / outcome-unknown）；malformed detail 保守 unknown。",
+          "constraints": [
+            "not-dispatched never becomes outcome-unknown"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "共享再核验单一家 + target/registry/preflight 同实例重跑与 ref 相等 + 通道调用后置 + 归一化。",
+          "constraints": [
+            "channel call only after all guards",
+            "identity/compat re-run registered as follow-up"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "路由映射 detail→accepted/deferred；无 detail 保守 outcome-unknown。",
+          "constraints": [
+            "renderer no-retry for outcome-unknown unchanged"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "seam 证据存续修复 + 内核级断言 + 门禁 pin/突变。",
+          "constraints": [
+            "dropping evidence is a named gate failure"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "v1 不写域收口；第二次 send 由 active-attempt 诚实阻断；回合收口流登记。",
+          "constraints": [
+            "no domain closure writes in dispatch v1"
+          ]
+        }
+      ]
     }
   ]
 }

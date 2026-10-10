@@ -120,8 +120,32 @@ export interface ProtectedEffectDispatchRequest extends AdmissionRequestBase {
   readonly dispatchRef: string
 }
 
+export type SessionCoreDispatchDetail =
+  | {
+      /** The session channel accepted the prompt (ADR-0289). */
+      readonly kind: 'session-send-accepted'
+      readonly sessionId: string
+      readonly requestId: string
+      readonly mode: 'queue' | 'steer'
+    }
+  | {
+      /** The channel held the text as a 待继续 item; the send did not reach the inbox. */
+      readonly kind: 'session-send-deferred'
+      readonly itemId: string
+    }
+
 export type ProtectedEffectDispatchResult =
-  | { readonly state: 'receipt'; readonly receiptRef: string }
+  | { readonly state: 'receipt'; readonly receiptRef: string; readonly detail?: SessionCoreDispatchDetail }
+  | {
+      /** A determinate refusal from the adapter itself — the effect did not run. */
+      readonly state: 'refused'
+      readonly code: string
+    }
+  | {
+      /** A pre-call guard refused: the effect provably did not run and the caller may retry
+       *  through a fresh admission (ADR-0289). */
+      readonly state: 'not-dispatched'
+    }
   | { readonly state: 'outcome-unknown' }
 
 /** Every optional port is a runtime dependency: absence always fails closed. */
@@ -203,10 +227,20 @@ export interface ProtectedEffectAdmissionAccepted {
   readonly correlation: string
   readonly operationRef: string
   readonly receiptRef: string
+  /** Family-declared receipt detail for the caller-facing outcome (ADR-0289); absent means the
+   *  receipt carries no further caller detail (conservative mapping at the route). */
+  readonly detail?: SessionCoreDispatchDetail
+}
+
+export interface ProtectedEffectAdmissionRefusedAfterDispatch {
+  readonly state: 'refused'
+  readonly correlation: string
+  readonly code: string
 }
 
 export type ProtectedEffectAdmissionResult =
   | ProtectedEffectAdmissionAccepted
+  | ProtectedEffectAdmissionRefusedAfterDispatch
   | ProtectedEffectAdmissionFailure
 
 type PreDispatchFailureState = 'unavailable' | 'denied' | 'stale'
@@ -268,6 +302,16 @@ function isPreflightFact(value: unknown): value is FreshPreflightFact {
 
 function isPersistenceFact(value: unknown): value is ProtectedEffectPersistenceFact {
   return hasRefs(value, 'operationRef', 'dispatchRef')
+}
+
+function isSessionCoreDispatchDetail(value: unknown): value is SessionCoreDispatchDetail {
+  if (!isRecord(value)) return false
+  if (value.kind === 'session-send-accepted') {
+    return isRef(value.sessionId) && isRef(value.requestId)
+      && (value.mode === 'queue' || value.mode === 'steer')
+  }
+  if (value.kind === 'session-send-deferred') return isRef(value.itemId)
+  return false
 }
 
 async function checkStep<Request, Fact>(
@@ -397,6 +441,10 @@ export async function admitProtectedEffect(input: {
   const compatibility: EquivalentCompatibilityFact = {
     evaluationRef: compatibilityStep.value.evaluationRef,
     outcome: 'equivalent',
+    // The sealed evidence must survive this seam: the persist step writes exactly these bytes
+    // (ADR-0288). Dropping it here made every real send fail closed at persistence — caught by
+    // the step-10 end-to-end spec.
+    ...(compatibilityStep.value.evidence === undefined ? {} : { evidence: compatibilityStep.value.evidence }),
   }
 
   const compatibilityRequest: CompatibilityBoundRequest = {
@@ -440,10 +488,17 @@ export async function admitProtectedEffect(input: {
   } catch {
     return outcomeUnknown(correlation)
   }
+  if (isRecord(dispatchResult) && dispatchResult.state === 'refused' && isRef(dispatchResult.code)) {
+    return { state: 'refused', correlation, code: dispatchResult.code }
+  }
+  if (isRecord(dispatchResult) && dispatchResult.state === 'not-dispatched') {
+    return failure('unavailable', 'dispatch', correlation)
+  }
   if (
     !isRecord(dispatchResult)
     || dispatchResult.state !== 'receipt'
     || !isRef(dispatchResult.receiptRef)
+    || (dispatchResult.detail !== undefined && !isSessionCoreDispatchDetail(dispatchResult.detail))
   ) {
     return outcomeUnknown(correlation)
   }
@@ -452,5 +507,6 @@ export async function admitProtectedEffect(input: {
     correlation,
     operationRef: persistence.operationRef,
     receiptRef: dispatchResult.receiptRef,
+    ...(dispatchResult.detail === undefined ? {} : { detail: dispatchResult.detail }),
   }
 }

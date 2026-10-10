@@ -304,6 +304,7 @@ function assemblePort(options: {
       matterRef: MATTER_ID,
       revisionRef: REVISION_ID,
       contextGeneration: 7,
+      frameGeneration: 7,
     }))) as never,
     readIdentitySession: (options.readIdentitySession ?? (() => ({ sessionRef: 'session:active' }))) as never,
     readFrame: (options.readFrame ?? (() => ({ generation: 7, ready: true, contaminated: false }))) as never,
@@ -361,8 +362,8 @@ describe('the real persistence step (ADR-0288)', () => {
     const base = { root: harness.root, home: harness.home, publication: harness.publication.publication }
 
     expect(await assemblePort({ ...base, readContext: () => null })(request)).toEqual({ state: 'unavailable' })
-    expect(await assemblePort({ ...base, readContext: () => ({ sessionRef: 'session:active', matterRef: MATTER_ID, revisionRef: REVISION_ID, contextGeneration: 8 }) })(request)).toEqual({ state: 'stale' })
-    expect(await assemblePort({ ...base, readContext: () => ({ sessionRef: 'session:other', matterRef: MATTER_ID, revisionRef: REVISION_ID, contextGeneration: 7 }) })(request)).toEqual({ state: 'stale' })
+    expect(await assemblePort({ ...base, readContext: () => ({ sessionRef: 'session:active', matterRef: MATTER_ID, revisionRef: REVISION_ID, contextGeneration: 8, frameGeneration: 7 }) })(request)).toEqual({ state: 'stale' })
+    expect(await assemblePort({ ...base, readContext: () => ({ sessionRef: 'session:other', matterRef: MATTER_ID, revisionRef: REVISION_ID, contextGeneration: 7, frameGeneration: 7 }) })(request)).toEqual({ state: 'stale' })
     expect(await assemblePort({ ...base, readIdentitySession: () => null })(request)).toEqual({ state: 'unavailable' })
     expect(await assemblePort({ ...base, readIdentitySession: () => ({ sessionRef: 'session:other' }) })(request)).toEqual({ state: 'stale' })
     expect(await assemblePort({ ...base, readFrame: () => ({ generation: 7, ready: false, contaminated: false }) })(request)).toEqual({ state: 'unavailable' })
@@ -411,7 +412,10 @@ describe('the production assembly wires the persistence step on its own switch',
   const callerBinding = { correlation: 'caller:session-core' }
 
   function assembleWith(omit?: 'runtimeEffective' | 'runtimeAttempts') {
-    let gateRead = false
+    // After ADR-0289 hoisted the shared reads, bundle-`ok` is no longer exclusive to one port.
+    // The publication `ok` read is: in this probe the compatibility port is gated off (no
+    // revision digest), so only the persistence port construction reads it.
+    let publicationOkReads = 0
     const options: Record<string, unknown> = {
       viewState: null,
       vault: vault as never,
@@ -431,29 +435,28 @@ describe('the production assembly wires the persistence step on its own switch',
         readFileBytes: () => Buffer.from('{}'),
         now: () => '2026-10-10T15:00:00.000Z',
       },
-      requirementBundle: { ok: false, reason: 'probe' },
-      compatibilityPublication: { ok: false, reason: 'probe' },
     }
+    options.requirementBundle = { ok: false, reason: 'probe' }
+    Object.defineProperty(options, 'compatibilityPublication', {
+      enumerable: true,
+      get() {
+        return Object.defineProperty({ reason: 'probe' }, 'ok', {
+          get() {
+            publicationOkReads += 1
+            return false
+          },
+        })
+      },
+    })
     if (omit !== 'runtimeEffective') options.runtimeEffective = () => OBSERVED
-    if (omit !== 'runtimeAttempts') {
-      // The merge reads this property only after authority, bundle, publication and the live
-      // read are all defined — and constructs the port right after reading it. An accessor here
-      // therefore observes exactly "the persistence gate was reached".
-      Object.defineProperty(options, 'sessionPromptAttempts', {
-        enumerable: false,
-        get() {
-          gateRead = true
-          return { close: () => undefined } as never
-        },
-      })
-    }
+    if (omit !== 'runtimeAttempts') options.sessionPromptAttempts = { close: () => undefined }
     createSageAppServiceProviders(options as never)
-    return gateRead
+    return publicationOkReads
   }
 
-  it('reaches the persistence gate only when every main-owned input exists', () => {
-    expect(assembleWith()).toBe(true)
-    expect(assembleWith('runtimeEffective')).toBe(false)
-    expect(assembleWith('runtimeAttempts')).toBe(false)
+  it('constructs the persistence port only when its gate inputs exist', () => {
+    expect(assembleWith()).toBe(1)
+    expect(assembleWith('runtimeEffective')).toBe(0)
+    expect(assembleWith('runtimeAttempts')).toBe(0)
   })
 })

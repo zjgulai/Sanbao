@@ -29,34 +29,15 @@ import { ACTION_AUTHORITY_TABLE } from './action-authority-table.js'
 import type { CompatibilityMatrixPublicationLoad, RequirementBundleLoad } from './publication-bundle.js'
 import { matrixBytesReference } from './session-prompt-evaluation-evidence.js'
 import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-store.js'
-import type { RuntimeEffectiveObservation } from '../protocol.js'
-import { isRuntimeEffectiveObservation } from '../protocol.js'
+import { verifyAdmittedFactsStillHold, type SessionPromptReverifyReads } from './session-prompt-reverify.js'
 
-export interface SessionPromptPersistenceOptions {
+/** The reads are the shared step-9/10 re-verification shape (single home, ADR-0289). */
+export interface SessionPromptPersistenceOptions extends SessionPromptReverifyReads {
   readonly requirementBundle: RequirementBundleLoad
   readonly publication: CompatibilityMatrixPublicationLoad
+  /** The full store handle; the re-verification reads use its rehydrate/digest surfaces. */
   readonly attempts: SessionPromptAttemptStorePort
-  /** Live context snapshot (sessionRef + matter/revision/generation), or null while absent. */
-  readonly readContext: () => {
-    readonly sessionRef: string
-    readonly matterRef: string
-    readonly revisionRef: string
-    readonly contextGeneration: number
-  } | null
-  readonly readIdentitySession: () => { readonly sessionRef: string } | null
-  readonly readFrame: () => { readonly generation: number, readonly ready: boolean, readonly contaminated: boolean } | undefined
-  readonly runtimeEffective: () => RuntimeEffectiveObservation | undefined
   readonly now: () => string
-}
-
-function sameContext(
-  live: { readonly sessionRef: string, readonly matterRef: string, readonly revisionRef: string, readonly contextGeneration: number },
-  admitted: { readonly sessionRef: string, readonly matterRef: string, readonly revisionRef: string, readonly contextGeneration: number },
-): boolean {
-  return live.sessionRef === admitted.sessionRef
-    && live.matterRef === admitted.matterRef
-    && live.revisionRef === admitted.revisionRef
-    && live.contextGeneration === admitted.contextGeneration
 }
 
 export function createSessionPromptPersistencePort(
@@ -81,44 +62,13 @@ export function createSessionPromptPersistencePort(
     const requirement = declaring.length === 1 ? declaring[0] : undefined
     if (requirement === undefined) return { state: 'unavailable' }
 
-    // Pre-write re-verification (item 9, cheap real subset). Missing providers are unavailable;
-    // facts that moved since admission are stale.
-    const liveContext = options.readContext()
-    if (liveContext === null) return { state: 'unavailable' }
-    if (!sameContext(liveContext, {
-      sessionRef: context.sessionRef,
-      matterRef: context.matterRef,
-      revisionRef: context.revisionRef,
-      contextGeneration: Number(context.generation),
-    })) return { state: 'stale' }
-
-    const identitySession = options.readIdentitySession()
-    if (identitySession === null) return { state: 'unavailable' }
-    if (identitySession.sessionRef !== context.sessionRef) return { state: 'stale' }
-
-    const frame = options.readFrame()
-    if (frame === undefined || !frame.ready || frame.contaminated) return { state: 'unavailable' }
-    if (String(frame.generation) !== context.generation) return { state: 'stale' }
-
-    let live: unknown
-    try {
-      live = options.runtimeEffective()
-    } catch {
-      return { state: 'unavailable' }
-    }
-    if (live === undefined || !isRuntimeEffectiveObservation(live)) return { state: 'unavailable' }
-    if (live.kind !== 'observed') return { state: 'unavailable' }
-
-    const rehydrated = options.attempts.strictRehydrate({
-      matterId: context.matterRef,
-      revisionId: context.revisionRef,
+    // Pre-write re-verification (item 9, cheap real subset): the shared step-9/10 helper.
+    // Missing providers are unavailable; facts that moved since admission are stale.
+    const reverified = verifyAdmittedFactsStillHold(options, {
+      context,
+      revisionDigest: evidence.revisionDigest,
     })
-    if (rehydrated === undefined) return { state: 'unavailable' }
-    if ('denied' in rehydrated) return { state: 'stale' }
-    if (!rehydrated.current) return { state: 'stale' }
-    const storeRevisionDigest = options.attempts.revisionDigest(context.matterRef, context.revisionRef)
-    if (storeRevisionDigest === undefined) return { state: 'unavailable' }
-    if (storeRevisionDigest !== evidence.revisionDigest) return { state: 'stale' }
+    if (!reverified.ok) return { state: reverified.state }
 
     const canonicalBytes = publication.bundle.artifacts
       .find((artifact) => artifact.matrixId === publication.matrixId)?.canonicalMatrix
@@ -133,7 +83,7 @@ export function createSessionPromptPersistencePort(
     // The domain kernel authors the event payload; anything it refuses stays unwritten.
     let next: BusinessMatter
     try {
-      next = startAttempt(rehydrated.matter, {
+      next = startAttempt(reverified.matter, {
         eventId: `attempt-started:${evidence.attemptId}`,
         occurredAt: options.now(),
         attemptId: evidence.attemptId,
@@ -177,7 +127,7 @@ export function createSessionPromptPersistencePort(
       return { state: 'unavailable' }
     }
 
-    const events = encodeBusinessMatterEvents(next).slice(rehydrated.matter.events.length).map((event) => ({
+    const events = encodeBusinessMatterEvents(next).slice(reverified.matter.events.length).map((event) => ({
       matterId: event.matterId,
       eventId: event.eventId,
       eventType: event.eventType,
@@ -191,7 +141,7 @@ export function createSessionPromptPersistencePort(
     try {
       result = options.attempts.appendAttempt({
         matterId: context.matterRef,
-        expectedVersion: { kind: 'exact', value: rehydrated.version },
+        expectedVersion: { kind: 'exact', value: reverified.version },
         appendId: `session-prompt-attempt:${evidence.attemptId}`,
         events,
         evidence: { evidence, historicalMatrix },

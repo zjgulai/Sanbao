@@ -25,6 +25,7 @@ import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-sto
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
 import { createSessionPromptPreflightPort } from './session-prompt-preflight.js'
 import { createSessionPromptRegistryPort } from './session-prompt-registry.js'
@@ -732,7 +733,53 @@ function isDevicePreferencesState(value: unknown): value is DevicePreferencesSta
  * fresh workspace fold and renderer frame before the active snapshot can be reused. */
 function createSessionCoreProtectedEffectPorts(
   options: SageAppServiceOptions,
-): Omit<ProtectedEffectAdmissionPorts, 'dispatch'> {
+): ProtectedEffectAdmissionPorts {
+  // Shared re-verification reads for steps 9 and 10 (ADR-0288/0289): one closure set, one home.
+  const reverifyReads = options.activeMatterContext === undefined
+    || options.framePolicySnapshot === undefined
+    || options.sessionPromptAttempts === undefined
+    || options.runtimeEffective === undefined
+    ? undefined
+    : {
+        readContext: () => {
+          const snapshot = options.activeMatterContext?.snapshot()
+          if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) return null
+          return {
+            sessionRef: snapshot.sessionRef,
+            matterRef: snapshot.matterId,
+            revisionRef: snapshot.revisionId,
+            contextGeneration: snapshot.contextGeneration,
+            frameGeneration: snapshot.frameGeneration,
+          }
+        },
+        readIdentitySession: () => options.vault.identitySession(),
+        readFrame: () => options.framePolicySnapshot?.(),
+        runtimeEffective: options.runtimeEffective,
+        attempts: options.sessionPromptAttempts,
+      }
+  // The cheap real ports are built once and shared: the dispatch step re-invokes the same
+  // instances at the dispatch instant (ADR-0289) instead of running a second implementation.
+  const targetPort = options.authority === undefined || options.requirementBundle === undefined
+    ? undefined
+    : createSessionPromptTargetPort({
+        bundle: options.requirementBundle,
+        now: options.authority.now,
+      })
+  const registryPort = options.requirementBundle === undefined
+    || options.capabilityRegistry === undefined
+    || options.runtimeInventoryObservation === undefined
+    ? undefined
+    : createSessionPromptRegistryPort({
+        requirementBundle: options.requirementBundle,
+        registryProvider: options.capabilityRegistry,
+        runtimeObservation: options.runtimeInventoryObservation,
+      })
+  const preflightPort = options.requirementBundle === undefined || options.runtimeEffective === undefined
+    ? undefined
+    : createSessionPromptPreflightPort({
+        requirementBundle: options.requirementBundle,
+        runtimeEffective: options.runtimeEffective,
+      })
   return {
     verifyCaller: async () => {
       const binding = options.callerBinding
@@ -837,14 +884,7 @@ function createSessionCoreProtectedEffectPorts(
     // T05-mid: the real target step over the shipped requirement bundle (ADR-0282). The target
     // step rides the same instance clock as the identity step; without the authority switch the
     // chain already stops at identity, so the target port is wired only when both exist.
-    ...(options.authority === undefined || options.requirementBundle === undefined
-      ? {}
-      : {
-          resolveTarget: createSessionPromptTargetPort({
-            bundle: options.requirementBundle,
-            now: options.authority.now,
-          }),
-        }),
+    ...(targetPort === undefined ? {} : { resolveTarget: targetPort }),
     // T05-mid step 6: the real compatibility step over the shipped matrix publication (ADR-0284).
     // Wired only when every main-owned input exists; any missing piece keeps the step absent.
     ...(options.authority === undefined
@@ -865,27 +905,10 @@ function createSessionCoreProtectedEffectPorts(
         }),
     // T05-mid step 7: the real registry step over the shipped first-party publication (ADR-0286).
     // Wired only when every main-owned input exists; any missing piece keeps the step absent.
-    ...(options.requirementBundle === undefined
-      || options.capabilityRegistry === undefined
-      || options.runtimeInventoryObservation === undefined
-      ? {}
-      : {
-          resolveRegistry: createSessionPromptRegistryPort({
-            requirementBundle: options.requirementBundle,
-            registryProvider: options.capabilityRegistry,
-            runtimeObservation: options.runtimeInventoryObservation,
-          }),
-        }),
+    ...(registryPort === undefined ? {} : { resolveRegistry: registryPort }),
     // T05-mid step 8: the real preflight step over the live runtime-effective observation of the
     // Host epoch (ADR-0287). Wired only when the bundle and the live read both exist.
-    ...(options.requirementBundle === undefined || options.runtimeEffective === undefined
-      ? {}
-      : {
-          preflight: createSessionPromptPreflightPort({
-            requirementBundle: options.requirementBundle,
-            runtimeEffective: options.runtimeEffective,
-          }),
-        }),
+    ...(preflightPort === undefined ? {} : { preflight: preflightPort }),
     // T05-mid step 9: the persistence step — pre-write re-verification plus the atomic
     // attempt + evaluation-evidence append (ADR-0288). Every main-owned input must exist.
     ...(options.authority === undefined
@@ -893,28 +916,38 @@ function createSessionCoreProtectedEffectPorts(
       || options.compatibilityPublication === undefined
       || options.runtimeEffective === undefined
       || options.sessionPromptAttempts === undefined
-      || options.activeMatterContext === undefined
-      || options.framePolicySnapshot === undefined
+      || reverifyReads === undefined
       ? {}
       : {
           persist: createSessionPromptPersistencePort({
             requirementBundle: options.requirementBundle,
             publication: options.compatibilityPublication,
-            attempts: options.sessionPromptAttempts,
-            readContext: () => {
-              const snapshot = options.activeMatterContext?.snapshot()
-              if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) return null
-              return {
-                sessionRef: snapshot.sessionRef,
-                matterRef: snapshot.matterId,
-                revisionRef: snapshot.revisionId,
-                contextGeneration: snapshot.contextGeneration,
-              }
-            },
-            readIdentitySession: () => options.vault.identitySession(),
-            readFrame: () => options.framePolicySnapshot?.(),
-            runtimeEffective: options.runtimeEffective,
+            ...reverifyReads,
             now: options.authority.now,
+          }),
+        }),
+    // T05-mid step 10: the dispatch step — the only place the admitted chain calls the real
+    // channel (ADR-0289). Wired only when the channel port and every re-verification input exist.
+    ...(reverifyReads === undefined
+      || options.sessionSend === undefined
+      || options.matterLinks === undefined
+      || targetPort === undefined
+      || registryPort === undefined
+      || preflightPort === undefined
+      ? {}
+      : {
+          dispatch: createSessionPromptDispatchPort({
+            ...reverifyReads,
+            sessionSend: options.sessionSend,
+            resolveTarget: targetPort,
+            resolveRegistry: registryPort,
+            preflight: preflightPort,
+            readWorkspaceRoot: (matterRef) => {
+              const links = options.matterLinks?.()
+              if (links === undefined || links.state !== 'read') return undefined
+              const defaults = links.links.filter((link) => link.matterRef === matterRef && link.isDefault)
+              return defaults.length === 1 ? defaults[0]?.workspacePath : undefined
+            },
           }),
         }),
   }

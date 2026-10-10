@@ -657,10 +657,22 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         { kind: 'matter', matterRef: request.matterRef },
         { text: request.text, ...(request.mode === undefined ? {} : { mode: request.mode }) },
       )
-      const outcome: SessionSendOutcome = {
-        state: 'refused',
-        code: protectedEffectFailureCode(admission),
-      }
+      // ADR-0289: a dispatched receipt speaks with the channel's own outcome detail. A receipt
+      // without detail (or any pre-dispatch failure) stays on the conservative refusal path; the
+      // renderer's no-retry rule for protected-effect-outcome-unknown remains the last resort.
+      if (process.env.SAGE_DISPATCH_PROBE === '1') console.error('ADMISSION-PROBE', JSON.stringify(admission))
+      const outcome: SessionSendOutcome = admission.state === 'dispatched'
+        ? admission.detail?.kind === 'session-send-accepted'
+          ? {
+              state: 'accepted',
+              sessionId: admission.detail.sessionId,
+              requestId: admission.detail.requestId,
+              mode: admission.detail.mode,
+            }
+          : admission.detail?.kind === 'session-send-deferred'
+            ? { state: 'deferred', itemId: admission.detail.itemId }
+            : { state: 'refused', code: 'protected-effect-outcome-unknown' }
+        : { state: 'refused', code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async savePreferences(request): Promise<Response> {

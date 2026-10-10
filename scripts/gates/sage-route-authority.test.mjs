@@ -29,6 +29,9 @@ const baseline = Object.freeze({
   sessionPromptPersistenceText: read('apps/sage-shell/src/main/session-prompt-persistence.ts'),
   sessionPromptAttemptStoreText: read('apps/sage-shell/src/main/session-prompt-attempt-store.ts'),
   sessionPromptEvaluationEvidenceText: read('apps/sage-shell/src/main/session-prompt-evaluation-evidence.ts'),
+  sessionPromptReverifyText: read('apps/sage-shell/src/main/session-prompt-reverify.ts'),
+  sessionPromptDispatchText: read('apps/sage-shell/src/main/session-prompt-dispatch.ts'),
+  protectedEffectAdmissionText: read('apps/sage-shell/src/appservice/protected-effect-admission.ts'),
 })
 
 const check = (patch = {}) => checkSageRouteAuthority({ ...baseline, ...patch })
@@ -881,8 +884,8 @@ test('the real preflight step cannot drift from its gated wiring, live validatio
 
 test('the real persistence step cannot drift from its wiring, identity, re-verification or atomic append', () => {
   const ungated = baseline.mainAppServiceText.replace(
-    'options.sessionPromptAttempts === undefined',
-    'false',
+    '|| options.sessionPromptAttempts === undefined\n      || reverifyReads === undefined',
+    '|| false',
   )
   assert.notEqual(ungated, baseline.mainAppServiceText)
   expectNamedFailure(check({ mainAppServiceText: ungated }), 'the persistence step must be wired only behind the store handle and every main-owned input')
@@ -902,16 +905,16 @@ test('the real persistence step cannot drift from its wiring, identity, re-verif
   assert.notEqual(evidenceDrop, baseline.sessionPromptCompatibilityText)
   expectNamedFailure(check({ sessionPromptCompatibilityText: evidenceDrop }), 'the compatibility step must seal and carry the evaluation evidence it admitted')
 
-  const digestDrift = baseline.sessionPromptPersistenceText.replace(
-    'storeRevisionDigest !== evidence.revisionDigest',
+  const digestDrift = baseline.sessionPromptReverifyText.replace(
+    'storeRevisionDigest !== admitted.revisionDigest',
     'false',
   )
-  assert.notEqual(digestDrift, baseline.sessionPromptPersistenceText)
-  expectNamedFailure(check({ sessionPromptPersistenceText: digestDrift }), 'the persistence step must re-verify current context, frame and the store-validated revision digest')
+  assert.notEqual(digestDrift, baseline.sessionPromptReverifyText)
+  expectNamedFailure(check({ sessionPromptReverifyText: digestDrift }), 'the shared re-verification must check current revision, frame agreement and the store-validated revision digest')
 
   const domainBypass = baseline.sessionPromptPersistenceText.replace(
-    'startAttempt(rehydrated.matter, {',
-    'buildAttemptPayload(rehydrated.matter, {',
+    'startAttempt(reverified.matter, {',
+    'buildAttemptPayload(reverified.matter, {',
   )
   assert.notEqual(domainBypass, baseline.sessionPromptPersistenceText)
   expectNamedFailure(check({ sessionPromptPersistenceText: domainBypass }), 'the attempt event payload must be authored by the domain kernel')
@@ -929,6 +932,64 @@ test('the real persistence step cannot drift from its wiring, identity, re-verif
   )
   assert.notEqual(secondWrite, baseline.sessionPromptPersistenceText)
   expectNamedFailure(check({ sessionPromptPersistenceText: secondWrite }), 'the persistence step must append through the store handle, never a second write path')
+})
+
+test('the real dispatch step cannot drift from its wiring, guard order, ref equality or outcome mapping', () => {
+  const ungated = baseline.mainAppServiceText.replace(
+    '|| options.matterLinks === undefined',
+    '|| false',
+  )
+  assert.notEqual(ungated, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: ungated }), 'the dispatch step must be wired only behind the channel and every re-verification input')
+
+  const evidenceDrop = baseline.protectedEffectAdmissionText.replace(
+    '...(compatibilityStep.value.evidence === undefined ? {} : { evidence: compatibilityStep.value.evidence }),',
+    '',
+  )
+  assert.notEqual(evidenceDrop, baseline.protectedEffectAdmissionText)
+  expectNamedFailure(check({ protectedEffectAdmissionText: evidenceDrop }), 'the admitted evidence must survive the admission seam')
+
+  const detailGuardDrop = baseline.protectedEffectAdmissionText.replace(
+    '|| (dispatchResult.detail !== undefined && !isSessionCoreDispatchDetail(dispatchResult.detail))',
+    '',
+  )
+  assert.notEqual(detailGuardDrop, baseline.protectedEffectAdmissionText)
+  expectNamedFailure(check({ protectedEffectAdmissionText: detailGuardDrop }), 'a malformed receipt detail must be the conservative unknown')
+
+  const refusalSwallowed = baseline.protectedEffectAdmissionText.replace(
+    "dispatchResult.state === 'refused' && isRef(dispatchResult.code)",
+    'false',
+  )
+  assert.notEqual(refusalSwallowed, baseline.protectedEffectAdmissionText)
+  expectNamedFailure(check({ protectedEffectAdmissionText: refusalSwallowed }), 'a determinate channel refusal must surface with its own code')
+
+  const notDispatchedBreak = baseline.protectedEffectAdmissionText.replace(
+    "if (isRecord(dispatchResult) && dispatchResult.state === 'not-dispatched') {",
+    'if (false) {',
+  )
+  assert.notEqual(notDispatchedBreak, baseline.protectedEffectAdmissionText)
+  expectNamedFailure(check({ protectedEffectAdmissionText: notDispatchedBreak }), 'a pre-call refusal must stay retryable, never outcome-unknown')
+
+  const detailDrop = baseline.compositionText.replace(
+    "admission.detail?.kind === 'session-send-accepted'",
+    'false',
+  )
+  assert.notEqual(detailDrop, baseline.compositionText)
+  expectNamedFailure(check({ compositionText: detailDrop }), 'the route must map the receipt detail to the channel outcome')
+
+  const refCompareDrop = baseline.sessionPromptDispatchText.replace(
+    'reTarget.value.targetRef !== target.targetRef',
+    'false',
+  )
+  assert.notEqual(refCompareDrop, baseline.sessionPromptDispatchText)
+  expectNamedFailure(check({ sessionPromptDispatchText: refCompareDrop }), 'the dispatch step must re-run the cheap real ports and require ref equality')
+
+  const closureWrite = baseline.sessionPromptDispatchText.replace(
+    'options.sessionSend({',
+    'startAttempt(); options.sessionSend({',
+  )
+  assert.notEqual(closureWrite, baseline.sessionPromptDispatchText)
+  expectNamedFailure(check({ sessionPromptDispatchText: closureWrite }), 'dispatch v1 writes no domain closure events (turn-close is the registered ticket)')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {
