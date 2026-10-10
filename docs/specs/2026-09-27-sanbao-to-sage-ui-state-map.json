@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 14,
-        "pending": 184,
+        "implementing": 18,
+        "pending": 180,
         "verified": 8
       },
       "applicationService": {
@@ -7334,8 +7334,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-page.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7356,7 +7362,8 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "添加上下文菜单已实现：六项（目标/计划/站点/工作区文件/插件/技能）只读渲染、Escape 关闭、焦点恢复与选不可用项不造假 chip 均有 tracked 测试（desktop-page.spec.tsx「shows unavailable context actions…」「reports a selected unavailable context action…」）。",
+          "菜单项的可用子面（技能/插件选择清单、站点模板、工作区文件）分别由对应行单独记账；真实服务链（applicationService）仍 blocked，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -7401,8 +7408,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/input-selections.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7423,7 +7441,8 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "技能入口已实现：session-region 断言只读技能清单渲染（来源/可选用或仅模型可调用标签）与 select/clear 经 bridge 精确载荷；input-selections.spec 断言挂载清单投影、选择校验与单请求携带。",
+          "原产品「搜索框+子菜单」形态未复刻（Sage 为清单+chip）；搜索过滤、执行、禁用态无断言；真实服务链（applicationService）仍 blocked，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -9261,8 +9280,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/draft-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/site-templates.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9283,7 +9313,8 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "站点起步模板面板已实现：draft-region 断言目录条目渲染（来源/版本）、使用只填草案输入（零 down-bridge 调用、不建站）、目录不可用/空态如实说明；site-templates.spec 断言目录投影、条目校验与无站点创建面（协议级结构断言）。",
+          "原产品「6 分类 tab+每类 10 项」分类面未实现（Sage 为平铺只读清单）；插入站点 chip 的原产品形态无对应断言；真实服务链（applicationService）仍 blocked，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -9596,8 +9627,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/input-selections.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9618,7 +9660,8 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "插件入口已实现：session-region 断言只读插件清单渲染（已挂载·版本）与 select/clear 经 bridge；未接线组合时以单行如实说明、不以空列表冒充；input-selections.spec 断言插件行的挂载投影。",
+          "原产品「搜索框+四项+管理/探索入口」形态未复刻；搜索过滤与市场入口无实现断言；真实服务链（applicationService）仍 blocked，hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },

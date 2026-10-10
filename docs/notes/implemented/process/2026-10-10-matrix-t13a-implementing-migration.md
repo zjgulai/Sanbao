@@ -5,7 +5,7 @@ module: sanbao-integration
 topic: state-matrix-implementing-migration
 status: stable
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 owner: self
 source: ai
 ---
@@ -71,3 +71,18 @@ ADR-0283 D3 重述入口语义（账号菜单 → 外观与显示表单，无独
 `summary.delivery.ui` 由生成器 `deriveSummary` 原函数重算写回（6→14 implementing、192→184 pending、verified 8 不变）；重写方式为 `node scripts/gen-sage-sanbao-state-matrix.mjs --source-root vendor/sanbao-prototype --write`（源根 HEAD `b861d046` 与 PIN 一致），随后 `--check-source` PASS。与迁移前快照 diff 审计确认：改动仅限 8 行的 `delivery.ui.status` / `delivery.ui.evidenceRefs` / `delivery.blockers` 与派生 summary；`source`/`prototype`/`legacyUi00Review`/`policy`/`migration`/行序逐字节不变。blocker 全部改写为与 implementing 相称的余留项（真实服务链、未实现子面、hostIntegration/visualAcceptance 仍 pending），未自造已解决事实。
 
 验证：`node scripts/gen-sage-sanbao-state-matrix.mjs --check` → `sage-sanbao-state-matrix generator check: PASS (206 rows; integrated 0)` exit 0；`node scripts/gates/sage-sanbao-state-matrix.mjs` → `sage-sanbao-state-matrix: PASS (206 rows; integrated 0)` exit 0；`node --test scripts/gates/sage-sanbao-state-matrix.test.mjs` → 13 tests / 13 pass / 0 fail exit 0；被引用 6 个路径逐一 `git ls-files --error-unmatch` 通过。未闭：implementing→verified 升级政策仍待裁决。
+
+## 第四批（2026-10-11）：输入区上下文族 4 行 pending→implementing
+
+从 184 行 pending（排除 90 行 `scope.unexpanded` 与第三批已核实跳过的 16 行）的 113 个候选中逐行打开被引用测试核实断言后，迁 4 行已有句级证据的输入区上下文行 `delivery.ui.status: pending→implementing`；全部 evidenceRefs 为 `kind: tracked-test`、路径形态、无 `(N/N)` 计数后缀、`countsAsVerification:false`（不升 `verified`）。迁移行清单（row id · 证据 ref · 核实要点）：
+
+1. `QDR.O01.context.menu.open` · `apps/sage-shell/test/product-app/desktop-page.spec.tsx` · 断言「添加上下文」菜单打开后六项（目标/计划/站点/工作区文件/插件/技能）可见、菜单标注不可用、ArrowDown 键盘移动、Escape 关闭、焦点恢复到 opener 且草稿不丢；另一断言选「工作区文件：不可用」不添加假 chip、零请求。原产品观察的「五项菜单」在 Sage 为六项（多「工作区文件」）；子层选择面已由对应行单独记账，已写入 blocker。
+2. `QDR.O02.skills.menu.open` · `apps/sage-shell/test/product-app/session-region.spec.tsx` + `apps/sage-shell/test/input-selections.spec.ts` · session-region 断言只读技能清单渲染（名称、来源·provider 标签、「可选用（本入口）」/「仅模型可调用（本入口不可选）」）、选用经 `selectInputRef('skill', …)` 下桥、清除与不在清单内的具名拒绝；input-selections.spec（ticket 038）断言清单为实际挂载投影、unavailable-first、选择按当前投影校验、单请求有界携带且不写启用状态。原产品「搜索框+子菜单」形态未复刻（Sage 为清单+chip），搜索过滤/执行/禁用态无断言，已写入 blocker。
+3. `QDR.O02.plugins.menu.open` · 同上两文件 · session-region 断言插件清单渲染「已挂载（组合内实际存在）·v1.2.0」、选用经 `selectInputRef('plugin', …)`、chip「已选：插件 …（随下一次发送携带；不改变启用状态，也不代表已获得能力）」；plugins 组合未接线时单行如实说明、不以空列表冒充。原产品「搜索框+四项+管理/探索入口」与搜索过滤无实现断言，已写入 blocker。
+4. `QDR.O02.sites.templates.open` · `apps/sage-shell/test/product-app/draft-region.spec.tsx` + `apps/sage-shell/test/site-templates.spec.ts` · draft-region「site starting-template panel」断言目录条目渲染（名称、来源·版本、prompt 缺失行「本入口不可用」）、「使用（填入草案输入）」只填 `#draft-input`、零 down-bridge 调用、「不建站不写配置」与「选模板不等于已建站」边界句、目录 unavailable/空态的具名说明；site-templates.spec（ticket 040/195-196）断言目录只读投影、坏条目具名拒绝、协议级结构断言「无任何站点创建请求面」。原产品「6 分类 tab、默认落地页 10 项」分类面与「插入站点 chip」形态未实现，已写入 blocker。
+
+核实后跳过的候选及原因（全部维持 pending）：22 行 `QDR.P06.settings.*.entry` 设置导航入口——Sage 设置面只有「外观与显示」一节（`desktop-settings-view.spec.tsx` 仅 8 项 select、`desktop-page.spec.tsx` 只断言「账号与设置→账号与设置页→外观与显示」两级入口），无 24 项设置导航清单，同名近似不成立；2 行 `QDR.P13.create.empty/ready`——新建工作区空表单（源文件夹/名称/图标/颜色）与「选择目录后创建可用」无 renderer 断言，`desktop-page.spec.tsx` 的 T03-C adopt 入口是「接入已有目录」（`/.sage/workspace/adopt`，取消/拒绝/已接入三态），`workspace-adoption.spec.ts` 是同一链路的模块 seam，与「新建表单」不同面；`QDR.P14.sidepanel.entry`——Sage 侧栏 collapse/expand 是导航收起，非原产品会话工作台侧面板；`QDR.OBS02.knowledge.entry` / `QDR.OBS03.sites.entry`——`desktop-page.spec.tsx` 断言侧栏名称存在且点击后落到 outstanding 占位（「尚未接通」），入口可见成立但整行语义（进入目标页）未达成，维持 pending 更诚实；`QDR.P06.settings.mobile.partial`、`QDR.OBS04.appearance.*` 6 行——Sage 账号菜单无快捷外观子菜单（第三批已核）；P04 扩展市场/O08 MCP 表单/OBS02 知识中心/OBS03 站点各默认页与弹窗——无对应实现面。
+
+`summary.delivery.ui` 由生成器 `deriveSummary` 原函数重算写回（14→18 implementing、184→180 pending、verified 8 不变）。写回方式与第三批一致：程序化改 4 行的 `delivery.ui.status`/`delivery.ui.evidenceRefs`/`delivery.blockers` 后，`node scripts/gen-sage-sanbao-state-matrix.mjs --source-root vendor/sanbao-prototype --write`（源根 HEAD `b861d046` 与 PIN 一致），随后 `--check-source` PASS。与迁移前快照 diff 审计确认：改动仅限 4 行的上述三字段与派生 summary；`source`/`prototype`/`legacyUi00Review`/`policy`/`migration`/行序/其余 202 行逐字节不变。blocker 全部改写为与 implementing 相称的余留项（已实现面的真实边界、未复刻的子形态、applicationService 仍 blocked、hostIntegration/visualAcceptance 仍 pending），未自造已解决事实。
+
+验证：`node scripts/gen-sage-sanbao-state-matrix.mjs --check` → `sage-sanbao-state-matrix generator check: PASS (206 rows; integrated 0)` exit 0；`node scripts/gates/sage-sanbao-state-matrix.mjs` → `sage-sanbao-state-matrix: PASS (206 rows; integrated 0)` exit 0；`node --test scripts/gates/sage-sanbao-state-matrix.test.mjs` → 13 tests / 13 pass / 0 fail exit 0；被引用 5 个路径逐一 `git ls-files --error-unmatch` 通过（`desktop-page.spec.tsx`、`session-region.spec.tsx`、`input-selections.spec.ts`、`draft-region.spec.tsx`、`site-templates.spec.ts`）。未闭：implementing→verified 升级政策仍待裁决。
