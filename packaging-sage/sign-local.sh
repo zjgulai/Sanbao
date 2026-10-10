@@ -40,7 +40,7 @@ recover_stale_local_signing_roots() {
   shopt -s nullglob
   recovery_roots=("$STAGING_ROOT"/.local-signing.*)
   shopt -u nullglob
-  for recovery_root in "${recovery_roots[@]}"; do
+  for recovery_root in ${recovery_roots[@]+"${recovery_roots[@]}"}; do
     [[ -d "$recovery_root" && ! -L "$recovery_root" ]] \
       || die "unsafe stale local-signing recovery path: $recovery_root"
     say "recovering stale local-signing state before starting a new operation: ${recovery_root#$REPO_ROOT/}"

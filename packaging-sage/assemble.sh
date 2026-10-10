@@ -68,7 +68,7 @@ done
 
 require_macos_packaging_tools
 prepare_output_roots
-require_packaging_input_lock assembler bash "$SCRIPT_DIR/assemble.sh" "${cli_arguments[@]}"
+require_packaging_input_lock assembler bash "$SCRIPT_DIR/assemble.sh" ${cli_arguments[@]+"${cli_arguments[@]}"}
 
 PRODUCT_NAME="$(config_value productName)"
 BUNDLE_ID="$(config_value bundleId)"
@@ -154,7 +154,7 @@ cleanup() {
     if [[ "$previous_app_saved" -eq 1 && ( -e "$previous_app" || -L "$previous_app" ) ]]; then
       if [[ -e "$output" || -L "$output" ]] || ! mv "$previous_app" "$output"; then rollback_failed=1; fi
     fi
-    for sidecar_name in "${previous_sidecar_names[@]}"; do
+    for sidecar_name in ${previous_sidecar_names[@]+"${previous_sidecar_names[@]}"}; do
       previous_sidecar="$previous_sidecars/$sidecar_name"
       destination="$(dirname "$output")/$sidecar_name"
       if [[ -e "$previous_sidecar" || -L "$previous_sidecar" ]]; then

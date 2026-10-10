@@ -199,24 +199,24 @@ while IFS=$'\t' read -r kind relative_path extra; do
       [[ "$relative_path" != '.' && -f "$target" && ! -L "$target" ]] \
         || die "invalid Mach-O signing target: $relative_path"
       assert_descendant_path "$(canonical_existing_path "$target")" "$candidate_app"
-      codesign --force --sign "$identity_sha1" --timestamp=none "${codesign_keychain_args[@]}" "$target"
+      codesign --force --sign "$identity_sha1" --timestamp=none ${codesign_keychain_args[@]+"${codesign_keychain_args[@]}"} "$target"
       ;;
     framework)
       [[ "$relative_path" == *.framework && -d "$target" && ! -L "$target" ]] \
         || die "invalid framework signing target: $relative_path"
       assert_descendant_path "$(canonical_existing_path "$target")" "$candidate_app"
-      codesign --force --sign "$identity_sha1" --timestamp=none "${codesign_keychain_args[@]}" "$target"
+      codesign --force --sign "$identity_sha1" --timestamp=none ${codesign_keychain_args[@]+"${codesign_keychain_args[@]}"} "$target"
       ;;
     helper)
       [[ "$relative_path" == *.app && -d "$target" && ! -L "$target" ]] \
         || die "invalid helper signing target: $relative_path"
       assert_descendant_path "$(canonical_existing_path "$target")" "$candidate_app"
-      codesign --force --sign "$identity_sha1" --timestamp=none "${codesign_keychain_args[@]}" "$target"
+      codesign --force --sign "$identity_sha1" --timestamp=none ${codesign_keychain_args[@]+"${codesign_keychain_args[@]}"} "$target"
       ;;
     app)
       [[ "$relative_path" == '.' && "$target" == "$candidate_app" ]] \
         || die "invalid outer app signing target: $relative_path"
-      codesign --force --sign "$identity_sha1" --timestamp=none "${codesign_keychain_args[@]}" "$target"
+      codesign --force --sign "$identity_sha1" --timestamp=none ${codesign_keychain_args[@]+"${codesign_keychain_args[@]}"} "$target"
       ;;
     *)
       die "unsupported signing plan kind: $kind"

@@ -38,8 +38,8 @@ done
 require_macos_packaging_tools
 require_command pnpm
 prepare_output_roots
-require_packaging_input_lock producer bash "$SCRIPT_DIR/produce-inputs.sh" "${cli_arguments[@]}"
+require_packaging_input_lock producer bash "$SCRIPT_DIR/produce-inputs.sh" ${cli_arguments[@]+"${cli_arguments[@]}"}
 
 arguments=()
 if [[ "$replace" -eq 1 ]]; then arguments+=(--replace); fi
-node "$PACKAGING_SAGE_ROOT/scripts/produce-inputs.mjs" "${arguments[@]}"
+node "$PACKAGING_SAGE_ROOT/scripts/produce-inputs.mjs" ${arguments[@]+"${arguments[@]}"}

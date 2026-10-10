@@ -29,6 +29,10 @@
 - 真实重观测首次跑通：隔离根 `~/tmp/sage-reobs-root`（generation `4e145a6b-0cfb-4206-b231-edb435c14be0`，601 包 2.8s——store 预热生效）→ 探针产出真实 descriptor/evidence；并首次用真实 descriptor 封存首个 target 发布件（详见 identity 语法对齐 note 与 ADR-0280）。
 - 未闭：sign/dmg/acceptance 读数（用户交互）、DMG-06 主链依赖、`did not activate` 类告警的真机复查。
 
+## 追加（2026-10-10 晚）：签发首执行又抓一枚首跑缺陷（bash 3.2 空数组）
+
+用户执行 `sign-local.sh` 时崩于 line 37：macOS 自带 `/bin/bash` 3.2 在 `set -u` 下对**空数组**的 `"${arr[@]}"` 展开报 `unbound variable`——正常首跑没有 stale 恢复目录，恰好走空数组路径。全链 9 处同类展开（`sign-local.sh` / `assemble.sh` / `produce-inputs.sh` / `sign.sh`）统一改 bash 3.2 安全惯用法 `${arr[@]+"${arr[@]}"}`，四个脚本 `bash -n` 通过；新增纯合同守卫 `shell-scripts-bash32-safety-test.mjs`（扫描全部打包 shell 脚本的未防护 `[@]` 展开；负控实证：注入坏模式判红并点名 file:line，移除转绿）——打包清单 13→14、层级计数与自测同步。修复后由用户重跑签发命令，签发/DMG/验收读数以本页后续为准。
+
 ## Verification
 
 证据（2026-10-10，全部真实执行；未跑的步骤照实写）：
