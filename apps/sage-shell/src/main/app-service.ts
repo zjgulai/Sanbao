@@ -120,6 +120,9 @@ export interface SageAppServiceOptions {
   /** T05-mid step 9 (ADR-0288): the persist step's store handle over the matter event store.
    *  Absent keeps the persistence step absent (fail closed). */
   readonly sessionPromptAttempts?: SessionPromptAttemptStorePort
+  /** ADR-0296: the persist step's closure baseline read (the session fold's turn-end edge,
+   *  observed before the attempt is recorded). Absent keeps the persistence step absent. */
+  readonly readObservedTurnEndEdge?: (matterRef: string) => Promise<string | null | undefined>
   /** ADR-0293 (alternative C): the send-path reconcile fallback for a stuck active attempt.
    *  Absent keeps the send path without the self-heal (the observer runner still owns closure). */
   readonly sessionSendReconcile?: SessionSendReconcile
@@ -945,6 +948,7 @@ function createSessionCoreProtectedEffectPorts(
       || options.compatibilityPublication === undefined
       || options.runtimeEffective === undefined
       || options.sessionPromptAttempts === undefined
+      || options.readObservedTurnEndEdge === undefined
       || reverifyReads === undefined
       ? {}
       : {
@@ -952,6 +956,7 @@ function createSessionCoreProtectedEffectPorts(
             requirementBundle: options.requirementBundle,
             publication: options.compatibilityPublication,
             ...reverifyReads,
+            readObservedTurnEndEdge: options.readObservedTurnEndEdge,
             now: options.authority.now,
           }),
         }),

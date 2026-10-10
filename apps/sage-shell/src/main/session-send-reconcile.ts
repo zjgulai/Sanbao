@@ -10,8 +10,10 @@
  *
  *  Guards, in order:
  *  - no active attempt -> no-op (the normal case; not even a channel read);
- *  - fold not `read` or no `lastTurnEnd` -> nothing observed to reconcile on;
- *  - `execution === 'executing'` -> the turn is still running; never interrupt it.
+ *  - fold not `read` or no `lastTurnEnd` / `lastTurnEndEdge` -> nothing observed to reconcile on;
+ *  - `execution === 'executing'` -> the turn is still running; never interrupt it;
+ *  - ADR-0296: the runner closes only on an edge newer than the attempt's start baseline — a
+ *    fold still showing the same old edge proves nothing about this attempt's turn.
  *
  *  It never throws: this is a best-effort pre-send step on the user-facing send path. A failed
  *  reconcile leaves the attempt as-is, and the downstream active-attempt refusal remains the
@@ -28,6 +30,8 @@ export interface SessionSendReconcileFold {
   readonly state: 'read' | 'no-session' | 'unavailable'
   readonly execution: 'idle' | 'executing'
   readonly lastTurnEnd: string | null
+  /** ADR-0296: the observed turn-end edge; the runner scopes it against the attempt baseline. */
+  readonly lastTurnEndEdge: string | null
 }
 
 export interface SessionSendReconcileOptions {
@@ -50,10 +54,12 @@ export function createSessionSendReconcile(options: SessionSendReconcileOptions)
       if (!attemptActive) return
 
       const fold = await options.readChannel(matterRef)
-      if (fold.state !== 'read' || fold.lastTurnEnd === null) return
+      if (fold.state !== 'read' || fold.lastTurnEnd === null || fold.lastTurnEndEdge === null) return
       // A still-running turn owns the open attempt; closing it here would be an interruption.
       if (fold.execution === 'executing') return
-      await options.close({ matterRef, endKind: fold.lastTurnEnd })
+      // ADR-0296: the runner itself refuses an edge that is not newer than the attempt's start
+      // baseline — the send path never closes an attempt on a turn end it did not cause.
+      await options.close({ matterRef, endKind: fold.lastTurnEnd, edge: fold.lastTurnEndEdge })
     } catch {
       // Best-effort pre-send step: never block or fail the send itself.
     }

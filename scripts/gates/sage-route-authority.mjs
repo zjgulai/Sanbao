@@ -773,7 +773,11 @@ function sessionSendReconcileViolations(input) {
   if (!reconcileText.includes("if (fold.execution === 'executing') return")) {
     violations.push('the reconcile must never interrupt a running turn')
   }
-  if (!reconcileText.includes('await options.close({ matterRef, endKind: fold.lastTurnEnd })')) {
+  // ADR-0296: the edge is the reconcile's evidence input; without it nothing may be closed.
+  if (!reconcileText.includes('fold.lastTurnEndEdge === null')) {
+    violations.push('the reconcile must carry the turn-end edge, never only the kind')
+  }
+  if (!reconcileText.includes('await options.close({ matterRef, endKind: fold.lastTurnEnd, edge: fold.lastTurnEndEdge })')) {
     violations.push('the reconcile must reuse the closure runner, never a second write path')
   }
   if (reconcileText.includes('succeedAttempt(') || reconcileText.includes('failAttempt(')) {
@@ -798,7 +802,7 @@ function sessionPromptTurnCloseViolations(input) {
   if (!indexText.includes('observePostTurn(matterRef, status.lastTurnEndEdge, status.lastTurnEnd)')) {
     violations.push('the post-turn observer must key on the edge, not the bare kind')
   }
-  const closeIndex = indexText.indexOf('void sessionTurnClose({ matterRef, endKind: kind })')
+  const closeIndex = indexText.indexOf('void sessionTurnClose({ matterRef, endKind: kind, edge })')
   const observeIndex = indexText.indexOf('void artifacts.observe({ matterRef, workspaceRoot: defaultLink.workspacePath })')
   if (closeIndex < 0 || observeIndex < 0 || closeIndex > observeIndex) {
     violations.push('the turn-end closure must run before the artifact observation')
@@ -825,6 +829,12 @@ function sessionPromptTurnCloseViolations(input) {
   if (!closeText.includes('policy.actionScope === scope && policy.requiresDecision === true')
     || !closeText.includes('if (SUCCESS_KINDS.has(endKind) && reviewRequired) return')) {
     violations.push('a completed turn on a decision-demanding scope must stay open for review')
+  }
+  // ADR-0296: only a turn-end edge newer than the attempt's start baseline may close it.
+  if (!closeText.includes('attempt.observedTurnEndEdge !== undefined')
+    || !closeText.includes('attempt.observedTurnEndEdge !== edge')
+    || !closeText.includes('if (!edgeIsNew) return')) {
+    violations.push('the closure must require an edge newer than the attempt start baseline')
   }
   return violations
 }
@@ -940,7 +950,7 @@ function sessionPromptPersistenceViolations(input) {
   // T05-mid step 9 (ADR-0288): the persistence step is wired only when every main-owned input
   // exists, over the store handle index opened under the Sage-owned paths.
   if (!appServiceText.includes('persist: createSessionPromptPersistencePort({')
-    || !appServiceText.includes('|| options.sessionPromptAttempts === undefined\n      || reverifyReads === undefined')) {
+    || !appServiceText.includes('|| options.sessionPromptAttempts === undefined\n      || options.readObservedTurnEndEdge === undefined\n      || reverifyReads === undefined')) {
     violations.push('the persistence step must be wired only behind the store handle and every main-owned input')
   }
   if (!indexText.includes('const sessionPromptAttempts = createSessionPromptAttemptStore({ sagePaths: paths })')
@@ -986,6 +996,17 @@ function sessionPromptPersistenceViolations(input) {
   }
   if (!persistText.includes('session-prompt-attempt:${evidence.attemptId}')) {
     violations.push('the attempt append must be idempotent per service-issued attempt identity')
+  }
+  // ADR-0296: the closure baseline is observed before the attempt event is authored; an
+  // unreadable fold fails the step closed instead of recording an unadjudicable attempt.
+  if (!persistText.includes('const observedTurnEndEdge = await options.readObservedTurnEndEdge(context.matterRef)')
+    || !persistText.includes("if (observedTurnEndEdge === undefined) return { state: 'unavailable' }")
+    || !persistText.includes('observedTurnEndEdge,')) {
+    violations.push('the persistence step must record the fold edge baseline or fail closed')
+  }
+  if (!indexText.includes('readObservedTurnEndEdge: async (matterRef: string) => {')
+    || !indexText.includes("status.state === 'read' || status.state === 'no-session' ? status.lastTurnEndEdge : undefined")) {
+    violations.push('index must wire the closure baseline read from the raw channel fold')
   }
   if (!attemptStoreText.includes('return database.appendWithCompatibilityEvidence({')) {
     violations.push('the attempt store must append event and evidence in one transaction')

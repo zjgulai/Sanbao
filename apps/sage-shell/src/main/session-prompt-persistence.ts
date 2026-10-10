@@ -6,7 +6,9 @@
  *  - What is written: the v1 domain `attempt-started` event (built through the domain kernel —
  *    its state machine and revision-policy checks are the sole author of the payload) plus the
  *    sealed `CompatibilityEvaluationEvidenceV1` carried by the compatibility fact. No raw
- *    subject, token, session or runtime authority snapshot touches the store.
+ *    subject, token, session or runtime authority snapshot touches the store. ADR-0296 adds one
+ *    pre-write observation: the session fold's turn-end edge, recorded as the attempt's closure
+ *    baseline (only a NEWER edge may later close it).
  *  - Where: the Sage-owned matter event store, one transaction (`appendWithCompatibilityEvidence`);
  *    `commit-unknown` answers unavailable and never proceeds to dispatch.
  *  - Re-verification (the cheap, real subset of item 9): the live context still equals the
@@ -37,6 +39,10 @@ export interface SessionPromptPersistenceOptions extends SessionPromptReverifyRe
   readonly publication: CompatibilityMatrixPublicationLoad
   /** The full store handle; the re-verification reads use its rehydrate/digest surfaces. */
   readonly attempts: SessionPromptAttemptStorePort
+  /** ADR-0296: the session fold's current turn-end edge, observed just before the attempt is
+   *  recorded (`null` = observed, none exists). `undefined` = the fold was unreadable — the
+   *  attempt may not be recorded without its closure baseline, so the step fails closed. */
+  readonly readObservedTurnEndEdge: (matterRef: string) => Promise<string | null | undefined>
   readonly now: () => string
 }
 
@@ -80,6 +86,12 @@ export function createSessionPromptPersistencePort(
       revocationSource: publication.revocationSource,
     }
 
+    // ADR-0296: the closure baseline is observed BEFORE the event is authored — a turn-end edge
+    // may later close this attempt only when it differs from this reading. An unreadable fold
+    // cannot yield a baseline; recording the attempt anyway would leave it unadjudicable.
+    const observedTurnEndEdge = await options.readObservedTurnEndEdge(context.matterRef)
+    if (observedTurnEndEdge === undefined) return { state: 'unavailable' }
+
     // The domain kernel authors the event payload; anything it refuses stays unwritten.
     let next: BusinessMatter
     try {
@@ -87,6 +99,7 @@ export function createSessionPromptPersistencePort(
         eventId: `attempt-started:${evidence.attemptId}`,
         occurredAt: options.now(),
         attemptId: evidence.attemptId,
+        observedTurnEndEdge,
         revisionId: context.revisionRef,
         actionScopes: [table.actionScope],
         decisionIds: [],

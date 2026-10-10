@@ -621,7 +621,7 @@ async function main(paths: SagePaths): Promise<void> {
     if (lastTurnEndSeen.get(matterRef) === edge) return
     lastTurnEndSeen.set(matterRef, edge)
     if (kind !== null && kind !== '') {
-      void sessionTurnClose({ matterRef, endKind: kind }).catch(() => undefined)
+      void sessionTurnClose({ matterRef, endKind: kind, edge }).catch(() => undefined)
     }
     const defaultLink = matterLinks.snapshot().links.find((link) => link.matterRef === matterRef && link.isDefault)
     if (defaultLink === undefined) return
@@ -1036,6 +1036,16 @@ async function main(paths: SagePaths): Promise<void> {
         capabilityRegistry: bundledRegistry,
         // T05-mid step 9 (ADR-0288): the persistence step's store handle (same Sage-owned store).
         sessionPromptAttempts,
+        // ADR-0296: the persist step's closure baseline — the raw channel read (no observer side
+        // effects); an unreadable fold yields undefined and the step fails closed.
+        readObservedTurnEndEdge: async (matterRef: string) => {
+          try {
+            const status = await sessionChannel.read({ matterRef })
+            return status.state === 'read' || status.state === 'no-session' ? status.lastTurnEndEdge : undefined
+          } catch {
+            return undefined
+          }
+        },
         sessionSendReconcile,
         // Ticket 030: the capability surface reads the same main-owned roster observation the
         // inventory provider uses. The reader is typed `unknown` on purpose, so re-validate the

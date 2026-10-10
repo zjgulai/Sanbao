@@ -298,6 +298,8 @@ describe('selection-time ensure completes the fresh-matter flow (ADR-0291)', () 
       ),
       runtimeEffective: () => OBSERVED,
       sessionPromptAttempts: attempts,
+      // ADR-0296: no prior turn end in the fixture fold.
+      readObservedTurnEndEdge: async () => null,
       revisionDigest: (matterId: string, revisionId: string) => attempts.revisionDigest(matterId, revisionId),
     })
 

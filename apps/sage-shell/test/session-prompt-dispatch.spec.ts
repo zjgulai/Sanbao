@@ -468,6 +468,8 @@ describe('the ten-step chain answers a real send end to end', () => {
       capabilityRegistry: createBundledCapabilityRegistryProvider(registryBody as never),
       runtimeEffective: () => OBSERVED,
       sessionPromptAttempts: attempts,
+      // ADR-0296: no prior turn end in the fixture fold.
+      readObservedTurnEndEdge: async () => null,
       revisionDigest: (matterId: string, revisionId: string) => attempts.revisionDigest(matterId, revisionId),
     })
 

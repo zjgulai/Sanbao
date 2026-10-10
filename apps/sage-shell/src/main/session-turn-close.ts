@@ -18,6 +18,12 @@
  *  The runner is observation-driven and idempotent: the appendId binds
  *  `turn-close:<attemptId>:<kind>` and a second observation of the same edge finds no active
  *  attempt and returns. It never throws to its caller — the observer path is fire-and-forget.
+ *
+ *  ADR-0296 closure-evidence scoping (the single home for both callers): an edge may close the
+ *  attempt only when it DIFFERS from the baseline recorded when the attempt started. An edge
+ *  equal to the baseline was already the fold's state before dispatch — it proves nothing about
+ *  this attempt's turn (the stale-edge hole). An attempt with no recorded baseline (legacy
+ *  record) is never auto-closed.
  */
 import { failAttempt, projectBusinessMatter, succeedAttempt } from '../domain/business-matter.js'
 import { encodeBusinessMatterEvents } from '../domain/business-matter-codec.js'
@@ -26,6 +32,8 @@ import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-sto
 export type SessionTurnClose = (request: {
   readonly matterRef: string
   readonly endKind: string
+  /** ADR-0296: the observed edge (`${cursor}:${kind}`) the close decision rides on. */
+  readonly edge: string
 }) => Promise<void>
 
 export interface SessionTurnCloseOptions {
@@ -37,19 +45,25 @@ const SUCCESS_KINDS = new Set(['completed'])
 const FAILURE_KINDS = new Set(['error', 'max-tokens', 'aborted'])
 
 export function createSessionTurnClose(options: SessionTurnCloseOptions): SessionTurnClose {
-  return async ({ matterRef, endKind }) => {
+  return async ({ matterRef, endKind, edge }) => {
     if (!SUCCESS_KINDS.has(endKind) && !FAILURE_KINDS.has(endKind)) return
 
     const readMatter = options.attempts.readMatter(matterRef)
     if (readMatter === undefined || 'denied' in readMatter) return
     let attemptId: string | undefined
     let reviewRequired = false
+    let edgeIsNew = false
     try {
       const projection = projectBusinessMatter(readMatter.matter)
       attemptId = projection.activeAttemptId
+      const attempt = projection.attempts.find((item) => item.attemptId === attemptId)
+      // ADR-0296: only an edge NEWER than the attempt's start baseline is evidence about this
+      // attempt's turn. Equal edge (stale re-observation) or absent baseline proves nothing.
+      edgeIsNew = attempt !== undefined
+        && attempt.observedTurnEndEdge !== undefined
+        && attempt.observedTurnEndEdge !== edge
       // ADR-0295 strategy split: an attempted scope whose revision policy demands a decision
       // keeps the review path (artifact/receipt) — a completed turn must NOT light-close it.
-      const attempt = projection.attempts.find((item) => item.attemptId === attemptId)
       const revision = projection.revisions.find((item) => item.revisionId === projection.currentRevisionId)
       reviewRequired = revision !== undefined && (attempt?.actionScopes ?? []).some((scope) =>
         revision.actionPolicies.some((policy) => policy.actionScope === scope && policy.requiresDecision === true))
@@ -57,6 +71,7 @@ export function createSessionTurnClose(options: SessionTurnCloseOptions): Sessio
       return
     }
     if (attemptId === undefined) return
+    if (!edgeIsNew) return
     if (SUCCESS_KINDS.has(endKind) && reviewRequired) return
 
     const occurredAt = options.now()

@@ -490,7 +490,7 @@ function assertAttempt(
       'executionSnapshot',
       'compatibility',
     ],
-    [],
+    ['observedTurnEndEdge'],
     context,
   )
   payloadString(attempt.attemptId, `${field}.attemptId`, context)
@@ -502,6 +502,12 @@ function assertAttempt(
   assertStringArray(attempt.decisionIds, `${field}.decisionIds`, context)
   assertExecutionSnapshot(attempt.executionSnapshot, `${field}.executionSnapshot`, context)
   assertCompatibility(attempt.compatibility, `${field}.compatibility`, context)
+  if (Object.hasOwn(attempt, 'observedTurnEndEdge')) {
+    const edge = attempt.observedTurnEndEdge
+    if (edge !== null && typeof edge !== 'string') {
+      payloadError(context, `${field}.observedTurnEndEdge`, 'must be a string or null.')
+    }
+  }
 }
 
 function assertArtifact(
@@ -1011,6 +1017,7 @@ function replayEvent(
         decisionIds: event.attempt.decisionIds,
         executionSnapshot: event.attempt.executionSnapshot,
         compatibility: event.attempt.compatibility,
+        observedTurnEndEdge: event.attempt.observedTurnEndEdge,
       })
     case 'attempt-failed':
       return failAttempt(matter, {

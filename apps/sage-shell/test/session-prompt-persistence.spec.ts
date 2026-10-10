@@ -287,6 +287,7 @@ function assemblePort(options: {
   readonly readIdentitySession?: () => unknown
   readonly readFrame?: () => unknown
   readonly runtimeEffective?: () => unknown
+  readonly readObservedTurnEndEdge?: () => Promise<string | null | undefined>
   readonly attempts?: ReturnType<typeof createSessionPromptAttemptStore>
 }) {
   const paths = resolveSagePaths({ home: options.home, root: options.root, platform: process.platform })
@@ -309,6 +310,7 @@ function assemblePort(options: {
     readIdentitySession: (options.readIdentitySession ?? (() => ({ sessionRef: 'session:active' }))) as never,
     readFrame: (options.readFrame ?? (() => ({ generation: 7, ready: true, contaminated: false }))) as never,
     runtimeEffective: (options.runtimeEffective ?? (() => OBSERVED)) as never,
+    readObservedTurnEndEdge: options.readObservedTurnEndEdge ?? (async () => '4:completed'),
     now: () => '2026-10-10T15:00:00.000Z',
   })
 }
@@ -344,6 +346,8 @@ describe('the real persistence step (ADR-0288)', () => {
     if (loaded.kind !== 'loaded') throw new Error('expected loaded')
     const projection = projectBusinessMatter(loaded.matter)
     expect(projection.attempts.map((attempt) => attempt.attemptId)).toEqual([ATTEMPT_ID])
+    // ADR-0296: the closure baseline read at persist time rides the attempt record itself.
+    expect(projection.attempts[0]?.observedTurnEndEdge).toBe('4:completed')
     const requirement = loadSessionPromptRequirementBundle()
     if (!requirement.ok) throw new Error(requirement.reason)
     const declared = requirement.snapshot.entries[0]!
@@ -369,6 +373,8 @@ describe('the real persistence step (ADR-0288)', () => {
     expect(await assemblePort({ ...base, readFrame: () => ({ generation: 7, ready: false, contaminated: false }) })(request)).toEqual({ state: 'unavailable' })
     expect(await assemblePort({ ...base, readFrame: () => ({ generation: 6, ready: true, contaminated: false }) })(request)).toEqual({ state: 'stale' })
     expect(await assemblePort({ ...base, runtimeEffective: () => undefined })(request)).toEqual({ state: 'unavailable' })
+    // ADR-0296: an unreadable fold cannot yield a closure baseline — the attempt stays unwritten.
+    expect(await assemblePort({ ...base, readObservedTurnEndEdge: async () => undefined })(request)).toEqual({ state: 'unavailable' })
     expect(await assemblePort({ ...base, runtimeEffective: () => ({ kind: 'unavailable', reason: 'registry-service-absent' }) })(request)).toEqual({ state: 'unavailable' })
     expect(await assemblePort(base)(requestWith(undefined))).toEqual({ state: 'unavailable' })
     // A fabrication: the evidence admits a different revision digest than the store validates.
@@ -411,7 +417,7 @@ describe('the production assembly wires the persistence step on its own switch',
   const adapter = { startLogin: async () => ({ ok: false as const, code: 'probe' }) }
   const callerBinding = { correlation: 'caller:session-core' }
 
-  function assembleWith(omit?: 'runtimeEffective' | 'runtimeAttempts') {
+  function assembleWith(omit?: 'runtimeEffective' | 'runtimeAttempts' | 'turnEndEdgeRead') {
     // After ADR-0289 hoisted the shared reads, bundle-`ok` is no longer exclusive to one port.
     // The publication `ok` read is: in this probe the compatibility port is gated off (no
     // revision digest), so only the persistence port construction reads it.
@@ -450,6 +456,7 @@ describe('the production assembly wires the persistence step on its own switch',
     })
     if (omit !== 'runtimeEffective') options.runtimeEffective = () => OBSERVED
     if (omit !== 'runtimeAttempts') options.sessionPromptAttempts = { close: () => undefined }
+    if (omit !== 'turnEndEdgeRead') options.readObservedTurnEndEdge = async () => null
     createSageAppServiceProviders(options as never)
     return publicationOkReads
   }
@@ -458,5 +465,6 @@ describe('the production assembly wires the persistence step on its own switch',
     expect(assembleWith()).toBe(1)
     expect(assembleWith('runtimeEffective')).toBe(0)
     expect(assembleWith('runtimeAttempts')).toBe(0)
+    expect(assembleWith('turnEndEdgeRead')).toBe(0)
   })
 })

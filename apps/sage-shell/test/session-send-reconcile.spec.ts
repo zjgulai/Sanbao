@@ -23,7 +23,7 @@ import { resolveSagePaths } from '../src/profile/paths.js'
 
 const MATTER_ID = 'matter:sage.send-reconcile-1'
 const REVISION_ID = 'revision:1'
-type Fold = { readonly state: 'read' | 'no-session' | 'unavailable', readonly execution: 'idle' | 'executing', readonly lastTurnEnd: string | null }
+type Fold = { readonly state: 'read' | 'no-session' | 'unavailable', readonly execution: 'idle' | 'executing', readonly lastTurnEnd: string | null, readonly lastTurnEndEdge: string | null }
 
 const cleanups: Array<() => void | Promise<void>> = []
 afterEach(async () => {
@@ -74,6 +74,9 @@ async function seededWithActiveAttempt(root: string, home: string) {
       capabilities: [],
     },
     compatibility: { outcome: 'equivalent', matrixId: 'urn:sage:compatibility-matrix:sha256:x', reason: 'x' },
+    // ADR-0296: the fold already showed this edge when the attempt started — exactly the case
+    // the evidence-scoping guard exists for.
+    observedTurnEndEdge: '9:completed',
   })
   const seeded = store.append({
     matterId: MATTER_ID,
@@ -130,7 +133,7 @@ describe('the send-path reconcile fallback (ADR-0293 alternative C)', () => {
   it('closes the stuck attempt when the fold says the turn ended and the channel is idle', async () => {
     const { root, home } = await temporaryRoot('completed')
     const { paths, store } = await seededWithActiveAttempt(root, home)
-    const { reconcile } = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed' })
+    const { reconcile } = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' })
 
     await reconcile({ matterRef: MATTER_ID })
 
@@ -144,7 +147,7 @@ describe('the send-path reconcile fallback (ADR-0293 alternative C)', () => {
   it('never appends while the turn is still executing', async () => {
     const { root, home } = await temporaryRoot('executing')
     const { paths, store } = await seededWithActiveAttempt(root, home)
-    const { reconcile } = harness(paths, { state: 'read', execution: 'executing', lastTurnEnd: 'completed' })
+    const { reconcile } = harness(paths, { state: 'read', execution: 'executing', lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' })
     const before = eventCount(store)
 
     await reconcile({ matterRef: MATTER_ID })
@@ -155,9 +158,9 @@ describe('the send-path reconcile fallback (ADR-0293 alternative C)', () => {
 
   it('appends nothing when the fold has no observed turn end or is not readable', async () => {
     for (const fold of [
-      { state: 'read' as const, execution: 'idle' as const, lastTurnEnd: null },
-      { state: 'no-session' as const, execution: 'idle' as const, lastTurnEnd: 'completed' },
-      { state: 'unavailable' as const, execution: 'idle' as const, lastTurnEnd: 'completed' },
+      { state: 'read' as const, execution: 'idle' as const, lastTurnEnd: null, lastTurnEndEdge: null },
+      { state: 'no-session' as const, execution: 'idle' as const, lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' },
+      { state: 'unavailable' as const, execution: 'idle' as const, lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' },
     ]) {
       const name = fold.state === 'read' ? 'null-end' : fold.state
       const { root, home } = await temporaryRoot(name)
@@ -172,17 +175,31 @@ describe('the send-path reconcile fallback (ADR-0293 alternative C)', () => {
     }
   })
 
+  it('refuses to close on the stale edge the attempt already started with (ADR-0296)', async () => {
+    // The regression: the fold still shows the pre-attempt edge (the dispatch never landed or
+    // its turn never started). Closing on it would record an outcome the evidence cannot prove.
+    const { root, home } = await temporaryRoot('stale-edge')
+    const { paths, store } = await seededWithActiveAttempt(root, home)
+    const { reconcile } = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed', lastTurnEndEdge: '9:completed' })
+    const before = eventCount(store)
+
+    await reconcile({ matterRef: MATTER_ID })
+
+    expect(eventCount(store)).toBe(before)
+    expect(projectBusinessMatter(loadedMatter(store)).activeAttemptId).toBe('attempt:sage.reconcile-1')
+  })
+
   it('no-ops when no attempt is active (the normal send path skips the close entirely)', async () => {
     const { root, home } = await temporaryRoot('no-active')
     const { paths, store } = await seededWithActiveAttempt(root, home)
     // Close the attempt once through the same runner; the second reconcile then finds no
     // active attempt and must not even reach the channel read.
-    const first = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed' })
+    const first = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' })
     await first.reconcile({ matterRef: MATTER_ID })
     const closed = eventCount(store)
     expect(closed).toBeGreaterThan(0)
 
-    const second = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed' })
+    const second = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' })
     await second.reconcile({ matterRef: MATTER_ID })
 
     expect(second.readChannel).not.toHaveBeenCalled()
@@ -193,7 +210,7 @@ describe('the send-path reconcile fallback (ADR-0293 alternative C)', () => {
     const { root, home } = await temporaryRoot('close-throws')
     const { paths, store } = await seededWithActiveAttempt(root, home)
     const close = vi.fn(async () => { throw new Error('probe') })
-    const { reconcile } = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed' }, { close })
+    const { reconcile } = harness(paths, { state: 'read', execution: 'idle', lastTurnEnd: 'completed', lastTurnEndEdge: '12:completed' }, { close })
     const before = eventCount(store)
 
     await expect(reconcile({ matterRef: MATTER_ID })).resolves.toBeUndefined()

@@ -891,7 +891,7 @@ test('the real preflight step cannot drift from its gated wiring, live validatio
 
 test('the real persistence step cannot drift from its wiring, identity, re-verification or atomic append', () => {
   const ungated = baseline.mainAppServiceText.replace(
-    '|| options.sessionPromptAttempts === undefined\n      || reverifyReads === undefined',
+    '|| options.sessionPromptAttempts === undefined\n      || options.readObservedTurnEndEdge === undefined\n      || reverifyReads === undefined',
     '|| false',
   )
   assert.notEqual(ungated, baseline.mainAppServiceText)
@@ -1135,7 +1135,7 @@ test('the turn-end closure cannot drift from its edge key, taxonomy, order or id
   expectNamedFailure(check({ sessionTurnCloseText: appendIdDrift }), 'the closure append must be idempotent per attempt and kind')
 
   const orderSwap = baseline.mainIndexText.replace(
-    '    if (kind !== null && kind !== \'\') {\n      void sessionTurnClose({ matterRef, endKind: kind }).catch(() => undefined)\n    }',
+    '    if (kind !== null && kind !== \'\') {\n      void sessionTurnClose({ matterRef, endKind: kind, edge }).catch(() => undefined)\n    }',
     '',
   )
   assert.notEqual(orderSwap, baseline.mainIndexText)
@@ -1158,7 +1158,7 @@ test('the send-path reconcile cannot drift from its order, gates or shared closu
   expectNamedFailure(check({ sessionSendReconcileText: interrupt }), 'the reconcile must never interrupt a running turn')
 
   const reimplemented = baseline.sessionSendReconcileText.replace(
-    'await options.close({ matterRef, endKind: fold.lastTurnEnd })',
+    'await options.close({ matterRef, endKind: fold.lastTurnEnd, edge: fold.lastTurnEndEdge })',
     'void options.close',
   )
   assert.notEqual(reimplemented, baseline.sessionSendReconcileText)
@@ -1227,6 +1227,34 @@ test('the epoch-gated projection and the review split cannot drift', () => {
   )
   assert.notEqual(detectDrop, baseline.sessionTurnCloseText)
   expectNamedFailure(check({ sessionTurnCloseText: detectDrop }), 'a completed turn on a decision-demanding scope must stay open for review')
+})
+
+test('the closure baseline cannot drift (ADR-0296)', () => {
+  const guardDrop = baseline.sessionTurnCloseText.replace('if (!edgeIsNew) return', '')
+  assert.notEqual(guardDrop, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: guardDrop }), 'the closure must require an edge newer than the attempt start baseline')
+
+  const equalityDrop = baseline.sessionTurnCloseText.replace('attempt.observedTurnEndEdge !== edge', 'true')
+  assert.notEqual(equalityDrop, baseline.sessionTurnCloseText)
+  expectNamedFailure(check({ sessionTurnCloseText: equalityDrop }), 'the closure must require an edge newer than the attempt start baseline')
+
+  const failClosedDrop = baseline.sessionPromptPersistenceText.replace(
+    "if (observedTurnEndEdge === undefined) return { state: 'unavailable' }",
+    '',
+  )
+  assert.notEqual(failClosedDrop, baseline.sessionPromptPersistenceText)
+  expectNamedFailure(check({ sessionPromptPersistenceText: failClosedDrop }), 'the persistence step must record the fold edge baseline or fail closed')
+
+  const wiringDrop = baseline.mainIndexText.replace(
+    'readObservedTurnEndEdge: async (matterRef: string) => {',
+    'unusedBaselineRead: async (matterRef: string) => {',
+  )
+  assert.notEqual(wiringDrop, baseline.mainIndexText)
+  expectNamedFailure(check({ mainIndexText: wiringDrop }), 'index must wire the closure baseline read from the raw channel fold')
+
+  const edgeDrop = baseline.sessionSendReconcileText.replace(', edge: fold.lastTurnEndEdge })', ' })')
+  assert.notEqual(edgeDrop, baseline.sessionSendReconcileText)
+  expectNamedFailure(check({ sessionSendReconcileText: edgeDrop }), 'the reconcile must reuse the closure runner, never a second write path')
 })
 
 test('main assembly and request-scoped owner cannot be replaced by a process-global current matter', () => {

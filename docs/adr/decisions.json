@@ -9782,6 +9782,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0296",
+      "title": "ADR-0296 · 收口证据域定界：turn-end 边沿按 attempt 基线定界，兼 dispatch-unknown 四项裁决",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "persist 观测 fold 边沿为基线写入 attempt-started（可选字段；不可读 fail closed）。",
+          "constraints": [
+            "no baseline -> never auto-closed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "runner 为唯一守卫：仅差于基线的边沿可收口；observer 与 reconcile 传边沿。",
+          "constraints": [
+            "one guard, both callers"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "晚于基线的新边沿为足够证据，允许轻收口（含 dispatch-unknown）；无痕迹场合保持活跃待具名核对。",
+          "constraints": [
+            "no ceremony for unknown closure"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "域第 13 型 attempt-dispatch-unknown（下一批实施）。",
+          "constraints": [
+            "payload attemptId + occurredAt"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "通道 requestId 由 attempt 身份派生（req-<attemptId uuid>），零新持久字段。",
+          "constraints": [
+            "re-derivable at reconciliation time"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "blocked 与 dispatch-unknown 治理分票。",
+          "constraints": [
+            "clarification 整合票 / 对账票"
+          ]
+        }
+      ]
     }
   ]
 }

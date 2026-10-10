@@ -136,6 +136,10 @@ export interface AttemptProjection {
   readonly decisionIds: readonly string[]
   readonly executionSnapshot: ExecutionSnapshot
   readonly compatibility: CompatibilityDecision
+  /** ADR-0296: the session fold's turn-end edge observed immediately before this attempt was
+   *  recorded (`null` = observed, none existed; absent = a legacy record with no baseline).
+   *  A turn-end edge may close the attempt only when it differs from this baseline. */
+  readonly observedTurnEndEdge?: string | null | undefined
   readonly status: 'running' | 'blocked' | 'failed' | 'succeeded'
   readonly startedAt: string
   readonly endedAt: string | undefined
@@ -394,6 +398,9 @@ export interface StartAttemptInput {
   readonly decisionIds: readonly string[]
   readonly executionSnapshot: ExecutionSnapshot
   readonly compatibility: CompatibilityDecision
+  /** ADR-0296: optional only so legacy records replay byte-identically; every new writer passes
+   *  it (the persist step always observes the fold first). Omitted = no baseline recorded. */
+  readonly observedTurnEndEdge?: string | null | undefined
 }
 
 export interface FailAttemptInput {
@@ -1361,6 +1368,7 @@ export function startAttempt(
       decisionIds: [...input.decisionIds],
       executionSnapshot: cloneExecutionSnapshot(input.executionSnapshot),
       compatibility: cloneCompatibility(input.compatibility),
+      ...(input.observedTurnEndEdge === undefined ? {} : { observedTurnEndEdge: input.observedTurnEndEdge }),
     },
   })
 }

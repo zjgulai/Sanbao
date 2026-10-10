@@ -33,7 +33,7 @@ afterEach(async () => {
   }
 })
 
-async function seeded(root: string, home: string, startAttemptNow: boolean) {
+async function seeded(root: string, home: string, startAttemptNow: boolean, observedTurnEndEdge: string | null | 'legacy' = null) {
   const paths = resolveSagePaths({ home, root, platform: process.platform })
   const store = openBusinessMatterEventStore({
     sagePaths: paths,
@@ -74,6 +74,7 @@ async function seeded(root: string, home: string, startAttemptNow: boolean) {
           capabilities: [],
         },
         compatibility: { outcome: 'equivalent', matrixId: 'urn:sage:compatibility-matrix:sha256:x', reason: 'x' },
+        ...(observedTurnEndEdge === 'legacy' ? {} : { observedTurnEndEdge }),
       })
     : created
   const seeded = store.append({
@@ -121,7 +122,7 @@ describe('turn-end closure (ADR-0293)', () => {
     const { paths, store } = await seeded(root, home, true)
     const { attempts, close } = runner(paths)
 
-    await close({ matterRef: MATTER_ID, endKind: 'completed' })
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '3:completed' })
 
     const loaded = store.load(MATTER_ID)
     expect(loaded.kind).toBe('loaded')
@@ -151,7 +152,7 @@ describe('turn-end closure (ADR-0293)', () => {
     expect(projectBusinessMatter(next).activeAttemptId).toBe('attempt:sage.close-2')
 
     // Idempotent: re-observing the same turn end finds no active attempt and appends nothing.
-    await close({ matterRef: MATTER_ID, endKind: 'completed' })
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '3:completed' })
     const again = attempts.readMatter(MATTER_ID)
     expect(again !== undefined && 'matter' in again && again.matter.events.length).toBe(loaded.matter.events.length)
   })
@@ -160,7 +161,7 @@ describe('turn-end closure (ADR-0293)', () => {
     const failedRoot = await temporaryRoot('failed')
     const failedCase = await seeded(failedRoot.root, failedRoot.home, true)
     const failed = runner(failedCase.paths)
-    await failed.close({ matterRef: MATTER_ID, endKind: 'error' })
+    await failed.close({ matterRef: MATTER_ID, endKind: 'error', edge: '3:error' })
     const loadedFailed = failedCase.store.load(MATTER_ID)
     if (loadedFailed.kind !== 'loaded') throw new Error('expected loaded')
     expect(loadedFailed.matter.events.at(-1)?.type).toBe('attempt-failed')
@@ -172,7 +173,7 @@ describe('turn-end closure (ADR-0293)', () => {
       const open = runner(openCase.paths)
       const before = openCase.store.load(MATTER_ID)
       if (before.kind !== 'loaded') throw new Error('expected loaded')
-      await open.close({ matterRef: MATTER_ID, endKind: kind })
+      await open.close({ matterRef: MATTER_ID, endKind: kind, edge: `3:${kind}` })
       const after = openCase.store.load(MATTER_ID)
       if (after.kind !== 'loaded') throw new Error('expected loaded')
       expect(after.matter.events.length, kind).toBe(before.matter.events.length)
@@ -239,6 +240,7 @@ describe('turn-end closure (ADR-0293)', () => {
         capabilities: [],
       },
       compatibility: { outcome: 'equivalent', matrixId: 'urn:sage:compatibility-matrix:sha256:x', reason: 'x' },
+      observedTurnEndEdge: null,
     })
     const seededReview = store.append({
       matterId: MATTER_ID,
@@ -258,17 +260,47 @@ describe('turn-end closure (ADR-0293)', () => {
     const { close } = runner(paths)
     const before = store.load(MATTER_ID)
     if (before.kind !== 'loaded') throw new Error('expected loaded')
-    await close({ matterRef: MATTER_ID, endKind: 'completed' })
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '3:completed' })
     const afterCompleted = store.load(MATTER_ID)
     if (afterCompleted.kind !== 'loaded') throw new Error('expected loaded')
     expect(afterCompleted.matter.events.length).toBe(before.matter.events.length)
     expect(projectBusinessMatter(afterCompleted.matter).activeAttemptId).toBe('attempt:sage.close-1')
 
     // A failure still closes honestly — review gating guards the light path only.
-    await close({ matterRef: MATTER_ID, endKind: 'error' })
+    await close({ matterRef: MATTER_ID, endKind: 'error', edge: '4:error' })
     const afterError = store.load(MATTER_ID)
     if (afterError.kind !== 'loaded') throw new Error('expected loaded')
     expect(afterError.matter.events.at(-1)?.type).toBe('attempt-failed')
+  })
+
+  it('refuses a stale edge or an attempt with no recorded baseline (ADR-0296 scoping)', async () => {
+    // The hole this closes: the fold still shows the edge from BEFORE this attempt started.
+    // Observed equal to the baseline, it proves nothing about this attempt's turn.
+    const staleRoot = await temporaryRoot('stale-edge')
+    const staleCase = await seeded(staleRoot.root, staleRoot.home, true, '7:completed')
+    const stale = runner(staleCase.paths)
+    const beforeStale = staleCase.store.load(MATTER_ID)
+    if (beforeStale.kind !== 'loaded') throw new Error('expected loaded')
+    await stale.close({ matterRef: MATTER_ID, endKind: 'completed', edge: '7:completed' })
+    const afterStale = staleCase.store.load(MATTER_ID)
+    if (afterStale.kind !== 'loaded') throw new Error('expected loaded')
+    expect(afterStale.matter.events.length).toBe(beforeStale.matter.events.length)
+    expect(projectBusinessMatter(afterStale.matter).activeAttemptId).toBe('attempt:sage.close-1')
+
+    // The same attempt still closes on an edge that IS newer than its baseline.
+    await stale.close({ matterRef: MATTER_ID, endKind: 'completed', edge: '8:completed' })
+    const afterNew = staleCase.store.load(MATTER_ID)
+    if (afterNew.kind !== 'loaded') throw new Error('expected loaded')
+    expect(afterNew.matter.events.at(-1)?.type).toBe('attempt-succeeded')
+
+    // A legacy record with no baseline is never auto-closed, whatever the edge says.
+    const legacyRoot = await temporaryRoot('legacy-baseline')
+    const legacyCase = await seeded(legacyRoot.root, legacyRoot.home, true, 'legacy')
+    const legacy = runner(legacyCase.paths)
+    await legacy.close({ matterRef: MATTER_ID, endKind: 'completed', edge: '3:completed' })
+    const afterLegacy = legacyCase.store.load(MATTER_ID)
+    if (afterLegacy.kind !== 'loaded') throw new Error('expected loaded')
+    expect(projectBusinessMatter(afterLegacy.matter).activeAttemptId).toBe('attempt:sage.close-1')
   })
 
   it('no-ops when no attempt is active or the matter is unknown', async () => {
@@ -277,8 +309,8 @@ describe('turn-end closure (ADR-0293)', () => {
     const { close } = runner(paths)
     const before = store.load(MATTER_ID)
     if (before.kind !== 'loaded') throw new Error('expected loaded')
-    await close({ matterRef: MATTER_ID, endKind: 'completed' })
-    await close({ matterRef: 'matter:sage.unknown-1', endKind: 'completed' })
+    await close({ matterRef: MATTER_ID, endKind: 'completed', edge: '3:completed' })
+    await close({ matterRef: 'matter:sage.unknown-1', endKind: 'completed', edge: '3:completed' })
     const after = store.load(MATTER_ID)
     if (after.kind !== 'loaded') throw new Error('expected loaded')
     expect(after.matter.events.length).toBe(before.matter.events.length)
