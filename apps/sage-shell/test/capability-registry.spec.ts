@@ -305,3 +305,44 @@ describe('Capability Registry pure kernel', () => {
     expect(source).not.toMatch(/\b(?:Date\.now|new Date)\b/u)
   })
 })
+
+const FIRST_PARTY_DESCRIPTOR: CapabilityRegistryDescriptorRefV1 = {
+  descriptorDigest: 'urn:sage:runtime-descriptor:sha256:9999999999999999999999999999999999999999999999999999999999999999',
+  artifactSubjectDigest: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  launchContractDigest: 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  toolContractDigest: 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+  verification: 'verified',
+  source: 'first-party',
+  evidenceDigest: 'urn:sage:first-party-capability-evidence:sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+}
+
+describe('first-party provenance (ADR-0285)', () => {
+  it('seals an approved first-party entry and never interchanges source namespaces', () => {
+    const entry: CapabilityRegistryEntryBodyV1 = {
+      ...approvedEntry('capability:sage.session-prompt'),
+      descriptor: FIRST_PARTY_DESCRIPTOR,
+    }
+    const sealed = sealCapabilityRegistrySnapshot(snapshotBody([entry]))
+    expect(sealed.ok).toBe(true)
+    if (sealed.ok) expect(sealed.value.entries[0]?.descriptor.source).toBe('first-party')
+
+    // A first-party source with an external evidence URN breaks its namespace set; parseEntry
+    // folds descriptor-level failures into registry-entry-invalid (established kernel semantics).
+    expect(sealCapabilityRegistrySnapshot(snapshotBody([{
+      ...entry,
+      descriptor: { ...FIRST_PARTY_DESCRIPTOR, evidenceDigest: VERIFIED_DESCRIPTOR.evidenceDigest },
+    }]))).toMatchObject({ ok: false, code: 'registry-entry-invalid' })
+
+    // A c2c5 source with first-party content digests breaks the external namespaces.
+    expect(sealCapabilityRegistrySnapshot(snapshotBody([{
+      ...entry,
+      descriptor: { ...FIRST_PARTY_DESCRIPTOR, source: 'c2c5' },
+    }]))).toMatchObject({ ok: false, code: 'registry-entry-invalid' })
+
+    // An unknown source is not a provenance path at all.
+    expect(sealCapabilityRegistrySnapshot(snapshotBody([{
+      ...entry,
+      descriptor: { ...FIRST_PARTY_DESCRIPTOR, source: 'self-attested' } as never,
+    }]))).toMatchObject({ ok: false, code: 'registry-entry-invalid' })
+  })
+})

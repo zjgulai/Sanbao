@@ -82,9 +82,7 @@ export function createSessionPromptCompatibilityPort(
     const requirement = declaring.length === 1 ? declaring[0] : undefined
     if (requirement === undefined) return { state: 'unavailable' }
 
-    const rebuilt = computeTargetSemanticFromRequirement(requirement, observation.descriptor)
-    if (!rebuilt.ok) return { state: 'unavailable' }
-    const targetSemantic = rebuilt.semantic
+    const targetSemantic = computeTargetSemanticFromRequirement(requirement, observation.descriptor)
 
     const revisionDigest = options.revisionDigest(context.matterRef, context.revisionRef)
     if (revisionDigest === undefined) return { state: 'unavailable' }

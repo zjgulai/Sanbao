@@ -18,6 +18,7 @@ import {
   type CompatibilityTargetRequirementBodyV1,
   type CompatibilityTargetRequirementSnapshotBodyV1,
 } from '../src/security/compatibility-target-requirement.js'
+import type { CompatibilityTargetCapabilityRequirementV1 } from '../src/security/compatibility-target-requirement.js'
 
 const CONTENT = (hex: string): string => `sha256:${hex.repeat(64)}`
 
@@ -28,6 +29,16 @@ function component(kind: string, suffix: string, version = '1.0.0'): Compatibili
     artifactDigest: CONTENT('1'),
     contractDigest: CONTENT('2'),
     behaviorConfigurationDigest: CONTENT('3'),
+  }
+}
+
+/** The seven-key capability face (ADR-0285): the shared five plus the two registry-derived
+ *  digests the V2 semantic capability face carries. */
+function capability(kind: string, suffix: string, version = '1.0.0'): CompatibilityTargetCapabilityRequirementV1 {
+  return {
+    ...component(kind, suffix, version),
+    registryDescriptorDigest: CONTENT('4'),
+    adapterMappingDigest: CONTENT('5'),
   }
 }
 
@@ -51,7 +62,7 @@ const BASE_BODY: CompatibilityTargetRequirementBodyV1 = {
   model: component('model', 'catalog', '2026-09-01'),
   agent: component('agent', 'catalog'),
   preset: component('preset', 'catalog'),
-  capabilities: [component('capability', 'catalog-read')],
+  capabilities: [capability('capability', 'catalog-read')],
   ownerDecision: {
     decisionId: 'decision:sage.catalog',
     ownerId: 'owner:sage.product-security',
@@ -184,7 +195,7 @@ describe('WT-02C.2T compatibility target requirement kernel', () => {
       actionRequirements: [{ actionScope: 'orders.read', effectClass: 'external-read', requiresDecision: false }],
       permissionRequirements: [{ identity: 'permission:sage.orders', version: '1.0.0', digest: CONTENT('6') }],
       dataBoundaryRequirements: [{ identity: 'data-boundary:sage.orders', version: '1.0.0', digest: CONTENT('7') }],
-      capabilities: [component('capability', 'orders-read')],
+      capabilities: [capability('capability', 'orders-read')],
     }
     const body = snapshotBody([second, BASE_BODY])
     const snapshot = unwrap(sealCompatibilityTargetRequirementSnapshot(body))

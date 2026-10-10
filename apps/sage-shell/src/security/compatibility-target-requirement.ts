@@ -25,6 +25,14 @@ export interface CompatibilityTargetComponentRequirementV1 {
   readonly behaviorConfigurationDigest: string
 }
 
+/** The capability face (seven keys, ADR-0285): the shared five plus the two registry-derived
+ *  digests the V2 semantic capability face carries. Empty capability lists keep their exact
+ *  canonical bytes, so requirements published before capabilities keep their digests. */
+export interface CompatibilityTargetCapabilityRequirementV1 extends CompatibilityTargetComponentRequirementV1 {
+  readonly registryDescriptorDigest: string
+  readonly adapterMappingDigest: string
+}
+
 export interface CompatibilityTargetOwnerDecisionV1 {
   readonly decisionId: string
   readonly ownerId: string
@@ -45,7 +53,7 @@ export interface CompatibilityTargetRequirementBodyV1 {
   readonly model: CompatibilityTargetComponentRequirementV1
   readonly agent: CompatibilityTargetComponentRequirementV1
   readonly preset: CompatibilityTargetComponentRequirementV1
-  readonly capabilities: readonly CompatibilityTargetComponentRequirementV1[]
+  readonly capabilities: readonly CompatibilityTargetCapabilityRequirementV1[]
   readonly ownerDecision: CompatibilityTargetOwnerDecisionV1
   readonly effectiveAt: string
   readonly expiresAt?: string
@@ -478,6 +486,46 @@ function parseComponentRequirement(
   return { identity, version, artifactDigest, contractDigest, behaviorConfigurationDigest }
 }
 
+function parseCapabilityRequirement(
+  value: unknown,
+): CompatibilityTargetCapabilityRequirementV1 | undefined {
+  const record = exactRecord(value, [
+    'identity',
+    'version',
+    'artifactDigest',
+    'contractDigest',
+    'behaviorConfigurationDigest',
+    'registryDescriptorDigest',
+    'adapterMappingDigest',
+  ])
+  if (record === undefined) return undefined
+  const identity = exactString(record.identity, COMPONENT_IDENTITY, 128)
+  const version = exactVersion(record.version)
+  const artifactDigest = exactContentDigest(record.artifactDigest)
+  const contractDigest = exactContentDigest(record.contractDigest)
+  const behaviorConfigurationDigest = exactContentDigest(record.behaviorConfigurationDigest)
+  const registryDescriptorDigest = exactContentDigest(record.registryDescriptorDigest)
+  const adapterMappingDigest = exactContentDigest(record.adapterMappingDigest)
+  if (
+    identity === undefined ||
+    version === undefined ||
+    artifactDigest === undefined ||
+    contractDigest === undefined ||
+    behaviorConfigurationDigest === undefined ||
+    registryDescriptorDigest === undefined ||
+    adapterMappingDigest === undefined
+  ) return undefined
+  return {
+    identity,
+    version,
+    artifactDigest,
+    contractDigest,
+    behaviorConfigurationDigest,
+    registryDescriptorDigest,
+    adapterMappingDigest,
+  }
+}
+
 function parseOwnerDecision(value: unknown): CompatibilityTargetOwnerDecisionV1 | undefined {
   const record = exactRecord(value, ['decisionId', 'ownerId', 'decidedAt', 'reason'])
   if (record === undefined) return undefined
@@ -533,11 +581,11 @@ function parseRequirementBody(value: unknown): ParseResult<CompatibilityTargetRe
   const agent = parseComponentRequirement(record.agent)
   const preset = parseComponentRequirement(record.preset)
   const capabilityValues = exactArray(record.capabilities)
-  const capabilities: CompatibilityTargetComponentRequirementV1[] = []
+  const capabilities: CompatibilityTargetCapabilityRequirementV1[] = []
   const capabilityIdentities = new Set<string>()
   if (capabilityValues !== undefined) {
     for (const candidate of capabilityValues) {
-      const capability = parseComponentRequirement(candidate)
+      const capability = parseCapabilityRequirement(candidate)
       if (capability === undefined) return { ok: false, code: 'requirement-entry-invalid' }
       if (capabilityIdentities.has(capability.identity)) {
         return { ok: false, code: 'requirement-entry-duplicate' }

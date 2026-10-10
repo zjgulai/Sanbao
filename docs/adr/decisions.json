@@ -9353,6 +9353,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0285",
+      "title": "ADR-0285 · 首方 Registry entry 与能力发布面：first-party provenance 类、7 键 capability 载体、首个非空快照与重发链",
+      "status": "accepted（2026-10-10）",
+      "date": "2026-10-10",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "source 扩 first-party；verification 词表不变、由 source 消歧验证路径；digest 命名空间按 source 条件化且不可互换；运行时过滤器同步接受 first-party+verified。",
+          "constraints": [
+            "cross-source namespaces are never interchangeable",
+            "no C2C.5 equivalence claimed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "requirement capability 载体改 7 键（CompatibilityTargetCapabilityRequirementV1）；空 caps 规范字节不变；候选与 semantic 重建同步。",
+          "constraints": [
+            "empty-capability digests stay stable",
+            "rebuild pins the published semantic digest"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "首个 registry 快照落 publications/（字节见正文）；effectiveAt=决策时刻；loader 须内核 parse + 重封回同 id 才可取代空集默认。",
+          "constraints": [
+            "bundled default stays the empty set",
+            "non-empty only via published snapshot with seal round trip"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "重观测即重发：probe 与 index 同款装载 registry；requirement/matrix v2 同批重封并重锚 golden。",
+          "constraints": [
+            "no stale pairing left behind",
+            "supersedes chain recorded"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "route-authority registry 事实组更新 + 两条突变；不变钉子保持。",
+          "constraints": [
+            "mechanism over review"
+          ]
+        }
+      ]
     }
   ]
 }

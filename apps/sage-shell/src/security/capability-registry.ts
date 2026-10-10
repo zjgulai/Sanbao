@@ -40,7 +40,10 @@ export interface CapabilityRegistryDescriptorRefV1 {
   readonly launchContractDigest: string
   readonly toolContractDigest: string
   readonly verification: CapabilityRegistryDescriptorVerification
-  readonly source: 'candidate' | 'c2c5'
+  /** The verification path: `c2c5` = the external provider seam; `first-party` = the Sage-owned
+   *  composite (C2A runtime-artifact attestation + publication decision, ADR-0285). The source
+   *  and its digest namespaces are one fact: they must never be interchangeable. */
+  readonly source: 'candidate' | 'c2c5' | 'first-party'
   readonly evidenceDigest?: string
 }
 
@@ -114,6 +117,13 @@ const ARTIFACT_DIGEST = /^urn:sage:external-capability-artifact:sha256:[0-9a-f]{
 const LAUNCH_DIGEST = /^urn:sage:external-capability-launch:sha256:[0-9a-f]{64}$/u
 const TOOL_DIGEST = /^urn:sage:external-capability-tool-contract:sha256:[0-9a-f]{64}$/u
 const EVIDENCE_DIGEST = /^urn:sage:external-capability-evidence:sha256:[0-9a-f]{64}$/u
+// First-party (ADR-0285) digest namespaces: the runtime descriptor line and the Sage-owned
+// artifact attestation are content digests, not external-capability URNs.
+const FIRST_PARTY_DESCRIPTOR_DIGEST = /^urn:sage:runtime-descriptor:sha256:[0-9a-f]{64}$/u
+const FIRST_PARTY_ARTIFACT_DIGEST = /^sha256:[0-9a-f]{64}$/u
+const FIRST_PARTY_LAUNCH_DIGEST = /^sha256:[0-9a-f]{64}$/u
+const FIRST_PARTY_TOOL_DIGEST = /^sha256:[0-9a-f]{64}$/u
+const FIRST_PARTY_EVIDENCE_DIGEST = /^urn:sage:first-party-capability-evidence:sha256:[0-9a-f]{64}$/u
 const CONTENT_DIGEST = /^sha256:[0-9a-f]{64}$/u
 const CAPABILITY_ID = /^capability:sage\.[a-z0-9][a-z0-9._-]*$/u
 const OPERATION_ID = /^[a-z][a-z0-9._-]{0,127}$/u
@@ -144,7 +154,7 @@ const FAILURE_REASONS: Readonly<Record<CapabilityRegistryFailureCode, string>> =
   'registry-invalid': 'The capability registry input is invalid.',
   'registry-schema-unsupported': 'The capability registry schema version is unsupported.',
   'registry-entry-invalid': 'The capability registry entry is invalid.',
-  'registry-descriptor-unverified': 'The capability descriptor is not verified by the C2C.5 provider.',
+  'registry-descriptor-unverified': 'The capability descriptor is not verified through its declared provenance path (C2C.5 provider or Sage first-party, ADR-0285).',
   'registry-operation-mapping-invalid': 'The capability operation mapping is invalid or incomplete.',
   'registry-approval-required': 'A product/security approval is required for this registry transition.',
   'registry-entry-duplicate': 'The capability registry contains a duplicate entry.',
@@ -366,18 +376,38 @@ function parseDescriptor(value: unknown): ParseResult<CapabilityRegistryDescript
     'source',
   ], ['evidenceDigest'])
   if (record === undefined) return rejected('registry-entry-invalid')
-  const descriptorDigest = exactDigest(record.descriptorDigest, DESCRIPTOR_DIGEST)
-  const artifactSubjectDigest = exactDigest(record.artifactSubjectDigest, ARTIFACT_DIGEST)
-  const launchContractDigest = exactDigest(record.launchContractDigest, LAUNCH_DIGEST)
-  const toolContractDigest = exactDigest(record.toolContractDigest, TOOL_DIGEST)
   const verification = record.verification
   const source = record.source
+  if (
+    (verification !== 'candidate' && verification !== 'verified')
+    || (source !== 'candidate' && source !== 'c2c5' && source !== 'first-party')
+  ) return rejected('registry-entry-invalid')
+  // Digest namespaces are source-conditional (ADR-0285): a C2C.5 external descriptor and a Sage
+  // first-party runtime descriptor are different classes of evidence and never interchangeable.
+  const patterns = source === 'first-party'
+    ? {
+        descriptor: FIRST_PARTY_DESCRIPTOR_DIGEST,
+        artifact: FIRST_PARTY_ARTIFACT_DIGEST,
+        launch: FIRST_PARTY_LAUNCH_DIGEST,
+        tool: FIRST_PARTY_TOOL_DIGEST,
+        evidence: FIRST_PARTY_EVIDENCE_DIGEST,
+      }
+    : {
+        descriptor: DESCRIPTOR_DIGEST,
+        artifact: ARTIFACT_DIGEST,
+        launch: LAUNCH_DIGEST,
+        tool: TOOL_DIGEST,
+        evidence: EVIDENCE_DIGEST,
+      }
+  const descriptorDigest = exactDigest(record.descriptorDigest, patterns.descriptor)
+  const artifactSubjectDigest = exactDigest(record.artifactSubjectDigest, patterns.artifact)
+  const launchContractDigest = exactDigest(record.launchContractDigest, patterns.launch)
+  const toolContractDigest = exactDigest(record.toolContractDigest, patterns.tool)
   if (
     descriptorDigest === undefined ||
     artifactSubjectDigest === undefined ||
     launchContractDigest === undefined ||
-    toolContractDigest === undefined ||
-    (verification !== 'candidate' && verification !== 'verified')
+    toolContractDigest === undefined
   ) return rejected('registry-entry-invalid')
 
   if (verification === 'candidate') {
@@ -394,8 +424,10 @@ function parseDescriptor(value: unknown): ParseResult<CapabilityRegistryDescript
     })
   }
 
-  const evidenceDigest = exactDigest(record.evidenceDigest, EVIDENCE_DIGEST)
-  if (source !== 'c2c5' || evidenceDigest === undefined) return rejected('registry-descriptor-unverified')
+  const evidenceDigest = exactDigest(record.evidenceDigest, patterns.evidence)
+  if (evidenceDigest === undefined || (source !== 'c2c5' && source !== 'first-party')) {
+    return rejected('registry-descriptor-unverified')
+  }
   return parsed({
     descriptorDigest,
     artifactSubjectDigest,
