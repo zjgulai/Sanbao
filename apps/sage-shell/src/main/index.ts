@@ -9,6 +9,7 @@ import { app, dialog, nativeTheme, protocol, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import { assertBundledProfileAdmissibleSync, installBundledProfileTemplate } from '../profile/bundled-profile.js'
+import { surfaceStartupFailure } from './startup-failure.js'
 import type { SageViewState } from '../product/contracts.js'
 import type { DraftRecord } from './draft-store.js'
 import type { DraftStatus, WorkspaceListStatus } from '../appservice/contracts.js'
@@ -1354,8 +1355,12 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap().catch(async (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error)
-  process.stderr.write(`sage shell: ${error instanceof Error ? error.stack ?? message : message}\n`)
-  dialog.showErrorBox('Sage Shell 启动失败', message)
-  app.exit(1)
+  // L2-A (ADR-0322): the failure surface waits for ready so the one named alert is frontmost —
+  // a pre-ready showErrorBox could sit unseen behind a blank frame while the process waited.
+  await surfaceStartupFailure(error, {
+    writeLog: (line) => { process.stderr.write(line) },
+    whenReady: () => app.whenReady(),
+    showErrorBox: (title, content) => { dialog.showErrorBox(title, content) },
+    exit: (code) => { app.exit(code) },
+  })
 })

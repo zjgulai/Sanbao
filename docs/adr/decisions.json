@@ -10899,6 +10899,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0322",
+      "title": "ADR-0322 · 启动失败可见面：ready 后前显对话框 + 稳定退出",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "startup-failure.ts 单家：log→ready→前显对话框→exit(1)。",
+          "constraints": [
+            "title 固定 Sage 启动失败"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "任一步失败不吞错，必然 exit(1)。",
+          "constraints": [
+            "never-throws"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "index.ts catch 改走模块；拒装判据与退出码不变。",
+          "constraints": [
+            "no behavior change besides surfacing"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "打包实机验证随 v5 produce。",
+          "constraints": [
+            "标注待验证"
+          ]
+        }
+      ]
     }
   ]
 }
