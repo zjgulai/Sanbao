@@ -155,6 +155,28 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .settings-appearance label { min-width: 0; display: grid; grid-template-columns: minmax(110px, 1fr) minmax(140px, 1fr); align-items: center; gap: var(--sage-density-row-gap); }
 .sage-desktop .settings-appearance select { min-width: 0; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
 .sage-desktop .settings-appearance button[type="submit"] { justify-self: end; min-height: var(--sage-density-control-min-height); margin-top: var(--sage-density-row-gap); padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 5px; }
+/* R17-A (QDR.P06): the settings shell — observed navigation beside the pane. */
+.sage-desktop .settings-shell { min-width: 0; display: grid; grid-template-columns: minmax(160px, 200px) minmax(0, 1fr); gap: 18px; width: min(1080px, calc(100% - 80px)); margin: 0 auto 27px; padding: var(--sage-density-main-padding) 0; }
+.sage-desktop .settings-nav { min-width: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); }
+.sage-desktop .settings-nav ul { display: grid; gap: 2px; margin: 4px 0 0; padding: 0; list-style: none; }
+.sage-desktop .settings-nav button[aria-current="page"] { font-weight: 600; color: var(--sage-ink); }
+.sage-desktop .settings-search { display: grid; gap: 4px; color: var(--sage-muted); }
+.sage-desktop .settings-search input { min-width: 0; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
+.sage-desktop .settings-nav-empty { margin: 0; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .settings-pane { min-width: 0; }
+.sage-desktop .settings-observed { min-width: 0; display: grid; gap: 16px; }
+.sage-desktop .settings-observed h2 { margin: 0; font-size: 28px; font-weight: 500; }
+.sage-desktop .settings-observed header p, .sage-desktop .settings-observed-note { margin: 10px 0 0; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .settings-observed-group { min-width: 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); }
+.sage-desktop .settings-observed-group h3 { margin: 0 0 8px; font-size: 13px; color: var(--sage-muted); }
+.sage-desktop .settings-observed-group ul { display: grid; gap: var(--sage-density-row-gap); margin: 0; padding: 0; list-style: none; }
+.sage-desktop .settings-observed-row { min-width: 0; display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto auto; align-items: center; gap: var(--sage-density-row-gap); }
+.sage-desktop .settings-observed-row small { color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .settings-observed-state { justify-self: end; font-size: 12px; color: var(--sage-muted); white-space: nowrap; }
+.sage-desktop .settings-profile-identity { display: flex; align-items: center; gap: 10px; }
+.sage-desktop .settings-profile-identity span { display: grid; }
+.sage-desktop .settings-profile-avatar { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 50%; border: 1px solid var(--sage-border); background: var(--sage-surface); color: var(--sage-muted); }
+@media (max-width: 700px) { .sage-desktop .settings-shell { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 950px) {
   .sage-desktop .product-sidebar { width: 195px; }
   .sage-desktop .welcome-content { margin-bottom: 25px; }

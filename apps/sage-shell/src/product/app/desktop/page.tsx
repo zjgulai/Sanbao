@@ -1127,7 +1127,11 @@ export function DesktopPage({
               ? <SearchPage navigate={navigate} />
               : page === '账号与设置'
                 ? <DesktopSettingsView controller={preferencesController}
-                  {...(state.kind === 'read' && state.settingsLeaves !== undefined ? { leaves: state.settingsLeaves } : {})} />
+                  {...(state.kind === 'read' && state.settingsLeaves !== undefined ? { leaves: state.settingsLeaves } : {})}
+                  onBack={() => navigate('新任务')}
+                  {...(accountRead.kind === 'read'
+                    ? { account: { auth: accountRead.state.auth, busy: accountBusy, onAction: actOnAccount } }
+                    : {})} />
                 : <section className="welcome-content outstanding-feature"><h1>{page}</h1><p>{outstanding[page]}</p>
                   <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
         <Composer draft={draft} changeDraft={changeDraft} notice={notice} setNotice={setNotice} navigate={navigate}

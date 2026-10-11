@@ -10706,6 +10706,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0318",
+      "title": "ADR-0318 · R17-A 设置壳批：观测导航 + 四默认页结构复刻",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "设置壳 = 观测导航 + 面板；只渲染已有页面的入口。",
+          "constraints": [
+            "no nav to fake pages"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "默认面板保持外观与显示（本地规则，偏离观测记录在案）。",
+          "constraints": [
+            "existing acceptance landing preserved"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "默认页结构逐字复刻；无机器行给未接线态，无伪造读数与动作入口。",
+          "constraints": [
+            "verbatim labels from captures"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "profile 页只接真身份事实与真 login/logout；其余具名未接线。",
+          "constraints": [
+            "minimal identity projection"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "写路径独立成批（local-preference 类，非 admission 批）；本批零写入。",
+          "constraints": [
+            "save/apply separated per T13"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "7 行 pending→implementing；route 权威维度零改动。",
+          "constraints": [
+            "tracked-test evidenceRefs, countsAsVerification:false"
+          ]
+        }
+      ]
     }
   ]
 }

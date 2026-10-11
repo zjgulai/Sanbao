@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 111,
-        "pending": 87,
+        "implementing": 118,
+        "pending": 80,
         "verified": 8
       },
       "applicationService": {
@@ -2189,8 +2189,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2211,7 +2222,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the settings entry renders in the R17-A settings shell navigation and lands on its reproduced pane (observed nav facts: back-to-app, search, entries); the P06 group expansion stays pending — later waves add each entry together with its page; the write path is not assembled (no DTO/intent/persistence owner yet — edits cannot save, T13 sub-batches); the local-preference write class (not a protected-effect admission batch) owns any eventual save route, so no admission batch is spun for this entry."
         ]
       }
     },
@@ -2254,8 +2265,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2276,7 +2298,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the settings entry renders in the R17-A settings shell navigation and lands on its reproduced pane (observed nav facts: back-to-app, search, entries); the P06 group expansion stays pending — later waves add each entry together with its page; the write path is not assembled (no DTO/intent/persistence owner yet — edits cannot save, T13 sub-batches); the local-preference write class (not a protected-effect admission batch) owns any eventual save route, so no admission batch is spun for this entry."
         ]
       }
     },
@@ -2319,8 +2341,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2341,7 +2374,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the settings entry renders in the R17-A settings shell navigation and lands on its reproduced pane (observed nav facts: back-to-app, search, entries); the P06 group expansion stays pending — later waves add each entry together with its page; the write path is not assembled (no DTO/intent/persistence owner yet — edits cannot save, T13 sub-batches); the local-preference write class (not a protected-effect admission batch) owns any eventual save route, so no admission batch is spun for this entry."
         ]
       }
     },
@@ -10926,8 +10959,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10948,7 +10992,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the observed default page (QB7-01) is reproduced as structure inside the R17-A settings shell — groups, labels and descriptions verbatim, controls carry the honest 未接线 state and no fabricated value is shown; save/persistence owner not yet assembled (T13 sub-batches), so nothing is written; real-window visual/electron acceptance stays pending; the eventual writes are local-preference class (no protected-effect admission batch)."
         ]
       }
     },
@@ -13665,8 +13709,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -13687,7 +13742,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the observed default page (QB15-01) is reproduced as structure inside the R17-A settings shell — groups, labels and descriptions verbatim, controls carry the honest 未接线 state and no fabricated value is shown; save/persistence owner not yet assembled (T13 sub-batches), so nothing is written; real-window visual/electron acceptance stays pending; the eventual writes are local-preference class (no protected-effect admission batch)."
         ]
       }
     },
@@ -13732,8 +13787,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -13754,7 +13820,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the observed default page (QB15-02) is reproduced as structure inside the R17-A settings shell — groups, labels and descriptions verbatim, controls carry the honest 未接线 state and no fabricated value is shown; save/persistence owner not yet assembled (T13 sub-batches), so nothing is written; real-window visual/electron acceptance stays pending; the eventual writes are local-preference class (no protected-effect admission batch)."
         ]
       }
     },
@@ -13799,8 +13865,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -13821,7 +13898,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the observed default page (QB16-01 + B15 AX 下半) is reproduced as structure inside the R17-A settings shell — groups, labels and descriptions verbatim, controls carry the honest 未接线 state and no fabricated value is shown; save/persistence owner not yet assembled (T13 sub-batches), so nothing is written; real-window visual/electron acceptance stays pending; the eventual writes are local-preference class (no protected-effect admission batch)."
         ]
       }
     },
