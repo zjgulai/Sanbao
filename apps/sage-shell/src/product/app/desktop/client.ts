@@ -15,7 +15,26 @@ export type DesktopRead =
       readonly activeContext?: DesktopActiveContext
       /** ADR-0300: the artifact slot (cards + the one side-preview state). */
       readonly artifacts?: DesktopArtifacts
+      /** ADR-0304: the run-monitor slot (steps + the honest unknown axes). */
+      readonly monitor?: DesktopRunMonitor
     }
+
+/** ADR-0304: the run monitor as the desktop displays it — the steps axis plus honest
+ *  state/reason rows (an unknown axis keeps its named reason; it is never a zero). */
+export interface DesktopRunMonitor {
+  readonly state: 'read' | 'unavailable'
+  readonly steps: {
+    readonly state: 'running' | 'idle' | 'unavailable'
+    readonly lastTurnEnd: string | null
+    readonly observedRecords: number
+    readonly reason: string | null
+  }
+  readonly axes: readonly {
+    readonly name: string
+    readonly state: string
+    readonly reason: string
+  }[]
+}
 
 /** ADR-0300: one artifact card as the observed feed reports it (display facts only). */
 export interface DesktopArtifactCard {
@@ -210,6 +229,7 @@ export function classifyDesktopState(input: unknown): DesktopRead {
   const matterLinks = parseMatterLinks(input.matterLinks)
   const activeContext = parseActiveContext(input.activeContext)
   const artifacts = parseArtifacts(input.artifacts)
+  const monitor = parseMonitor(input.runMonitor)
   return {
     kind: 'read',
     runtime: { status: runtime.status, message: RUNTIME_MESSAGES[runtime.status], retryable: runtime.retryable },
@@ -218,6 +238,38 @@ export function classifyDesktopState(input: unknown): DesktopRead {
     ...(matterLinks === null ? {} : { matterLinks }),
     ...(activeContext === null ? {} : { activeContext }),
     ...(artifacts === null ? {} : { artifacts }),
+    ...(monitor === null ? {} : { monitor }),
+  }
+}
+
+/** ADR-0304: tolerant parse — the steps axis is validated; each remaining axis degrades to an
+ *  honest unknown row with its named fallback reason. A fully malformed monitor is omitted. */
+function parseMonitor(input: unknown): DesktopRunMonitor | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  const stepsInput = isRecord(input.steps) ? input.steps : {}
+  const stepState: 'running' | 'idle' | 'unavailable' = stepsInput.state === 'running' || stepsInput.state === 'idle' || stepsInput.state === 'unavailable'
+    ? stepsInput.state : 'unavailable'
+  const steps = {
+    state: stepState,
+    lastTurnEnd: stepsInput.lastTurnEnd === null || stepsInput.lastTurnEnd === undefined
+      ? null : typeof stepsInput.lastTurnEnd === 'string' ? stepsInput.lastTurnEnd : null,
+    observedRecords: typeof stepsInput.observedRecords === 'number' && Number.isSafeInteger(stepsInput.observedRecords) && stepsInput.observedRecords >= 0
+      ? stepsInput.observedRecords : 0,
+    reason: typeof stepsInput.reason === 'string' ? stepsInput.reason : null,
+  }
+  const axisOf = (value: unknown, fallbackReason: string): { state: string, reason: string } =>
+    isRecord(value) && typeof value.state === 'string' && value.state !== '' && typeof value.reason === 'string'
+      ? { state: value.state, reason: value.reason }
+      : { state: 'unknown', reason: fallbackReason }
+  return {
+    state: input.state,
+    steps,
+    axes: [
+      { name: '预算／用量', ...axisOf(input.budget, 'usage-provider-unavailable') },
+      { name: '设备', ...axisOf(input.device, 'device-binding-unavailable') },
+      { name: '后台', ...axisOf(input.background, 'background-host-unavailable') },
+      { name: '上下文', ...axisOf(input.context, 'context-usage-unavailable') },
+    ],
   }
 }
 

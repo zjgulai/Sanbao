@@ -32,14 +32,23 @@ export function desktopSessionPayload() {
       { role: 'assistant', text: '实际回复', source: 'history', at: '2026-10-05T00:00:01Z', attachments: [] },
     ],
     reconciled: true, streamBroken: false, code: null, records: 2, unapplied: 0,
-    turnProcess: { durationMs: null, iterations: null, fileWrites: [] },
+    turnProcess: { durationMs: null, endedAt: null, iterations: null, fileWrites: [] },
     contextUsage: null,
     paused: false, pending: [], queue: { state: 'read', occurrences: [] },
   } satisfies SessionChannelStatus
   // ADR-0300: the artifact slot rides the same envelope; the default fixture carries none.
   const artifacts = { state: 'read', cards: [] as const, preview: { state: 'closed' as const } }
+  const monitor = {
+    state: 'read', matterRef: 'matter:one',
+    steps: { state: 'idle', lastTurnEnd: 'completed', observedRecords: 2, reason: null },
+    budget: { state: 'unknown', reason: 'usage-provider-unavailable' },
+    device: { state: 'unknown', reason: 'device-binding-unavailable' },
+    background: { state: 'unknown', reason: 'background-host-unavailable' },
+    context: { state: 'unknown', reason: 'context-usage-unavailable', compaction: 'unknown' },
+  }
   return {
     artifacts,
+    runMonitor: monitor,
     service: { status: 'unavailable', reason: 'authenticated', auth: { status: 'signed-in', displayName: null }, correlation: 'response:one', command: null },
     runtime: { status: 'ready', message: 'private-actor', retryable: true },
     activeContext, matter, workspaces, matterLinks, sessionChannel,

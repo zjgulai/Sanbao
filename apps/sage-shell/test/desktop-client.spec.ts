@@ -34,6 +34,16 @@ describe('desktop service response classification', () => {
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
+      monitor: {
+        state: 'unavailable',
+        steps: { state: 'unavailable', lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' },
+        axes: [
+          { name: '预算／用量', state: 'unknown', reason: 'usage-provider-unavailable' },
+          { name: '设备', state: 'unknown', reason: 'device-binding-unavailable' },
+          { name: '后台', state: 'unknown', reason: 'background-host-unavailable' },
+          { name: '上下文', state: 'unknown', reason: 'context-usage-unavailable' },
+        ],
+      },
     })
     expect(JSON.stringify(result)).not.toContain('private-runtime-canary')
   })
@@ -82,6 +92,16 @@ describe('desktop service response classification', () => {
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
+      monitor: {
+        state: 'unavailable',
+        steps: { state: 'unavailable', lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' },
+        axes: [
+          { name: '预算／用量', state: 'unknown', reason: 'usage-provider-unavailable' },
+          { name: '设备', state: 'unknown', reason: 'device-binding-unavailable' },
+          { name: '后台', state: 'unknown', reason: 'background-host-unavailable' },
+          { name: '上下文', state: 'unknown', reason: 'context-usage-unavailable' },
+        ],
+      },
     })
   })
 

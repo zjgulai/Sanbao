@@ -195,6 +195,19 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
+/* ADR-0304: the task monitor page — axes, the review card and its honest empty sections. */
+.sage-desktop .monitor-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
+.sage-desktop .monitor-page h1 { margin: 0; font-size: 16px; }
+.sage-desktop .monitor-axes { display: flex; flex-direction: column; gap: 6px; }
+.sage-desktop .monitor-axis { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .monitor-empty { font-size: 12px; color: var(--sage-faint); }
+.sage-desktop .review-card { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 12px; }
+.sage-desktop .review-card-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sage-desktop .review-updated { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .review-outputs, .sage-desktop .review-sources { display: flex; gap: 10px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .review-outputs ul { margin: 0; padding-left: 16px; }
+.sage-desktop .review-more summary { cursor: pointer; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .review-more-body { display: flex; gap: 10px; padding-top: 6px; }
 /* ADR-0303: the context-occupancy chip — reference only, never a gating number. */
 .sage-desktop .context-usage { display: inline-block; margin-right: 10px; padding: 1px 8px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .turn-process-summary { color: var(--sage-muted); }

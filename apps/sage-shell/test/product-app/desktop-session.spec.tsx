@@ -308,6 +308,36 @@ describe('default desktop session submission lifecycle', () => {
     expect(plain.container.querySelector('.context-usage')).toBeNull()
   })
 
+  it('renders the task monitor with the review card and honest axes (ADR-0304)', async () => {
+    const payload = desktopSessionPayload()
+    const withMonitor = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        turnProcess: { durationMs: 12000, endedAt: 1760000000000, iterations: 3, fileWrites: [] },
+      },
+    })
+    const { container } = await mount(async () => withMonitor)
+    await click(control(container, '运行模式'))
+    expect(container.querySelector('.monitor-page')).not.toBeNull()
+    expect(container.textContent).toContain('步骤：空闲')
+    expect(container.textContent).toContain('预算／用量：未知（usage-provider-unavailable）')
+    const card = container.querySelector('.review-card')
+    expect(card?.textContent).toContain('本轮回顾')
+    expect(card?.querySelector('.review-updated')?.textContent).toContain('更新于')
+    expect(card?.textContent).toContain('耗时 12s')
+    expect(card?.textContent).toContain('3 步')
+    expect(card?.textContent).toContain('暂无观察到产出')
+    expect(card?.textContent).toContain('来源读数未接通')
+
+    // A malformed monitor degrades to the honest unavailable rows, never a crash.
+    const malformed = classifyDesktopState({ ...payload, runMonitor: { state: 'read', steps: 'x' } })
+    const second = await mount(async () => malformed)
+    await click(control(second.container, '运行模式'))
+    expect(second.container.textContent).toContain('步骤：不可读（monitor-not-read）')
+    expect(second.container.textContent).toContain('设备：未知（device-binding-unavailable）')
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

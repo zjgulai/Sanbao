@@ -156,6 +156,7 @@ function hunksFromMeta(meta: unknown): { readonly hunks: readonly FoldTurnHunk[]
 /** ADR-0301: the status face of the fold's turn process (bounded, display-only). */
 export function turnProcessView(process: FoldTurnProcess): {
   readonly durationMs: number | null
+  readonly endedAt: number | null
   readonly iterations: number | null
   readonly fileWrites: readonly {
     readonly name: string
@@ -175,6 +176,7 @@ export function turnProcessView(process: FoldTurnProcess): {
     : null
   return {
     durationMs,
+    endedAt: process.endedAt,
     iterations: process.steps > 0 ? process.steps : null,
     fileWrites: process.items.map((item) => ({
       name: item.name,

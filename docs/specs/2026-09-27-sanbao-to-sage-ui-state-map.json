@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 29,
-        "pending": 169,
+        "implementing": 30,
+        "pending": 168,
         "verified": 8
       },
       "applicationService": {
@@ -1160,8 +1160,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1182,7 +1193,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the desktop task-monitor surface does not exist yet — the review card needs its own monitor-region slice (registered as the next Loop-Q round); the observed card itself (产出/来源 empty) needs the real task chain; visualAcceptance pending"
+          "the review card lives on the new desktop task-monitor page (运行模式): update time from the log's own stamp, the process expansion, outputs from observed artifacts and sources honestly unwired; the 更多操作 menu is minimal (返回任务输入); budget/device/background/context axes stay named unknowns until real readings exist; visualAcceptance pending"
         ]
       }
     },

@@ -806,6 +806,9 @@ export interface SessionChannelStatus {
    *  tool runs, with BASENAMES only — a machine path never crosses this projection. */
   readonly turnProcess: {
     readonly durationMs: number | null
+    /** ADR-0304: the log's own millisecond stamp of the turn end (null when absent) — the
+     *  review card's update time; never a local clock. */
+    readonly endedAt: number | null
     readonly iterations: number | null
     readonly fileWrites: readonly {
       readonly name: string

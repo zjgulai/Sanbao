@@ -8,7 +8,9 @@ import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, 
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
 import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
-import { DesktopSessionView } from './session-view.js'
+import type { DesktopSession } from './session.js'
+import type { DesktopArtifacts } from './client.js'
+import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
 
 // Sanbao b861d04: ProductPages.tsx:31–36,73–75 and Controls.tsx:199–234.
@@ -170,6 +172,58 @@ function SearchResult({ outcome }: { readonly outcome: DesktopSearchOutcome }): 
 // T03-D: the search page consumes the real `POST /.sage/search` route. A blank query is answered
 // locally without a request; every submit replaces the previous result so no stale rows survive
 // under a new query.
+/** ADR-0304: the task monitor page — the steps axis, the honest unknown axes, and the review
+ *  card (updated time from the log's own stamp; outputs/sources stay honest when empty). */
+function MonitorPage({ state, session, artifacts, navigate }: {
+  readonly state: DesktopReadState
+  readonly session?: DesktopSession
+  readonly artifacts?: DesktopArtifacts
+  readonly navigate: (page: Page) => void
+}): ReactNode {
+  const monitor = state.kind === 'read' ? state.monitor : undefined
+  const stepsLabel = monitor === undefined || monitor.steps.state === 'unavailable'
+    ? '步骤：不可读（' + (monitor?.steps.reason ?? 'monitor-not-read') + '）'
+    : monitor.steps.state === 'running' ? '步骤：执行中' : '步骤：空闲'
+  const turnProcess = session?.turnProcess
+  const updated = turnProcess !== undefined && turnProcess.endedAt !== null
+    ? new Date(turnProcess.endedAt).toLocaleString('zh-CN', { hour12: false })
+    : null
+  return <section className="monitor-page" aria-label="任务监控">
+    <h1>任务监控</h1>
+    <div className="monitor-axes">
+      <p className="monitor-axis" data-monitor-step={monitor?.steps.state ?? 'unavailable'}>{stepsLabel}</p>
+      {(monitor?.axes ?? []).map((axis) => <p className="monitor-axis" key={axis.name}>
+        {axis.name}：{axis.state === 'unknown' ? `未知（${axis.reason}）` : `${axis.state}（${axis.reason}）`}
+      </p>)}
+    </div>
+    {session === undefined || session.lastTurnEnd === null
+      ? <p className="monitor-empty">尚无已结束的回合可供回顾。</p>
+      : <article className="review-card" aria-label="本轮回顾">
+        <header className="review-card-header">
+          <strong>本轮回顾</strong>
+          <span className="review-updated">{updated === null ? '更新时间未知' : `更新于 ${updated}`}</span>
+        </header>
+        <TurnProcessFooter lastTurnEnd={session.lastTurnEnd} turnProcess={turnProcess ?? { durationMs: null, endedAt: null, iterations: null, fileWrites: [] }} />
+        <div className="review-outputs">
+          <strong>产出</strong>
+          {artifacts !== undefined && artifacts.cards.length > 0
+            ? <ul>{artifacts.cards.map((card) => <li key={card.artifactId}>{card.name}</li>)}</ul>
+            : <span>暂无观察到产出。</span>}
+        </div>
+        <div className="review-sources">
+          <strong>来源</strong>
+          <span>来源读数未接通。</span>
+        </div>
+        <details className="review-more">
+          <summary>更多操作</summary>
+          <div className="review-more-body">
+            <button className="text-button" aria-label="返回任务输入" onClick={() => navigate('新任务')}>返回任务输入</button>
+          </div>
+        </details>
+      </article>}
+  </section>
+}
+
 function SearchPage({ navigate }: { readonly navigate: (page: Page) => void }): ReactNode {
   const [query, setQuery] = useState('')
   const [outcome, setOutcome] = useState<DesktopSearchOutcome | undefined>(undefined)
@@ -414,7 +468,7 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
       </div>
       <div className="composer-context">
         <button onClick={() => navigate('工作区')}><Icon name="folder" size={13} />工作区待接入 <Icon name="down" size={11} /></button>
-        <button onClick={() => navigate('运行模式')}><Icon name="monitor" size={13} />运行模式未知</button>
+        <button aria-label="运行模式" onClick={() => navigate('运行模式')}><Icon name="monitor" size={13} />运行模式未知</button>
       </div>
       {draftBytes > DRAFT_BYTE_NOTICE_AT && <p className="composer-byte-note" role="note">
         草稿当前 {draftBytes} 字节；发送请求总上限 4096 字节（含事项与工作区字段），超出会被本地拒绝，草稿保留。
@@ -514,6 +568,11 @@ export function DesktopPage({
               onArtifactClose={() => runArtifactAction(closeDesktopArtifact)}
               onArtifactFullscreen={(on) => runArtifactAction(() => setDesktopArtifactFullscreen(on))}
               onArtifactWindow={(action) => runArtifactAction(() => setDesktopArtifactWindow(action))} />)
+          : page === '运行模式'
+            ? <MonitorPage state={state}
+              {...(session === undefined ? {} : { session })}
+              {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
+              navigate={navigate} />
           : page === '工作区'
             ? <WorkspacePage state={state} retry={retry} navigate={navigate} />
             : page === '搜索'

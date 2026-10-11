@@ -29,6 +29,7 @@ export interface DesktopSession {
  *  basenames only. A malformed piece degrades to null/absent; it never invents a value. */
 export interface DesktopTurnProcess {
   readonly durationMs: number | null
+  readonly endedAt: number | null
   readonly iterations: number | null
   readonly fileWrites: readonly {
     readonly name: string
@@ -114,8 +115,10 @@ function parseTurnProcess(input: unknown): DesktopTurnProcess {
       }]
     })
     : []
+  const endedAt = record.endedAt
   return {
     durationMs: typeof duration === 'number' && Number.isSafeInteger(duration) && duration >= 0 ? duration : null,
+    endedAt: typeof endedAt === 'number' && Number.isSafeInteger(endedAt) && endedAt >= 0 ? endedAt : null,
     iterations: typeof iterations === 'number' && Number.isSafeInteger(iterations) && iterations >= 0 ? iterations : null,
     fileWrites,
   }

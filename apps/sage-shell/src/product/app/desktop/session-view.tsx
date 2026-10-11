@@ -63,7 +63,7 @@ function DiffHunk({ hunk, index }: {
 
 /** ADR-0301: the settled turn's footer — outcome, duration, iterations and the file list.
  *  ADR-0302 adds the round's change summary and the review surface (审阅 opens the same list). */
-function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
+export function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
   readonly lastTurnEnd: string
   readonly turnProcess: DesktopTurnProcess
 }): ReactNode {
