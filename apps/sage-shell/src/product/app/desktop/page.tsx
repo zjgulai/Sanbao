@@ -10,6 +10,7 @@ import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import type { DesktopSession } from './session.js'
 import type { DesktopArtifacts } from './client.js'
+import { McpForm } from './mcp-form.js'
 import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
@@ -26,12 +27,11 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
   知识中心: '知识中心尚未接通；不会展示虚构知识条目。',
   站点: '站点尚未接通；没有创建、发布或打开站点。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
-  扩展: '扩展尚未接通；安装、启用与授权需要分别核验。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
   模型: '模型选择尚未接通；配置与可用状态未知。',
   运行模式: '运行模式尚未接通；不从运行时连接状态推断任务执行权限。',
@@ -175,6 +175,24 @@ function SearchResult({ outcome }: { readonly outcome: DesktopSearchOutcome }): 
 // under a new query.
 /** ADR-0304: the task monitor page — the steps axis, the honest unknown axes, and the review
  *  card (updated time from the log's own stamp; outputs/sources stay honest when empty). */
+/** ADR-0306: the extension-management page — the observed add-custom-MCP entry lives under
+ *  the connector section; the form itself is a local unsaved draft (see mcp-form.tsx). */
+export function ExtensionsPage(): ReactNode {
+  const [adding, setAdding] = useState(false)
+  return <section className="extensions-page" aria-label="扩展管理">
+    <h1>扩展管理</h1>
+    <div className="connector-section">
+      <div className="connector-header">
+        <strong>连接器</strong>
+        <button type="button" className="text-button" aria-label="添加 MCP" onClick={() => setAdding(true)}>添加 MCP</button>
+      </div>
+      {adding
+        ? <McpForm onClose={() => setAdding(false)} />
+        : <p className="extensions-note">尚未添加自定义连接器。安装、启用与授权仍分别治理（T10）。</p>}
+    </div>
+  </section>
+}
+
 function MonitorPage({ state, session, artifacts, navigate }: {
   readonly state: DesktopReadState
   readonly session?: DesktopSession
@@ -599,6 +617,8 @@ export function DesktopPage({
               onArtifactClose={() => runArtifactAction(closeDesktopArtifact)}
               onArtifactFullscreen={(on) => runArtifactAction(() => setDesktopArtifactFullscreen(on))}
               onArtifactWindow={(action) => runArtifactAction(() => setDesktopArtifactWindow(action))} />)
+          : page === '扩展'
+            ? <ExtensionsPage />
           : page === '运行模式'
             ? <MonitorPage state={state}
               {...(session === undefined ? {} : { session })}

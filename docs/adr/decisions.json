@@ -10169,6 +10169,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0306",
+      "title": "ADR-0306 · 弹层族第二刀：自定义 MCP 表单（本地草稿，提交 fail closed）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "McpForm 本地草稿域，观察形状逐条装配（空表单/传输/HTTP|SSE|STDIO 字段集/动态行/JSON 示例/名称预览/放弃确认）。",
+          "constraints": [
+            "no invented validation or normalization"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "添加 MCP 与预览导入 fail closed（T10 未接通具名拒绝）；不写/不装/不授权。",
+          "constraints": [
+            "nothing persists"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "未验证项不装不断言（跨传输保留、灰色高亮、凭据遮蔽）。",
+          "constraints": [
+            "recorded in blockers"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "扩展页 = 扩展管理（连接器区 + 表单）；outstanding 移除扩展。",
+          "constraints": [
+            "page spec loop updated"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "11 叶 + O08 伞行迁 implementing（伞行依组内核验判据）。",
+          "constraints": [
+            "summary regenerated"
+          ]
+        }
+      ]
     }
   ]
 }

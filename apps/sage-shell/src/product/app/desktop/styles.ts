@@ -195,6 +195,30 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
+/* ADR-0306: the extension-management page and the add-custom-MCP form. */
+.sage-desktop .extensions-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
+.sage-desktop .extensions-page h1 { margin: 0; font-size: 16px; }
+.sage-desktop .connector-section { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 12px; }
+.sage-desktop .connector-header { display: flex; align-items: center; justify-content: space-between; }
+.sage-desktop .extensions-note { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .mcp-form { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--sage-divider); border-radius: 10px; }
+.sage-desktop .mcp-form-header { display: flex; align-items: center; justify-content: space-between; }
+.sage-desktop .mcp-tabs { display: flex; gap: 6px; }
+.sage-desktop .mcp-tabs [role="tab"] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; background: transparent; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .mcp-tabs [role="tab"].active { color: var(--sage-ink); border-color: var(--sage-brand); }
+.sage-desktop .mcp-form-body { display: flex; flex-direction: column; gap: 10px; max-height: 46dvh; overflow-y: auto; }
+.sage-desktop .mcp-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--sage-ink); }
+.sage-desktop .mcp-field input, .sage-desktop .mcp-field select { padding: 6px 9px; }
+.sage-desktop .mcp-name-preview, .sage-desktop .mcp-hint { margin: 0; font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .mcp-rows-section { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.sage-desktop .mcp-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+.sage-desktop .mcp-row input { flex: 1; min-width: 0; padding: 6px 9px; }
+.sage-desktop .mcp-notice { margin: 0; font-size: 12px; color: var(--sage-warning); }
+.sage-desktop .mcp-form-footer { display: flex; justify-content: flex-end; gap: 10px; }
+.sage-desktop .mcp-discard { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; padding: 18px; background: var(--sage-surface); border: 1px solid var(--sage-border); border-radius: 10px; }
+.sage-desktop .mcp-discard p { margin: 0; font-size: 13px; color: var(--sage-ink); }
+.sage-desktop .mcp-discard-actions { display: flex; gap: 10px; }
+.sage-desktop .mcp-discard-confirm { color: var(--sage-danger); }
 /* ADR-0305: the quick appearance submenu inside the account menu. */
 .sage-desktop .appearance-menu { position: absolute; right: 12px; margin-top: 2px; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
 .sage-desktop .appearance-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--sage-ink); }

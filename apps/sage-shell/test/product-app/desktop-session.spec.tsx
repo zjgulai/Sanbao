@@ -378,6 +378,13 @@ describe('default desktop session submission lifecycle', () => {
     expect(plain.container.querySelector('.appearance-note')?.textContent).toContain('偏好不可读')
   })
 
+  it('navigates to the extension management page from the sidebar (ADR-0306)', async () => {
+    const { container } = await mount(async () => snapshot())
+    await click(control(container, '扩展'))
+    expect(container.querySelector('.extensions-page')).not.toBeNull()
+    expect(container.textContent).toContain('连接器')
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

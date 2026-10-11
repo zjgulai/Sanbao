@@ -302,7 +302,8 @@ describe('T01 composer has no business write authority', () => {
     write(container, '未提交的原文')
     // 工作区 no longer shows the outstanding placeholder; it is covered by the T03 describes below.
     // 搜索 likewise left this loop: T03-D wires it to the real search route (desktop-search.spec.tsx).
-    for (const label of ['知识中心', '站点', '自动化', '扩展']) {
+    // 扩展 left this loop too: ADR-0306 gives it the extension-management page (desktop-mcp-form.spec.tsx).
+    for (const label of ['知识中心', '站点', '自动化']) {
       click(button(container, label))
       expect(node(container, 'h1').textContent).toBe(label)
       expect(node(container, '.outstanding-feature').textContent).toContain('尚未接通')
