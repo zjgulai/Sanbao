@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 82,
-        "pending": 116,
+        "implementing": 83,
+        "pending": 115,
         "verified": 8
       },
       "applicationService": {
@@ -4127,7 +4127,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the appearance subtree is closed (9 leaves: 8 verified + appearance.entry implementing); the remaining 50 settings leaves (profile/general/mode/shortcuts/voice/models/pet/memory/import/extensions/hooks/computer-control/mobile/git/worktrees/workspace-index/connections/security/archived-tasks/experiments/network/playground entries and subpages) are not assembled — the group stays non-exhaustive and pending"
         ]
       }
     },
@@ -4625,8 +4625,34 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-region-bridge.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -4647,7 +4673,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 3/3 leaves implementing (preview.html / terminal.entry / sidepanel.entry); desktop-labelling and layout/tab behaviors of the workbench were not observed and stay registered; the side-panel click path remains unverified"
         ]
       }
     },
