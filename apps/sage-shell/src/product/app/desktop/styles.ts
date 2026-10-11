@@ -176,6 +176,14 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .settings-profile-identity { display: flex; align-items: center; gap: 10px; }
 .sage-desktop .settings-profile-identity span { display: grid; }
 .sage-desktop .settings-profile-avatar { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 50%; border: 1px solid var(--sage-border); background: var(--sage-surface); color: var(--sage-muted); }
+.sage-desktop .settings-inline-input { display: flex; align-items: center; gap: 6px; }
+.sage-desktop .settings-inline-input input { min-width: 0; width: 160px; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
+/* R17-C: the shortcut-edit modal shell (observed; recording/saving stay disabled). */
+.sage-desktop .settings-modal-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--sage-overlay); }
+.sage-desktop .settings-modal { min-width: 280px; max-width: 420px; display: grid; gap: 10px; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); box-shadow: var(--sage-shadow); }
+.sage-desktop .settings-modal h3 { margin: 0; font-size: 15px; }
+.sage-desktop .settings-modal p { margin: 0; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .settings-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 700px) { .sage-desktop .settings-shell { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 950px) {
   .sage-desktop .product-sidebar { width: 195px; }

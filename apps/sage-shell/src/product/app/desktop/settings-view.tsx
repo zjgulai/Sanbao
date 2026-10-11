@@ -14,7 +14,9 @@ import {
 import {
   GENERAL_GROUPS,
   MODE_GROUPS,
+  SHORTCUT_GROUPS,
   TASK_MONITOR_GROUPS,
+  VOICE_GROUPS,
   type SettingsObservedGroup,
 } from './settings-observed.js'
 
@@ -251,13 +253,121 @@ function ProfilePane({ account }: {
   </section>
 }
 
-type SettingsPane = 'appearance' | 'profile' | 'general' | 'mode' | 'task-monitor'
+/** R17-C: the observed shortcut-edit modal shell (QB18-04 / QB19-02). Open, cancel and Escape
+ *  are real local interactions; recording and saving stay disabled with the honest note — the
+ *  local shortcut store lands in its own batch (T13 sub-batch: save/apply separated). */
+function ShortcutEditModal({ title, onClose }: {
+  readonly title: string
+  readonly onClose: () => void
+}): ReactNode {
+  return <div className="settings-modal-backdrop" role="presentation"
+    onKeyDown={event => { if (event.key === 'Escape') onClose() }}>
+    <div className="settings-modal" role="dialog" aria-modal="true" aria-label={title}>
+      <h3>{title}</h3>
+      <p>按下包含 ⌘/Ctrl、⌃ 或 Option/Alt 的新组合键。Escape 可取消修改。</p>
+      <button type="button" className="text-button" disabled aria-label="按下新快捷键">按下新快捷键</button>
+      <p className="settings-observed-note">录制与保存未接线：本机不录制、不保存任何快捷键。</p>
+      <div className="settings-modal-actions">
+        <button type="button" className="text-button" aria-label="取消修改" onClick={onClose}>取消</button>
+        <button type="button" className="text-button" disabled aria-label="保存快捷键">保存快捷键</button>
+      </div>
+    </div>
+  </div>
+}
+
+/** R17-C: the 快捷键 page — the 5 observed groups / 16 commands plus the REAL local search
+ *  (QB18-01/02: filter over command or description; the no-match copy and clear are the
+ *  observed interaction). Every command row carries the 未接线 state; the pencil opens the
+ *  modal shell. */
+function ShortcutsPane(): ReactNode {
+  const [query, setQuery] = useState('')
+  const [editing, setEditing] = useState<string | null>(null)
+  const q = query.trim()
+  const total = SHORTCUT_GROUPS.reduce((count, group) => count + group.rows.length, 0)
+  const groups = SHORTCUT_GROUPS
+    .map((group) => ({ group: group.group, rows: group.rows.filter((row) => row.label.includes(q) || row.note.includes(q)) }))
+    .filter((group) => group.rows.length > 0)
+  return <section className="settings-observed" aria-label="快捷键">
+    <header>
+      <h2>快捷键</h2>
+      <p>搜索、查看并修改内置命令的快捷键。本机未接线：不录制、不保存任何绑定。</p>
+    </header>
+    <section className="settings-observed-group" aria-label="应用快捷键">
+      <h3>应用快捷键</h3>
+      <p className="settings-observed-note">共 {total} 条观测命令，0 个已自定义（本机未接线）。</p>
+      <label className="settings-search">
+        <span>搜索快捷键</span>
+        <input type="search" value={query} aria-label="搜索快捷键" placeholder="搜索命令、说明或组合键"
+          onChange={event => setQuery(event.currentTarget.value)} />
+      </label>
+      {groups.length === 0
+        ? <p className="settings-nav-empty">没有找到包含“{q}”的命令、说明或组合键。
+          <button type="button" className="text-button" aria-label="清空搜索" onClick={() => setQuery('')}>清空搜索</button></p>
+        : null}
+    </section>
+    {groups.map((group) => <section className="settings-observed-group" key={group.group} aria-label={group.group}>
+      <h3>{group.group}</h3>
+      <ul>
+        {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
+          <strong>{row.label}</strong>
+          <small>{row.note}</small>
+          {row.label !== '发送消息'
+            ? <button type="button" className="text-button" aria-label={`修改 ${row.label} 快捷键`}
+              onClick={() => setEditing(row.label)}>修改快捷键</button>
+            : null}
+          <span className="settings-observed-state">未接线</span>
+        </li>)}
+      </ul>
+    </section>)}
+    {editing !== null ? <ShortcutEditModal title={`修改“${editing}”快捷键`} onClose={() => setEditing(null)} /> : null}
+  </section>
+}
+
+/** R17-C: the 语音 page — the 4 observed groups / 13 rows. The 实时语音快捷键 row opens the same
+ *  modal shell; the 常用词纠正 row offers a REAL local draft input whose 添加 stays disabled
+ *  (QB19-03: the observation never added a word — nothing here adds or persists either). */
+function VoicePane(): ReactNode {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  return <section className="settings-observed" aria-label="语音">
+    <header>
+      <h2>语音</h2>
+      <p>集中配置语音输入与实时语音。本机未接线：不录音、不保存任何偏好。</p>
+    </header>
+    {VOICE_GROUPS.map((group) => <section className="settings-observed-group" key={group.group} aria-label={group.group}>
+      <h3>{group.group}</h3>
+      <ul>
+        {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
+          <strong>{row.label}</strong>
+          <small>{row.note}</small>
+          {row.label === '实时语音快捷键'
+            ? <button type="button" className="text-button" aria-label="修改 实时语音快捷键 快捷键"
+              onClick={() => setEditing(true)}>修改快捷键</button>
+            : null}
+          {row.label === '常用词纠正'
+            ? <label className="settings-inline-input">
+              <input type="text" value={draft} aria-label="添加词汇" placeholder="添加词汇"
+                onChange={event => setDraft(event.currentTarget.value)} />
+              <button type="button" className="text-button" disabled aria-label="添加词汇按钮">添加</button>
+            </label>
+            : null}
+          <span className="settings-observed-state">未接线</span>
+        </li>)}
+      </ul>
+    </section>)}
+    {editing ? <ShortcutEditModal title={'修改“实时语音快捷键”快捷键'} onClose={() => setEditing(false)} /> : null}
+  </section>
+}
+
+type SettingsPane = 'appearance' | 'profile' | 'general' | 'mode' | 'task-monitor' | 'shortcuts' | 'voice'
 
 const PANES: readonly { readonly pane: SettingsPane, readonly label: string }[] = [
   { pane: 'profile', label: '个人资料' },
   { pane: 'general', label: '常规' },
   { pane: 'mode', label: '模式配置' },
   { pane: 'task-monitor', label: '任务监控' },
+  { pane: 'shortcuts', label: '快捷键' },
+  { pane: 'voice', label: '语音' },
   { pane: 'appearance', label: '外观与显示' },
 ]
 
@@ -300,9 +410,13 @@ export function DesktopSettingsView({ controller, leaves, account, onBack }: Des
             : pane === 'mode'
               ? <ObservedGroupsPane heading="模式配置" groups={MODE_GROUPS}
                 note="本页复刻观测结构（QB15-02，编程/通用各六行）；写路径在独立批，控件不保存任何设置，读数不伪造。" />
-              : <ObservedGroupsPane heading="任务监控" groups={TASK_MONITOR_GROUPS}
-                extraRows={[{ group: '进度与上下文', label: '任务回顾' }]}
-                note="本页复刻观测结构（QB16-01，五组十四行）；写路径在独立批，控件不保存任何设置，读数不伪造。" />}
+              : pane === 'task-monitor'
+                ? <ObservedGroupsPane heading="任务监控" groups={TASK_MONITOR_GROUPS}
+                  extraRows={[{ group: '进度与上下文', label: '任务回顾' }]}
+                  note="本页复刻观测结构（QB16-01，五组十四行）；写路径在独立批，控件不保存任何设置，读数不伪造。" />
+                : pane === 'shortcuts'
+                  ? <ShortcutsPane />
+                  : <VoicePane />}
     </div>
   </div>
 }

@@ -117,3 +117,85 @@ export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
 ]
+
+/** QB17-01 + QB18 快捷键页：五组十六行；搜索为真实本地交互（观测覆盖 search.voice/empty）。 */
+export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
+  {
+    group: '输入',
+    rows: [
+      { label: '发送消息', note: '聊天输入框使用 ⌘ Enter 换行，也可用 Shift Enter。运行中支持插话时，⌘ Enter 仍用于插话。' },
+    ],
+  },
+  {
+    group: '导航',
+    rows: [
+      { label: '设置', note: '打开设置。' },
+      { label: '返回', note: '在工作台导航历史中返回上一页。' },
+      { label: '前进', note: '在工作台导航历史中前进到下一页。' },
+      { label: '切换工作模式', note: '在编程模式和通用模式之间切换。' },
+      { label: '切换任务', note: '搜索并切换到另一个任务。' },
+      { label: '打开或关闭左侧栏', note: '切换工作台左侧导航栏的展开状态。' },
+    ],
+  },
+  {
+    group: '任务',
+    rows: [
+      { label: '新任务', note: '从当前工作台打开新的 Chat 输入页。' },
+      { label: '搜索当前任务', note: '在当前可见的 ChatSession 中打开任务搜索。' },
+      { label: '打开或关闭右侧栏', note: '切换当前任务或新任务的右侧工作区栏。' },
+    ],
+  },
+  {
+    group: '语音',
+    rows: [
+      { label: '开始或停止语音输入', note: '在当前聚焦的消息输入框中切换语音输入。' },
+      { label: '实时语音快捷键', note: '在当前聚焦的 Chat 输入框中开始实时语音，或结束正在进行的实时语音。' },
+      { label: '静音或恢复实时语音播报', note: '不切换当前焦点，静音或恢复正在进行的实时语音播报。' },
+      { label: '启用或禁用实时语音麦克风', note: '不切换当前焦点，启用或禁用正在进行的实时语音麦克风。' },
+    ],
+  },
+  {
+    group: '系统',
+    rows: [
+      { label: '新建窗口', note: '在桌面端打开一个新的窗口。' },
+      { label: '问题反馈', note: '打开问题反馈窗口并自动附带当前截图。' },
+    ],
+  },
+]
+
+/** QB18-05 语音页：四组十三行（实时语音快捷键行另挂修改弹窗；常用词纠正行挂本地草稿输入）。 */
+export const VOICE_GROUPS: readonly SettingsObservedGroup[] = [
+  {
+    group: '通用',
+    rows: [
+      { label: '输入设备', note: '选择用于语音输入的麦克风；自动会跟随系统当前设备。' },
+    ],
+  },
+  {
+    group: '语音输入',
+    rows: [
+      { label: '语音输入', note: '开启后可在当前 Chat 输入框中使用麦克风、快捷键和 DJI Mic 进行语音输入。' },
+      { label: '语音识别润色', note: '自动修正口语停顿、重复和标点，让转写结果更适合直接发送。' },
+      { label: '声纹识别', note: '根据本次录音开头的声音特征降低周围人声干扰；下一次录音时生效。' },
+      { label: '自动发送', note: '使用 DJI Mic Mini 2 合作套装时，单击开始录音，再次单击结束录音并自动发送。' },
+      { label: '常用词纠正', note: '添加专有名词或术语，提升识别准确率。' },
+      { label: '暂无语音输入历史', note: '在 Chat 输入框完成语音输入后，记录会显示在这里。' },
+    ],
+  },
+  {
+    group: '实时语音',
+    rows: [
+      { label: '实时语音快捷键', note: '在当前聚焦的 Chat 输入框中开始实时语音，或结束正在进行的实时语音。' },
+      { label: '播报音色', note: '新实时语音连接使用所选音色。' },
+      { label: '播报速度', note: '新实时语音连接使用所选速度。' },
+      { label: '声纹识别', note: '新实时语音任务优先识别已保存的声纹；关闭不会删除已有声纹。' },
+      { label: '屏幕上下文', note: '当你提到屏幕内容时，允许实时语音将检查请求交给 Backend Agent。' },
+    ],
+  },
+  {
+    group: '录音纪要',
+    rows: [
+      { label: '录音纪要最长时长', note: '到达上限后自动停止并保存录音和转写。' },
+    ],
+  },
+]

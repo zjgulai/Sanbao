@@ -10756,6 +10756,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0319",
+      "title": "ADR-0319 · R17-C 快捷键/语音壳批：结构复刻 + 真实本地搜索与弹窗壳",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "结构逐字 + 未接线态；不显示伪造绑定值。",
+          "constraints": [
+            "R17-A doctrine"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "三件真实本地交互：搜索/弹窗壳/草稿输入（操作边界与观测一致）。",
+          "constraints": [
+            "no recording or saving"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "五个菜单态只登记不渲染（无 store 不造假选择面）。",
+          "constraints": [
+            "named blockers"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "铅笔=非发送命令行；发送行从其观测（组合菜单）。",
+          "constraints": [
+            "modal title verbatim"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "偏好 store 独立成批（T13 子批 4）；本波零写入。",
+          "constraints": [
+            "local-preference class"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "14 行迁 implementing；route 权威维度不动。",
+          "constraints": [
+            "tracked-test evidenceRefs"
+          ]
+        }
+      ]
     }
   ]
 }
