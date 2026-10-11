@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 
 import type { DesktopSettingsLeaf } from './client.js'
 import {
@@ -86,11 +86,16 @@ export function DesktopSettingsView({ controller: suppliedController, leaves }: 
   const [controller] = useState(() => suppliedController ?? createDevicePreferencesController())
   const [snapshot, setSnapshot] = useState(() => controller.snapshot())
   const [draft, setDraft] = useState<DevicePreferenceValues | null>(() => draftFrom(controller.snapshot()))
+  // Acceptance finding (2026-10-11): an authoritative read that lands WHILE the user is editing
+  // (the mount refresh can resolve mid-interaction) must never discard the unsaved draft. The
+  // draft is only re-adopted from a snapshot while it is clean; a submit re-arms the adoption so
+  // the read-back (saved or refused) still restores the authoritative values.
+  const dirty = useRef(false)
 
   useEffect(() => {
     const unsubscribe = controller.subscribe((next) => {
       setSnapshot(next)
-      setDraft(draftFrom(next))
+      setDraft(current => (current !== null && dirty.current) ? current : draftFrom(next))
     })
     void controller.refresh()
     return unsubscribe
@@ -98,12 +103,16 @@ export function DesktopSettingsView({ controller: suppliedController, leaves }: 
 
   const update = (key: DevicePreferenceKey, value: string): void => {
     if (!isDevicePreferenceValue(key, value)) return
+    dirty.current = true
     setDraft(current => current === null ? null : ({ ...current, [key]: value } as DevicePreferenceValues))
   }
 
   const save = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
     if (draft === null || snapshot.saving) return
+    // The submitted values are now the candidate authority: re-arm adoption so the read-back
+    // (saved → the sent values; refused → the previous authority) lands on the form.
+    dirty.current = false
     void controller.save(draft)
   }
 

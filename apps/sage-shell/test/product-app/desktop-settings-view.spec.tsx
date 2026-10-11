@@ -147,6 +147,27 @@ describe('desktop settings appearance view', () => {
     expect(container.textContent).not.toContain('已保存到本设备')
   })
 
+  it('keeps unsaved edits when an authoritative refresh lands mid-edit (acceptance finding)', async () => {
+    const controller = createDevicePreferencesController({
+      root: null,
+      createSignal: signal,
+      fetcher: async () => Response.json(initial),
+    })
+    const container = await mount(controller)
+    const theme = container.querySelector<HTMLSelectElement>('select[name="theme"]')!
+    act(() => {
+      theme.value = 'light'
+      theme.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(theme.value).toBe('light')
+    // A late authoritative read (the mount refresh resolving mid-interaction) must not clobber
+    // the unsaved draft — the acceptance caught this wiping user edits (2026-10-11).
+    await act(async () => { await controller.refresh() })
+    expect(theme.value).toBe('light')
+    // Submitting re-arms adoption: the refusal path still restores the authoritative form
+    // (covered by the refusal case above).
+  })
+
   it('restores the authoritative form and says no save was confirmed after refusal', async () => {
     const controller = createDevicePreferencesController({
       root: null,
