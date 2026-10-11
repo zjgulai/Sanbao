@@ -10,7 +10,7 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 v4 DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `8285a692ebef436ca09dbcfe50ca410563c16712e825feb550b750cd872ee6e6`，392,524,263 bytes，含 R2–R16 全部新装面）。挂载 → 拖入 `/Applications`。v3（`052c3970…`）已改名备份为 `Sage-0.1.0-internal-arm64-v3.dmg`；**步骤 8–18 在 v3 上不可执行**。
+1. 安装 v4 DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `171d06b7d2af291998010ac2e1f5dd9b7171a95c6d51447cc5dcbfdf2fcd23df`，386,658,338 bytes，含 R2–R16 全部新装面；DMG-06 全链验收 `passed=true` 于 2026-10-11，读数入仓 `evidence/2026-10-11-dmg06-v4-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v3（`052c3970…`）已改名备份为 `Sage-0.1.0-internal-arm64-v3.dmg`；**步骤 8–18 在 v3 上不可执行**。
 2. Logto Native 应用 `cmg2ty121m1tlsd0fgiuv` 的 redirect allowlist 仍含 `http://127.0.0.1:3000/callback`（ADR-0183 时已配，请复核）。
 3. 测试账号设置 Name（否则界面显示名为空）。
 4. 登录窗口期 3000 端口空闲。
