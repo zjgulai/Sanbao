@@ -6,6 +6,7 @@
  * collapsed to stable product states; provider errors and authority objects never reach callers.
  */
 
+import type { ApprovalReceiptView } from './contracts.js'
 import type { CompatibilityEvaluationEvidenceV1 } from '../security/compatibility-evaluation-evidence.js'
 
 export interface SessionCoreProtectedEffectIntent {
@@ -134,9 +135,11 @@ export type SessionCoreDispatchDetail =
       readonly itemId: string
     }
   // B batch (ADR-0317): the session-control receipts — one per operation, each carrying the
-  // identity the route answered on (never a bare "ok").
-  | { readonly kind: 'approval-answer-recorded', readonly requestId: string }
-  | { readonly kind: 'approval-withdraw-recorded', readonly requestId: string }
+  // identity the route answered on (never a bare "ok"). Stage 3: the approval receipts carry
+  // the full route-facing receipt view the handler produced (the route maps it 1:1 and never
+  // re-reads or re-derives it).
+  | { readonly kind: 'approval-answer-recorded', readonly requestId: string, readonly receipt: ApprovalReceiptView }
+  | { readonly kind: 'approval-withdraw-recorded', readonly requestId: string, readonly receipt: ApprovalReceiptView }
   | { readonly kind: 'pending-edited', readonly itemId: string }
   | { readonly kind: 'pending-removed', readonly itemId: string }
   | { readonly kind: 'queue-edited', readonly itemId: string }
@@ -312,6 +315,18 @@ function isPersistenceFact(value: unknown): value is ProtectedEffectPersistenceF
   return hasRefs(value, 'operationRef', 'dispatchRef')
 }
 
+/** The approval receipt the route answers with: shape-checked here so no malformed receipt can
+ *  cross the dispatch seam, and the receipt's own identity must equal the detail's requestId. */
+function isApprovalReceiptView(value: unknown): value is ApprovalReceiptView {
+  if (!isRecord(value)) return false
+  if (!isRef(value.requestId)) return false
+  if (value.state !== 'accepted' && value.state !== 'effective' && value.state !== 'lapsed' && value.state !== 'unknown') return false
+  if (value.outcome !== null && value.outcome !== 'allowed-once' && value.outcome !== 'rejected' && value.outcome !== 'withdrawn') return false
+  if (typeof value.submittedAt !== 'string' || value.submittedAt.length === 0) return false
+  if (value.code !== null && typeof value.code !== 'string') return false
+  return typeof value.verifyOnly === 'boolean'
+}
+
 function isSessionCoreDispatchDetail(value: unknown): value is SessionCoreDispatchDetail {
   if (!isRecord(value)) return false
   if (value.kind === 'session-send-accepted') {
@@ -319,7 +334,10 @@ function isSessionCoreDispatchDetail(value: unknown): value is SessionCoreDispat
       && (value.mode === 'queue' || value.mode === 'steer')
   }
   if (value.kind === 'session-send-deferred') return isRef(value.itemId)
-  if (value.kind === 'approval-answer-recorded' || value.kind === 'approval-withdraw-recorded') return isRef(value.requestId)
+  if (value.kind === 'approval-answer-recorded' || value.kind === 'approval-withdraw-recorded') {
+    return isRef(value.requestId) && isApprovalReceiptView(value.receipt)
+      && value.receipt.requestId === value.requestId
+  }
   if (value.kind === 'pending-edited' || value.kind === 'pending-removed'
     || value.kind === 'queue-edited' || value.kind === 'queue-removed') return isRef(value.itemId)
   return false

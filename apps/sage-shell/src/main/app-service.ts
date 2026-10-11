@@ -968,6 +968,8 @@ function createSessionCoreProtectedEffectPorts(
         }),
     // T05-mid step 10: the dispatch step — the only place the admitted chain calls the real
     // channel (ADR-0289). Wired only when the channel port and every re-verification input exist.
+    // B batch stage 3 (ADR-0317 D4): the six session-control handlers ride the same step, each
+    // optional — an unwired handler keeps exactly its own operation not-dispatched.
     ...(reverifyReads === undefined
       || options.sessionSend === undefined
       || options.matterLinks === undefined
@@ -995,6 +997,10 @@ function createSessionCoreProtectedEffectPorts(
               const defaults = links.links.filter((link) => link.matterRef === matterRef && link.isDefault)
               return defaults.length === 1 ? defaults[0]?.workspacePath : undefined
             },
+            ...(options.sessionApprovalAnswer === undefined ? {} : { approvalAnswer: options.sessionApprovalAnswer }),
+            ...(options.sessionApprovalWithdraw === undefined ? {} : { approvalWithdraw: options.sessionApprovalWithdraw }),
+            ...(options.pendingUpdate === undefined ? {} : { pendingUpdate: options.pendingUpdate }),
+            ...(options.queueItemUpdate === undefined ? {} : { queueItemUpdate: options.queueItemUpdate }),
           }),
         }),
   }

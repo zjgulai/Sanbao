@@ -298,9 +298,17 @@ describe('admitProtectedEffect', () => {
   })
 
   it('carries each session-control receipt detail through the dispatched result (ADR-0317)', async () => {
+    const receipt = {
+      requestId: 'approval:1',
+      state: 'accepted' as const,
+      outcome: 'allowed-once' as const,
+      submittedAt: '2026-10-11T12:00:00Z',
+      code: null,
+      verifyOnly: false,
+    }
     const details = [
-      { kind: 'approval-answer-recorded' as const, requestId: 'approval:1' },
-      { kind: 'approval-withdraw-recorded' as const, requestId: 'approval:1' },
+      { kind: 'approval-answer-recorded' as const, requestId: 'approval:1', receipt },
+      { kind: 'approval-withdraw-recorded' as const, requestId: 'approval:1', receipt: { ...receipt, outcome: 'withdrawn' as const } },
       { kind: 'pending-edited' as const, itemId: 'pending:1' },
       { kind: 'pending-removed' as const, itemId: 'pending:1' },
       { kind: 'queue-edited' as const, itemId: 'queue:1' },
@@ -315,8 +323,21 @@ describe('admitProtectedEffect', () => {
   })
 
   it('answers outcome-unknown for a malformed session-control detail (ADR-0317)', async () => {
+    const receipt = {
+      requestId: 'approval:1',
+      state: 'accepted' as const,
+      outcome: 'allowed-once' as const,
+      submittedAt: '2026-10-11T12:00:00Z',
+      code: null,
+      verifyOnly: false,
+    }
     const malformed = [
       { kind: 'approval-answer-recorded' },
+      // Stage 3: the approval receipt is load-bearing — a receipt-less or drifted detail is a
+      // fabricated receipt and must never reach the route as dispatched.
+      { kind: 'approval-answer-recorded', requestId: 'approval:1' },
+      { kind: 'approval-answer-recorded', requestId: 'approval:1', receipt: { ...receipt, requestId: 'approval:other' } },
+      { kind: 'approval-withdraw-recorded', requestId: 'approval:1', receipt: { ...receipt, state: 'made-up' } },
       { kind: 'pending-edited', itemId: '' },
       { kind: 'queue-removed', itemId: 7 },
     ]

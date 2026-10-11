@@ -752,3 +752,96 @@ describe('AUTH-02E attachment cancel admission', () => {
     expect(attachmentsCancel).not.toHaveBeenCalled()
   })
 })
+
+describe('B batch stage 3: the control routes map dispatched receipts 1:1 (ADR-0317 D4)', () => {
+  const receipt = {
+    requestId: 'approval:1',
+    state: 'accepted' as const,
+    outcome: 'allowed-once' as const,
+    submittedAt: '2026-10-11T12:00:00Z',
+    code: null,
+    verifyOnly: false,
+  }
+
+  /** The full admitted chain with every pre-dispatch step allowed and a stub dispatch that
+   *  returns the one detail under test — the route mapping is what these cases pin. */
+  function providersWithDispatch(detail: unknown) {
+    return createUnavailableFirstService(null, {
+      protectedEffectCorrelation: () => 'correlation:stage-3',
+      protectedEffectPorts: {
+        verifyCaller: async () => ({ state: 'allowed', value: { bindingRef: callerBinding.correlation } }),
+        resolveActiveContext: async () => ({
+          state: 'allowed',
+          value: {
+            scope: 'request',
+            callerBindingRef: callerBinding.correlation,
+            sessionRef: 'session:active',
+            matterRef: 'matter:active',
+            revisionRef: 'revision:active.1',
+            generation: '1',
+          },
+        }),
+        matchCandidate: async () => ({ state: 'allowed', value: { candidateRef: 'candidate:active' } }),
+        resolveIdentityPolicy: async () => ({ state: 'allowed', value: { decisionRef: 'decision:1', actorScopeRef: 'actor:1' } }),
+        resolveTarget: async () => ({ state: 'allowed', value: { targetRef: 'target:1' } }),
+        resolveCompatibility: async () => ({ state: 'allowed', value: { evaluationRef: 'evaluation:1', outcome: 'equivalent' } }),
+        resolveRegistry: async () => ({ state: 'allowed', value: { mappingRef: 'mapping:1' } }),
+        preflight: async () => ({ state: 'allowed', value: { preflightRef: 'preflight:1' } }),
+        persist: async () => ({ state: 'allowed', value: { operationRef: 'operation:1', dispatchRef: 'dispatch:1' } }),
+        dispatch: async () => ({ state: 'receipt', receiptRef: 'receipt:stage-3', detail }),
+      } as never,
+    })
+  }
+
+  it('answers recorded with the handler receipt for the approval answer and withdraw', async () => {
+    const answered = await post(
+      providersWithDispatch({ kind: 'approval-answer-recorded', requestId: 'approval:1', receipt }),
+      '/.sage/session/approval-answer',
+      { matterRef: 'matter:active', requestId: 'approval:1', outcome: 'allowed-once' },
+    )
+    expect(await answered.json()).toEqual({ state: 'recorded', receipt })
+
+    const withdrawnReceipt = { ...receipt, outcome: 'withdrawn' as const }
+    const withdrawn = await post(
+      providersWithDispatch({ kind: 'approval-withdraw-recorded', requestId: 'approval:1', receipt: withdrawnReceipt }),
+      '/.sage/session/approval-withdraw',
+      { matterRef: 'matter:active', requestId: 'approval:1' },
+    )
+    expect(await withdrawn.json()).toEqual({ state: 'recorded', receipt: withdrawnReceipt })
+  })
+
+  it('answers ok for the pending and queue receipts that name the exact item', async () => {
+    const cases = [
+      ['/.sage/session/pending', { action: 'edit', itemId: 'pending:1', text: 'new text' }, { kind: 'pending-edited', itemId: 'pending:1' }, { ok: true }],
+      ['/.sage/session/pending', { action: 'remove', itemId: 'pending:1' }, { kind: 'pending-removed', itemId: 'pending:1' }, { ok: true }],
+      ['/.sage/session/queue', { action: 'edit', itemId: 'queue:1', text: 'new text' }, { kind: 'queue-edited', itemId: 'queue:1' }, { state: 'ok' }],
+      ['/.sage/session/queue', { action: 'remove', itemId: 'queue:1' }, { kind: 'queue-removed', itemId: 'queue:1' }, { state: 'ok' }],
+    ] as const
+    for (const [path, body, detail, expected] of cases) {
+      expect(await (await post(providersWithDispatch(detail), path, body)).json(), detail.kind).toEqual(expected)
+    }
+  })
+
+  it('keeps a dispatched-but-mismatched detail on the conservative unknown path', async () => {
+    const mismatch = await post(
+      providersWithDispatch({ kind: 'approval-answer-recorded', requestId: 'approval:other', receipt: { ...receipt, requestId: 'approval:other' } }),
+      '/.sage/session/approval-answer',
+      { matterRef: 'matter:active', requestId: 'approval:1', outcome: 'allowed-once' },
+    )
+    expect(await mismatch.json()).toEqual({ state: 'refused', code: 'protected-effect-outcome-unknown' })
+
+    const wrongItem = await post(
+      providersWithDispatch({ kind: 'pending-edited', itemId: 'pending:other' }),
+      '/.sage/session/pending',
+      { action: 'edit', itemId: 'pending:1', text: 'new text' },
+    )
+    expect(await wrongItem.json()).toEqual({ ok: false, code: 'protected-effect-outcome-unknown' })
+
+    const wrongKind = await post(
+      providersWithDispatch({ kind: 'queue-edited', itemId: 'queue:1' }),
+      '/.sage/session/queue',
+      { action: 'remove', itemId: 'queue:1' },
+    )
+    expect(await wrongKind.json()).toEqual({ state: 'refused', code: 'protected-effect-outcome-unknown' })
+  })
+})

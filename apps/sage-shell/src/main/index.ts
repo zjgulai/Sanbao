@@ -716,6 +716,25 @@ async function main(paths: SagePaths): Promise<void> {
     sessionApprovals: () => approvals.read({ matterRef: scopedMatterRef() }),
     sessionApprovalAnswer: (request: { readonly matterRef: string, readonly requestId: string, readonly outcome: 'allowed-once' | 'rejected' }) => approvals.answer(request),
     sessionApprovalWithdraw: (request: { readonly matterRef: string, readonly requestId: string }) => approvals.withdraw(request),
+    // B batch stage 3 (ADR-0317 D4): the pending/queue editors ride the admitted dispatch step;
+    // the trusted matterRef the dispatch re-verified is the one these handlers write against.
+    pendingUpdate: (
+      request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string },
+      matterRef: string,
+    ) => {
+      if (request.action === 'edit') {
+        const edited = pendingInputs.edit(matterRef, request.itemId, request.text)
+        return edited.ok ? { ok: true } : { ok: false, code: edited.code }
+      }
+      const removed = pendingInputs.remove(matterRef, request.itemId)
+      return removed.ok ? { ok: true } : { ok: false, code: removed.code }
+    },
+    queueItemUpdate: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => sessionChannel.queueItem({
+      matterRef: scopedMatterRef(),
+      itemId: request.itemId,
+      action: request.action,
+      ...(request.action === 'edit' ? { text: request.text } : {}),
+    }),
     modelQueue: () => modelQueue.read({ matterRef: scopedMatterRef() }),
     terminal: () => terminal.status({ matterRef: scopedMatterRef() }),
     toolResults: () => toolResults.list(),

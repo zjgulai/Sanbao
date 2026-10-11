@@ -80,6 +80,12 @@ function dispatchHarness(options: {
   readonly targetRef?: string
   readonly registryRef?: string
   readonly preflightRef?: string
+  readonly operation?: string
+  readonly payload?: Readonly<Record<string, unknown>>
+  readonly approvalAnswer?: unknown
+  readonly approvalWithdraw?: unknown
+  readonly pendingUpdate?: unknown
+  readonly queueItemUpdate?: unknown
 }) {
   const sessionSend = (options.sessionSend ?? vi.fn(async () => ({
     state: 'accepted' as const,
@@ -88,6 +94,11 @@ function dispatchHarness(options: {
     mode: 'queue' as const,
   }))) as never
   const recordDispatchUnknown = (options.recordDispatchUnknown ?? vi.fn(async () => undefined)) as never
+  // The control handlers default to spies; a test that omits one exercises the unwired path.
+  const approvalAnswer = (options.approvalAnswer ?? vi.fn(async () => ({ state: 'refused' as const, code: 'not-configured' }))) as never
+  const approvalWithdraw = (options.approvalWithdraw ?? vi.fn(async () => ({ state: 'refused' as const, code: 'not-configured' }))) as never
+  const pendingUpdate = (options.pendingUpdate ?? vi.fn(() => ({ ok: false as const, code: 'not-configured' }))) as never
+  const queueItemUpdate = (options.queueItemUpdate ?? vi.fn(async () => ({ state: 'refused' as const, code: 'not-configured' }))) as never
   const port = createSessionPromptDispatchPort({
     sessionSend: sessionSend as never,
     recordDispatchUnknown: recordDispatchUnknown as never,
@@ -109,14 +120,18 @@ function dispatchHarness(options: {
       strictRehydrate: () => ({ matter: {} as never, current: true, version: 3 }),
       revisionDigest: () => EVIDENCE.revisionDigest,
     } as never,
+    ...(options.approvalAnswer === undefined ? {} : { approvalAnswer: approvalAnswer as never }),
+    ...(options.approvalWithdraw === undefined ? {} : { approvalWithdraw: approvalWithdraw as never }),
+    ...(options.pendingUpdate === undefined ? {} : { pendingUpdate: pendingUpdate as never }),
+    ...(options.queueItemUpdate === undefined ? {} : { queueItemUpdate: queueItemUpdate as never }),
   })
   const request = {
     intent: {
       family: 'session-core',
       requestId: 'dispatch-fixture-1',
-      operation: 'session.send',
+      operation: options.operation ?? 'session.send',
       candidate: { kind: 'matter', matterRef: MATTER_ID },
-      payload: { text: options.text ?? 'run', mode: 'queue' },
+      payload: options.payload ?? { text: options.text ?? 'run', mode: 'queue' },
     },
     correlation: 'caller:session-core',
     context: CONTEXT,
@@ -131,6 +146,10 @@ function dispatchHarness(options: {
     port,
     sessionSend: sessionSend as unknown as ReturnType<typeof vi.fn>,
     recordDispatchUnknown: recordDispatchUnknown as unknown as ReturnType<typeof vi.fn>,
+    approvalAnswer: approvalAnswer as unknown as ReturnType<typeof vi.fn>,
+    approvalWithdraw: approvalWithdraw as unknown as ReturnType<typeof vi.fn>,
+    pendingUpdate: pendingUpdate as unknown as ReturnType<typeof vi.fn>,
+    queueItemUpdate: queueItemUpdate as unknown as ReturnType<typeof vi.fn>,
     request,
   }
 }
@@ -216,6 +235,182 @@ describe('the real dispatch step (ADR-0289)', () => {
   })
 })
 
+describe('the session-control operations dispatch through their own handlers (ADR-0317 stage 3)', () => {
+  const receipt = {
+    requestId: 'approval:9',
+    state: 'accepted' as const,
+    outcome: 'allowed-once' as const,
+    submittedAt: '2026-10-11T12:00:00Z',
+    code: null,
+    verifyOnly: false,
+  }
+
+  it('dispatches the approval answer and withdraw with the handler receipt inside the detail', async () => {
+    const answer = dispatchHarness({
+      operation: 'session.approval.answer',
+      payload: { requestId: 'approval:9', outcome: 'allowed-once' },
+      approvalAnswer: vi.fn(async () => ({ state: 'recorded' as const, receipt })),
+    })
+    expect(await answer.port(answer.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-approval-answer:approval:9',
+      detail: { kind: 'approval-answer-recorded', requestId: 'approval:9', receipt },
+    })
+    expect(answer.approvalAnswer).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:9', outcome: 'allowed-once' })
+    // The channel port and the send-only durable note are never touched by a control op.
+    expect(answer.sessionSend).not.toHaveBeenCalled()
+    expect(answer.recordDispatchUnknown).not.toHaveBeenCalled()
+
+    const withdraw = dispatchHarness({
+      operation: 'session.approval.withdraw',
+      payload: { requestId: 'approval:9' },
+      approvalWithdraw: vi.fn(async () => ({ state: 'recorded' as const, receipt: { ...receipt, outcome: 'withdrawn' as const } })),
+    })
+    expect(await withdraw.port(withdraw.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-approval-withdraw:approval:9',
+      detail: { kind: 'approval-withdraw-recorded', requestId: 'approval:9', receipt: { ...receipt, outcome: 'withdrawn' } },
+    })
+    expect(withdraw.approvalWithdraw).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:9' })
+
+    // A determinate handler refusal passes its own code; a throw is the conservative unknown.
+    const refused = dispatchHarness({
+      operation: 'session.approval.answer',
+      payload: { requestId: 'approval:9', outcome: 'rejected' },
+      approvalAnswer: vi.fn(async () => ({ state: 'refused' as const, code: 'approval-not-pending' })),
+    })
+    expect(await refused.port(refused.request)).toEqual({ state: 'refused', code: 'approval-not-pending' })
+
+    const thrown = dispatchHarness({
+      operation: 'session.approval.withdraw',
+      payload: { requestId: 'approval:9' },
+      approvalWithdraw: vi.fn(async () => { throw new Error('probe') }),
+    })
+    expect(await thrown.port(thrown.request)).toEqual({ state: 'outcome-unknown' })
+  })
+
+  it('dispatches the pending and queue edits/removals with named receipts', async () => {
+    const edit = dispatchHarness({
+      operation: 'session.pending.edit',
+      payload: { itemId: 'pending:1', text: 'new text' },
+      pendingUpdate: vi.fn(() => ({ ok: true as const })),
+    })
+    expect(await edit.port(edit.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-pending-edit:pending:1',
+      detail: { kind: 'pending-edited', itemId: 'pending:1' },
+    })
+    // The handler receives the trusted matter ref, never the renderer's.
+    expect(edit.pendingUpdate).toHaveBeenCalledWith({ action: 'edit', itemId: 'pending:1', text: 'new text' }, MATTER_ID)
+
+    const remove = dispatchHarness({
+      operation: 'session.pending.remove',
+      payload: { itemId: 'pending:2' },
+      pendingUpdate: vi.fn(() => ({ ok: true as const })),
+    })
+    expect(await remove.port(remove.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-pending-remove:pending:2',
+      detail: { kind: 'pending-removed', itemId: 'pending:2' },
+    })
+
+    // A frozen item is a determinate refusal; a code-less refusal keeps its own stable name.
+    const frozen = dispatchHarness({
+      operation: 'session.pending.edit',
+      payload: { itemId: 'pending:1', text: 'new text' },
+      pendingUpdate: vi.fn(() => ({ ok: false as const, code: 'item-frozen' })),
+    })
+    expect(await frozen.port(frozen.request)).toEqual({ state: 'refused', code: 'item-frozen' })
+    const codeless = dispatchHarness({
+      operation: 'session.pending.remove',
+      payload: { itemId: 'pending:1' },
+      pendingUpdate: vi.fn(() => ({ ok: false as const })),
+    })
+    expect(await codeless.port(codeless.request)).toEqual({ state: 'refused', code: 'session-pending-update-refused' })
+
+    const queueEdit = dispatchHarness({
+      operation: 'session.queue.edit',
+      payload: { itemId: 'queue:1', text: 'new text' },
+      queueItemUpdate: vi.fn(async () => ({ state: 'ok' as const })),
+    })
+    expect(await queueEdit.port(queueEdit.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-queue-edit:queue:1',
+      detail: { kind: 'queue-edited', itemId: 'queue:1' },
+    })
+    expect(queueEdit.queueItemUpdate).toHaveBeenCalledWith({ action: 'edit', itemId: 'queue:1', text: 'new text' })
+
+    const queueRemove = dispatchHarness({
+      operation: 'session.queue.remove',
+      payload: { itemId: 'queue:2' },
+      queueItemUpdate: vi.fn(async () => ({ state: 'ok' as const })),
+    })
+    expect(await queueRemove.port(queueRemove.request)).toEqual({
+      state: 'receipt',
+      receiptRef: 'receipt:session-queue-remove:queue:2',
+      detail: { kind: 'queue-removed', itemId: 'queue:2' },
+    })
+
+    const gone = dispatchHarness({
+      operation: 'session.queue.remove',
+      payload: { itemId: 'queue:2' },
+      queueItemUpdate: vi.fn(async () => ({ state: 'refused' as const, code: 'queue-item-not-found' })),
+    })
+    expect(await gone.port(gone.request)).toEqual({ state: 'refused', code: 'queue-item-not-found' })
+  })
+
+  it('keeps an unwired handler and every malformed payload not-dispatched', async () => {
+    const unwired = [
+      dispatchHarness({ operation: 'session.approval.answer', payload: { requestId: 'approval:9', outcome: 'allowed-once' } }),
+      dispatchHarness({ operation: 'session.approval.withdraw', payload: { requestId: 'approval:9' } }),
+      dispatchHarness({ operation: 'session.pending.edit', payload: { itemId: 'pending:1', text: 'x' } }),
+      dispatchHarness({ operation: 'session.queue.remove', payload: { itemId: 'queue:1' } }),
+    ]
+    for (const harness of unwired) {
+      expect(await harness.port(harness.request)).toEqual({ state: 'not-dispatched' })
+    }
+
+    const malformed = [
+      dispatchHarness({ operation: 'session.approval.answer', payload: { requestId: '', outcome: 'allowed-once' }, approvalAnswer: vi.fn() }),
+      dispatchHarness({ operation: 'session.approval.answer', payload: { requestId: 'approval:9', outcome: 'maybe' }, approvalAnswer: vi.fn() }),
+      dispatchHarness({ operation: 'session.approval.withdraw', payload: {}, approvalWithdraw: vi.fn() }),
+      dispatchHarness({ operation: 'session.pending.edit', payload: { itemId: 'pending:1', text: '' }, pendingUpdate: vi.fn() }),
+      dispatchHarness({ operation: 'session.pending.remove', payload: { itemId: 7 }, pendingUpdate: vi.fn() }),
+      dispatchHarness({ operation: 'session.queue.edit', payload: { itemId: 'queue:1', text: 'x'.repeat(16_385) }, queueItemUpdate: vi.fn() }),
+      dispatchHarness({ operation: 'session.unknown.op', payload: {}, approvalAnswer: vi.fn() }),
+    ]
+    for (const harness of malformed) {
+      expect(await harness.port(harness.request)).toEqual({ state: 'not-dispatched' })
+    }
+    for (const harness of malformed) {
+      expect(harness.approvalAnswer).not.toHaveBeenCalled()
+      expect(harness.approvalWithdraw).not.toHaveBeenCalled()
+      expect(harness.pendingUpdate).not.toHaveBeenCalled()
+      expect(harness.queueItemUpdate).not.toHaveBeenCalled()
+    }
+  })
+
+  it('keeps the drift re-checks in force for the control operations', async () => {
+    const targetMoved = dispatchHarness({
+      operation: 'session.pending.edit',
+      payload: { itemId: 'pending:1', text: 'new text' },
+      pendingUpdate: vi.fn(() => ({ ok: true as const })),
+      targetRef: 'target:other',
+    })
+    expect(await targetMoved.port(targetMoved.request)).toEqual({ state: 'not-dispatched' })
+    expect(targetMoved.pendingUpdate).not.toHaveBeenCalled()
+
+    const contextMoved = dispatchHarness({
+      operation: 'session.queue.remove',
+      payload: { itemId: 'queue:1' },
+      queueItemUpdate: vi.fn(async () => ({ state: 'ok' as const })),
+      readContext: () => ({ sessionRef: 'session:active', matterRef: MATTER_ID, revisionRef: REVISION_ID, contextGeneration: 8, frameGeneration: 7 }),
+    })
+    expect(await contextMoved.port(contextMoved.request)).toEqual({ state: 'not-dispatched' })
+    expect(contextMoved.queueItemUpdate).not.toHaveBeenCalled()
+  })
+})
+
 describe('the kernel passes the receipt detail and the determinate refusal through', () => {
   const persistSaw: unknown[] = []
   afterEach(() => { persistSaw.length = 0 })
@@ -286,7 +481,7 @@ describe('the kernel passes the receipt detail and the determinate refusal throu
   })
 })
 
-describe('the ten-step chain answers a real send end to end', () => {
+describe('the ten-step chain answers real operations end to end', () => {
   const callerBinding = { correlation: 'caller:session-core' }
 
   function testPublication() {
@@ -299,14 +494,41 @@ describe('the ten-step chain answers a real send end to end', () => {
       issuer: { identity: 'authority:sage-compatibility', version: '2.0.0', digest: `sha256:${'a'.repeat(64)}` },
       validFrom: '2026-10-10T00:00:00.000Z',
       expiresAt: '2026-10-11T00:00:00.000Z',
-      rules: [{
-        ruleId: 'rule:sage-session-prompt-v1',
-        targetSemanticDigest: TARGET_SEMANTIC_DIGEST,
-        runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
-        outcome: 'equivalent',
-        reasonCode: 'owner-approved-exact-pair',
-        reason: 'test window covering the observed evidence instant',
-      }],
+      rules: [
+        {
+          ruleId: 'rule:sage-session-prompt-v1',
+          targetSemanticDigest: TARGET_SEMANTIC_DIGEST,
+          runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
+          outcome: 'equivalent',
+          reasonCode: 'owner-approved-exact-pair',
+          reason: 'test window covering the observed evidence instant',
+        },
+        // The three control scopes (ADR-0317 stage 2): same pairing, their own shipped semantics.
+        {
+          ruleId: 'rule:sage-session-approval-v1',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:c276cbb96f3805ae3c8fc6f95953b4c7d580d8bdfa0a62054fe5f76089e6743e',
+          runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
+          outcome: 'equivalent',
+          reasonCode: 'owner-approved-exact-pair',
+          reason: 'test window covering the observed evidence instant',
+        },
+        {
+          ruleId: 'rule:sage-session-pending-v1',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:06d4deb671feb6d8d9e6c2aa8398b39d1659f5462be49249f86af5d175740ae8',
+          runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
+          outcome: 'equivalent',
+          reasonCode: 'owner-approved-exact-pair',
+          reason: 'test window covering the observed evidence instant',
+        },
+        {
+          ruleId: 'rule:sage-session-queue-v1',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:b02e2848a05997886b7789990b7e7cba8d3b4e52610101f8c9f14f4a1d20f77c',
+          runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
+          outcome: 'equivalent',
+          reasonCode: 'owner-approved-exact-pair',
+          reason: 'test window covering the observed evidence instant',
+        },
+      ],
     }
     const canonicalMatrix = canonicalizeCompatibilityMatrixV2(matrix)
     const sealed = sealCompatibilityMatrixBundleV2({
@@ -522,5 +744,187 @@ describe('the ten-step chain answers a real send end to end', () => {
     const second = await (await post()).json()
     expect(second).toEqual({ state: 'refused', code: 'protected-effect-unavailable' })
     expect(sessionSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('answers a real approval end to end over the admitted chain (ADR-0317 stage 3)', async () => {
+    const container = await mkdtemp(join(await realpath(tmpdir()), 'sage-dispatch-approval-e2e-'))
+    cleanups.push(() => rm(container, { recursive: true, force: true }))
+    const root = join(container, 'Sage')
+    const home = join(container, 'home')
+    await mkdir(home, { mode: 0o700 })
+    await mkdir(join(root, 'data', 'business-matter'), { mode: 0o700, recursive: true })
+    const paths = resolveSagePaths({ home, root, platform: process.platform })
+    await writeFile(paths.organizationPolicyFile, JSON.stringify({
+      schemaVersion: 'sage.organization-policy.v1',
+      organizationId: 'organization:sage',
+      policy: { identity: 'policy:local', version: '1' },
+      validFrom: '2026-10-01T00:00:00Z',
+      expiresAt: '2027-10-01T00:00:00Z',
+      membership: { mode: 'instance-operator', roleRefs: ['role:owner'] },
+      // The strictest grant shape: the answer op IS a decision, so requiresDecision must match.
+      grants: [{
+        roleRef: 'role:owner',
+        operation: 'session.approval.answer',
+        actionScope: 'session.approval',
+        effectClass: 'external-write',
+        requiresDecision: true,
+      }],
+    }), 'utf8')
+
+    const seedStore = openBusinessMatterEventStore({
+      sagePaths: paths,
+      maxStreamEvents: 32,
+      maxPayloadBytes: 64 * 1024,
+      busyTimeoutMs: 75,
+      clock: () => '2026-10-10T15:00:00.000Z',
+    })
+    cleanups.push(() => seedStore.close())
+    const created = createBusinessMatter({
+      matterId: MATTER_ID,
+      eventId: `${MATTER_ID}:created`,
+      occurredAt: '2026-10-10T10:00:00Z',
+      goal: 'Answer the first admitted approval.',
+      responsibleParty: { kind: 'human', roleRef: 'role:owner' },
+    })
+    const withRevision = enterEvidence(created, {
+      eventId: `${MATTER_ID}:revision-1`,
+      occurredAt: '2026-10-10T10:01:00Z',
+      revisionId: REVISION_ID,
+      changeReason: 'Declare the bounded session-control scopes.',
+      scope: 'One approval answer under the admitted chain.',
+      permissionBoundary: 'No external mutation beyond the approval answer.',
+      dataDestination: 'Sage approval store.',
+      evidence: [{
+        evidenceId: 'evidence:approval-1',
+        source: 'fixture:dispatch',
+        observedAt: '2026-10-10T10:00:30Z',
+        status: 'supported',
+      }],
+      unknowns: [],
+      options: [],
+      dependencies: [],
+      experienceRefs: [],
+      actionPolicies: [
+        { actionScope: 'session.prompt', effectClass: 'external-write', requiresDecision: false },
+        // The revision declares the scope EXECUTABLE: the domain's requiresDecision (a recorded
+        // matter decision before an attempt) must not gate an answer that IS the live decision —
+        // the decision-capability requirement lives in the identity grant below, not here.
+        { actionScope: 'session.approval', effectClass: 'external-write', requiresDecision: false },
+      ],
+    })
+    const seedEvents = encodeBusinessMatterEvents(withRevision).map((event) => ({
+      matterId: event.matterId,
+      eventId: event.eventId,
+      eventType: event.eventType,
+      eventSchemaVersion: event.eventSchemaVersion,
+      occurredAt: event.occurredAt,
+      payloadBytes: event.payloadBytes.slice(),
+    }))
+    expect(seedStore.append({
+      matterId: MATTER_ID,
+      expectedVersion: { kind: 'not-exists' },
+      appendId: 'seed:approval-1',
+      events: seedEvents,
+    }).kind).toBe('appended')
+
+    const attempts = createSessionPromptAttemptStore({ sagePaths: paths })
+    cleanups.push(() => attempts.close())
+    const receipt = {
+      requestId: 'approval:1',
+      state: 'accepted' as const,
+      outcome: 'allowed-once' as const,
+      submittedAt: '2026-10-12T00:00:00.000Z',
+      code: null,
+      verifyOnly: false,
+    }
+    const sessionApprovalAnswer = vi.fn(async () => ({ state: 'recorded' as const, receipt }))
+
+    const activeMatterContext = createActiveMatterContext()
+    expect(activeMatterContext.activate({
+      expectedContextGeneration: 0,
+      next: {
+        actorScopeRef: 'actor:local',
+        matterId: MATTER_ID,
+        revisionId: REVISION_ID,
+        workspaceRef: 'workspace:active',
+        trustedWorkspaceRoot: '/trusted/workspace',
+        sessionRef: 'session:active',
+        frameGeneration: 7,
+      },
+    }).ok).toBe(true)
+
+    const providers = createSageAppServiceProviders({
+      viewState: null,
+      vault: {
+        status: () => 'signed-out' as const,
+        snapshot: () => ({ status: 'signed-out' as const, displayName: null }),
+        signOut: () => undefined,
+        identitySession: () => ({
+          sessionRef: 'session:active',
+          identityHandle: 'actor:local',
+          issuer: 'https://issuer.invalid',
+          authenticatedAt: '2026-10-01T00:00:00.000Z',
+          expiresAt: '2027-01-01T00:00:00.000Z',
+        }),
+      } as never,
+      adapter: { startLogin: async () => ({ ok: false as const, code: 'probe' }) } as never,
+      callerBinding,
+      activeMatterContext,
+      framePolicySnapshot: () => ({ generation: 7, ready: true, contaminated: false, contaminationReasons: [] }),
+      matterRehydrate: (() => ({ matter: {} as never, current: true })) as never,
+      matterLinks: () => ({
+        state: 'read',
+        links: [{
+          matterRef: MATTER_ID,
+          workspaceRef: 'workspace:active',
+          workspacePath: '/trusted/workspace',
+          linkedAt: '2026-10-01T00:00:00.000Z',
+          isDefault: true,
+        }],
+        trail: [],
+      }),
+      workspaceList: async () => ({
+        source: 'workspace-follow', state: 'read', reason: null,
+        entries: [{
+          workspaceId: 'workspace:active',
+          path: '/trusted/workspace',
+          title: 'Workspace', sessionCount: 0,
+          createdAt: '2026-10-01T00:00:00.000Z',
+          updatedAt: '2026-10-01T00:00:00.000Z',
+        }],
+        order: ['workspace:active'], archivedSessions: 0, frames: 1, unapplied: 0,
+      }),
+      // The dispatch wiring requires the send port; this chain never reaches it.
+      sessionSend: vi.fn(),
+      sessionApprovalAnswer,
+      authority: {
+        policyPath: paths.organizationPolicyFile,
+        readFileBytes: (path: string) => readFileSync(path),
+        now: () => '2026-10-12T00:00:00.000Z',
+      },
+      requirementBundle: loadSessionPromptRequirementBundle(),
+      compatibilityPublication: testPublication(),
+      runtimeInventoryObservation: () => observation,
+      capabilityRegistry: createBundledCapabilityRegistryProvider((() => {
+        const registryLoad = JSON.parse(readFileSync(join(APP_ROOT, 'publications', 'session-prompt.capability-registry.json'), 'utf8')) as { snapshotId: string } & Record<string, unknown>
+        const { snapshotId: _ignored, ...body } = registryLoad
+        void _ignored
+        return body
+      })() as never),
+      runtimeEffective: () => OBSERVED,
+      sessionPromptAttempts: attempts,
+      readObservedTurnEndEdge: async () => null,
+      revisionDigest: (matterId: string, revisionId: string) => attempts.revisionDigest(matterId, revisionId),
+    })
+
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/session/approval-answer', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matterRef: MATTER_ID, requestId: 'approval:1', outcome: 'allowed-once' }),
+    }), { callerBinding, providers })
+
+    expect(await response.json()).toEqual({ state: 'recorded', receipt })
+    expect(sessionApprovalAnswer).toHaveBeenCalledTimes(1)
+    expect(sessionApprovalAnswer).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:1', outcome: 'allowed-once' })
   })
 })

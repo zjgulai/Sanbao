@@ -33,10 +33,17 @@ source: ai
 
 用户点名授权（六项 grant 清单 + first-party 自证机制）后执行：新模块 `session-controls-publication.ts` + runner `scripts/publish-session-controls.mjs`（默认 dry、`--write` 落地、代际守卫防重复扩展）。三条 permission 声明逐字采用所请文本；adapter/contract 摘要按固定 canonical 声明自算（first-party 路线，ADR-0283 D4 同构）。落地：requirement v2 `fa2b7cae…` / registry v2 `6d3434c5…` / matrix v2 `f5d8c7ce…`；re-observation fixture 同步刷新（descriptor 换面重算摘要 + evidence 自摘要重算）。runner 自检当场抓出并修复：URN 双重包装、同 scope 双 tuple、快照剥 digest 语义、descriptor/evidence 摘要重算。端到端生效待用户 policy grants（六 op 行）。
 
+## 阶段三（当日落地）：dispatch 解硬编码 + 路由映射
+
+- `session-prompt-dispatch.ts` 去 `session.send` 硬编码：七 op 共用前端（表查/证据/重验/三端口重跑），分支到六个 handler 端口（`approvalAnswer`/`approvalWithdraw`/`pendingUpdate`/`queueItemUpdate`，全部可选：缺一即该 op not-dispatched）。成功收据命名到操作：`receipt:session-approval-answer:<id>` 等；approval 收据**随 detail 过 kernel 守卫**（detail.requestId 与 receipt.requestId 强配，防伪收据）；抛错 → outcome-unknown。
+- composition 四路由 dispatched 1:1 映射：recorded receipt / ok / state ok；错配或裸 dispatched → `protected-effect-outcome-unknown`。app-service 把四个 option 端口接进 dispatch；index.ts 接 `pendingUpdate`（pendingInputs.edit/remove）与 `queueItemUpdate`（sessionChannel.queueItem）。
+- **链上真缺陷（e2e 抓出）**：revision.actionPolicies 若把 `session.approval` 声明 requiresDecision:true，startAttempt 要求先行 approved decision → persist 恒 unavailable（死锁）。裁定：table/grant 层（身份能力）与 revision 层（执行前提）是两个家；control 类 scope 在 revision 声明 executable，decision-capability 只由 grant 表达。
+- e2e：approval.answer 过真身份（decision-capable grant）/真 requirement 快照/真 registry/persist（attempt 落 business-matter store）/dispatch，route 答 recorded receipt。
+
 ## Verification
 
 真实运行（2026-10-11）：
 
-- tsc 0 错；全量 **2022 passed | 1 skipped（226 文件）**（阶段二后）。
+- tsc 0 错；全量 **2034 passed | 1 skipped（226 文件）**（阶段三后）。
 - 新增/扩展用例：kernel 六态 detail 正例逐条 carry；畸形 detail（缺 ref/空串/非串）→ outcome-unknown；表十行精确钉子 + 六行逐条映射；identity spec 六行裁定钉子。
 - `pnpm run gate` 退出码见提交记录。

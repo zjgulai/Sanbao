@@ -769,7 +769,14 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
           ? { itemId: request.itemId, text: request.text }
           : { itemId: request.itemId },
       )
-      const outcome = { ok: false, code: protectedEffectFailureCode(admission) }
+      // B batch stage 3 (ADR-0317 D4): a dispatched receipt names the exact item it edited or
+      // removed; the route maps it 1:1. A dispatched admission with a mismatched detail stays on
+      // the conservative unknown path.
+      const outcome = admission.state === 'dispatched'
+        && admission.detail?.kind === (request.action === 'edit' ? 'pending-edited' : 'pending-removed')
+        && admission.detail.itemId === request.itemId
+        ? { ok: true }
+        : { ok: false, code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async sessionHistoryList(request: { readonly beforeSeq?: number }): Promise<Response> {
@@ -854,10 +861,13 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         { kind: 'matter', matterRef: request.matterRef },
         { requestId: request.requestId, outcome: request.outcome },
       )
-      const outcome: ApprovalAnswerOutcome = {
-        state: 'refused',
-        code: protectedEffectFailureCode(admission),
-      }
+      // B batch stage 3 (ADR-0317 D4): the dispatched receipt carries the handler's own receipt
+      // view, paired to the request's identity — no re-read, no re-derivation at the route.
+      const outcome: ApprovalAnswerOutcome = admission.state === 'dispatched'
+        && admission.detail?.kind === 'approval-answer-recorded'
+        && admission.detail.requestId === request.requestId
+        ? { state: 'recorded', receipt: admission.detail.receipt }
+        : { state: 'refused', code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async sessionApprovalWithdraw(request: { readonly matterRef: string, readonly requestId: string }): Promise<Response> {
@@ -867,10 +877,11 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         { kind: 'matter', matterRef: request.matterRef },
         { requestId: request.requestId },
       )
-      const outcome: ApprovalWithdrawOutcome = {
-        state: 'refused',
-        code: protectedEffectFailureCode(admission),
-      }
+      const outcome: ApprovalWithdrawOutcome = admission.state === 'dispatched'
+        && admission.detail?.kind === 'approval-withdraw-recorded'
+        && admission.detail.requestId === request.requestId
+        ? { state: 'recorded', receipt: admission.detail.receipt }
+        : { state: 'refused', code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async sessionPlanModeSwitch(request: { readonly active: boolean }): Promise<Response> {
@@ -948,10 +959,14 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
           ? { itemId: request.itemId, text: request.text }
           : { itemId: request.itemId },
       )
-      const outcome: QueueItemOutcome = {
-        state: 'refused',
-        code: protectedEffectFailureCode(admission),
-      }
+      // B batch stage 3 (ADR-0317 D4): a dispatched receipt names the exact item it edited or
+      // removed; the route maps it 1:1. A dispatched admission with a mismatched detail stays on
+      // the conservative unknown path.
+      const outcome: QueueItemOutcome = admission.state === 'dispatched'
+        && admission.detail?.kind === (request.action === 'edit' ? 'queue-edited' : 'queue-removed')
+        && admission.detail.itemId === request.itemId
+        ? { state: 'ok' }
+        : { state: 'refused', code: protectedEffectFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async pickAttachments(): Promise<Response> {
