@@ -58,6 +58,38 @@ export const answerDesktopApproval = (matterRef: string, requestId: string, outc
 export const withdrawDesktopApproval = (matterRef: string, requestId: string): Promise<SessionControlResult> =>
   post(PATHS.approvalWithdraw, { matterRef, requestId })
 
+/** ADR-0317 D4 (stage 7, code-set derivation): the ONE home of the retryable contract for a
+ *  control refusal. Retryability is a property of the refusal code — the closed set the kernel
+ *  itself emits (`protected-effect-unavailable` is exactly its retryable family); the route
+ *  body stays {state, code} and no second field re-states this mapping. A null code (transport
+ *  failure or an unowned refusal) stays retryable. */
+export function retryableForRefusal(code: string | null): boolean {
+  switch (code) {
+    case 'protected-effect-unavailable': return true
+    case 'protected-effect-denied':
+    case 'protected-effect-stale':
+    case 'protected-effect-outcome-unknown': return false
+    case null: return true
+    default: return true
+  }
+}
+
+/** ADR-0317 (stage 7): the admission refusal family's own sentence. The control surfaces no
+ *  longer say "not wired" — the routes are wired, and each refusal family is named with its
+ *  own next step (retry later / authorization missing / refresh / no auto-retry). null for
+ *  codes this home does not own (route-specific codes keep their own wording). */
+export function describeControlRefusal(code: string | null): string | null {
+  if (code === 'protected-effect-unavailable') {
+    return retryableForRefusal(code)
+      ? '控制操作暂不可用——可稍后重试。'
+      : '控制操作暂不可用。'
+  }
+  if (code === 'protected-effect-denied') return '当前没有执行该操作的授权；未记录任何改动。'
+  if (code === 'protected-effect-stale') return '状态已变化：请刷新后重试。'
+  if (code === 'protected-effect-outcome-unknown') return '结果未知（已记录，待核对，不自动重试）。'
+  return null
+}
+
 // The pending/queue parsers accept exactly {action, itemId[, text]} — the matter scope is bound
 // server-side by the request-scoped service assembly; the renderer never names it.
 export const editPendingInput = (itemId: string, text: string): Promise<SessionControlResult> =>

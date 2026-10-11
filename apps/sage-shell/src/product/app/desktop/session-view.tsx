@@ -4,7 +4,7 @@ import { MarkdownText } from '../markdown.js'
 import type { DesktopArtifacts } from './client.js'
 import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopSideChats, DesktopTerminal, DesktopToolResultField, DesktopToolResults, DesktopTurnProcess } from './session.js'
 import type { DesktopTerminalRead } from './terminal.js'
-import type { SessionControlResult } from './session-controls.js'
+import { describeControlRefusal, type SessionControlResult } from './session-controls.js'
 
 export interface DesktopSessionViewProps {
   readonly title: string
@@ -246,9 +246,7 @@ function ApprovalsSection({ approvals, onAnswer, onWithdraw }: {
   const run = (action: () => Promise<SessionControlResult>, recorded: string) => {
     void action().then((result) => {
       setNote(!result.ok
-        ? result.code === 'protected-effect-unavailable'
-          ? '授权应答尚未接通（接线完成前不会记录任何决定）。'
-          : `未受理（${result.code ?? 'unknown'}）。`
+        ? describeControlRefusal(result.code) ?? `未受理（${result.code ?? 'unknown'}）。`
         : result.receiptState === 'unknown'
           ? '结果未知（已记录，待核对，不自动重试）。'
           : recorded)
@@ -305,7 +303,8 @@ function controlItemNote(result: SessionControlResult, kind: 'edit' | 'remove'):
   if (result.ok) return kind === 'edit'
     ? '已提交修改（以权威快照为准，刷新后可见）。'
     : '已提交移除（若已开始处理则改不动——以快照为准）。'
-  if (result.code === 'protected-effect-unavailable') return '会话控制尚未接通（接线完成前不会记录任何改动）。'
+  const family = describeControlRefusal(result.code)
+  if (family !== null) return family
   if (result.code === 'queue-item-not-found') return '这一项已开始处理（不在队列里了）——以服务快照为准。'
   if (result.code === 'queue-no-session') return '还没有会话：没有队列项可改。'
   if (result.code === 'queue-edit-invalid') return '修改内容为空或超长：没有提交。'

@@ -45,10 +45,16 @@ source: ai
 - 真缺陷（阶段三 e2e 暴露）：控制类 op 的 attempt 由 turn-close 永远收不了口（无回合）→ open attempt 锁死后续任意 attempt。新模块 `session-control-close.ts`（main-owned recorder，best-effort、事件 id 与 turn-close 同形 `attempt-succeeded:<id>` / `attempt-failed:<id>` 故不可能双闭）：receipt → succeeded；确定拒绝 → failed（code 入 reason）；unknown → 既有 dispatch-unknown marker，attempt 保持 open fail-closed，待 per-op reconcile（登记后续）。
 - dispatch 发/收两路共用 `answerUnknown`/`closeControl` helper；app-service 装配 `recordControlClosed`；门禁增第 4 枚事实钉（recorder 装配 + 经 domain kernel 落事件）。e2e 加解锁证明：approval 连答两次均 recorded。
 
+## 阶段五~七（收尾）
+
+- 阶段五：无独立残留——四路由消费真实 provider 装配与 dispatched 收据映射在阶段三一并落地（含 index.ts 真身接线）。
+- 阶段六：裁定无需 checker 专属分支——mode 词汇描述「进入准入体制」而非「恒拒绝」；四路由与 session.send 一族同桶，矩阵/checker 双语一致。
+- 阶段七（用户裁定 code 集合推导）：`retryableForRefusal`（unavailable/null→可重试；denied/stale/outcome-unknown→否）与 `describeControlRefusal` 是 renderer 侧唯一家；approvals 卡与 pending/queue 行两处文案按拒绝族分叉；route 应答体保持 {state, code} 零扩面。**B 批完成。**
+
 ## Verification
 
 真实运行（2026-10-11）：
 
-- tsc 0 错；全量 **2037 passed | 1 skipped（227 文件）**（阶段四后）。
+- tsc 0 错；全量 **2038 passed | 1 skipped（227 文件）**（阶段七后，B 批完成）。
 - 新增/扩展用例：kernel 六态 detail 正例逐条 carry；畸形 detail（缺 ref/空串/非串）→ outcome-unknown；表十行精确钉子 + 六行逐条映射；identity spec 六行裁定钉子。
 - `pnpm run gate` 退出码见提交记录。

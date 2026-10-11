@@ -2,6 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describeControlRefusal, retryableForRefusal } from '../../src/product/app/desktop/session-controls.js'
 import { DesktopPage } from '../../src/product/app/desktop/page.js'
 import { classifyDesktopState, type DesktopBootstrapRead, type DesktopRead } from '../../src/product/app/desktop/client.js'
 import type { DevicePreferencesController } from '../../src/product/app/desktop/device-preferences.js'
@@ -407,11 +408,28 @@ describe('default desktop session submission lifecycle', () => {
     await click(control(container, '允许一次 run_shell'))
     const answer = fetcher.mock.calls.find(([url]) => url === '/.sage/session/approval-answer')
     expect(JSON.parse(String(answer?.[1]?.body))).toEqual({ matterRef: 'matter:one', requestId: 'approval:1', outcome: 'allowed-once' })
-    expect(container.textContent).toContain('授权应答尚未接通')
+    expect(container.textContent).toContain('控制操作暂不可用——可稍后重试。')
     await click(control(container, '撤回等待 run_shell'))
     const withdraw = fetcher.mock.calls.find(([url]) => url === '/.sage/session/approval-withdraw')
     expect(JSON.parse(String(withdraw?.[1]?.body))).toEqual({ matterRef: 'matter:one', requestId: 'approval:1' })
     expect(container.textContent).toContain('已撤回等待')
+  })
+
+  it('derives the control refusal families from the code set alone (ADR-0317 stage 7)', () => {
+    // The route body stays {state, code}: retryability and wording are the code's own meaning.
+    expect(retryableForRefusal('protected-effect-unavailable')).toBe(true)
+    expect(retryableForRefusal(null)).toBe(true)
+    expect(retryableForRefusal('protected-effect-denied')).toBe(false)
+    expect(retryableForRefusal('protected-effect-stale')).toBe(false)
+    expect(retryableForRefusal('protected-effect-outcome-unknown')).toBe(false)
+
+    expect(describeControlRefusal('protected-effect-unavailable')).toContain('可稍后重试')
+    expect(describeControlRefusal('protected-effect-denied')).toContain('授权')
+    expect(describeControlRefusal('protected-effect-stale')).toContain('刷新')
+    expect(describeControlRefusal('protected-effect-outcome-unknown')).toContain('不自动重试')
+    // Route-specific codes keep their own wording — the shared home does not claim them.
+    expect(describeControlRefusal('queue-item-not-found')).toBeNull()
+    expect(describeControlRefusal(null)).toBeNull()
   })
 
   it('shows the model-queue card with the service facts and a verify reread (ADR-0313 S05)', async () => {
@@ -525,7 +543,7 @@ describe('default desktop session submission lifecycle', () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '改后的说明')
     await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
     await click(control(container, '保存修改'))
-    expect(container.textContent).toContain('会话控制尚未接通（接线完成前不会记录任何改动）。')
+    expect(container.textContent).toContain('控制操作暂不可用——可稍后重试。')
     expect(container.querySelector('input[aria-label="编辑 补充说明"]')).not.toBeNull()
     const readsAfterEdit = read.mock.calls.length
     expect(readsAfterEdit).toBeGreaterThan(reads)
