@@ -1,7 +1,7 @@
 {
   "schemaVersion": "sage.capability-registry.v1",
   "canonicalizationVersion": "sage.capability-registry-canonical-json.v1",
-  "createdAt": "2026-10-10T09:00:00.000Z",
+  "createdAt": "2026-10-11T12:00:00Z",
   "entries": [
     {
       "schemaVersion": "sage.capability-registry-entry.v1",
@@ -19,6 +19,90 @@
         "evidenceDigest": "urn:sage:first-party-capability-evidence:sha256:9ec8da8b60a2d16462688b91b1456c9a2f39cf26b79fb0340a5cec975112092d"
       },
       "operations": [
+        {
+          "operationId": "session.approval.answer",
+          "adapter": {
+            "identity": "adapter:sage.approval-relay",
+            "version": "1.0.0",
+            "digest": "sha256:4c5d31e37fa7b02db31803c5edf8dd9442d1c155794dac7b639fbec7070817a2"
+          },
+          "effectClass": "external-write",
+          "dataBoundary": "sage.local-only",
+          "inputContractDigest": "sha256:cb87d08a031a9f600b2c218f6299d1f182707c33275f7d53fc6adb84b1ac1a43",
+          "outputContractDigest": "sha256:eaa2b6d79144eebc7431a994fec69a5a96a105cce7505ed24d619fa97e39fb48",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
+        {
+          "operationId": "session.approval.withdraw",
+          "adapter": {
+            "identity": "adapter:sage.approval-relay",
+            "version": "1.0.0",
+            "digest": "sha256:d00292af0075b0822c099d0a0af88ef25da7b8e8736fa156220fe313fd934d20"
+          },
+          "effectClass": "external-write",
+          "dataBoundary": "sage.local-only",
+          "inputContractDigest": "sha256:1b7e2e09c1e87012d708267b2bae07845038d06eeacde1d49cfc6d7a0603cec8",
+          "outputContractDigest": "sha256:eaa2b6d79144eebc7431a994fec69a5a96a105cce7505ed24d619fa97e39fb48",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
+        {
+          "operationId": "session.pending.edit",
+          "adapter": {
+            "identity": "adapter:sage.pending-inputs",
+            "version": "1.0.0",
+            "digest": "sha256:15227534f92ec5c3016b3f06f43a16bf500bc5062ad5d9011dd42db9d2294efc"
+          },
+          "effectClass": "local-write",
+          "dataBoundary": "sage.local-only",
+          "inputContractDigest": "sha256:f663831cf32e07f42f572d878cefbbaace94090c47f79f1f81ffbe4976870c72",
+          "outputContractDigest": "sha256:df828c8340458df4c2376773b85794e2eb946de27cc09ba64c8d75fbbda263d2",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
+        {
+          "operationId": "session.pending.remove",
+          "adapter": {
+            "identity": "adapter:sage.pending-inputs",
+            "version": "1.0.0",
+            "digest": "sha256:2b2cb0c777a03d25db30e7619b9f4e8291d9d0dea732f357a3b2c69338794bbf"
+          },
+          "effectClass": "local-write",
+          "dataBoundary": "sage.local-only",
+          "inputContractDigest": "sha256:416b372b89467038e343e8e1fe8382d566274f6b1931c15a83d982ae2eec48d5",
+          "outputContractDigest": "sha256:df828c8340458df4c2376773b85794e2eb946de27cc09ba64c8d75fbbda263d2",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
+        {
+          "operationId": "session.queue.edit",
+          "adapter": {
+            "identity": "adapter:sage.session-queue",
+            "version": "1.0.0",
+            "digest": "sha256:95eedf967f5fc02b857726a20956a31942e58c5023aec0f820ddd394f9796279"
+          },
+          "effectClass": "external-write",
+          "dataBoundary": "sage.model-egress",
+          "inputContractDigest": "sha256:f663831cf32e07f42f572d878cefbbaace94090c47f79f1f81ffbe4976870c72",
+          "outputContractDigest": "sha256:df828c8340458df4c2376773b85794e2eb946de27cc09ba64c8d75fbbda263d2",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
+        {
+          "operationId": "session.queue.remove",
+          "adapter": {
+            "identity": "adapter:sage.session-queue",
+            "version": "1.0.0",
+            "digest": "sha256:610bfed36de29b6fbb2f8301186e5769f7e43a7aad01364499b142ad476a79f9"
+          },
+          "effectClass": "external-write",
+          "dataBoundary": "sage.model-egress",
+          "inputContractDigest": "sha256:416b372b89467038e343e8e1fe8382d566274f6b1931c15a83d982ae2eec48d5",
+          "outputContractDigest": "sha256:df828c8340458df4c2376773b85794e2eb946de27cc09ba64c8d75fbbda263d2",
+          "preflight": "read-only",
+          "revokeBehavior": "deny-new-actions"
+        },
         {
           "operationId": "session.send",
           "adapter": {
@@ -40,11 +124,18 @@
           "ownerId": "owner:sage.product",
           "decidedAt": "2026-10-10T09:00:00.000Z",
           "reason": "用户裁决（ADR-0283 D4）自证等价路线；条目字节按 ADR-0285 批准。"
+        },
+        {
+          "decisionId": "decision:sage.session-controls.registry",
+          "ownerId": "owner:sage.product",
+          "decidedAt": "2026-10-11T12:00:00Z",
+          "reason": "用户核准（2026-10-11）：六操作以 first-party 自证等价路线入册（adapter=approval relay / pending store / queue adapter）。"
         }
       ],
       "effectiveAt": "2026-10-10T09:00:00.000Z",
       "expiresAt": "2027-10-11T00:00:00.000Z"
     }
   ],
-  "snapshotId": "urn:sage:capability-registry:sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411"
+  "supersedesSnapshotId": "urn:sage:capability-registry:sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411",
+  "snapshotId": "urn:sage:capability-registry:sha256:6d3434c50b899903130e8da9f3b293e61d16d3c5240f945dd2b3797125dd237d"
 }

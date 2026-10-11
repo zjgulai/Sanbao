@@ -28,8 +28,8 @@ import type {
   RuntimeInventoryEvidenceV2,
 } from '../src/security/compatibility.js'
 
-const SNAPSHOT_ID = 'urn:sage:capability-registry:sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411'
-const MAPPING_DIGEST = 'sha256:0b6e398d0a88bf9a82dcfd00c2753cee99b5fd5e6dca64b950f917add7087c25'
+const SNAPSHOT_ID = 'urn:sage:capability-registry:sha256:6d3434c50b899903130e8da9f3b293e61d16d3c5240f945dd2b3797125dd237d'
+const MAPPING_DIGEST = 'sha256:e04c4eda4931e16d5c2c1d7d6d712e92c30aba81ba299341c04ace8db1651b21'
 
 const reobs = JSON.parse(readFileSync(new URL('./support/reobs-runtime-inventory.json', import.meta.url), 'utf8')) as {
   kind: string

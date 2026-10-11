@@ -13,7 +13,7 @@ import {
 } from '../src/main/publication-bundle.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const SNAPSHOT_ID = 'urn:sage:capability-registry:sha256:f2df5963780c0868769343cf94147a02e49527e83f8ef49e32a277830aacb411'
+const SNAPSHOT_ID = 'urn:sage:capability-registry:sha256:6d3434c50b899903130e8da9f3b293e61d16d3c5240f945dd2b3797125dd237d'
 
 const cleanups: Array<() => Promise<void>> = []
 afterEach(async () => {
@@ -36,8 +36,10 @@ describe('the shipped capability registry publication', () => {
     expect(entry.capabilityId).toBe('capability:sage.session-prompt')
     expect(entry.descriptor.source).toBe('first-party')
     expect(entry.descriptor.verification).toBe('verified')
-    expect(entry.operations[0]?.operationId).toBe('session.send')
-    expect(entry.operations[0]?.adapter.identity).toBe('adapter:sage.session-channel')
+    // ADR-0317 stage 2: the entry now carries seven operations (sorted by operationId).
+    expect(entry.operations).toHaveLength(7)
+    const send = entry.operations.find((operation) => operation.operationId === 'session.send')!
+    expect(send.adapter.identity).toBe('adapter:sage.session-channel')
   })
 
   it('rejects tampered or missing publication bytes without repairing them', async () => {

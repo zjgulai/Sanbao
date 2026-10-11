@@ -29,10 +29,14 @@ source: ai
 - identity 步对六 op 真实求值：**已登录无 grant → denied**（不再 unavailable）；未登录仍 unavailable（fail closed）。
 - 端到端生效待阶段二（publications 含新 scope）＋用户 policy grants；v4-final DMG 冻结于本阶段前，走查不受影响。
 
+## 阶段二（当日落地）：publications 再封印
+
+用户点名授权（六项 grant 清单 + first-party 自证机制）后执行：新模块 `session-controls-publication.ts` + runner `scripts/publish-session-controls.mjs`（默认 dry、`--write` 落地、代际守卫防重复扩展）。三条 permission 声明逐字采用所请文本；adapter/contract 摘要按固定 canonical 声明自算（first-party 路线，ADR-0283 D4 同构）。落地：requirement v2 `fa2b7cae…` / registry v2 `6d3434c5…` / matrix v2 `f5d8c7ce…`；re-observation fixture 同步刷新（descriptor 换面重算摘要 + evidence 自摘要重算）。runner 自检当场抓出并修复：URN 双重包装、同 scope 双 tuple、快照剥 digest 语义、descriptor/evidence 摘要重算。端到端生效待用户 policy grants（六 op 行）。
+
 ## Verification
 
 真实运行（2026-10-11）：
 
-- tsc 0 错；全量 **2022 passed | 1 skipped**（225 文件）。
+- tsc 0 错；全量 **2022 passed | 1 skipped（226 文件）**（阶段二后）。
 - 新增/扩展用例：kernel 六态 detail 正例逐条 carry；畸形 detail（缺 ref/空串/非串）→ outcome-unknown；表十行精确钉子 + 六行逐条映射；identity spec 六行裁定钉子。
 - `pnpm run gate` 退出码见提交记录。

@@ -35,10 +35,10 @@ import {
 } from '../src/security/compatibility-matrix-provider.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:304c124f0d1de11b1cdcb6431e6cadddc4d7a23588e87f0e65be25868a1158bf'
-const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:b2967eb3cf86585beebb77c932590876bc9b7acf1b9dea46b9f296c9079c041e'
+const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:2f2ea90e35b30d1a001124e29f3bd8fa1ee692049fb4b07fa3ec0436fc5f582e'
+const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:f5d8c7ce080c88b7f186a8189474db037a3d5f54b6aaa530426f1b0184213e8e'
 const REVOCATION_SOURCE_ID = 'urn:sage:compatibility-matrix-revocation-source:sha256:9837c233d165e19c205a31c80962917102b16768475ecef3e03bd5806ae2d5a1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:a9a0feb0d94e9937b02145dae15cb4ba2107476039a55d48b35827d7a6488319'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
 
 const reobs = JSON.parse(readFileSync(new URL('./support/reobs-runtime-inventory.json', import.meta.url), 'utf8')) as {
   kind: string
@@ -62,8 +62,9 @@ afterEach(async () => {
 function realEntry() {
   const bundle = loadSessionPromptRequirementBundle()
   if (!bundle.ok) throw new Error(bundle.reason)
-  const entry = bundle.snapshot.entries[0]
-  if (entry === undefined) throw new Error('shipped requirement bundle has no entries')
+  // ADR-0317 stage 2: the snapshot carries four entries; this suite means the session-prompt one.
+  const entry = bundle.snapshot.entries.find((candidate) => candidate.requirementId === 'requirement:sage-session-prompt')
+  if (entry === undefined) throw new Error('shipped requirement bundle has no session-prompt entry')
   return entry
 }
 
@@ -179,7 +180,7 @@ describe('the shipped compatibility matrix publication (ADR-0284)', () => {
     const bundleText = readFileSync(`${APP_ROOT}/${SESSION_PROMPT_MATRIX_BUNDLE_REL_PATH}`, 'utf8')
     const tampered = bundleText.replace(
       reobs.descriptor.runtimeDescriptorDigest,
-      reobs.descriptor.runtimeDescriptorDigest.slice(0, -1) + '0',
+      reobs.descriptor.runtimeDescriptorDigest.slice(0, -1) + (reobs.descriptor.runtimeDescriptorDigest.endsWith('0') ? '1' : '0'),
     )
     expect(tampered).not.toBe(bundleText)
     await writeFile(join(container, SESSION_PROMPT_MATRIX_BUNDLE_REL_PATH), tampered, 'utf8')

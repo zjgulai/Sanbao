@@ -20,8 +20,8 @@ import { resolveSagePaths } from '../src/profile/paths.js'
 import type { ServiceProviders } from '../src/appservice/contracts.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const SNAPSHOT_ID = 'urn:sage:compatibility-target-requirement-snapshot:sha256:1b398a3763ec13e26d3dffe39168c73d4a7622894d5d5cceda6a6b359386d561'
-const REQUIREMENT_DIGEST = 'urn:sage:compatibility-target-requirement:sha256:a00e6303de08108bef77445d2e912438a0a0515b65cab0ad689c0ebfbc4cb2c0'
+const SNAPSHOT_ID = 'urn:sage:compatibility-target-requirement-snapshot:sha256:fa2b7cae510aa78f08e7e30323658a2760372f57039808d8e2a47744b39225e9'
+const REQUIREMENT_DIGEST = 'urn:sage:compatibility-target-requirement:sha256:2256562650b6a5fc5ffc126ebc6e95787df34e643817e767a1b8a542a3dba5d2'
 /** Inside the requirement window (2026-10-11 → 2027-10-11) and the session/policy windows. */
 const IN_WINDOW = '2026-10-12T00:30:00.000Z'
 /** Before the published effectiveAt — identity still passes, the target must not. */
@@ -156,8 +156,9 @@ describe('the shipped session-prompt requirement bundle (ADR-0282)', () => {
     expect(load.ok).toBe(true)
     if (!load.ok) throw new Error(load.reason)
     expect(load.snapshotId).toBe(SNAPSHOT_ID)
-    expect(load.snapshot.entries).toHaveLength(1)
-    const entry = load.snapshot.entries[0]!
+    // ADR-0317 stage 2: the snapshot now carries four entries (ordered by requirementId).
+    expect(load.snapshot.entries).toHaveLength(4)
+    const entry = load.snapshot.entries.find((candidate) => candidate.requirementId === 'requirement:sage-session-prompt')!
     expect(entry.requirementId).toBe('requirement:sage-session-prompt')
     expect(entry.requirementDigest).toBe(REQUIREMENT_DIGEST)
     expect(entry.effectiveAt).toBe('2026-10-11T00:00:00Z')
