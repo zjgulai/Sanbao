@@ -10,7 +10,8 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 **v5** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `728013c214859484585451d88f81e35e23849e36c8a3621c852f1d9589dd411c`，390,032,618 bytes，含 R2–R16 + B 批（审批/待继续/队列写路径）+ R17-A/C 设置壳 + L1-A/B 事项治理 + 启动失败面；DMG-06 全链验收 `passed=true` 于 2026-10-12，读数入仓 `evidence/2026-10-12-dmg06-v5-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v4（`171d06b7…`）已改名备份为 `Sage-0.1.0-internal-arm64-v4.dmg`；v3（`052c3970…`）同旧。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
+1. 安装 **v5** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `e9493ac7c53d6473fc5301357986110f67c6c57ba8945c1d2aadc906aaa41513`，399,076,900 bytes，含 R2–R16 + B 批（审批/待继续/队列写路径）+ R17-A/C 设置壳 + L1-A/B 事项治理 + 启动失败面；DMG-06 全链验收 `passed=true` 于 2026-10-12（修正版：首版 v5 误装仓内旧 input 残留，见下），读数入仓 `evidence/2026-10-12-dmg06-v5-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v4（`171d06b7…`）已改名备份为 `Sage-0.1.0-internal-arm64-v4.dmg`；v3（`052c3970…`）同旧。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
+   > ⚠️ 修正记录（2026-10-12）：同日首版 v5（sha `728013c2…`）误装仓内旧 input 残留（assemble 收了仓库相对路径而非 `$PACKAGING_STAGING_ROOT` 覆盖根；另有 Finder `.DS_Store` 污染过 profile-template），已重产为 `e9493ac7…`。若你已从 `728013c2…` 安装，请删除 `/Applications/Sage.app` 并从修正版 DMG 重装。
 2. Logto Native 应用 `cmg2ty121m1tlsd0fgiuv` 的 redirect allowlist 仍含 `http://127.0.0.1:3000/callback`（ADR-0183 时已配，请复核）。
 3. 测试账号设置 Name（否则界面显示名为空）。
 4. 登录窗口期 3000 端口空闲。

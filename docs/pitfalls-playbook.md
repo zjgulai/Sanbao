@@ -1865,3 +1865,22 @@
   （不是合成形状、不是「预期输出」）；判据报「观测到 0」时，先验证流/格式前提，再怀疑被测物。
   仪器修复与被测物修复必须能在一次运行里区分开：先让仪器对已知好的件读出正确值。
 - **详见**：[Note](notes/implemented/packaging/2026-10-10-dmg-chain-first-real-run.md)（七追加）。
+
+## P-70 · 打包输入伪装成「当前构建」：每一步仪器全绿，箱子却是旧的
+
+- **症状**：v5 全链（produce→assembler→sign→dmg→DMG-06 验收→真机走查）全绿后核对发现装的
+  **是 v4 内容**——包内 renderer bundle 无当期新面标记。错误产物从未被任何一步读出。
+- **根因类**：**产物身份没有内容锚点**。assemble 的输入是「合法且校验通过」的旧 input（仓内
+  `packaging-sage/staging/input` 残留），全部校验器诚实报绿——判据校验的是「输入合法」，而不是
+  「输入就是本次 produce 的字节」。README 示例（仓内相对路径）在 env 覆盖模式下指向残留，
+  把错误路径变成默认路径；验收/走查的通过又被误读为「当前构建通过」。与 P-52 家族同族：
+  仪器对**错误的被测物**给出诚实的绿。
+- **已落地机制**：`script:packaging-sage/assemble.sh` 在拷贝前对两个输入调用
+  `script:packaging-sage/scripts/macos-metadata.mjs` 的 `removeMacosMetadata`（按名精确清洗 `.DS_Store`、
+  不可读即抛，防 produce 之后的 Finder/iCloud 元数据污染 exact-shape 校验）；
+  `script:packaging-sage/README.md` 示例改 `"$PACKAGING_STAGING_ROOT/input/..."` 并明示仓内相对路径
+  在覆盖模式下指向陈旧残留；修正版产物以内容标记锚定（bundle 含当期 feature 字符串）后再入验收。
+- **下一版默认动作**：打包链任何一环的「通过」都要能回答「凭什么知道这是**本次**构建」——
+  以本期新增面的内容标记（或与 produce 源的逐字节比对）作锚；看到「验收绿但疑似旧物」先做
+  内容取证（grep 标记/比对 sha），再谈重装。凡涉及路径参数，先打印解析后的绝对路径再执行。
+- **详见**：[Note](notes/implemented/packaging/2026-10-12-v5-input-path-and-metadata-correction.md)。

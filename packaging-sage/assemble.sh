@@ -96,6 +96,11 @@ icon="$REPO_ROOT/$ICON_RELATIVE"
 [[ -f "$icon" ]] || die "Sage icon is missing: $ICON_RELATIVE"
 
 node "$PACKAGING_SAGE_ROOT/scripts/validate-inputs.mjs" runtime "$app_runtime"
+# macOS metadata can appear between produce and assemble (Finder / iCloud browsing the inputs —
+# observed 2026-10-12: one .DS_Store failed the exact profile-template shape check after a
+# correct produce). Normalize both inputs by name before copying so the packaged tree cannot
+# inherit it; the normalizer throws on unreadable entries and never guesses.
+node -e 'import(process.argv[1]).then(m => { for (const root of process.argv.slice(2)) console.log(`[sage-packaging] removed ${m.removeMacosMetadata(root)} macOS metadata entries under ${root}`) }).catch(error => { console.error(error); process.exit(1) })' "file://$PACKAGING_SAGE_ROOT/scripts/macos-metadata.mjs" "$app_runtime" "$profile_template"
 node "$PACKAGING_SAGE_ROOT/scripts/validate-inputs.mjs" profile "$profile_template"
 node "$PACKAGING_SAGE_ROOT/scripts/validate-mach-o.mjs" "$app_runtime" app-runtime
 node "$PACKAGING_SAGE_ROOT/scripts/validate-mach-o.mjs" "$profile_template" profile-template

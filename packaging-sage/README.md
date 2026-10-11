@@ -123,12 +123,14 @@ Run the existing bundled-profile implementation against those produced bytes:
 node packaging-sage/tests/producer-contract-test.mjs
 ```
 
-Assemble an unsigned app from explicit inputs:
+Assemble an unsigned app from explicit inputs (use the roots the producer actually wrote — with
+`PACKAGING_STAGING_ROOT` overridden, literal `packaging-sage/staging/...` paths point at any stale
+in-repo leftover and will silently package the wrong build; observed 2026-10-12):
 
 ```bash
 bash packaging-sage/assemble.sh \
-  --app-runtime packaging-sage/staging/input/app-runtime \
-  --profile-template packaging-sage/staging/input/profile-template
+  --app-runtime "$PACKAGING_STAGING_ROOT/input/app-runtime" \
+  --profile-template "$PACKAGING_STAGING_ROOT/input/profile-template"
 ```
 
 Inspect the signing order without modifying the app:
