@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createDraftStore, type DraftStore } from '../src/main/draft-store.js'
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../src/appservice/composition.js'
+import { draftCustodyTestPorts } from './support/draft-custody-ports.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
@@ -200,14 +201,17 @@ describe('the draft routes and the confirm path through the pipeline (ticket 002
     )
     const seen: string[] = []
     const providers = createUnavailableFirstService(null, {
-      draftCreate: (request) => {
-        seen.push(`create:${request.rawInput}`)
-        return { state: 'unlocked', drafts: [] }
-      },
-      draftUpdate: (request) => {
-        seen.push(`update:${request.draftId}`)
-        return { state: 'unlocked', drafts: [] }
-      },
+      // L1-C (ADR-0323): create/update ride the draft-custody admission.
+      draftCustodyPorts: draftCustodyTestPorts({
+        create: (request) => {
+          seen.push(`create:${request.rawInput}`)
+          return { state: 'unlocked', drafts: [] }
+        },
+        update: (request) => {
+          seen.push(`update:${request.draftId}`)
+          return { state: 'unlocked', drafts: [] }
+        },
+      }),
       draftPrepareConversion: () => ({ state: 'incomplete' }),
     })
     expect((await post('/.sage/draft/create', JSON.stringify({ rawInput: '需求' }), providers)).status).toBe(200)
@@ -421,6 +425,17 @@ describe('the unknown path end to end (US-005/119): inject unknown → reconcile
           ? { state: 'settled' as const, matterRef: 'receipt:9' }
           : { state: 'unknown' as const, code: 'custodian-query-unavailable' }
       },
+      draftCustodyPorts: draftCustodyTestPorts({
+        draftList: () => ({ state: 'unlocked', drafts: [draft] as never }),
+        reconcileCreation: ({ correlation }) => {
+          events.push(`reconcile:${correlation}`)
+          return custodianAnswer === 'receipt'
+            ? { state: 'settled' as const, matterRef: 'receipt:9' }
+            : { state: 'unknown' as const, code: 'custodian-query-unavailable' }
+        },
+        commitConversion: ({ matterRef }) => { draft = { ...draft, status: 'converted', matterRef, attempt: null }; events.push('commit') },
+        noteAttempt: ({ state }) => { draft = { ...draft, attempt: { ...(draft.attempt as object), state } }; events.push(`note:${state}`) },
+      }),
     })
 
     const converted = await (await route('/.sage/draft/convert', providers)).json() as Record<string, unknown>
@@ -442,8 +457,10 @@ describe('the unknown path end to end (US-005/119): inject unknown → reconcile
 
   it('keeps unknown as its own answer when nothing can be asked, and cancels a pending confirm', async () => {
     const providers = createUnavailableFirstService(null, {
-      draftList: () => ({ state: 'unlocked', drafts: [draftPayload({ attempt: { correlation: 'c-1', at: 't', state: 'pending' } })] as never }),
-      draftCancelAttempt: () => ({ state: 'unlocked', drafts: [draftPayload()] as never }),
+      draftCustodyPorts: draftCustodyTestPorts({
+        draftList: () => ({ state: 'unlocked', drafts: [draftPayload({ attempt: { correlation: 'c-1', at: 't', state: 'pending' } })] as never }),
+        cancel: () => ({ state: 'unlocked', drafts: [draftPayload()] as never }),
+      }),
     })
     expect(await (await route('/.sage/draft/reconcile', providers)).json()).toMatchObject({ state: 'unknown', code: 'reconcile-unavailable' })
     expect(await (await route('/.sage/draft/cancel', providers)).json()).toMatchObject({ state: 'unlocked' })

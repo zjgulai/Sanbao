@@ -10935,6 +10935,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0323",
+      "title": "ADR-0323 · L1-C 草案保管 admission 家族：四命令收口",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "第三家族 draft-custody（五步面，draft.custody 四 op，四 detail kind）。",
+          "constraints": [
+            "same five-step profile"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "reconcile 三态裁决随 detail；settled 落 commit、failed 落 note 于 dispatch。",
+          "constraints": [
+            "outcome.draftId === detail.draftId"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "convert 路留族外；commit/note 选项双职共用闭包。",
+          "constraints": [
+            "no confirmation-pipeline change"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "非 dispatched 保持诚实 unavailable/unknown；永不自 settle。",
+          "constraints": [
+            "contract has no code field"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁翻转 16/10/19 + 三族识别 + selftest 同步。",
+          "constraints": [
+            "deliberate edit"
+          ]
+        }
+      ]
     }
   ]
 }

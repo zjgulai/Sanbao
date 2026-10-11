@@ -12,6 +12,7 @@ import type { DraftStatus } from '../src/appservice/contracts.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { projectBusinessMatter } from '../src/domain/business-matter.js'
 import { createDraftStore, type DraftRecord } from '../src/main/draft-store.js'
+import { draftCustodyTestPorts } from './support/draft-custody-ports.js'
 import { createMatterCustody } from '../src/main/matter-custody.js'
 import { openBusinessMatterEventStore } from '../src/persistence/business-matter-event-store.js'
 import { resolveSagePaths, type SagePaths } from '../src/profile/paths.js'
@@ -75,20 +76,29 @@ async function harness(options: { readonly identity?: 'authorized' | 'denied' } 
 
   const providers = createUnavailableFirstService(null, {
     draftList: () => gateToStatus(drafts.list(true)),
-    draftCreate: (request) => gateToStatus(drafts.create(request.rawInput, true)),
-    draftUpdate: (request) => {
-      const gate = drafts.update(request.draftId, {
-        ...(request.fields === undefined ? {} : { fields: request.fields }),
-        ...(request.clarification === undefined ? {} : { clarification: request.clarification }),
-        ...(request.selectedEntryIds === undefined ? {} : { selectedEntryIds: request.selectedEntryIds }),
-      }, true)
-      return gate === undefined ? undefined : gateToStatus(gate)
-    },
+    // L1-C (ADR-0323): the four custody commands ride the draft-custody admission family — the
+    // same real store closures, bound to the REAL dispatch port.
+    draftCustodyPorts: draftCustodyTestPorts({
+      create: (request) => gateToStatus(drafts.create(request.rawInput, true)),
+      update: (request) => {
+        const gate = drafts.update(request.draftId, {
+          ...(request.fields === undefined ? {} : { fields: request.fields }),
+          ...(request.clarification === undefined ? {} : { clarification: request.clarification }),
+          ...(request.selectedEntryIds === undefined ? {} : { selectedEntryIds: request.selectedEntryIds }),
+        }, true)
+        return gate === undefined ? undefined : gateToStatus(gate)
+      },
+      noteAttempt: (request) => { drafts.noteAttempt(request.draftId, request.correlation, request.state) },
+      commitConversion: (request) => { drafts.commitConversion(request.draftId, request.matterRef) },
+      reconcileCreation: (request) => custody.reconcileCreation(request),
+      draftList: () => gateToStatus(drafts.list(true)),
+    }),
     draftPrepareConversion: (request) => drafts.prepareConversion(request.draftId, true),
     draftBeginAttempt: (request) => { drafts.beginAttempt(request.draftId, request.correlation) },
+    // The convert route (outside the custody family) still consumes these two directly: the
+    // settled conversion's durable receipt and the denied attempt's note.
     draftNoteAttempt: (request) => { drafts.noteAttempt(request.draftId, request.correlation, request.state) },
     draftCommitConversion: (request) => { drafts.commitConversion(request.draftId, request.matterRef) },
-    reconcileDraftCreation: (request) => custody.reconcileCreation(request),
     actionConfirmations: { store: confirmations, facts: () => ({ environmentRef: null }) },
     commandPorts: {
       ...PRODUCTION_FAIL_CLOSED_PORTS,

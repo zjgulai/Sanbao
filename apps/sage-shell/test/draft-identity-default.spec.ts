@@ -4,6 +4,7 @@ import { PRODUCTION_FAIL_CLOSED_PORTS } from '../src/appservice/composition.js'
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import type { CommandPipelinePorts } from '../src/appservice/command-contracts.js'
+import { draftCustodyTestPorts } from './support/draft-custody-ports.js'
 
 /**
  * Ticket 004 (US-008) at the route and wiring seams.
@@ -32,10 +33,14 @@ describe('the responsibility value never feeds a permission judgement (ticket 00
   it('the draft route carries no identity claim — extra keys are refused at both levels', async () => {
     const seen: unknown[] = []
     const providers = createUnavailableFirstService(null, {
-      draftUpdate: (request) => {
-        seen.push(request)
-        return { state: 'unlocked' as const, drafts: [draftRecord('张三（代填）')] }
-      },
+      // L1-C (ADR-0323): the update rides the draft-custody admission; the dispatch forwards
+      // exactly the trimmed member set to the spy.
+      draftCustodyPorts: draftCustodyTestPorts({
+        update: (request) => {
+          seen.push(request)
+          return { state: 'unlocked' as const, drafts: [draftRecord('张三（代填）')] }
+        },
+      }),
     })
     const post = (body: unknown) => handleSageServiceRequest(
       new Request('dsh-app://app/.sage/draft/update', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
@@ -69,11 +74,13 @@ describe('the responsibility value never feeds a permission judgement (ticket 00
     const service = createUnavailableFirstService(null, {
       authSnapshot: () => ({ status: 'signed-in', displayName: '林一' }),
       draftList: () => draftState,
-      draftUpdate: (request) => {
-        updates.push(request)
-        draftState = { state: 'unlocked', drafts: [draftRecord('张三（代填）')] }
-        return draftState
-      },
+      draftCustodyPorts: draftCustodyTestPorts({
+        update: (request) => {
+          updates.push(request)
+          draftState = { state: 'unlocked', drafts: [draftRecord('张三（代填）')] }
+          return draftState
+        },
+      }),
       commandPorts: ports,
     })
     const before = await (await service.readState()).json() as { service: { auth: unknown, reason: string, command: unknown }, draft: unknown }

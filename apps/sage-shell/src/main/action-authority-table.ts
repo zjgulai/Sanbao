@@ -159,4 +159,33 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'local-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // L1-C (ADR-0323): the draft-custody family — local writes over the Sage-owned draft store.
+  'draft.create': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'draft.create',
+    actionScope: 'draft.custody',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'draft.update': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'draft.update',
+    actionScope: 'draft.custody',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'draft.cancel': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'draft.cancel',
+    actionScope: 'draft.custody',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'draft.reconcile': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'draft.reconcile',
+    actionScope: 'draft.custody',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

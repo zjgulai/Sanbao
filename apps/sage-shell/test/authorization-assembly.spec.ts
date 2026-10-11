@@ -25,6 +25,7 @@ describe('action authority table (WT-02D.2A)', () => {
       'session.queue.edit', 'session.queue.remove',
       'matter.admin.archive', 'matter.admin.restore', 'matter.admin.batch', 'matter.admin.rename',
       'matter.groups.create', 'matter.groups.rename', 'matter.groups.remove', 'matter.groups.membership',
+      'draft.create', 'draft.update', 'draft.cancel', 'draft.reconcile',
     ])
     expect(ACTION_AUTHORITY_TABLE['start-attempt']).toEqual({
       requiredRoleRef: 'role:owner',
@@ -88,6 +89,17 @@ describe('action authority table (WT-02D.2A)', () => {
         requiredRoleRef: 'role:owner',
         operation,
         actionScope: 'matter.groups',
+        effectClass: 'local-write',
+        requiresDecision: false,
+      })
+    }
+    for (const operation of [
+      'draft.create', 'draft.update', 'draft.cancel', 'draft.reconcile',
+    ] as const) {
+      expect(ACTION_AUTHORITY_TABLE[operation]).toEqual({
+        requiredRoleRef: 'role:owner',
+        operation,
+        actionScope: 'draft.custody',
         effectClass: 'local-write',
         requiresDecision: false,
       })

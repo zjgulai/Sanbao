@@ -410,13 +410,17 @@
       "persistence": "durable local draft store",
       "runtimeLevel": "L4 local source record",
       "runCommand": {
-        "required": true,
+        "required": false,
         "actual": false
       },
       "unsupportedOperations": [],
       "currentAuthority": {
-        "status": "violation",
-        "mode": "direct-provider-bypass"
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
       }
     },
     {
@@ -436,13 +440,17 @@
       "persistence": "durable local draft store",
       "runtimeLevel": "L4 local source record",
       "runCommand": {
-        "required": true,
+        "required": false,
         "actual": false
       },
       "unsupportedOperations": [],
       "currentAuthority": {
-        "status": "violation",
-        "mode": "direct-provider-bypass"
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
       }
     },
     {
@@ -488,13 +496,17 @@
       "persistence": "durable draft attempt store",
       "runtimeLevel": "L4 local record plus the custodian reconciliation query",
       "runCommand": {
-        "required": true,
+        "required": false,
         "actual": false
       },
       "unsupportedOperations": [],
       "currentAuthority": {
-        "status": "violation",
-        "mode": "direct-provider-bypass"
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
       }
     },
     {
@@ -514,13 +526,17 @@
       "persistence": "durable draft attempt store",
       "runtimeLevel": "L4 local source record",
       "runCommand": {
-        "required": true,
+        "required": false,
         "actual": false
       },
       "unsupportedOperations": [],
       "currentAuthority": {
-        "status": "violation",
-        "mode": "direct-provider-bypass"
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
       }
     },
     {

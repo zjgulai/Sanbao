@@ -25,7 +25,9 @@ import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-sto
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import type { DraftCustodyAdmissionPorts } from '../appservice/draft-custody-admission.js'
 import type { MatterGovernanceAdmissionPorts } from '../appservice/matter-governance-admission.js'
+import { createDraftCustodyDispatchPort } from './draft-custody-dispatch.js'
 import { createMatterAdminDispatchPort } from './matter-admin-dispatch.js'
 import { createMatterGroupsDispatchPort } from './matter-groups-dispatch.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
@@ -756,6 +758,8 @@ function createSessionCoreProtectedEffectPorts(
   readonly prepareSessionPrompt?: SessionPrepareRunner
   /** L1-A (ADR-0320): the matter-governance family rides the same front closures. */
   readonly matterPorts: MatterGovernanceAdmissionPorts
+  /** L1-C (ADR-0323): the draft-custody family rides the same front closures. */
+  readonly draftPorts: DraftCustodyAdmissionPorts
 } {
   // The live context/session/frame reads are one closure set for every family and every step
   // (ADR-0288/0289/0320): the session re-verify, the matter re-verify and the dispatches all
@@ -1071,9 +1075,51 @@ function createSessionCoreProtectedEffectPorts(
       }
     })(),
   }
+  // L1-C (ADR-0323): the draft-custody family — same front closures; the dispatch binds the
+  // custody store. Reconcile resolves the draft's open-attempt correlation at call time (the
+  // custodian asks about the same request); a missing open attempt is 'no-open-attempt', never a
+  // settled guess.
+  const readAttemptCorrelation = (draftId: string): string | undefined => {
+    const draft = options.draftList?.()?.drafts.find((entry) => entry.draftId === draftId)
+    return draft?.attempt?.correlation
+  }
+  const draftPorts: DraftCustodyAdmissionPorts = {
+    verifyCaller: (request) => verifyCallerPort(request as never),
+    resolveActiveContext: (request) => activeContextPort(request as never),
+    matchCandidate: (request) => candidatePort(request as never),
+    ...(identityPolicyPort === undefined ? {} : { resolveIdentityPolicy: (request) => identityPolicyPort(request as never) }),
+    ...(options.draftCreate === undefined
+      || options.draftUpdate === undefined
+      || options.draftCancelAttempt === undefined
+      || options.reconcileDraftCreation === undefined
+      || options.draftCommitConversion === undefined
+      || options.draftNoteAttempt === undefined
+      ? {}
+      : {
+          dispatch: createDraftCustodyDispatchPort({
+            create: options.draftCreate,
+            update: options.draftUpdate,
+            cancel: options.draftCancelAttempt,
+            reconcile: async ({ draftId }) => {
+              const correlation = readAttemptCorrelation(draftId)
+              if (correlation === undefined) return { state: 'unknown' as const, code: 'no-open-attempt' }
+              return options.reconcileDraftCreation?.({ draftId, correlation })
+            },
+            commitConversion: options.draftCommitConversion,
+            noteAttempt: ({ draftId, state }) => {
+              const correlation = readAttemptCorrelation(draftId)
+              if (correlation !== undefined) options.draftNoteAttempt?.({ draftId, correlation, state })
+            },
+            readContext: readContextClosure,
+            readIdentitySession: readIdentitySessionClosure,
+            readFrame: readFrameClosure,
+          }),
+        }),
+  }
   return {
     ports,
     matterPorts,
+    draftPorts,
     ...(prepareSessionPrompt === undefined ? {} : { prepareSessionPrompt }),
   }
 }
@@ -1101,6 +1147,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     devicePreferencesRead: createDevicePreferencesRunner(options),
     protectedEffectPorts: sessionCoreAssembly.ports,
     matterGovernancePorts: sessionCoreAssembly.matterPorts,
+    draftCustodyPorts: sessionCoreAssembly.draftPorts,
     ...(sessionCoreAssembly.prepareSessionPrompt === undefined
       ? {}
       : { prepareSessionPrompt: sessionCoreAssembly.prepareSessionPrompt }),

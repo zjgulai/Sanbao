@@ -16,6 +16,11 @@ import { runCommand } from './command-pipeline.js'
 import type { CommandDenied, CommandPipelinePorts, CommandResult, SageActionIntentV2, SageDispatchIntent } from './command-contracts.js'
 import type { ActionConfirmationsWiring } from './action-confirmations.js'
 import {
+  admitDraftCustodyEffect,
+  type DraftCustodyAdmissionPorts,
+  type DraftCustodyAdmissionResult,
+} from './draft-custody-admission.js'
+import {
   admitMatterGovernanceEffect,
   type MatterGovernanceAdmissionPorts,
   type MatterGovernanceAdmissionResult,
@@ -67,6 +72,8 @@ export interface ServiceOptions {
   readonly protectedEffectPorts?: ProtectedEffectAdmissionPorts
   /** L1-A (ADR-0320): the matter-governance family's five-step ports. Absent = unavailable-first. */
   readonly matterGovernancePorts?: MatterGovernanceAdmissionPorts
+  /** L1-C (ADR-0323): the draft-custody family's five-step ports. Absent = unavailable-first. */
+  readonly draftCustodyPorts?: DraftCustodyAdmissionPorts
   /** T05 prepare (ADR-0290): the governed local preparation write before the first send. */
   readonly prepareSessionPrompt?: (request: { readonly matterRef: string, readonly text: string }) => Promise<
     | { readonly state: 'prepared' }
@@ -373,6 +380,25 @@ function matterGovernanceFailureCode(result: MatterGovernanceAdmissionResult): s
   return result.state === 'dispatched' ? 'protected-effect-outcome-unknown' : result.code
 }
 
+async function admitDraftCustodyProtectedEffect(
+  options: ServiceOptions,
+  operation: 'draft.create' | 'draft.update' | 'draft.cancel' | 'draft.reconcile',
+  payload: Readonly<Record<string, unknown>>,
+): Promise<DraftCustodyAdmissionResult> {
+  const correlation = options.protectedEffectCorrelation?.() ?? randomUUID()
+  return admitDraftCustodyEffect({
+    intent: {
+      family: 'draft-custody',
+      requestId: randomUUID(),
+      operation,
+      candidate: { kind: 'active-session' },
+      payload,
+    },
+    correlation,
+    ports: options.draftCustodyPorts ?? {},
+  })
+}
+
 /** Ticket 030: classify the main-observed roster once. A failed row keeps its own state and loses
  *  the base's free text — the surface receives a code it owns wording for (no paths or secrets). */
 function capabilityStatus(observation: RuntimeEffectiveObservation | undefined): CapabilityStatus {
@@ -570,12 +596,27 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async createDraft(request: { readonly rawInput: string }): Promise<Response> {
-      const gate = options.draftCreate?.(request)
-      return serviceJson(gate ?? { state: 'unavailable' as const, drafts: [] }, 200)
+      // L1-C (ADR-0323): the route maps the dispatched receipt 1:1 — the DraftStatus contract has
+      // no refusal code, so every non-dispatched path keeps its honest 'unavailable' status.
+      const admission = await admitDraftCustodyProtectedEffect(options, 'draft.create', { rawInput: request.rawInput })
+      const outcome: DraftStatus = admission.state === 'dispatched' && admission.detail.kind === 'draft-created'
+        ? admission.detail.status
+        : { state: 'unavailable', drafts: [] }
+      return serviceJson(outcome, 200)
     },
     async updateDraft(request): Promise<Response> {
-      const gate = options.draftUpdate?.(request)
-      return serviceJson(gate ?? { state: 'unavailable' as const, drafts: [] }, 200)
+      const admission = await admitDraftCustodyProtectedEffect(options, 'draft.update', {
+        draftId: request.draftId,
+        ...(request.fields === undefined ? {} : { fields: request.fields }),
+        ...(request.clarification === undefined ? {} : { clarification: request.clarification }),
+        ...(request.selectedEntryIds === undefined ? {} : { selectedEntryIds: request.selectedEntryIds }),
+      })
+      const outcome: DraftStatus = admission.state === 'dispatched'
+        && admission.detail.kind === 'draft-updated'
+        && admission.detail.draftId === request.draftId
+        ? admission.detail.status
+        : { state: 'unavailable', drafts: [] }
+      return serviceJson(outcome, 200)
     },
     async convertDraft(request: { readonly draftId: string, readonly confirmationId?: string }): Promise<Response> {
       const prepare = options.draftPrepareConversion
@@ -638,26 +679,24 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson({ state: 'prepared', draftId: request.draftId, card } satisfies DraftConfirmationOutcome, 200)
     },
     async reconcileDraft(request: { readonly draftId: string }): Promise<Response> {
-      const ask = options.reconcileDraftCreation
-      const draft = options.draftList?.().drafts.find((entry) => entry.draftId === request.draftId)
-      const correlation = draft?.attempt?.correlation
-      if (ask === undefined || correlation === undefined) {
-        // Nothing to ask or nobody to ask: the answer is unknown, and unknown never settles itself.
-        return serviceJson({ state: 'unknown', draftId: request.draftId, code: ask === undefined ? 'reconcile-unavailable' : 'no-open-attempt' } satisfies DraftReconcileOutcome, 200)
-      }
-      const answer = await ask({ draftId: request.draftId, correlation })
-      if (answer.state === 'settled') {
-        options.draftCommitConversion?.({ draftId: request.draftId, matterRef: answer.matterRef })
-        return serviceJson({ state: 'settled', draftId: request.draftId, matterRef: answer.matterRef } satisfies DraftReconcileOutcome, 200)
-      }
-      if (answer.state === 'failed') options.draftNoteAttempt?.({ draftId: request.draftId, correlation, state: 'failed' })
-      return serviceJson(answer.state === 'failed'
-        ? { state: 'failed', draftId: request.draftId, code: answer.code } satisfies DraftReconcileOutcome
-        : { state: 'unknown', draftId: request.draftId, code: answer.code } satisfies DraftReconcileOutcome, 200)
+      // The custodian's verdict (settled/failed/unknown) rides the dispatched receipt; anything
+      // short of that keeps the conservative unknown — unknown never settles itself.
+      const admission = await admitDraftCustodyProtectedEffect(options, 'draft.reconcile', { draftId: request.draftId })
+      const outcome: DraftReconcileOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'draft-reconciled'
+        && admission.detail.draftId === request.draftId
+        ? admission.detail.outcome
+        : { state: 'unknown', draftId: request.draftId, code: 'reconcile-unavailable' }
+      return serviceJson(outcome, 200)
     },
     async cancelDraftConfirm(request: { readonly draftId: string }): Promise<Response> {
-      const gate = options.draftCancelAttempt?.(request)
-      return serviceJson(gate ?? { state: 'unavailable' as const, drafts: [] }, 200)
+      const admission = await admitDraftCustodyProtectedEffect(options, 'draft.cancel', { draftId: request.draftId })
+      const outcome: DraftStatus = admission.state === 'dispatched'
+        && admission.detail.kind === 'draft-canceled'
+        && admission.detail.draftId === request.draftId
+        ? admission.detail.status
+        : { state: 'unavailable', drafts: [] }
+      return serviceJson(outcome, 200)
     },
     async dispatch(intent: SageDispatchIntent, confirmationId?: string): Promise<Response> {
       // Ticket 011: the chosen execution environment is verified per dispatch, before anything
