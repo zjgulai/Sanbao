@@ -10449,6 +10449,65 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0313",
+      "title": "ADR-0313 · T07 会话控制批：授权等待、模型排队、计划步骤与队列（S03/S05/S06/S07）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "解析扩槽与面板同提交；每槽宽容解析、面板只渲染事实。",
+          "constraints": [
+            "no silent drop"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "S03 授权等待卡 + 真实 route 应答 + protected-effect-unavailable 专用文案；写路径注册不在本批。",
+          "constraints": [
+            "exact request bodies",
+            "dedicated refusal copy"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "S05 排队卡五态 + 延迟为事实不倒数 + 核对=state 重读；自然出现验证留 pending。",
+          "constraints": [
+            "no fabricated states"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "S06 blocked 标签 + 计划 roster（阻断——不派发、零 action、逐步骤详情不装）。",
+          "constraints": [
+            "no plans action from desktop"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "S07 列表渲染 + 精确 action 体 + consumed 冻结。",
+          "constraints": [
+            "no matterRef in control bodies"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "四伞行迁 ui implementing（两 spec 证据并集）；applicationService 保持 blocked 不虚升；S04 blocker 具名改写。",
+          "constraints": [
+            "summary regenerated",
+            "no appsvc upgrade without effective writes"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "对抗评审 8 确认 + 3 批评项全修复：拒绝具名与应答重读、计划读数诚实（不可读/草稿）、回执 unknown、延迟精确、队列可编辑位与快照态、display-only 无死控件。",
+          "constraints": [
+            "each fix carries a spec case"
+          ]
+        }
+      ]
     }
   ]
 }

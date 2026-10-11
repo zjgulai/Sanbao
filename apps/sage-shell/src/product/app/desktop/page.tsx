@@ -8,7 +8,7 @@ import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, 
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
 import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
-import type { DesktopSession } from './session.js'
+import type { DesktopPlans, DesktopSession } from './session.js'
 import type { DesktopArtifacts } from './client.js'
 import { listDesktopFileCandidates, type DesktopFileCandidate } from './files.js'
 import { McpForm } from './mcp-form.js'
@@ -16,6 +16,7 @@ import { ExtensionsMarketView } from './extensions-market.js'
 import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
+import { answerDesktopApproval, editPendingInput, editQueueItem, removePendingInput, removeQueueItem, withdrawDesktopApproval, type SessionControlResult } from './session-controls.js'
 
 // Sanbao b861d04: ProductPages.tsx:31–36,73–75 and Controls.tsx:199–234.
 // Keep the research desktop's structure, not its routes, fixtures or optimistic send/clear behavior.
@@ -329,10 +330,11 @@ export function ExtensionsPage(): ReactNode {
   </section>
 }
 
-function MonitorPage({ state, session, artifacts, navigate }: {
+function MonitorPage({ state, session, artifacts, plans, navigate }: {
   readonly state: DesktopReadState
   readonly session?: DesktopSession
   readonly artifacts?: DesktopArtifacts
+  readonly plans?: DesktopPlans | null
   readonly navigate: (page: Page) => void
 }): ReactNode {
   const monitor = state.kind === 'read' ? state.monitor : undefined
@@ -343,6 +345,9 @@ function MonitorPage({ state, session, artifacts, navigate }: {
   const updated = turnProcess !== undefined && turnProcess.endedAt !== null
     ? new Date(turnProcess.endedAt).toLocaleString('zh-CN', { hour12: false })
     : null
+  // The roster's copy speaks about accepted plans — drafts are counted, never readiness-judged.
+  const acceptedPlans = plans !== undefined && plans !== null ? plans.plans.filter((plan) => plan.state === 'accepted') : []
+  const draftPlans = plans !== undefined && plans !== null ? plans.plans.length - acceptedPlans.length : 0
   return <section className="monitor-page" aria-label="任务监控">
     <h1>任务监控</h1>
     <div className="monitor-axes">
@@ -351,6 +356,26 @@ function MonitorPage({ state, session, artifacts, navigate }: {
         {axis.name}：{axis.state === 'unknown' ? `未知（${axis.reason}）` : `${axis.state}（${axis.reason}）`}
       </p>)}
     </div>
+    {plans !== undefined && plans !== null
+      ? <section className="plans-roster" aria-label="计划步骤">
+        <strong>计划步骤</strong>
+        {plans.state !== 'read'
+          ? <p className="monitor-empty">计划读取不可用——不据此断言无计划。</p>
+          : acceptedPlans.length === 0
+            ? <p className="monitor-empty">暂无已接受计划的步骤可供核验。</p>
+            : acceptedPlans.map((plan) => <div className="plan-roster" key={plan.planId}>
+              <p className="plan-roster-title">{plan.title}</p>
+              <ul>{plan.steps.map((step) => <li key={step.stepNo} data-step-readiness={step.readiness}>
+                <span>{step.stepNo}. {step.title}</span>
+                <span className="plan-step-readiness">{step.readiness === 'ready' ? '就绪' : step.readiness === 'not-ready' ? '未就绪（阻断——不派发）' : '未知（阻断——不派发）'}</span>
+                <small>{step.readinessNote}</small>
+              </li>)}</ul>
+            </div>)}
+        {plans.state === 'read' && draftPlans > 0
+          ? <p className="monitor-empty">另有 {draftPlans} 个未接受草稿计划（不判读步骤）。</p>
+          : null}
+      </section>
+      : null}
     {session === undefined || session.lastTurnEnd === null
       ? <p className="monitor-empty">尚无已结束的回合可供回顾。</p>
       : <article className="review-card" aria-label="本轮回顾">
@@ -917,6 +942,11 @@ export function DesktopPage({
   // ADR-0300: one action path for the artifact rail — the route answers, then the projection
   // is re-read; a refusal leaves the surface as-is (the card state still tells the truth).
   const runArtifactAction = (action: () => Promise<boolean>) => { void action().then(() => refreshNow()) }
+  // ADR-0313: one session-control path — the route answers, the panel shows the outcome verbatim,
+  // and every answer (recorded or refused) pulls the fresh projection so the lists reflect the
+  // authoritative fold (a consumed item vanishes even when its own edit was refused).
+  const runSessionControl = (action: () => Promise<SessionControlResult>): Promise<SessionControlResult> =>
+    action().then((result) => { refreshNow(); return result })
   const [accountRead, setAccountRead] = useState<DesktopBootstrapRead | { readonly kind: 'loading' }>({ kind: 'loading' })
   const [accountBusy, setAccountBusy] = useState(false)
   const refreshAccount = async () => {
@@ -980,6 +1010,15 @@ export function DesktopPage({
               paused={session.paused} streamBroken={session.streamBroken} messages={session.messages}
               streaming={streamingText}
               turnProcess={session.turnProcess}
+              approvals={session.approvals}
+              modelQueue={session.modelQueue}
+              pending={session.pending}
+              queue={session.queue}
+              onApprovalAnswer={(requestId, outcome) => runSessionControl(() => answerDesktopApproval(session.context.matterRef, requestId, outcome))}
+              onApprovalWithdraw={(requestId) => runSessionControl(() => withdrawDesktopApproval(session.context.matterRef, requestId))}
+              onPendingChange={(action) => runSessionControl(() => action.kind === 'edit' ? editPendingInput(action.itemId, action.text) : removePendingInput(action.itemId))}
+              onQueueChange={(action) => runSessionControl(() => action.kind === 'edit' ? editQueueItem(action.itemId, action.text) : removeQueueItem(action.itemId))}
+              onVerifyQueue={() => refreshNow()}
               {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
               onArtifactOpen={(artifactId) => runArtifactAction(() => openDesktopArtifact(artifactId))}
               onArtifactRetry={() => runArtifactAction(retryDesktopArtifact)}
@@ -999,6 +1038,7 @@ export function DesktopPage({
           : page === '运行模式'
             ? <MonitorPage state={state}
               {...(session === undefined ? {} : { session })}
+              plans={session?.plans ?? null}
               {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
               navigate={navigate} />
           : page === '工作区'

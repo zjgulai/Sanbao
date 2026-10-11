@@ -20,6 +20,16 @@ export interface DesktopSession {
   readonly turnProcess: DesktopTurnProcess
   /** ADR-0303: the host's context-pressure projection, or null when absent. */
   readonly contextUsage: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
+  /** ADR-0313 (S03): the external-authorization waits (Ticket 041), read-only display facts. */
+  readonly approvals: DesktopApprovals | null
+  /** ADR-0313 (S05): the model-queue verdict (Ticket 042) — the service's own facts. */
+  readonly modelQueue: DesktopModelQueue | null
+  /** ADR-0313 (S06): the plans roster (read-only; carries no prepare/execute entry). */
+  readonly plans: DesktopPlans | null
+  /** ADR-0313 (S07): the paused-input list (Ticket 006) — edit/remove ride existing routes. */
+  readonly pending: readonly DesktopPendingItem[]
+  /** ADR-0313 (S07): the live queue snapshot (Ticket 008) — occurrences plus their readability. */
+  readonly queue: DesktopQueue
   readonly paused: boolean
   readonly streamBroken: boolean
   readonly canSubmit: boolean
@@ -43,6 +53,67 @@ export interface DesktopTurnProcess {
       readonly new: string | null
     }[]
   }[]
+}
+
+export interface DesktopApprovalCard {
+  readonly requestId: string
+  readonly toolName: string
+  readonly reason: string | null
+  readonly withdrawable: boolean
+}
+export interface DesktopApprovals {
+  readonly state: 'read' | 'no-session' | 'unavailable'
+  readonly pending: readonly DesktopApprovalCard[]
+  readonly code: string | null
+}
+export interface DesktopModelQueueRetry {
+  readonly retryId: string
+  readonly provider: string
+  readonly failureCode: string
+  readonly attempt: number
+  readonly maxAttempts: number | null
+  readonly delayMs: number
+  readonly started: boolean
+}
+export interface DesktopModelQueue {
+  readonly state: 'read' | 'no-session' | 'unavailable'
+  readonly verdict: 'idle' | 'waiting' | 'retrying' | 'ready' | 'unknown'
+  readonly retries: readonly DesktopModelQueueRetry[]
+  readonly verifyOnly: boolean
+  readonly reason: string | null
+}
+export interface DesktopPlanStep {
+  readonly stepNo: number
+  readonly title: string
+  readonly readiness: 'ready' | 'not-ready' | 'unknown'
+  readonly readinessNote: string
+}
+export interface DesktopPlan {
+  readonly planId: string
+  readonly title: string
+  readonly state: 'draft' | 'accepted'
+  readonly steps: readonly DesktopPlanStep[]
+}
+export interface DesktopPlans {
+  readonly state: 'read' | 'unavailable'
+  readonly plans: readonly DesktopPlan[]
+}
+export interface DesktopPendingItem {
+  readonly itemId: string
+  readonly text: string
+  readonly state: 'pending' | 'dispatching' | 'submitted' | 'consumed'
+  readonly editable: boolean
+}
+export interface DesktopQueueOccurrence {
+  readonly queueItemId: string
+  readonly position: 'queued' | 'steering' | 'context'
+  readonly preview: string
+}
+/** The queue slot keeps its own readability fact: an unavailable snapshot never renders as
+ *  "no queued items" (ADR-0313 review). */
+export interface DesktopQueue {
+  readonly state: 'read' | 'unavailable'
+  readonly occurrences: readonly DesktopQueueOccurrence[]
 }
 
 export type DesktopSessionAction = { readonly kind: 'send'; readonly text: string } | { readonly kind: 'stop' | 'resume' }
@@ -136,6 +207,91 @@ function parseContextUsage(input: unknown): { readonly pressureTokens: number | 
   return { pressureTokens, contextWindow }
 }
 
+// ADR-0313: display-only tolerant parses. Malformed pieces degrade to null/[]. These are facts
+// the panels render verbatim; no panel turns absence into a claim.
+
+function parseApprovals(input: unknown): DesktopApprovals | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'no-session' && input.state !== 'unavailable')) return null
+  if (!Array.isArray(input.pending)) return null
+  const pending: DesktopApprovalCard[] = []
+  for (const card of input.pending) {
+    if (!isRecord(card) || !reference(card.requestId) || !reference(card.toolName)
+      || (card.reason !== null && card.reason !== undefined && typeof card.reason !== 'string')
+      || typeof card.withdrawable !== 'boolean') return null
+    pending.push({
+      requestId: card.requestId, toolName: card.toolName,
+      reason: typeof card.reason === 'string' ? card.reason : null, withdrawable: card.withdrawable,
+    })
+  }
+  return { state: input.state, pending, code: typeof input.code === 'string' ? input.code : null }
+}
+
+function parseModelQueue(input: unknown): DesktopModelQueue | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'no-session' && input.state !== 'unavailable')) return null
+  const verdict = input.verdict
+  if (verdict !== 'idle' && verdict !== 'waiting' && verdict !== 'retrying' && verdict !== 'ready' && verdict !== 'unknown') return null
+  if (!Array.isArray(input.retries)) return null
+  const retries: DesktopModelQueueRetry[] = []
+  for (const retry of input.retries) {
+    if (!isRecord(retry) || !reference(retry.retryId) || typeof retry.provider !== 'string' || typeof retry.failureCode !== 'string'
+      || typeof retry.attempt !== 'number' || typeof retry.delayMs !== 'number' || typeof retry.started !== 'boolean'
+      || (retry.maxAttempts !== null && retry.maxAttempts !== undefined && typeof retry.maxAttempts !== 'number')) return null
+    retries.push({
+      retryId: retry.retryId, provider: retry.provider, failureCode: retry.failureCode,
+      attempt: retry.attempt, maxAttempts: typeof retry.maxAttempts === 'number' ? retry.maxAttempts : null,
+      delayMs: retry.delayMs, started: retry.started,
+    })
+  }
+  return {
+    state: input.state, verdict, retries,
+    verifyOnly: input.verifyOnly === true,
+    reason: typeof input.reason === 'string' ? input.reason : null,
+  }
+}
+
+function parsePlans(input: unknown): DesktopPlans | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable') || !Array.isArray(input.plans)) return null
+  const plans: DesktopPlan[] = []
+  for (const plan of input.plans) {
+    if (!isRecord(plan) || !reference(plan.planId) || typeof plan.title !== 'string' || !Array.isArray(plan.steps)
+      || (plan.state !== 'draft' && plan.state !== 'accepted')) return null
+    const steps: DesktopPlanStep[] = []
+    for (const step of plan.steps) {
+      if (!isRecord(step) || typeof step.stepNo !== 'number' || typeof step.title !== 'string'
+        || (step.readiness !== 'ready' && step.readiness !== 'not-ready' && step.readiness !== 'unknown')
+        || typeof step.readinessNote !== 'string') return null
+      steps.push({ stepNo: step.stepNo, title: step.title, readiness: step.readiness, readinessNote: step.readinessNote })
+    }
+    plans.push({ planId: plan.planId, title: plan.title, state: plan.state, steps })
+  }
+  return { state: input.state, plans }
+}
+
+function parsePending(input: unknown): readonly DesktopPendingItem[] {
+  if (!Array.isArray(input)) return []
+  const items: DesktopPendingItem[] = []
+  for (const item of input) {
+    if (!isRecord(item) || !reference(item.itemId) || typeof item.text !== 'string'
+      || (item.state !== 'pending' && item.state !== 'dispatching' && item.state !== 'submitted' && item.state !== 'consumed')
+      || typeof item.editable !== 'boolean') continue
+    items.push({ itemId: item.itemId, text: item.text, state: item.state, editable: item.editable })
+  }
+  return items
+}
+
+function parseQueue(input: unknown): DesktopQueue | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (!Array.isArray(input.occurrences)) return null
+  const occurrences: DesktopQueueOccurrence[] = []
+  for (const occurrence of input.occurrences) {
+    if (!isRecord(occurrence) || !reference(occurrence.queueItemId)
+      || (occurrence.position !== 'queued' && occurrence.position !== 'steering' && occurrence.position !== 'context')
+      || typeof occurrence.preview !== 'string') continue
+    occurrences.push({ queueItemId: occurrence.queueItemId, position: occurrence.position, preview: occurrence.preview })
+  }
+  return { state: input.state, occurrences }
+}
+
 export function parseDesktopSession(input: unknown): DesktopSession | null {
   if (!isRecord(input)) return null
   const { service, activeContext: active, matter, workspaces, matterLinks, sessionChannel: channel } = input
@@ -183,6 +339,12 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
     title: matter.matter.goal, messages, execution: channel.execution, lastTurnEnd: channel.lastTurnEnd,
     turnProcess: parseTurnProcess(channel.turnProcess),
     contextUsage: parseContextUsage(channel.contextUsage),
+    approvals: parseApprovals(input.sessionApprovals),
+    modelQueue: parseModelQueue(input.modelQueue),
+    plans: parsePlans(input.plans),
+    pending: parsePending(channel.pending),
+    // A malformed queue slot degrades to unavailable — absence must not read as "empty queue".
+    queue: parseQueue(channel.queue) ?? { state: 'unavailable', occurrences: [] },
     paused: channel.paused, streamBroken: channel.streamBroken,
     canSubmit: matter.actionability === 'allowed' && matter.authorizationState === 'authorized'
       && matter.compatibilityOutcome === 'equivalent' && matter.availabilityState === 'available' && !channel.streamBroken,

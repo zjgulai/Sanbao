@@ -386,6 +386,226 @@ describe('default desktop session submission lifecycle', () => {
     expect(container.textContent).toContain('管理本机已安装的插件、技能、连接器和智能体。')
   })
 
+  it('renders the approval wait card and posts the real answer with honest refusals (ADR-0313 S03)', async () => {
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/approval-answer'
+      ? Response.json({ state: 'refused', code: 'protected-effect-unavailable' })
+      : url === '/.sage/session/approval-withdraw'
+        ? Response.json({ state: 'recorded', receipt: { receiptId: 'r1', requestId: 'approval:1', outcome: 'withdrawn', at: '2026-10-11T00:00:00Z' } })
+        : ack())
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withApprovals = classifyDesktopState({
+      ...payload,
+      sessionApprovals: {
+        state: 'read', code: null, at: null, lapsed: [], receipts: [],
+        pending: [{ requestId: 'approval:1', toolName: 'run_shell', callId: null, reason: '需要读取工作区', withdrawable: true, raisedAt: '2026-10-11T00:00:00Z' }],
+      },
+    })
+    const { container } = await mount(async () => withApprovals)
+    expect(container.querySelector('.approvals-section')?.textContent).toContain('run_shell')
+    expect(container.textContent).toContain('需要读取工作区')
+    await click(control(container, '允许一次 run_shell'))
+    const answer = fetcher.mock.calls.find(([url]) => url === '/.sage/session/approval-answer')
+    expect(JSON.parse(String(answer?.[1]?.body))).toEqual({ matterRef: 'matter:one', requestId: 'approval:1', outcome: 'allowed-once' })
+    expect(container.textContent).toContain('授权应答尚未接通')
+    await click(control(container, '撤回等待 run_shell'))
+    const withdraw = fetcher.mock.calls.find(([url]) => url === '/.sage/session/approval-withdraw')
+    expect(JSON.parse(String(withdraw?.[1]?.body))).toEqual({ matterRef: 'matter:one', requestId: 'approval:1' })
+    expect(container.textContent).toContain('已撤回等待')
+  })
+
+  it('shows the model-queue card with the service facts and a verify reread (ADR-0313 S05)', async () => {
+    const payload = desktopSessionPayload()
+    const withQueue = classifyDesktopState({
+      ...payload,
+      modelQueue: {
+        state: 'read', verdict: 'retrying', verifyOnly: false, reason: null, at: null,
+        retries: [{ retryId: 'retry:1', turn: 1, attempt: 2, maxAttempts: 3, delayMs: 5000, provider: 'provider:local', failureCode: 'rate-limited', started: false }],
+      },
+    })
+    const { container } = await mount(async () => withQueue)
+    const card = container.querySelector('.model-queue-card')
+    expect(card?.textContent).toContain('正在重试')
+    expect(card?.textContent).toContain('rate-limited')
+    expect(card?.textContent).toContain('服务计划 5s 后重试')
+
+    const unknown = classifyDesktopState({
+      ...payload,
+      modelQueue: { state: 'read', verdict: 'unknown', retries: [], verifyOnly: true, reason: 'timeout', at: null },
+    })
+    const read = vi.fn(async () => unknown)
+    const second = await mount(read)
+    const calls = read.mock.calls.length
+    await click(control(second.container, '核对排队状态'))
+    expect(read.mock.calls.length).toBeGreaterThan(calls)
+  })
+
+  it('lists pending inputs and queue occurrences with edit/remove on the real routes (ADR-0313 S07)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ state: 'ok' }))
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withLists = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        pending: [{ itemId: 'pending:1', text: '补充说明', state: 'pending', note: null, editable: true }],
+        queue: { state: 'read', occurrences: [{ queueItemId: 'queue:1', position: 'queued', requestId: null, preview: '排队消息' }] },
+      },
+    })
+    const { container } = await mount(async () => withLists)
+    expect(container.querySelector('[aria-label="待继续输入"]')?.textContent).toContain('补充说明')
+    expect(container.querySelector('[aria-label="队列"]')?.textContent).toContain('排队消息')
+    await click(control(container, '编辑项 补充说明'))
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="编辑 补充说明"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '改后的说明')
+    await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await click(control(container, '保存修改'))
+    const editCall = fetcher.mock.calls.find(([url]) => url === '/.sage/session/pending')
+    expect(JSON.parse(String(editCall?.[1]?.body))).toEqual({ action: 'edit', itemId: 'pending:1', text: '改后的说明' })
+    await click(control(container, '移除项 排队消息'))
+    const removeCall = fetcher.mock.calls.find(([url]) => url === '/.sage/session/queue')
+    expect(JSON.parse(String(removeCall?.[1]?.body))).toEqual({ action: 'remove', itemId: 'queue:1' })
+  })
+
+  it('renders the plans roster with blocking readiness labels (ADR-0313 S06)', async () => {
+    const payload = desktopSessionPayload()
+    const withPlans = classifyDesktopState({
+      ...payload,
+      plans: {
+        state: 'read', lastStepRun: null,
+        plans: [{
+          planId: 'plan:1', matterRef: 'matter:one', title: '三步计划', state: 'accepted', createdAt: '2026-10-11T00:00:00Z',
+          steps: [
+            { stepNo: 1, title: '采集', readiness: 'ready', readinessNote: '素材已备' },
+            { stepNo: 2, title: '整理', readiness: 'not-ready', readinessNote: '依赖第 1 步产物' },
+            { stepNo: 3, title: '发布', readiness: 'unknown', readinessNote: '权限未核验' },
+          ],
+        }],
+      },
+    })
+    const { container } = await mount(async () => withPlans)
+    await click(control(container, '运行模式'))
+    const roster = container.querySelector('[aria-label="计划步骤"]')
+    expect(roster?.textContent).toContain('三步计划')
+    expect(roster?.textContent).toContain('就绪')
+    expect(roster?.textContent).toContain('未就绪（阻断——不派发）')
+    expect(roster?.textContent).toContain('未知（阻断——不派发）')
+    expect(roster?.textContent).toContain('依赖第 1 步产物')
+  })
+
+  it('names every control refusal and re-reads the fold even when the service refuses (ADR-0313 review)', async () => {
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/pending'
+      ? Response.json({ state: 'refused', code: 'protected-effect-unavailable' })
+      : url === '/.sage/session/queue'
+        ? Response.json({ state: 'refused', code: 'queue-item-not-found' })
+        : ack())
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withLists = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        pending: [{ itemId: 'pending:1', text: '补充说明', state: 'pending', note: null, editable: true }],
+        queue: { state: 'read', occurrences: [{ queueItemId: 'queue:1', position: 'queued', requestId: null, preview: '排队消息' }] },
+      },
+    })
+    const read = vi.fn(async () => withLists)
+    const { container } = await mount(read)
+    const reads = read.mock.calls.length
+    await click(control(container, '编辑项 补充说明'))
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="编辑 补充说明"]')!
+    // A whitespace-only save is refused locally: nothing is posted and the editor stays open.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '   ')
+    await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await click(control(container, '保存修改'))
+    expect(container.textContent).toContain('未提交（内容为空）。')
+    expect(fetcher.mock.calls.some(([url]) => url === '/.sage/session/pending')).toBe(false)
+    expect(container.querySelector('input[aria-label="编辑 补充说明"]')).not.toBeNull()
+    // A real edit refused by the service is named, the editor stays open, and the fold is re-read.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '改后的说明')
+    await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await click(control(container, '保存修改'))
+    expect(container.textContent).toContain('会话控制尚未接通（接线完成前不会记录任何改动）。')
+    expect(container.querySelector('input[aria-label="编辑 补充说明"]')).not.toBeNull()
+    const readsAfterEdit = read.mock.calls.length
+    expect(readsAfterEdit).toBeGreaterThan(reads)
+    await click(control(container, '移除项 排队消息'))
+    expect(container.textContent).toContain('这一项已开始处理（不在队列里了）——以服务快照为准。')
+    expect(read.mock.calls.length).toBeGreaterThan(readsAfterEdit)
+  })
+
+  it('keeps the plans roster honest: unavailable reads are named, draft plans are counted not judged (ADR-0313 review)', async () => {
+    const payload = desktopSessionPayload()
+    const unavailable = classifyDesktopState({ ...payload, plans: { state: 'unavailable', lastStepRun: null, plans: [] } })
+    const first = await mount(async () => unavailable)
+    await click(control(first.container, '运行模式'))
+    const roster = first.container.querySelector('[aria-label="计划步骤"]')
+    expect(roster?.textContent).toContain('计划读取不可用——不据此断言无计划。')
+    expect(roster?.textContent).not.toContain('暂无已接受计划')
+    const withDrafts = classifyDesktopState({
+      ...payload,
+      plans: {
+        state: 'read', lastStepRun: null,
+        plans: [
+          { planId: 'plan:accepted', matterRef: 'matter:one', title: '已接受计划', state: 'accepted', createdAt: '2026-10-11T00:00:00Z',
+            steps: [{ stepNo: 1, title: '采集', readiness: 'ready', readinessNote: '素材已备' }] },
+          { planId: 'plan:draft', matterRef: 'matter:one', title: '草稿计划', state: 'draft', createdAt: '2026-10-11T00:00:00Z',
+            steps: [{ stepNo: 1, title: '未定步骤', readiness: 'ready', readinessNote: '不应判读' }] },
+        ],
+      },
+    })
+    const second = await mount(async () => withDrafts)
+    await click(control(second.container, '运行模式'))
+    const roster2 = second.container.querySelector('[aria-label="计划步骤"]')
+    expect(roster2?.textContent).toContain('已接受计划')
+    expect(roster2?.textContent).not.toContain('未定步骤')
+    expect(roster2?.textContent).toContain('另有 1 个未接受草稿计划（不判读步骤）。')
+  })
+
+  it('echoes an indeterminate approval receipt as unknown, never as a recorded decision (ADR-0313 review)', async () => {
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/approval-answer'
+      ? Response.json({ state: 'recorded', receipt: { receiptId: 'r2', requestId: 'approval:2', outcome: 'allowed-once', state: 'unknown', at: '2026-10-11T00:00:00Z' } })
+      : ack())
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withApprovals = classifyDesktopState({
+      ...payload,
+      sessionApprovals: {
+        state: 'read', code: null, at: null, lapsed: [], receipts: [],
+        pending: [{ requestId: 'approval:2', toolName: 'run_shell', callId: null, reason: null, withdrawable: false, raisedAt: '2026-10-11T00:00:00Z' }],
+      },
+    })
+    const { container } = await mount(async () => withApprovals)
+    await click(control(container, '允许一次 run_shell'))
+    expect(container.textContent).toContain('结果未知（已记录，待核对，不自动重试）。')
+    expect(container.textContent).not.toContain('已提交并等待服务记录。')
+  })
+
+  it('offers queue editing only for the queued position and names an unavailable snapshot (ADR-0313 review)', async () => {
+    const payload = desktopSessionPayload()
+    const withMixed = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        queue: { state: 'read', occurrences: [
+          { queueItemId: 'queue:1', position: 'queued', requestId: null, preview: '排队消息' },
+          { queueItemId: 'queue:2', position: 'steering', requestId: null, preview: '插队消息' },
+        ] },
+      },
+    })
+    const first = await mount(async () => withMixed)
+    expect(first.container.querySelector('button[aria-label="编辑项 插队消息"]')).toBeNull()
+    expect(first.container.querySelector('button[aria-label="移除项 插队消息"]')).toBeNull()
+    expect(first.container.textContent).toContain('已进入处理，不可修改——以服务快照为准。')
+    expect(first.container.querySelector('button[aria-label="编辑项 排队消息"]')).not.toBeNull()
+    const unavailableQueue = classifyDesktopState({
+      ...payload,
+      sessionChannel: { ...payload.sessionChannel, queue: { state: 'unavailable', occurrences: [] } },
+    })
+    const second = await mount(async () => unavailableQueue)
+    expect(second.container.textContent).toContain('队列快照不可用——以服务恢复后为准。')
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

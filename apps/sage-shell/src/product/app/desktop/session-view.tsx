@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { MarkdownText } from '../markdown.js'
 import type { DesktopArtifacts } from './client.js'
-import type { DesktopTurnProcess } from './session.js'
+import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopTurnProcess } from './session.js'
+import type { SessionControlResult } from './session-controls.js'
 
 export interface DesktopSessionViewProps {
   readonly title: string
@@ -15,6 +16,16 @@ export interface DesktopSessionViewProps {
   readonly streaming?: string | null
   /** ADR-0301: the last turn's process facts (footer + live file activity). */
   readonly turnProcess?: DesktopTurnProcess
+  /** ADR-0313: the session-control surfaces (S03/S05/S06/S07). */
+  readonly approvals?: DesktopApprovals | null
+  readonly modelQueue?: DesktopModelQueue | null
+  readonly pending?: readonly DesktopPendingItem[]
+  readonly queue?: DesktopQueue
+  readonly onApprovalAnswer?: (requestId: string, outcome: 'allowed-once' | 'rejected') => Promise<SessionControlResult>
+  readonly onApprovalWithdraw?: (requestId: string) => Promise<SessionControlResult>
+  readonly onPendingChange?: (action: { readonly kind: 'edit', readonly itemId: string, readonly text: string } | { readonly kind: 'remove', readonly itemId: string }) => Promise<SessionControlResult>
+  readonly onQueueChange?: (action: { readonly kind: 'edit', readonly itemId: string, readonly text: string } | { readonly kind: 'remove', readonly itemId: string }) => Promise<SessionControlResult>
+  readonly onVerifyQueue?: () => void
   /** ADR-0300: the artifact cards and the one side-preview state (absent = slot omitted). */
   readonly artifacts?: DesktopArtifacts
   readonly onArtifactOpen?: (artifactId: string) => void
@@ -30,6 +41,12 @@ function formatDuration(ms: number): string {
   const minutes = Math.floor(ms / 60_000)
   const seconds = Math.round((ms % 60_000) / 1000)
   return `${minutes}m${seconds}s`
+}
+
+// The service's scheduled delay is a fact: only whole seconds collapse, everything else keeps
+// its exact value (500ms is 0.5s — never rounded to 1s, never to 0s).
+function formatDelayMs(ms: number): string {
+  return ms % 1000 === 0 ? `${ms / 1000}s` : `${(ms / 1000).toFixed(1)}s`
 }
 
 const TOOL_VERB: Record<string, string> = { write: '写入', edit: '编辑', apply_patch: '编辑' }
@@ -71,7 +88,8 @@ export function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
   const label = lastTurnEnd === 'completed' ? '已完成'
     : lastTurnEnd === 'error' ? '回合失败'
       : lastTurnEnd === 'aborted' ? '已停止'
-        : '本轮已结束'
+        : lastTurnEnd === 'blocked' ? '被阻断结束'
+          : '本轮已结束'
   const meta: string[] = []
   if (turnProcess.durationMs !== null && lastTurnEnd !== 'error' && lastTurnEnd !== 'aborted') {
     meta.push(`耗时 ${formatDuration(turnProcess.durationMs)}`)
@@ -180,9 +198,148 @@ function ArtifactRail({ artifacts, onArtifactOpen, onArtifactRetry, onArtifactCl
 }
 
 // Sanbao src/pages/SessionPage.tsx:78–86: transcript structure only, without observation-driven content.
+/** ADR-0313 (S03): the external-authorization wait cards — an answer is never approval-by-UI:
+ *  the button posts the real action and echoes the service's receipt verbatim — a recorded but
+ *  unconfirmed receipt ('unknown') is named as such, never as a confirmed decision. A button
+ *  exists only when its own handler is wired (a display-only consumer gets no dead controls). */
+function ApprovalsSection({ approvals, onAnswer, onWithdraw }: {
+  readonly approvals: DesktopApprovals
+  readonly onAnswer?: (requestId: string, outcome: 'allowed-once' | 'rejected') => Promise<SessionControlResult>
+  readonly onWithdraw?: (requestId: string) => Promise<SessionControlResult>
+}): ReactNode {
+  const [note, setNote] = useState('')
+  if (approvals.state !== 'read' || approvals.pending.length === 0) return null
+  const run = (action: () => Promise<SessionControlResult>, recorded: string) => {
+    void action().then((result) => {
+      setNote(!result.ok
+        ? result.code === 'protected-effect-unavailable'
+          ? '授权应答尚未接通（接线完成前不会记录任何决定）。'
+          : `未受理（${result.code ?? 'unknown'}）。`
+        : result.receiptState === 'unknown'
+          ? '结果未知（已记录，待核对，不自动重试）。'
+          : recorded)
+    })
+  }
+  return <section className="approvals-section" aria-label="外部授权等待">
+    <strong>等待授权的操作（{approvals.pending.length}）</strong>
+    {approvals.pending.map((card) => <div className="approval-card" key={card.requestId}>
+      <div className="approval-card-head"><span className="approval-tool">{card.toolName}</span></div>
+      {card.reason !== null ? <p className="approval-reason">{card.reason}</p> : null}
+      <div className="approval-actions">
+        {onAnswer !== undefined
+          ? <>
+            <button type="button" className="text-button" aria-label={`允许一次 ${card.toolName}`}
+              onClick={() => run(() => onAnswer(card.requestId, 'allowed-once'), '已提交并等待服务记录。')}>允许一次</button>
+            <button type="button" className="text-button" aria-label={`拒绝 ${card.toolName}`}
+              onClick={() => run(() => onAnswer(card.requestId, 'rejected'), '已提交并等待服务记录。')}>拒绝</button>
+          </>
+          : null}
+        {card.withdrawable && onWithdraw !== undefined
+          ? <button type="button" className="text-button" aria-label={`撤回等待 ${card.toolName}`}
+            onClick={() => run(() => onWithdraw(card.requestId), '已撤回等待。')}>撤回等待</button>
+          : null}
+      </div>
+    </div>)}
+    {note !== '' ? <p className="approval-note" role="status">{note}</p> : null}
+  </section>
+}
+
+/** ADR-0313 (S05): the model-queue verdict card — the service's own facts; retry rows display the
+ *  service's scheduled delay as a fact (never counted down by the UI). */
+function ModelQueueCard({ queue, onVerify }: {
+  readonly queue: DesktopModelQueue
+  readonly onVerify?: () => void
+}): ReactNode {
+  if (queue.state !== 'read' || queue.verdict === 'idle') return null
+  const label = { waiting: '等待模型就绪', retrying: '正在重试', ready: '模型已就绪', unknown: '排队状态未核验' }[queue.verdict as 'waiting' | 'retrying' | 'ready' | 'unknown']
+  return <section className="model-queue-card" aria-label="模型排队" data-queue-verdict={queue.verdict}>
+    <strong>{label}</strong>
+    {queue.retries.map((retry) => <p className="queue-retry" key={retry.retryId}>
+      {retry.provider} · 第 {retry.attempt}{retry.maxAttempts === null ? '' : `/${retry.maxAttempts}`} 次 · {retry.failureCode}
+      {retry.started ? '（已重启）' : `（服务计划 ${formatDelayMs(retry.delayMs)} 后重试）`}
+    </p>)}
+    {queue.reason !== null ? <p className="queue-reason">{queue.reason}</p> : null}
+    {queue.verifyOnly || queue.verdict === 'unknown'
+      ? <button type="button" className="text-button" aria-label="核对排队状态" onClick={() => onVerify?.()}>核对</button>
+      : null}
+  </section>
+}
+
+// Every control outcome is named (the legacy queue wording, kept): a refusal is never silent and
+// the editor stays open so the draft is not lost.
+function controlItemNote(result: SessionControlResult, kind: 'edit' | 'remove'): string {
+  if (result.ok) return kind === 'edit'
+    ? '已提交修改（以权威快照为准，刷新后可见）。'
+    : '已提交移除（若已开始处理则改不动——以快照为准）。'
+  if (result.code === 'protected-effect-unavailable') return '会话控制尚未接通（接线完成前不会记录任何改动）。'
+  if (result.code === 'queue-item-not-found') return '这一项已开始处理（不在队列里了）——以服务快照为准。'
+  if (result.code === 'queue-no-session') return '还没有会话：没有队列项可改。'
+  if (result.code === 'queue-edit-invalid') return '修改内容为空或超长：没有提交。'
+  return `未受理（${result.code ?? 'unknown'}）。`
+}
+
+/** ADR-0313 (S07): one editable item list shared by the pending inputs and the queue occurrences.
+ *  Edit is inline (draft swap); remove is explicit — both ride the existing compliant routes, and
+ *  every outcome is named in the list's own note. Editing is offered only where the list's facts
+ *  allow it (pending: the item's own editable; queue: the queued position only), and only when a
+ *  handler is wired — never a dead control. */
+function ControlItemList({ label, items, onEdit, onRemove }: {
+  readonly label: string
+  readonly items: readonly { readonly id: string, readonly text: string, readonly badge: string, readonly editable: boolean, readonly lockNote?: string }[]
+  readonly onEdit?: (itemId: string, text: string) => Promise<SessionControlResult>
+  readonly onRemove?: (itemId: string) => Promise<SessionControlResult>
+}): ReactNode {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [note, setNote] = useState('')
+  if (items.length === 0) return null
+  const save = (itemId: string) => {
+    if (onEdit === undefined) return
+    const text = draft.trim()
+    if (text === '') { setNote('未提交（内容为空）。'); return }
+    void onEdit(itemId, text).then((result) => {
+      setNote(controlItemNote(result, 'edit'))
+      if (result.ok) setEditingId(null)
+    })
+  }
+  const remove = (itemId: string) => {
+    if (onRemove === undefined) return
+    void onRemove(itemId).then((result) => setNote(controlItemNote(result, 'remove')))
+  }
+  return <div className="control-list" aria-label={label}>
+    <strong>{label}（{items.length}）</strong>
+    <ul>{items.map((item) => <li key={item.id}>
+      {editingId === item.id
+        ? <>
+          <input aria-label={`编辑 ${item.text}`} value={draft} onChange={(event) => setDraft(event.target.value)} />
+          <button type="button" className="text-button" aria-label="保存修改" onClick={() => save(item.id)}>保存</button>
+          <button type="button" className="text-button" aria-label="取消编辑" onClick={() => setEditingId(null)}>取消</button>
+        </>
+        : <>
+          <span className="control-item-text">{item.text}</span>
+          <span className="control-item-badge">{item.badge}</span>
+          {item.editable && onEdit !== undefined
+            ? <button type="button" className="text-button" aria-label={`编辑项 ${item.text}`}
+              onClick={() => { setEditingId(item.id); setDraft(item.text) }}>编辑</button>
+            : null}
+          {item.editable && onRemove !== undefined
+            ? <button type="button" className="text-button" aria-label={`移除项 ${item.text}`}
+              onClick={() => remove(item.id)}>移除</button>
+            : null}
+          {!item.editable && item.lockNote !== undefined
+            ? <small className="control-item-lock">{item.lockNote}</small>
+            : null}
+        </>}
+    </li>)}</ul>
+    {note !== '' ? <p className="control-note" role="status">{note}</p> : null}
+  </div>
+}
+
 export function DesktopSessionView({
   title, execution, lastTurnEnd, paused, streamBroken, messages, streaming = null,
   turnProcess, artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
+  approvals = null, modelQueue = null, pending = [], queue = { state: 'read', occurrences: [] },
+  onApprovalAnswer, onApprovalWithdraw, onPendingChange, onQueueChange, onVerifyQueue,
 }: DesktopSessionViewProps): ReactNode {
   // ADR-0309: the side-panel entry (OBS: the button is visible on the first-run page; its click
   // path was not observed) — it toggles the artifact rail locally. No provider is involved.
@@ -220,6 +377,14 @@ export function DesktopSessionView({
     </header>
     <div className={`session-layout${artifacts !== undefined && (artifacts.preview.state === 'opening' || artifacts.preview.state === 'ready') ? ' preview-open' : ''}`}>
       <div className="conversation">
+        {approvals !== null
+          ? <ApprovalsSection approvals={approvals}
+            {...(onApprovalAnswer === undefined ? {} : { onAnswer: onApprovalAnswer })}
+            {...(onApprovalWithdraw === undefined ? {} : { onWithdraw: onApprovalWithdraw })} />
+          : null}
+        {modelQueue !== null
+          ? <ModelQueueCard queue={modelQueue} {...(onVerifyQueue === undefined ? {} : { onVerify: onVerifyQueue })} />
+          : null}
         <div className="message-scroll" role="region" aria-label="会话消息" tabIndex={0} ref={scroller}>
           {messages.length === 0 ? <p className="session-empty">当前会话尚无可读消息</p>
             : messages.map((message, index) => message.role === 'user'
@@ -239,6 +404,32 @@ export function DesktopSessionView({
             ? <TurnProcessFooter lastTurnEnd={lastTurnEnd} turnProcess={turnProcess} />
             : null}
         </div>
+        <ControlItemList label="待继续输入"
+          items={pending.map((item) => ({
+            id: item.itemId, text: item.text,
+            badge: { pending: '待继续', dispatching: '派发中', submitted: '已提交', consumed: '已消费' }[item.state],
+            editable: item.editable,
+          }))}
+          {...(onPendingChange === undefined ? {} : {
+            onEdit: (itemId: string, text: string) => onPendingChange({ kind: 'edit', itemId, text }),
+            onRemove: (itemId: string) => onPendingChange({ kind: 'remove', itemId }),
+          })}
+        />
+        <ControlItemList label="队列"
+          items={queue.occurrences.map((occurrence) => ({
+            id: occurrence.queueItemId, text: occurrence.preview,
+            badge: { queued: '排队', steering: '插队', context: '上下文' }[occurrence.position],
+            editable: occurrence.position === 'queued',
+            ...(occurrence.position === 'queued' ? {} : { lockNote: '已进入处理，不可修改——以服务快照为准。' }),
+          }))}
+          {...(onQueueChange === undefined ? {} : {
+            onEdit: (itemId: string, text: string) => onQueueChange({ kind: 'edit', itemId, text }),
+            onRemove: (itemId: string) => onQueueChange({ kind: 'remove', itemId }),
+          })}
+        />
+        {queue.state === 'unavailable'
+          ? <p className="control-note" role="status">队列快照不可用——以服务恢复后为准。</p>
+          : null}
       </div>
       {railVisible
         ? <ArtifactRail

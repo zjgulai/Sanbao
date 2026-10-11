@@ -211,6 +211,28 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
 /* ADR-0306: the extension-management page and the add-custom-MCP form. */
+/* ADR-0313: the session-control surfaces (S03/S05/S07) and the plans roster (S06). */
+.sage-desktop .approvals-section { display: flex; flex-direction: column; gap: 8px; margin: 0 30px 14px; padding: 12px 14px; border: 1px solid var(--sage-warning); border-radius: 10px; }
+.sage-desktop .approval-card { display: flex; flex-direction: column; gap: 6px; }
+.sage-desktop .approval-tool { font-size: 12px; color: var(--sage-ink); }
+.sage-desktop .approval-reason { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .approval-actions { display: flex; gap: 10px; }
+.sage-desktop .approval-note { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .model-queue-card { display: flex; flex-direction: column; gap: 6px; margin: 0 30px 14px; padding: 12px 14px; border: 1px solid var(--sage-border); border-radius: 10px; font-size: 12px; color: var(--sage-ink); }
+.sage-desktop .queue-retry, .sage-desktop .queue-reason { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .control-list { display: flex; flex-direction: column; gap: 6px; margin: 0 30px 12px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .control-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sage-desktop .control-list li { display: flex; align-items: center; gap: 8px; }
+.sage-desktop .control-item-text { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--sage-ink); }
+.sage-desktop .control-item-badge { padding: 1px 8px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 11px; }
+.sage-desktop .control-item-lock { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .control-note { margin: 2px 0 0; font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .plans-roster { display: flex; flex-direction: column; gap: 10px; }
+.sage-desktop .plan-roster { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--sage-border); border-radius: 9px; }
+.sage-desktop .plan-roster-title { margin: 0; font-size: 13px; color: var(--sage-ink); }
+.sage-desktop .plans-roster ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.sage-desktop .plans-roster li { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .plan-step-readiness { color: var(--sage-ink); }
 /* ADR-0312: the settings leaf region (Ticket 046 machine rows). */
 .sage-desktop .settings-leaves { margin-top: 18px; }
 .sage-desktop .settings-leaves h3 { margin: 0 0 8px; font-size: 13px; }

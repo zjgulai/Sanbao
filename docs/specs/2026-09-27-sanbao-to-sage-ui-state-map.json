@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 98,
-        "pending": 100,
+        "implementing": 102,
+        "pending": 96,
         "verified": 8
       },
       "applicationService": {
@@ -6165,8 +6165,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6187,7 +6198,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——授权等待卡消费 sessionApprovals 投影，允许一次／拒绝／撤回 post 真实 protected-effect route（body 精确）且每个拒绝具名（protected-effect-unavailable 专用文案、receipt 逐字回显、unknown 记结果未知）；写路径生效注册为独立批次（具名推迟）——lapsed/排队态仅自然出现验证"
         ]
       }
     },
@@ -6252,7 +6263,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开；原生计划工具卡在壳内无事实源——迁移即伪造（ADR-0313 D5 具名推迟）；plans admission 重做批独立登记；就绪前保持 pending"
         ]
       }
     },
@@ -6295,8 +6306,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6317,7 +6339,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——五态判定卡只渲染服务事实（计划延迟精确显示不倒数、核对=权威重读、unknown 具名）；waiting/retrying/ready 仅自然出现验证"
         ]
       }
     },
@@ -6360,8 +6382,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6382,7 +6415,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——blocked 回合标签 + 已接受计划 roster（就绪/未就绪（阻断——不派发）/未知、零 action、草稿计数不判读、读取不可用具名不冒称无计划）；blocked/步骤运行态仅自然出现验证"
         ]
       }
     },
@@ -6425,8 +6458,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6447,7 +6491,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——待继续/队列列表 post 精确 {action,itemId[,text]}，每个结果具名（受理与 protected-effect-unavailable/queue-item-not-found/queue-edit-invalid 等拒绝），每次应答后重读权威面；queued 以外位置不提供内联编辑；consumed/竞态仅自然出现验证"
         ]
       }
     },

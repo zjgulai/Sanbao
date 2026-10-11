@@ -117,6 +117,37 @@ describe('desktop session reads source projections instead of prototype observat
     expect(node.querySelector('.artifact-rail')).toBeNull()
   })
 
+  it('labels a blocked turn end as 被阻断结束 (ADR-0313 S06)', () => {
+    const node = renderSession({
+      execution: 'idle', lastTurnEnd: 'blocked',
+      turnProcess: { durationMs: null, endedAt: null, iterations: null, fileWrites: [] },
+    })
+    expect(node.querySelector('.turn-process-label')?.textContent).toContain('被阻断结束')
+  })
+
+  it('renders approval waits for a display-only consumer without dead controls (ADR-0313 review)', () => {
+    const node = renderSession({
+      approvals: { state: 'read', code: null, pending: [{ requestId: 'approval:1', toolName: 'run_shell', reason: null, withdrawable: true }] },
+    })
+    const section = node.querySelector('.approvals-section')
+    expect(section).not.toBeNull()
+    expect(section?.textContent).toContain('run_shell')
+    expect(section?.querySelector('button')).toBeNull()
+  })
+
+  it('keeps the service-scheduled retry delay exact (500ms is 0.5s, never rounded) (ADR-0313 review)', () => {
+    const node = renderSession({
+      modelQueue: { state: 'read', verdict: 'retrying', verifyOnly: false, reason: null,
+        retries: [{ retryId: 'retry:1', provider: 'provider:local', failureCode: 'rate-limited', attempt: 2, maxAttempts: 3, delayMs: 500, started: false }] },
+    })
+    expect(node.querySelector('.model-queue-card')?.textContent).toContain('服务计划 0.5s 后重试')
+    const half = renderSession({
+      modelQueue: { state: 'read', verdict: 'retrying', verifyOnly: false, reason: null,
+        retries: [{ retryId: 'retry:2', provider: 'provider:local', failureCode: 'rate-limited', attempt: 2, maxAttempts: null, delayMs: 1500, started: false }] },
+    })
+    expect(half.querySelector('.model-queue-card')?.textContent).toContain('服务计划 1.5s 后重试')
+  })
+
   it('does not synthesize an answer or an outgoing prompt for an empty transcript', () => {
     const node = renderSession({ messages: [], execution: 'idle' })
     expect(node.querySelector('.assistant-message')).toBeNull()
