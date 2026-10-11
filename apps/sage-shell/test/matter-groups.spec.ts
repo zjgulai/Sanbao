@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
+import { createMatterGroupsDispatchPort } from '../src/main/matter-groups-dispatch.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createMatterGroups } from '../src/main/matter-groups.js'
 import { createMatterList, type MatterListDraftFact } from '../src/main/matter-list.js'
@@ -164,22 +165,39 @@ describe('the task-group route (ticket 049)', () => {
 
   it('parses exactly, forwards the four named acts, and keeps an unwired provider honest', async () => {
     const seen: unknown[] = []
+    // L1-B (ADR-0321): the four commands ride the governance family — front stubs allowed, and
+    // the REAL groups dispatch port forwards the trimmed payloads to the spies.
     const providers = createUnavailableFirstService(null, {
-      matterGroupsCreate: (request) => {
-        seen.push({ create: request })
-        return { state: 'created', status: statusFixture }
-      },
-      matterGroupsRename: (request) => {
-        seen.push({ rename: request })
-        return { state: 'renamed', status: statusFixture }
-      },
-      matterGroupsRemove: (request) => {
-        seen.push({ remove: request })
-        return { state: 'removed', status: statusFixture }
-      },
-      matterGroupsAssign: (request) => {
-        seen.push({ assign: request })
-        return { state: 'batch', status: statusFixture }
+      matterGovernancePorts: {
+        verifyCaller: async () => ({ state: 'allowed', value: { bindingRef: 'c-049' } }),
+        resolveActiveContext: async () => ({
+          state: 'allowed',
+          value: {
+            scope: 'request',
+            callerBindingRef: 'c-049',
+            sessionRef: 'session:1',
+            matterRef: 'matter:one',
+            revisionRef: 'revision:1',
+            generation: '1',
+          },
+        }),
+        matchCandidate: async () => ({ state: 'allowed', value: { candidateRef: 'matter:one' } }),
+        resolveIdentityPolicy: async () => ({ state: 'allowed', value: { decisionRef: 'decision:1', actorScopeRef: 'actor:1' } }),
+        dispatch: createMatterGroupsDispatchPort({
+          create: (request) => { seen.push({ create: request }); return { state: 'created', status: statusFixture } },
+          rename: (request) => { seen.push({ rename: request }); return { state: 'renamed', status: statusFixture } },
+          remove: (request) => { seen.push({ remove: request }); return { state: 'removed', status: statusFixture } },
+          membership: (request) => { seen.push({ assign: request }); return { state: 'batch', status: statusFixture } },
+          readContext: () => ({
+            sessionRef: 'session:1',
+            matterRef: 'matter:one',
+            revisionRef: 'revision:1',
+            contextGeneration: 1,
+            frameGeneration: 7,
+          }),
+          readIdentitySession: () => ({ sessionRef: 'session:1' }),
+          readFrame: () => ({ generation: 7, ready: true, contaminated: false }),
+        }),
       },
     })
     const post = (body: unknown, service = providers) => handleSageServiceRequest(
@@ -194,12 +212,12 @@ describe('the task-group route (ticket 049)', () => {
     expect(await (await post({ action: 'assign', groupId: 'grp-1', operation: 'remove', targets: ['m-1'] })).json()).toMatchObject({ state: 'batch' })
     // 恰好转发这些具名命令；没有整体成功、没有别的动作。
     expect(seen).toEqual([
-      { create: { action: 'create', name: '交付跟进' } },
-      { create: { action: 'create', name: '交付跟进', targets: ['m-1'] } },
-      { rename: { action: 'rename', groupId: 'grp-1', name: '新名' } },
-      { remove: { action: 'remove', groupId: 'grp-1' } },
-      { assign: { action: 'assign', groupId: 'grp-1', operation: 'add', targets: ['m-1'] } },
-      { assign: { action: 'assign', groupId: 'grp-1', operation: 'remove', targets: ['m-1'] } },
+      { create: { name: '交付跟进' } },
+      { create: { name: '交付跟进', targets: ['m-1'] } },
+      { rename: { groupId: 'grp-1', name: '新名' } },
+      { remove: { groupId: 'grp-1' } },
+      { assign: { groupId: 'grp-1', operation: 'add', targets: ['m-1'] } },
+      { assign: { groupId: 'grp-1', operation: 'remove', targets: ['m-1'] } },
     ])
     // 精确成员：多余键、坏类型、越界批量一律 400。
     expect((await post({ action: 'create', name: 'x', extra: 1 })).status).toBe(400)
@@ -214,8 +232,8 @@ describe('the task-group route (ticket 049)', () => {
     expect((await post({ action: 'nope' })).status).toBe(400)
 
     const unwired = createUnavailableFirstService(null, {})
-    expect(await (await post({ action: 'create', name: 'x' }, unwired)).json()).toMatchObject({ code: 'matter-groups-unavailable' })
-    expect(await (await post({ action: 'remove', groupId: 'g' }, unwired)).json()).toMatchObject({ code: 'matter-groups-unavailable' })
+    expect(await (await post({ action: 'create', name: 'x' }, unwired)).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(await (await post({ action: 'remove', groupId: 'g' }, unwired)).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 
   it('carries the unavailable slot and the read slot through the state projection', async () => {

@@ -130,4 +130,33 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'local-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // L1-B (ADR-0320): the group commands — same family, same local-write class.
+  'matter.groups.create': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.groups.create',
+    actionScope: 'matter.groups',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.groups.rename': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.groups.rename',
+    actionScope: 'matter.groups',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.groups.remove': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.groups.remove',
+    actionScope: 'matter.groups',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.groups.membership': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.groups.membership',
+    actionScope: 'matter.groups',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

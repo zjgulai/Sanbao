@@ -7,6 +7,7 @@ import { Icon, TreeStamp, type DesktopIconName } from './icons.js'
 import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, type DesktopSearchSessions } from './search.js'
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
 import { archiveDesktopMatter, renameDesktopMatter, restoreDesktopMatter, type MatterAdminActionResult } from './matter-admin-actions.js'
+import { createDesktopMatterGroup, removeDesktopMatterGroup, renameDesktopMatterGroup, type MatterGroupsActionResult } from './matter-groups-actions.js'
 import { describeControlRefusal } from './session-controls.js'
 import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
@@ -86,7 +87,7 @@ const GROUP_TRAIL_LABEL: Record<string, string> = {
   create: '建立', rename: '改名', remove: '移除', 'add-members': '加入成员', 'remove-members': '移出成员',
 }
 const MATTER_ADMIN_NOTE = '批量与分组写路径尚未接通（L1-B 与选择态）；本卡提供当前事项的重命名/归档/恢复，全部走事项治理 admission。'
-const GROUPS_UNWIRED_NOTE = '建立/改名/移除/成员变更尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。'
+const GROUPS_UNWIRED_NOTE = '成员变更尚未接通（选择态随后续批）；本卡提供分组建立/改名/移除，全部走事项治理 admission。'
 
 /** L1-A.2 (ADR-0320): the real action entries — rename / archive / restore for the CURRENT
  *  matter (the active context's matterRef), all riding the admitted route. The read-backs below
@@ -133,9 +134,27 @@ function MatterSection({ state, currentMatterRef, refresh }: {
   readonly currentMatterRef?: string
   readonly refresh?: () => void
 }): ReactNode {
+  // L1-B (ADR-0321): the group command entries — create / rename / remove. Membership stays a
+  // named follow-up (its selection state lands with its own batch).
+  const [groupsBusy, setGroupsBusy] = useState(false)
+  const [groupsNote, setGroupsNote] = useState('')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
   if (state.kind !== 'read') return null
   const { matterList, matterAdmin, matterGroups } = state
   if (matterList === undefined && matterAdmin === undefined && matterGroups === undefined) return null
+  const runGroup = (action: () => Promise<MatterGroupsActionResult>, done: string): void => {
+    if (groupsBusy) return
+    setGroupsBusy(true)
+    void action().then((result) => {
+      setGroupsNote(result.ok ? done : describeControlRefusal(result.code) ?? `未受理（${result.code ?? 'unknown'}）。`)
+      setGroupsBusy(false)
+      setRenamingGroupId(null)
+      setRenameDraft('')
+      refresh?.()
+    })
+  }
   return <section className="matter-section" aria-label="事项">
     <h2>事项</h2>
     {matterList !== undefined && (matterList.state !== 'read'
@@ -183,9 +202,41 @@ function MatterSection({ state, currentMatterRef, refresh }: {
         {matterGroups.groups.length === 0
           ? <p className="control-note" role="status">当前没有事项分组。</p>
           : <ul className="workspace-list" aria-label="事项分组列表">{matterGroups.groups.map(group => <li key={group.groupId} className="matter-row">
-            <strong>{group.name}</strong>
-            <span className="control-item-badge">{`${String(group.memberCount)} 项`}</span>
+            {renamingGroupId === group.groupId
+              ? <span className="settings-inline-input">
+                <input type="text" aria-label={`分组新名称 ${group.name}`} value={renameDraft}
+                  disabled={groupsBusy} onChange={event => setRenameDraft(event.currentTarget.value)} />
+                <button type="button" className="text-button" aria-label={`确认改名 ${group.name}`}
+                  disabled={groupsBusy || renameDraft.trim() === ''}
+                  onClick={() => runGroup(() => renameDesktopMatterGroup(group.groupId, renameDraft.trim()), '分组改名已提交（以服务回读为准）。')}>确认</button>
+                <button type="button" className="text-button" aria-label={`取消改名 ${group.name}`}
+                  onClick={() => { setRenamingGroupId(null); setRenameDraft('') }}>取消</button>
+              </span>
+              : <>
+                <strong>{group.name}</strong>
+                <span className="control-item-badge">{`${String(group.memberCount)} 项`}</span>
+                <button type="button" className="text-button" aria-label={`改名分组 ${group.name}`}
+                  disabled={groupsBusy} onClick={() => { setRenamingGroupId(group.groupId); setRenameDraft(group.name) }}>改名</button>
+                <button type="button" className="text-button" aria-label={`移除分组 ${group.name}`}
+                  disabled={groupsBusy}
+                  onClick={() => runGroup(() => removeDesktopMatterGroup(group.groupId), '分组移除已提交（以服务回读为准）。')}>移除</button>
+              </>}
           </li>)}</ul>}
+        <div className="matter-admin-actions" aria-label="新建分组">
+          <input type="text" aria-label="新分组名称" placeholder="新分组名称" value={newGroupName}
+            disabled={groupsBusy} onChange={event => setNewGroupName(event.currentTarget.value)} />
+          <button type="button" className="text-button" aria-label="创建分组"
+            disabled={groupsBusy || newGroupName.trim() === ''}
+            onClick={() => {
+              // The draft clears only on success — a refusal keeps the name for a retry.
+              const name = newGroupName.trim()
+              runGroup(() => createDesktopMatterGroup(name).then((result) => {
+                if (result.ok) setNewGroupName('')
+                return result
+              }), '分组已创建（以服务回读为准）。')
+            }}>创建分组</button>
+        </div>
+        {groupsNote !== '' && <p className="workspace-note" role="status">{groupsNote}</p>}
         {matterGroups.rename === null ? null
           : <p className="control-note">{`最近改名：${matterGroups.rename.requested} → ${matterGroups.rename.effective}（以服务回读为准）`}</p>}
         {matterGroups.batch === null ? null

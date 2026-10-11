@@ -135,5 +135,15 @@ describe('the matter-governance family (ADR-0320)', () => {
     expect(isMatterGovernanceDispatchDetail({ kind: 'matter-batch', operation: 'delete', status: STATUS })).toBe(false)
     expect(isMatterGovernanceDispatchDetail({ kind: 'matter-restored', matterRef: '', status: STATUS })).toBe(false)
     expect(isMatterGovernanceDispatchDetail({ kind: 'matter-renamed', matterRef: MATTER, title: 'x', status: { state: 'made-up' } })).toBe(false)
+    // L1-B group kinds.
+    const groupStatus = { state: 'read' as const, code: null, groups: [], trail: [], rename: null, batch: null }
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-created', name: 'x', status: groupStatus })).toBe(true)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-created', name: '', status: groupStatus })).toBe(false)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-renamed', groupId: 'grp-1', name: 'x', status: groupStatus })).toBe(true)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-renamed', groupId: '', name: 'x', status: groupStatus })).toBe(false)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-removed', groupId: 'grp-1', status: groupStatus })).toBe(true)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-removed', groupId: '', status: groupStatus })).toBe(false)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-membership', groupId: 'grp-1', operation: 'add', status: groupStatus })).toBe(true)
+    expect(isMatterGovernanceDispatchDetail({ kind: 'matter-group-membership', groupId: 'grp-1', operation: 'delete', status: groupStatus })).toBe(false)
   })
 })

@@ -1,4 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { resolveSagePaths } from '../src/profile/paths.js'
 
 import { createSageAppServiceProviders } from '../src/main/app-service.js'
 import { createActiveMatterContext } from '../src/main/active-matter-context.js'
@@ -27,6 +34,15 @@ function assemble(overrides: Record<string, unknown>) {
 }
 
 const marker = (code: string) => async () => ({ state: 'refused' as const, code })
+
+const cleanups: Array<() => Promise<void>> = []
+afterEach(async () => {
+  let cleanup = cleanups.pop()
+  while (cleanup !== undefined) {
+    await cleanup()
+    cleanup = cleanups.pop()
+  }
+})
 
 describe('the production assembly forwards every wired family (ticket 033 repair)', () => {
   it('CTX-01B projects and forwards only the explicit main-owned active-context selection', async () => {
@@ -292,6 +308,43 @@ describe('the production assembly forwards every wired family (ticket 033 repair
   })
 
   it('ticket 049: the group ports reach the service; a group change moves nothing else and infers no permission', async () => {
+    // L1-B (ADR-0321): the group commands now ride the governance family, so this assembly
+    // test supplies the full front (active context / identity session / frame / policy grants)
+    // and the real provider options — exactly the production forwarding path.
+    const container = await mkdtemp(join(tmpdir(), 'sage-groups-wiring-'))
+    cleanups.push(() => rm(container, { recursive: true, force: true }))
+    const home = join(container, 'home')
+    await mkdir(home, { recursive: true })
+    const paths = resolveSagePaths({ home, platform: 'darwin', root: join(container, 'Sage') })
+    await mkdir(paths.root, { recursive: true })
+    await writeFile(paths.organizationPolicyFile, JSON.stringify({
+      schemaVersion: 'sage.organization-policy.v1',
+      organizationId: 'organization:sage',
+      policy: { identity: 'policy:local', version: '1' },
+      validFrom: '2026-10-01T00:00:00Z',
+      expiresAt: '2027-10-01T00:00:00Z',
+      membership: { mode: 'instance-operator', roleRefs: ['role:owner'] },
+      grants: ['create', 'rename', 'remove', 'membership'].map(act => ({
+        roleRef: 'role:owner',
+        operation: `matter.groups.${act}`,
+        actionScope: 'matter.groups',
+        effectClass: 'local-write',
+        requiresDecision: false,
+      })),
+    }), 'utf8')
+    const context = createActiveMatterContext()
+    expect(context.activate({
+      expectedContextGeneration: 0,
+      next: {
+        actorScopeRef: 'actor:local',
+        matterId: 'm-1',
+        revisionId: 'revision:1',
+        workspaceRef: 'w-1',
+        trustedWorkspaceRoot: '/workspace',
+        sessionRef: 'session:groups-1',
+        frameGeneration: 7,
+      },
+    }).ok).toBe(true)
     const authoritySpy = vi.fn(async () => ({ state: 'refused' as const, code: 'must-not-fire' }))
     const listSlot = () => ({
       state: 'read' as const,
@@ -319,6 +372,42 @@ describe('the production assembly forwards every wired family (ticket 033 repair
       // Authority-adjacent ports a group change must never reach (US-226, 不触发权限推断).
       matterAdminArchive: authoritySpy,
       matterAdminBatch: authoritySpy,
+      // The governance front for the group commands.
+      callerBinding: { correlation: 'c-049' },
+      activeMatterContext: context,
+      matterRehydrate: (() => ({ matter: {} as never, current: true })) as never,
+      matterLinks: () => ({
+        state: 'read',
+        links: [{ matterRef: 'm-1', workspaceRef: 'w-1', workspacePath: '/workspace', linkedAt: 't', isDefault: true }],
+        trail: [],
+      }),
+      workspaceList: async () => ({
+        source: 'workspace-follow', state: 'read', reason: null,
+        entries: [{
+          workspaceId: 'w-1',
+          path: '/workspace',
+          title: 'W', sessionCount: 0,
+          createdAt: 't',
+          updatedAt: 't',
+        }],
+        order: ['w-1'], archivedSessions: 0, frames: 1, unapplied: 0,
+      }),
+      framePolicySnapshot: () => ({ generation: 7, ready: true, contaminated: false, contaminationReasons: [] }),
+      vault: {
+        ...vault,
+        identitySession: () => ({
+          sessionRef: 'session:groups-1',
+          identityHandle: 'actor:local',
+          issuer: 'https://issuer.invalid',
+          authenticatedAt: '2026-10-03T00:00:00.000Z',
+          expiresAt: '2026-10-03T01:00:00.000Z',
+        }),
+      },
+      authority: {
+        policyPath: paths.organizationPolicyFile,
+        readFileBytes: (path: string) => readFileSync(path),
+        now: () => '2026-10-03T00:30:00.000Z',
+      },
     })
     const before = await (await service.readState()).json() as { matterList: unknown, matterGroups: { groups: Array<{ groupId: string }> } }
     expect(before.matterGroups.groups[0]?.groupId).toBe('g-1')
@@ -331,8 +420,8 @@ describe('the production assembly forwards every wired family (ticket 033 repair
     expect(after.matterList).toEqual(before.matterList)
     // The unwired family answers a named 缺项, never a fabricated group.
     const bare = assemble({})
-    expect(await (await bare.createMatterGroup({ name: 'x' })).json()).toMatchObject({ code: 'matter-groups-unavailable' })
-    expect(await (await bare.assignMatterGroup({ groupId: 'g', operation: 'add', targets: ['m'] })).json()).toMatchObject({ code: 'matter-groups-unavailable' })
+    expect(await (await bare.createMatterGroup({ name: 'x' })).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
+    expect(await (await bare.assignMatterGroup({ groupId: 'g', operation: 'add', targets: ['m'] })).json()).toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
   })
 
   it('ticket 044: the artifact-window ports reach the service, unwired stays honest', async () => {

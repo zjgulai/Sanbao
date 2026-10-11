@@ -80,13 +80,52 @@ describe('the workspace matter section (ADR-0316 R16/O04; L1-A.2 ADR-0320)', () 
     expect(section?.textContent).toContain('1 项')
     expect(section?.textContent).toContain('最近成员批量（加入）：受理 1 / 未变 0 / 拒绝 0')
     expect(section?.textContent).toContain('批量与分组写路径尚未接通（L1-B 与选择态）')
-    expect(section?.textContent).toContain('建立/改名/移除/成员变更尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。')
+    expect(section?.textContent).toContain('成员变更尚未接通（选择态随后续批）')
     // L1-A.2: the current matter (fixture session context = matter:one) carries the real entries —
     // rename + the two archive grounds; matter:two is archived but NOT current, so no restore here.
     expect(section?.querySelector('button[aria-label="重命名当前事项"]')).not.toBeNull()
     expect(section?.querySelector('button[aria-label="归档当前事项（已完成）"]')).not.toBeNull()
     expect(section?.querySelector('button[aria-label="归档当前事项（已停止）"]')).not.toBeNull()
     expect(section?.querySelector('button[aria-label="恢复当前事项"]')).toBeNull()
+    // L1-B: the group command entries exist (create row + per-group rename/remove).
+    expect(section?.querySelector('input[aria-label="新分组名称"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="创建分组"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="改名分组 走查组"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="移除分组 走查组"]')).not.toBeNull()
+  })
+
+  it('posts the group commands over the admitted route and re-reads the read-backs', async () => {
+    const fetcher = vi.fn(async (url: string) => {
+      if (url === '/.sage/matter-groups') return Response.json({ state: 'created', status: MATTER_PAYLOAD.matterGroups })
+      return ack()
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const read = classifyDesktopState({ ...desktopSessionPayload(), ...MATTER_PAYLOAD })
+    const readState = vi.fn(async () => read)
+    const container = await mount(readState)
+    await click(control(container, '工作区'))
+
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="新分组名称"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, ' 交付跟进 ')
+    await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+    const before = readState.mock.calls.length
+    await click(control(container, '创建分组'))
+    const create = fetcher.mock.calls.find(([url]) => url === '/.sage/matter-groups')
+    expect(JSON.parse(String(create?.[1]?.body))).toEqual({ action: 'create', name: '交付跟进' })
+    expect(container.textContent).toContain('分组已创建（以服务回读为准）。')
+    expect(readState.mock.calls.length).toBeGreaterThan(before)
+
+    await click(control(container, '改名分组 走查组'))
+    const renameInput = container.querySelector<HTMLInputElement>('input[aria-label="分组新名称 走查组"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(renameInput, '改名后')
+    await act(async () => { renameInput.dispatchEvent(new Event('input', { bubbles: true })) })
+    await click(control(container, '确认改名 走查组'))
+    const rename = fetcher.mock.calls.filter(([url]) => url === '/.sage/matter-groups').at(-1)
+    expect(JSON.parse(String(rename?.[1]?.body))).toEqual({ action: 'rename', groupId: 'group:1', name: '改名后' })
+
+    await click(control(container, '移除分组 走查组'))
+    const remove = fetcher.mock.calls.filter(([url]) => url === '/.sage/matter-groups').at(-1)
+    expect(JSON.parse(String(remove?.[1]?.body))).toEqual({ action: 'remove', groupId: 'group:1' })
   })
 
   it('posts the admitted actions with the current matter ref and re-reads the read-backs', async () => {

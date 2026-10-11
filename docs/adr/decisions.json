@@ -10856,6 +10856,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0321",
+      "title": "ADR-0321 · L1-B 事项分组四 op：同家族收口 + 真实分组动作入口",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "四 op 入 matter-governance 家族（matter.groups scope，四 detail kind）。",
+          "constraints": [
+            "no second family"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "family dispatch 按 operation 前缀多路复用。",
+          "constraints": [
+            "unwired family keeps own ops not-dispatched"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "membership 逐行 status；路由 groupId+operation 配对。",
+          "constraints": [
+            "no success banner"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "UI 建立/改名/移除真入口；成员选择态具名。",
+          "constraints": [
+            "draft clears only on success"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁翻转 20/14/15 并同步 selftest 与矩阵 spec。",
+          "constraints": [
+            "deliberate edit"
+          ]
+        }
+      ]
     }
   ]
 }

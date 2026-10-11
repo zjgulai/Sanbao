@@ -348,7 +348,8 @@ function protectedEffectFailureCode(result: ProtectedEffectAdmissionResult): str
 
 async function admitMatterGovernanceProtectedEffect(
   options: ServiceOptions,
-  operation: 'matter.admin.archive' | 'matter.admin.restore' | 'matter.admin.batch' | 'matter.admin.rename',
+  operation: 'matter.admin.archive' | 'matter.admin.restore' | 'matter.admin.batch' | 'matter.admin.rename'
+  | 'matter.groups.create' | 'matter.groups.rename' | 'matter.groups.remove' | 'matter.groups.membership',
   candidate: { readonly kind: 'matter', readonly matterRef: string } | { readonly kind: 'active-session' },
   payload: Readonly<Record<string, unknown>>,
 ): Promise<MatterGovernanceAdmissionResult> {
@@ -1292,31 +1293,63 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async createMatterGroup(request: { readonly name: string, readonly targets?: readonly string[] }): Promise<Response> {
-      const run = options.matterGroupsCreate
-      const outcome: MatterGroupsOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-groups-unavailable' }
-        : run(request)
+      // L1-B (ADR-0321): the group commands ride the same governance family; the route maps the
+      // dispatched receipt 1:1 and pairs the identity fields.
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.groups.create',
+        { kind: 'active-session' },
+        { name: request.name, ...(request.targets === undefined ? {} : { targets: request.targets }) },
+      )
+      const outcome: MatterGroupsOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-group-created'
+        && admission.detail.name === request.name
+        ? { state: 'created', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async renameMatterGroup(request: { readonly groupId: string, readonly name: string }): Promise<Response> {
-      const run = options.matterGroupsRename
-      const outcome: MatterGroupsOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-groups-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.groups.rename',
+        { kind: 'active-session' },
+        { groupId: request.groupId, name: request.name },
+      )
+      const outcome: MatterGroupsOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-group-renamed'
+        && admission.detail.groupId === request.groupId
+        && admission.detail.name === request.name
+        ? { state: 'renamed', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async removeMatterGroup(request: { readonly groupId: string }): Promise<Response> {
-      const run = options.matterGroupsRemove
-      const outcome: MatterGroupsOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-groups-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.groups.remove',
+        { kind: 'active-session' },
+        { groupId: request.groupId },
+      )
+      const outcome: MatterGroupsOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-group-removed'
+        && admission.detail.groupId === request.groupId
+        ? { state: 'removed', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async assignMatterGroup(request: { readonly groupId: string, readonly operation: 'add' | 'remove', readonly targets: readonly string[] }): Promise<Response> {
-      const run = options.matterGroupsAssign
-      const outcome: MatterGroupsOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-groups-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.groups.membership',
+        { kind: 'active-session' },
+        { groupId: request.groupId, operation: request.operation, targets: request.targets },
+      )
+      const outcome: MatterGroupsOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-group-membership'
+        && admission.detail.groupId === request.groupId
+        && admission.detail.operation === request.operation
+        ? { state: 'batch', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async readRunLog(request: { readonly workspaceRoot: string, readonly path: string, readonly fromLine?: number, readonly expectVersion?: string, readonly expectBytes?: number }): Promise<Response> {

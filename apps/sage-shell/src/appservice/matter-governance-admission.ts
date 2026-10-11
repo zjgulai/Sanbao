@@ -16,7 +16,7 @@
  *  itself authors (the matter's own store); this family writes no separate intent ledger yet
  *  (named as the follow-up in the batch record).
  */
-import type { MatterAdminStatus } from './contracts.js'
+import type { MatterAdminStatus, MatterGroupsStatus } from './contracts.js'
 import {
   checkStep,
   isActiveContext,
@@ -39,6 +39,10 @@ export type MatterGovernanceOperation =
   | 'matter.admin.restore'
   | 'matter.admin.batch'
   | 'matter.admin.rename'
+  | 'matter.groups.create'
+  | 'matter.groups.rename'
+  | 'matter.groups.remove'
+  | 'matter.groups.membership'
 
 export interface MatterGovernanceIntent {
   readonly family: 'matter-governance'
@@ -55,6 +59,10 @@ export type MatterGovernanceDispatchDetail =
   | { readonly kind: 'matter-restored', readonly matterRef: string, readonly status: MatterAdminStatus }
   | { readonly kind: 'matter-batch', readonly operation: 'archive' | 'restore', readonly status: MatterAdminStatus }
   | { readonly kind: 'matter-renamed', readonly matterRef: string, readonly title: string, readonly status: MatterAdminStatus }
+  | { readonly kind: 'matter-group-created', readonly name: string, readonly status: MatterGroupsStatus }
+  | { readonly kind: 'matter-group-renamed', readonly groupId: string, readonly name: string, readonly status: MatterGroupsStatus }
+  | { readonly kind: 'matter-group-removed', readonly groupId: string, readonly status: MatterGroupsStatus }
+  | { readonly kind: 'matter-group-membership', readonly groupId: string, readonly operation: 'add' | 'remove', readonly status: MatterGroupsStatus }
 
 export type MatterGovernanceDispatchResult =
   | { readonly state: 'receipt', readonly receiptRef: string, readonly detail: MatterGovernanceDispatchDetail }
@@ -143,6 +151,10 @@ export function isMatterGovernanceDispatchDetail(value: unknown): value is Matte
   if (value.kind === 'matter-restored') return isRef(value.matterRef)
   if (value.kind === 'matter-batch') return value.operation === 'archive' || value.operation === 'restore'
   if (value.kind === 'matter-renamed') return isRef(value.matterRef) && typeof value.title === 'string' && value.title.length > 0
+  if (value.kind === 'matter-group-created') return typeof value.name === 'string' && value.name.length > 0
+  if (value.kind === 'matter-group-renamed') return isRef(value.groupId) && typeof value.name === 'string' && value.name.length > 0
+  if (value.kind === 'matter-group-removed') return isRef(value.groupId)
+  if (value.kind === 'matter-group-membership') return isRef(value.groupId) && (value.operation === 'add' || value.operation === 'remove')
   return false
 }
 

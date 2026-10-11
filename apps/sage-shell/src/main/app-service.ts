@@ -27,6 +27,7 @@ import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import type { MatterGovernanceAdmissionPorts } from '../appservice/matter-governance-admission.js'
 import { createMatterAdminDispatchPort } from './matter-admin-dispatch.js'
+import { createMatterGroupsDispatchPort } from './matter-groups-dispatch.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
 import { createSessionControlCloseRecorder } from './session-control-close.js'
@@ -1029,13 +1030,15 @@ function createSessionCoreProtectedEffectPorts(
     resolveActiveContext: (request) => activeContextPort(request as never),
     matchCandidate: (request) => candidatePort(request as never),
     ...(identityPolicyPort === undefined ? {} : { resolveIdentityPolicy: (request) => identityPolicyPort(request as never) }),
-    ...(options.matterAdminArchive === undefined
-      || options.matterAdminRestore === undefined
-      || options.matterAdminBatch === undefined
-      || options.matterAdminRename === undefined
-      ? {}
-      : {
-          dispatch: createMatterAdminDispatchPort({
+    ...(() => {
+      // L1-A/L1-B: one family dispatch multiplexes by operation — each op family keeps its own
+      // provider binding, and an unwired family keeps exactly its own operations not-dispatched.
+      const admin = options.matterAdminArchive === undefined
+        || options.matterAdminRestore === undefined
+        || options.matterAdminBatch === undefined
+        || options.matterAdminRename === undefined
+        ? undefined
+        : createMatterAdminDispatchPort({
             archive: options.matterAdminArchive,
             restore: options.matterAdminRestore,
             batch: options.matterAdminBatch,
@@ -1043,8 +1046,30 @@ function createSessionCoreProtectedEffectPorts(
             readContext: readContextClosure,
             readIdentitySession: readIdentitySessionClosure,
             readFrame: readFrameClosure,
-          }),
-        }),
+          })
+      const groups = options.matterGroupsCreate === undefined
+        || options.matterGroupsRename === undefined
+        || options.matterGroupsRemove === undefined
+        || options.matterGroupsAssign === undefined
+        ? undefined
+        : createMatterGroupsDispatchPort({
+            create: options.matterGroupsCreate,
+            rename: options.matterGroupsRename,
+            remove: options.matterGroupsRemove,
+            membership: options.matterGroupsAssign,
+            readContext: readContextClosure,
+            readIdentitySession: readIdentitySessionClosure,
+            readFrame: readFrameClosure,
+          })
+      if (admin === undefined && groups === undefined) return {}
+      return {
+        dispatch: (request: Parameters<NonNullable<MatterGovernanceAdmissionPorts['dispatch']>>[0]) => {
+          const port = request.intent.operation.startsWith('matter.groups.') ? groups : admin
+          if (port === undefined) return Promise.resolve({ state: 'not-dispatched' as const })
+          return port(request)
+        },
+      }
+    })(),
   }
   return {
     ports,
