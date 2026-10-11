@@ -86,6 +86,7 @@ function dispatchHarness(options: {
   readonly approvalWithdraw?: unknown
   readonly pendingUpdate?: unknown
   readonly queueItemUpdate?: unknown
+  readonly recordControlClosed?: unknown
 }) {
   const sessionSend = (options.sessionSend ?? vi.fn(async () => ({
     state: 'accepted' as const,
@@ -124,6 +125,7 @@ function dispatchHarness(options: {
     ...(options.approvalWithdraw === undefined ? {} : { approvalWithdraw: approvalWithdraw as never }),
     ...(options.pendingUpdate === undefined ? {} : { pendingUpdate: pendingUpdate as never }),
     ...(options.queueItemUpdate === undefined ? {} : { queueItemUpdate: queueItemUpdate as never }),
+    ...(options.recordControlClosed === undefined ? {} : { recordControlClosed: options.recordControlClosed as never }),
   })
   const request = {
     intent: {
@@ -150,6 +152,7 @@ function dispatchHarness(options: {
     approvalWithdraw: approvalWithdraw as unknown as ReturnType<typeof vi.fn>,
     pendingUpdate: pendingUpdate as unknown as ReturnType<typeof vi.fn>,
     queueItemUpdate: queueItemUpdate as unknown as ReturnType<typeof vi.fn>,
+    recordControlClosed: options.recordControlClosed as unknown as ReturnType<typeof vi.fn>,
     request,
   }
 }
@@ -246,10 +249,12 @@ describe('the session-control operations dispatch through their own handlers (AD
   }
 
   it('dispatches the approval answer and withdraw with the handler receipt inside the detail', async () => {
+    const answerClosure = vi.fn(async () => undefined)
     const answer = dispatchHarness({
       operation: 'session.approval.answer',
       payload: { requestId: 'approval:9', outcome: 'allowed-once' },
       approvalAnswer: vi.fn(async () => ({ state: 'recorded' as const, receipt })),
+      recordControlClosed: answerClosure,
     })
     expect(await answer.port(answer.request)).toEqual({
       state: 'receipt',
@@ -257,6 +262,12 @@ describe('the session-control operations dispatch through their own handlers (AD
       detail: { kind: 'approval-answer-recorded', requestId: 'approval:9', receipt },
     })
     expect(answer.approvalAnswer).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:9', outcome: 'allowed-once' })
+    // Stage 4: the control attempt closes synchronously with the proven outcome.
+    expect(answerClosure).toHaveBeenCalledWith({
+      matterRef: MATTER_ID,
+      attemptId: 'attempt:sage.dispatch-fixture-1',
+      outcome: { state: 'succeeded' },
+    })
     // The channel port and the send-only durable note are never touched by a control op.
     expect(answer.sessionSend).not.toHaveBeenCalled()
     expect(answer.recordDispatchUnknown).not.toHaveBeenCalled()
@@ -273,13 +284,21 @@ describe('the session-control operations dispatch through their own handlers (AD
     })
     expect(withdraw.approvalWithdraw).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:9' })
 
-    // A determinate handler refusal passes its own code; a throw is the conservative unknown.
+    // A determinate handler refusal passes its own code and closes the attempt as failed; a
+    // throw is the conservative unknown — the attempt stays open fail-closed with the note.
+    const refusedClosure = vi.fn(async () => undefined)
     const refused = dispatchHarness({
       operation: 'session.approval.answer',
       payload: { requestId: 'approval:9', outcome: 'rejected' },
       approvalAnswer: vi.fn(async () => ({ state: 'refused' as const, code: 'approval-not-pending' })),
+      recordControlClosed: refusedClosure,
     })
     expect(await refused.port(refused.request)).toEqual({ state: 'refused', code: 'approval-not-pending' })
+    expect(refusedClosure).toHaveBeenCalledWith({
+      matterRef: MATTER_ID,
+      attemptId: 'attempt:sage.dispatch-fixture-1',
+      outcome: { state: 'failed', code: 'approval-not-pending' },
+    })
 
     const thrown = dispatchHarness({
       operation: 'session.approval.withdraw',
@@ -287,6 +306,10 @@ describe('the session-control operations dispatch through their own handlers (AD
       approvalWithdraw: vi.fn(async () => { throw new Error('probe') }),
     })
     expect(await thrown.port(thrown.request)).toEqual({ state: 'outcome-unknown' })
+    expect(thrown.recordDispatchUnknown).toHaveBeenCalledWith({
+      matterRef: MATTER_ID,
+      attemptId: 'attempt:sage.dispatch-fixture-1',
+    })
   })
 
   it('dispatches the pending and queue edits/removals with named receipts', async () => {
@@ -321,12 +344,19 @@ describe('the session-control operations dispatch through their own handlers (AD
       pendingUpdate: vi.fn(() => ({ ok: false as const, code: 'item-frozen' })),
     })
     expect(await frozen.port(frozen.request)).toEqual({ state: 'refused', code: 'item-frozen' })
+    const codelessClosure = vi.fn(async () => undefined)
     const codeless = dispatchHarness({
       operation: 'session.pending.remove',
       payload: { itemId: 'pending:1' },
       pendingUpdate: vi.fn(() => ({ ok: false as const })),
+      recordControlClosed: codelessClosure,
     })
     expect(await codeless.port(codeless.request)).toEqual({ state: 'refused', code: 'session-pending-update-refused' })
+    expect(codelessClosure).toHaveBeenCalledWith({
+      matterRef: MATTER_ID,
+      attemptId: 'attempt:sage.dispatch-fixture-1',
+      outcome: { state: 'failed', code: 'session-pending-update-refused' },
+    })
 
     const queueEdit = dispatchHarness({
       operation: 'session.queue.edit',
@@ -926,5 +956,19 @@ describe('the ten-step chain answers real operations end to end', () => {
     expect(await response.json()).toEqual({ state: 'recorded', receipt })
     expect(sessionApprovalAnswer).toHaveBeenCalledTimes(1)
     expect(sessionApprovalAnswer).toHaveBeenCalledWith({ matterRef: MATTER_ID, requestId: 'approval:1', outcome: 'allowed-once' })
+
+    // Stage 4: the answer closed its attempt synchronously — no turn ever runs for a control op,
+    // so without the closure the open attempt would lock the matter for every later attempt.
+    const read = attempts.readMatter(MATTER_ID)
+    if (read === undefined || 'denied' in read) throw new Error('matter must read')
+    expect(read.matter.events.some((event) => event.type === 'attempt-succeeded')).toBe(true)
+
+    const second = await handleSageServiceRequest(new Request('dsh-app://app/.sage/session/approval-answer', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matterRef: MATTER_ID, requestId: 'approval:1', outcome: 'allowed-once' }),
+    }), { callerBinding, providers })
+    expect(await second.json()).toEqual({ state: 'recorded', receipt })
+    expect(sessionApprovalAnswer).toHaveBeenCalledTimes(2)
   })
 })

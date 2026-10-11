@@ -27,6 +27,7 @@ import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
+import { createSessionControlCloseRecorder } from './session-control-close.js'
 import { createSessionDispatchUnknownRecorder } from './session-dispatch-unknown.js'
 import { createSessionPromptPrepareRunner, type SessionPrepareRunner } from './session-prompt-prepare.js'
 import type { SessionSendReconcile } from './session-send-reconcile.js'
@@ -985,6 +986,12 @@ function createSessionCoreProtectedEffectPorts(
             sessionSend: options.sessionSend,
             // ADR-0296 D4: the same store handle the revertify reads hold, plus trusted clock.
             recordDispatchUnknown: createSessionDispatchUnknownRecorder({
+              attempts: options.sessionPromptAttempts,
+              now: options.authority.now,
+            }),
+            // B batch stage 4 (ADR-0317 D4): the synchronous closure for a control outcome —
+            // same store handle, so a control attempt never outlives its own request.
+            recordControlClosed: createSessionControlCloseRecorder({
               attempts: options.sessionPromptAttempts,
               now: options.authority.now,
             }),

@@ -716,6 +716,7 @@ const CHECKS = [
         sessionTurnCloseText: readRepoText('apps/sage-shell/src/main/session-turn-close.ts'),
         sessionSendReconcileText: readRepoText('apps/sage-shell/src/main/session-send-reconcile.ts'),
         sessionDispatchUnknownText: readRepoText('apps/sage-shell/src/main/session-dispatch-unknown.ts'),
+        sessionControlCloseText: readRepoText('apps/sage-shell/src/main/session-control-close.ts'),
         runtimeInventoryCurrencyText: readRepoText('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
         sageReadoutText: readRepoText('apps/sage-shell/src/main/sage-readout.ts'),
         sessionChannelText: readRepoText('apps/sage-shell/src/main/session-channel.ts'),

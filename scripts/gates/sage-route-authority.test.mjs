@@ -38,6 +38,7 @@ const baseline = Object.freeze({
   sessionChannelText: read('apps/sage-shell/src/main/session-channel.ts'),
   sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
   sessionDispatchUnknownText: read('apps/sage-shell/src/main/session-dispatch-unknown.ts'),
+  sessionControlCloseText: read('apps/sage-shell/src/main/session-control-close.ts'),
   runtimeInventoryCurrencyText: read('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
   sageReadoutText: read('apps/sage-shell/src/main/sage-readout.ts'),
 })

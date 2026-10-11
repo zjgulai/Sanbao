@@ -23,6 +23,7 @@
 import type { ProtectedEffectAdmissionPorts } from '../appservice/protected-effect-admission.js'
 import type { ApprovalAnswerOutcome, ApprovalWithdrawOutcome, QueueItemOutcome, SessionSendOutcome } from '../appservice/contracts.js'
 import { ACTION_AUTHORITY_TABLE } from './action-authority-table.js'
+import type { SessionControlCloseOutcome, SessionControlCloseRecorder } from './session-control-close.js'
 import { verifyAdmittedFactsStillHold, type SessionPromptReverifyReads } from './session-prompt-reverify.js'
 
 export type SessionSendPort = (
@@ -86,6 +87,8 @@ export interface SessionPromptDispatchOptions extends SessionPromptReverifyReads
   readonly approvalWithdraw?: ApprovalWithdrawPort
   readonly pendingUpdate?: PendingUpdatePort
   readonly queueItemUpdate?: QueueItemUpdatePort
+  /** B batch stage 4 (ADR-0317 D4): the synchronous attempt closure for a control outcome. */
+  readonly recordControlClosed?: SessionControlCloseRecorder
 }
 
 /** The same upper bound every real text handler enforces (session-channel / pending-inputs).
@@ -194,6 +197,19 @@ export function createSessionPromptDispatchPort(
       return { state: 'not-dispatched' }
     }
 
+    // ADR-0296 D4: the unknown is durable before it is answered — best-effort note, then the
+    // same outcome the product already speaks. B batch stage 4 (ADR-0317 D4): a control
+    // operation completes inside this request — its attempt closes durably with the outcome
+    // (receipt -> succeeded, determinate refusal -> failed, unknown -> the existing marker,
+    // attempt left open fail-closed). Both recorders are best-effort and never throw.
+    const answerUnknown = async (): Promise<{ state: 'outcome-unknown' }> => {
+      await options.recordDispatchUnknown({ matterRef: context.matterRef, attemptId: evidence.attemptId })
+      return { state: 'outcome-unknown' }
+    }
+    const closeControl = async (closeOutcome: SessionControlCloseOutcome): Promise<void> => {
+      await options.recordControlClosed?.({ matterRef: context.matterRef, attemptId: evidence.attemptId, outcome: closeOutcome })
+    }
+
     if (prepared.op === 'session.send') {
       const workspaceRoot = options.readWorkspaceRoot(context.matterRef)
       if (workspaceRoot === undefined) return { state: 'not-dispatched' }
@@ -208,10 +224,7 @@ export function createSessionPromptDispatchPort(
           requestId: sessionRequestIdForAttempt(evidence.attemptId),
         })
       } catch {
-        // ADR-0296 D4: the unknown is durable before it is answered — best-effort note, then the
-        // same outcome the product already speaks.
-        await options.recordDispatchUnknown({ matterRef: context.matterRef, attemptId: evidence.attemptId })
-        return { state: 'outcome-unknown' }
+        return answerUnknown()
       }
 
       if (outcome.state === 'accepted') {
@@ -243,15 +256,17 @@ export function createSessionPromptDispatchPort(
       try {
         outcome = await handler({ matterRef: context.matterRef, requestId: prepared.requestId, outcome: prepared.outcome })
       } catch {
-        return { state: 'outcome-unknown' }
+        return answerUnknown()
       }
       if (outcome.state === 'recorded') {
+        await closeControl({ state: 'succeeded' })
         return {
           state: 'receipt',
           receiptRef: `receipt:session-approval-answer:${prepared.requestId}`,
           detail: { kind: 'approval-answer-recorded', requestId: prepared.requestId, receipt: outcome.receipt },
         }
       }
+      await closeControl({ state: 'failed', code: outcome.code })
       return { state: 'refused', code: outcome.code }
     }
 
@@ -262,15 +277,17 @@ export function createSessionPromptDispatchPort(
       try {
         outcome = await handler({ matterRef: context.matterRef, requestId: prepared.requestId })
       } catch {
-        return { state: 'outcome-unknown' }
+        return answerUnknown()
       }
       if (outcome.state === 'recorded') {
+        await closeControl({ state: 'succeeded' })
         return {
           state: 'receipt',
           receiptRef: `receipt:session-approval-withdraw:${prepared.requestId}`,
           detail: { kind: 'approval-withdraw-recorded', requestId: prepared.requestId, receipt: outcome.receipt },
         }
       }
+      await closeControl({ state: 'failed', code: outcome.code })
       return { state: 'refused', code: outcome.code }
     }
 
@@ -286,9 +303,10 @@ export function createSessionPromptDispatchPort(
           context.matterRef,
         )
       } catch {
-        return { state: 'outcome-unknown' }
+        return answerUnknown()
       }
       if (result.ok) {
+        await closeControl({ state: 'succeeded' })
         return {
           state: 'receipt',
           receiptRef: `receipt:${prepared.op === 'session.pending.edit' ? 'session-pending-edit' : 'session-pending-remove'}:${prepared.itemId}`,
@@ -298,7 +316,9 @@ export function createSessionPromptDispatchPort(
         }
       }
       // The store answered a determinate refusal; a code-less refusal keeps its own stable name.
-      return { state: 'refused', code: result.code ?? 'session-pending-update-refused' }
+      const code = result.code ?? 'session-pending-update-refused'
+      await closeControl({ state: 'failed', code })
+      return { state: 'refused', code }
     }
 
     const handler = options.queueItemUpdate
@@ -309,9 +329,10 @@ export function createSessionPromptDispatchPort(
         ? { action: 'edit', itemId: prepared.itemId, text: prepared.text }
         : { action: 'remove', itemId: prepared.itemId })
     } catch {
-      return { state: 'outcome-unknown' }
+      return answerUnknown()
     }
     if (outcome.state === 'ok') {
+      await closeControl({ state: 'succeeded' })
       return {
         state: 'receipt',
         receiptRef: `receipt:${prepared.op === 'session.queue.edit' ? 'session-queue-edit' : 'session-queue-remove'}:${prepared.itemId}`,
@@ -320,6 +341,7 @@ export function createSessionPromptDispatchPort(
           : { kind: 'queue-removed', itemId: prepared.itemId },
       }
     }
+    await closeControl({ state: 'failed', code: outcome.code })
     return { state: 'refused', code: outcome.code }
   }
 }
