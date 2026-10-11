@@ -62,8 +62,8 @@ const MATTER_PAYLOAD = {
   },
 }
 
-describe('the workspace matter section (ADR-0316 R16/O04)', () => {
-  it('renders the roster, the administration read-backs and the named-unwired lines — with zero action entries', async () => {
+describe('the workspace matter section (ADR-0316 R16/O04; L1-A.2 ADR-0320)', () => {
+  it('renders the roster, the administration read-backs and the real action entries for the current matter', async () => {
     const read = classifyDesktopState({ ...desktopSessionPayload(), ...MATTER_PAYLOAD })
     const container = await mount(async () => read)
     await click(control(container, '工作区'))
@@ -79,10 +79,69 @@ describe('the workspace matter section (ADR-0316 R16/O04)', () => {
     expect(section?.textContent).toContain('走查组')
     expect(section?.textContent).toContain('1 项')
     expect(section?.textContent).toContain('最近成员批量（加入）：受理 1 / 未变 0 / 拒绝 0')
-    expect(section?.textContent).toContain('归档/恢复/批量/重命名尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。')
+    expect(section?.textContent).toContain('批量与分组写路径尚未接通（L1-B 与选择态）')
     expect(section?.textContent).toContain('建立/改名/移除/成员变更尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。')
-    // A pure shell: no action entry exists on the section at all (selection lands with the admission batch).
-    expect(section?.querySelectorAll('button')).toHaveLength(0)
+    // L1-A.2: the current matter (fixture session context = matter:one) carries the real entries —
+    // rename + the two archive grounds; matter:two is archived but NOT current, so no restore here.
+    expect(section?.querySelector('button[aria-label="重命名当前事项"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="归档当前事项（已完成）"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="归档当前事项（已停止）"]')).not.toBeNull()
+    expect(section?.querySelector('button[aria-label="恢复当前事项"]')).toBeNull()
+  })
+
+  it('posts the admitted actions with the current matter ref and re-reads the read-backs', async () => {
+    const fetcher = vi.fn(async (url: string) => {
+      if (url === '/.sage/matter-admin') return Response.json({ state: 'renamed', status: MATTER_PAYLOAD.matterAdmin })
+      return ack()
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const read = classifyDesktopState({ ...desktopSessionPayload(), ...MATTER_PAYLOAD })
+    const readState = vi.fn(async () => read)
+    const container = await mount(readState)
+    await click(control(container, '工作区'))
+
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="事项新名称"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '  新名称  ')
+    await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+    const clicksBefore = readState.mock.calls.length
+    await click(control(container, '重命名当前事项'))
+    const rename = fetcher.mock.calls.find(([url]) => url === '/.sage/matter-admin')
+    expect(JSON.parse(String(rename?.[1]?.body))).toEqual({ action: 'rename', matterRef: 'matter:one', title: '新名称' })
+    expect(container.textContent).toContain('重命名已提交（以服务回读为准）。')
+    expect(readState.mock.calls.length).toBeGreaterThan(clicksBefore)
+
+    await click(control(container, '归档当前事项（已停止）'))
+    const archive = fetcher.mock.calls.filter(([url]) => url === '/.sage/matter-admin').at(-1)
+    expect(JSON.parse(String(archive?.[1]?.body))).toEqual({ action: 'archive', matterRef: 'matter:one', ground: 'stopped' })
+  })
+
+  it('names a refusal with the shared protection vocabulary and offers restore for an archived current matter', async () => {
+    const fetcher = vi.fn(async (url: string) => {
+      if (url === '/.sage/matter-admin') return Response.json({ state: 'refused', code: 'protected-effect-denied' })
+      return ack()
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const payload = {
+      ...MATTER_PAYLOAD,
+      matterAdmin: {
+        ...MATTER_PAYLOAD.matterAdmin,
+        entries: [
+          { matterRef: 'matter:two', archivedAt: '2026-10-11T00:00:00Z', ground: 'completed' },
+          { matterRef: 'matter:one', archivedAt: '2026-10-11T00:00:00Z', ground: 'completed' },
+        ],
+      },
+    }
+    const read = classifyDesktopState({ ...desktopSessionPayload(), ...payload })
+    const container = await mount(async () => read)
+    await click(control(container, '工作区'))
+
+    // The current matter is archived: the restore entry replaces the archive pair.
+    expect(container.querySelector('button[aria-label="恢复当前事项"]')).not.toBeNull()
+    expect(container.querySelector('button[aria-label="归档当前事项（已完成）"]')).toBeNull()
+    await click(control(container, '恢复当前事项'))
+    const restore = fetcher.mock.calls.find(([url]) => url === '/.sage/matter-admin')
+    expect(JSON.parse(String(restore?.[1]?.body))).toEqual({ action: 'restore', matterRef: 'matter:one' })
+    expect(container.textContent).toContain('当前没有执行该操作的授权；未记录任何改动。')
   })
 
   it('names each unavailable slot and omits malformed ones instead of claiming emptiness', async () => {

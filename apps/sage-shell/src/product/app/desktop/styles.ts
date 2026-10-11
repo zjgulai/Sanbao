@@ -177,6 +177,9 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .settings-profile-identity span { display: grid; }
 .sage-desktop .settings-profile-avatar { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 50%; border: 1px solid var(--sage-border); background: var(--sage-surface); color: var(--sage-muted); }
 .sage-desktop .settings-inline-input { display: flex; align-items: center; gap: 6px; }
+/* L1-A.2 (ADR-0320): the matter-admin action row (current matter; rename/archive/restore). */
+.sage-desktop .matter-admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 9px 0; }
+.sage-desktop .matter-admin-actions input { min-width: 0; width: 180px; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
 .sage-desktop .settings-inline-input input { min-width: 0; width: 160px; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
 /* R17-C: the shortcut-edit modal shell (observed; recording/saving stay disabled). */
 .sage-desktop .settings-modal-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--sage-overlay); }

@@ -6,6 +6,8 @@ import { adoptDesktopWorkspace } from './adopt.js'
 import { Icon, TreeStamp, type DesktopIconName } from './icons.js'
 import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, type DesktopSearchSessions } from './search.js'
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
+import { archiveDesktopMatter, renameDesktopMatter, restoreDesktopMatter, type MatterAdminActionResult } from './matter-admin-actions.js'
+import { describeControlRefusal } from './session-controls.js'
 import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import type { DesktopPlans, DesktopSession } from './session.js'
@@ -83,10 +85,54 @@ const MATTER_TRIGGER_LABEL: Record<string, string> = {
 const GROUP_TRAIL_LABEL: Record<string, string> = {
   create: '建立', rename: '改名', remove: '移除', 'add-members': '加入成员', 'remove-members': '移出成员',
 }
-const MATTER_UNWIRED_NOTE = '归档/恢复/批量/重命名尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。'
+const MATTER_ADMIN_NOTE = '批量与分组写路径尚未接通（L1-B 与选择态）；本卡提供当前事项的重命名/归档/恢复，全部走事项治理 admission。'
 const GROUPS_UNWIRED_NOTE = '建立/改名/移除/成员变更尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。'
 
-function MatterSection({ state }: { readonly state: DesktopReadState }): ReactNode {
+/** L1-A.2 (ADR-0320): the real action entries — rename / archive / restore for the CURRENT
+ *  matter (the active context's matterRef), all riding the admitted route. The read-backs below
+ *  refresh through the page's retry after every attempt; the note vocabulary is the shared
+ *  protected-effect refusal copy. */
+function MatterAdminActions({ matterRef, archived, refresh }: {
+  readonly matterRef: string
+  readonly archived: boolean
+  readonly refresh: () => void
+}): ReactNode {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const [title, setTitle] = useState('')
+  const run = (action: () => Promise<MatterAdminActionResult>, done: string): void => {
+    if (busy) return
+    setBusy(true)
+    void action().then((result) => {
+      setNote(result.ok ? done : describeControlRefusal(result.code) ?? `未受理（${result.code ?? 'unknown'}）。`)
+      setBusy(false)
+      refresh()
+    })
+  }
+  return <div className="matter-admin-actions" aria-label="事项管理动作">
+    <input type="text" aria-label="事项新名称" placeholder="新名称" value={title} disabled={busy}
+      onChange={event => setTitle(event.currentTarget.value)} />
+    <button type="button" className="text-button" aria-label="重命名当前事项"
+      disabled={busy || title.trim() === ''}
+      onClick={() => run(() => renameDesktopMatter(matterRef, title.trim()), '重命名已提交（以服务回读为准）。')}>重命名</button>
+    {archived
+      ? <button type="button" className="text-button" aria-label="恢复当前事项" disabled={busy}
+        onClick={() => run(() => restoreDesktopMatter(matterRef), '恢复已提交（以服务回读为准）。')}>恢复</button>
+      : <>
+        <button type="button" className="text-button" aria-label="归档当前事项（已完成）" disabled={busy}
+          onClick={() => run(() => archiveDesktopMatter(matterRef, 'completed'), '归档已提交（以服务回读为准）。')}>归档（已完成）</button>
+        <button type="button" className="text-button" aria-label="归档当前事项（已停止）" disabled={busy}
+          onClick={() => run(() => archiveDesktopMatter(matterRef, 'stopped'), '归档已提交（以服务回读为准）。')}>归档（已停止）</button>
+      </>}
+    {note !== '' && <p className="workspace-note" role="status">{note}</p>}
+  </div>
+}
+
+function MatterSection({ state, currentMatterRef, refresh }: {
+  readonly state: DesktopReadState
+  readonly currentMatterRef?: string
+  readonly refresh?: () => void
+}): ReactNode {
   if (state.kind !== 'read') return null
   const { matterList, matterAdmin, matterGroups } = state
   if (matterList === undefined && matterAdmin === undefined && matterGroups === undefined) return null
@@ -124,7 +170,12 @@ function MatterSection({ state }: { readonly state: DesktopReadState }): ReactNo
           {matterAdmin.trail.slice(-6).map((record, index) => <li key={index} className="matter-row">
             <small>{`${record.at} · ${record.action === 'archive' ? '归档' : '恢复'} ${record.matterRef}`}</small>
           </li>)}</ul>}
-        <p className="control-note" role="status">{MATTER_UNWIRED_NOTE}</p>
+        {currentMatterRef !== undefined && refresh !== undefined
+          ? <MatterAdminActions matterRef={currentMatterRef}
+            archived={matterAdmin.entries.some(entry => entry.matterRef === currentMatterRef)}
+            refresh={refresh} />
+          : null}
+        <p className="control-note" role="status">{MATTER_ADMIN_NOTE}</p>
       </div>)}
     {matterGroups !== undefined && (matterGroups.state !== 'read'
       ? <p className="workspace-note" role="status">事项分组读取不可用（{matterGroups.code ?? 'matter-groups-unavailable'}）。</p>
@@ -260,7 +311,9 @@ function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopRead
       {createNote !== '' && <p className="workspace-create-note" role="status">{createNote}</p>}
     </section>}
     {body}
-    <MatterSection state={state} />
+    <MatterSection state={state}
+      {...(state.kind === 'read' && state.session !== undefined ? { currentMatterRef: state.session.context.matterRef } : {})}
+      refresh={retry} />
     {adoptNotice !== '' && <p className="workspace-note workspace-adopt-note" role="status">{adoptNotice}</p>}
     <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>
   </section>
