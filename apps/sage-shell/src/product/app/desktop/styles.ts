@@ -112,6 +112,21 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .workspace-entry span { min-width: 0; font-size: 11px; color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .workspace-entry small { font-size: 11px; color: var(--sage-faint); }
 .sage-desktop .workspace-note { margin: 18px 0 0; color: var(--sage-muted); overflow-wrap: anywhere; }
+/* Loop-Q R12 line A (QDR.P13.create.*): the create-workspace form shell — geometry only,
+   palette stays owned by product/theme-tokens.ts via the existing --sage-* tokens. */
+.sage-desktop .workspace-create { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: 8px; background: var(--sage-raised); }
+.sage-desktop .workspace-create h2 { margin: 0; font-size: 12px; font-weight: 500; color: var(--sage-ink); }
+.sage-desktop .workspace-create-field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .workspace-create-field > span { flex-shrink: 0; }
+.sage-desktop .workspace-create-field input { flex: 1; min-width: 140px; max-width: 240px; padding: 5px 9px; border: 1px solid var(--sage-border); border-radius: 5px; background: var(--sage-surface); color: var(--sage-ink); font-size: 12px; }
+.sage-desktop .workspace-create-field [aria-pressed] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .workspace-create-field [aria-pressed].active { color: var(--sage-ink); border-color: var(--sage-brand); }
+.sage-desktop .workspace-create-dir-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; margin: 0; font-size: 12px; }
+.sage-desktop .workspace-create-dir-row strong { min-width: 0; font-weight: 500; color: var(--sage-ink); overflow-wrap: anywhere; }
+.sage-desktop .workspace-create-primary { padding: 1px 8px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 11px; color: var(--sage-muted); flex-shrink: 0; }
+.sage-desktop .workspace-create-dir-row small { min-width: 0; font-size: 11px; color: var(--sage-faint); overflow-wrap: anywhere; }
+.sage-desktop .workspace-create > .text-button[aria-label="创建工作区"] { align-self: flex-start; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); }
+.sage-desktop .workspace-create-note { margin: 0; font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
 /* T03-D search page: geometry only, palette from product/theme-tokens.ts. Every block is
    min-width:0 with overflow-wrap:anywhere so an opaque ref or snippet reflows at 320px instead of
    widening the page. */

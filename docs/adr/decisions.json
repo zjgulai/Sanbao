@@ -10320,6 +10320,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0310",
+      "title": "ADR-0310 · 新建工作区表单：复用真实接入链路的形状装配",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "新建工作区表单形状（源文件夹/名称/图标/颜色/创建禁用逻辑；图标颜色本地）。",
+          "constraints": [
+            "placeholder labels registered"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "选择文件夹复用 adopt 真实链路；三态具名；adopted 填表单。",
+          "constraints": [
+            "adopt.ts untouched"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "两段式差异登记；创建点击仅结算本地草稿，请求次数恒 1。",
+          "constraints": [
+            "no second adopt request"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "草稿 state 上提以抗 retry loading。",
+          "constraints": [
+            "necessary for the auto-name requirement"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "2 行迁 implementing；summary 生成器重算。",
+          "constraints": [
+            "deriveSummary"
+          ]
+        }
+      ]
     }
   ]
 }

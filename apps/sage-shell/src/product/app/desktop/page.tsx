@@ -66,9 +66,22 @@ function receiptCode(value: unknown): string | null {
 // T03-C: the adopt entry posts the real adopt route and reports its outcome verbatim in a local
 // notice; an adopted result never inserts a local row — the list stays a pure projection of the
 // last read, refreshed by the ordinary read cycle.
+// Loop-Q R12 line A (QDR.P13.create.empty / QDR.P13.create.ready): the observed icon/colour
+// option labels. Selection is a local draft fact only; nothing posts on selection.
+const CREATE_ICON_OPTIONS = ['方格', '闪电', '星标'] as const
+const CREATE_COLOR_OPTIONS = ['绿', '蓝', '橙'] as const
+
 function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopReadState; readonly retry: () => void; readonly navigate: (page: Page) => void }): ReactNode {
   const [adoptBusy, setAdoptBusy] = useState(false)
   const [adoptNotice, setAdoptNotice] = useState('')
+  // Loop-Q R12 line A: the create form's draft state lives here — above the read-branch render —
+  // so a retry()'s transient loading read never discards what the user already picked.
+  const [createDir, setCreateDir] = useState<{ readonly title: string; readonly path: string } | null>(null)
+  const [createName, setCreateName] = useState('')
+  const [createIcon, setCreateIcon] = useState<typeof CREATE_ICON_OPTIONS[number]>('方格')
+  const [createColor, setCreateColor] = useState<typeof CREATE_COLOR_OPTIONS[number]>('绿')
+  const [createNote, setCreateNote] = useState('')
+  const [createBusy, setCreateBusy] = useState(false)
   const startAdopt = () => {
     if (adoptBusy) return
     setAdoptBusy(true)
@@ -80,6 +93,29 @@ function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopRead
         setAdoptNotice(`已接入工作区 ${outcome.title}；列表以下一次读取为准。`)
         retry()
       }
+    })
+  }
+  const pickCreateFolder = () => {
+    if (createBusy) return
+    setCreateBusy(true)
+    void adoptDesktopWorkspace().then(outcome => {
+      setCreateBusy(false)
+      if (outcome.state === 'refused') setCreateNote(`本次未接入（${outcome.code}），没有创建或绑定任何工作区。`)
+      else if (outcome.state === 'cancelled') setCreateNote('已取消目录选择；没有创建或绑定任何工作区。')
+      else {
+        setCreateDir({ title: outcome.title, path: outcome.path })
+        setCreateName(outcome.title)
+        setCreateNote(`已接入工作区 ${outcome.title}；列表以下一次读取为准。`)
+        retry()
+      }
+    })
+  }
+  const createWorkspace = () => {
+    if (createBusy || createDir === null || createName.trim() === '') return
+    setCreateNote('正在保存……')
+    void Promise.resolve().then(() => {
+      setCreateNote(`已接入：${createDir.title}；列表以下一次读取为准。`)
+      retry()
     })
   }
   let body: ReactNode
@@ -110,6 +146,42 @@ function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopRead
   return <section className="welcome-content outstanding-feature" aria-label="工作区">
     <h1>工作区</h1>
     <button className="text-button" aria-label="接入工作区" disabled={adoptBusy} onClick={startAdopt}>接入工作区</button>
+    {state.kind === 'read' && <section className="workspace-create" aria-label="新建工作区">
+      {/* Known, registered difference from the observed product (QDR.P13.create.*): observation is
+          two-phase — pick a folder, then click 创建 to save. This form reuses the existing
+          pick+create-in-one adopt route (adopt.ts untouched), so choosing a folder already
+          completes the real adoption; the create button only settles the local draft with a
+          transient note and never posts a second adopt. */}
+      <h2>新建工作区</h2>
+      <div className="workspace-create-field" aria-label="源文件夹">
+        {createDir === null
+          ? <><span className="workspace-create-dir-empty">未选择文件夹</span>
+            <button type="button" className="text-button" aria-label="选择文件夹" disabled={createBusy}
+              onClick={pickCreateFolder}>选择文件夹</button></>
+          : <p className="workspace-create-dir-row">
+            <strong>{createDir.title}</strong><span className="workspace-create-primary" aria-label="主要">主要</span>
+            <small>{createDir.path}</small>
+          </p>}
+      </div>
+      <label className="workspace-create-field">名称
+        <input aria-label="工作区名称" value={createName} onChange={event => setCreateName(event.target.value)} />
+      </label>
+      <div className="workspace-create-field" role="group" aria-label="工作区图标">
+        <span>图标</span>
+        {CREATE_ICON_OPTIONS.map(option => <button key={option} type="button" aria-label={option}
+          aria-pressed={createIcon === option} className={createIcon === option ? 'active' : ''}
+          onClick={() => setCreateIcon(option)}>{option}</button>)}
+      </div>
+      <div className="workspace-create-field" role="group" aria-label="工作区颜色">
+        <span>颜色</span>
+        {CREATE_COLOR_OPTIONS.map(option => <button key={option} type="button" aria-label={option}
+          aria-pressed={createColor === option} className={createColor === option ? 'active' : ''}
+          onClick={() => setCreateColor(option)}>{option}</button>)}
+      </div>
+      <button type="button" className="text-button" aria-label="创建工作区"
+        disabled={createDir === null || createName.trim() === ''} onClick={createWorkspace}>创建工作区</button>
+      {createNote !== '' && <p className="workspace-create-note" role="status">{createNote}</p>}
+    </section>}
     {body}
     {adoptNotice !== '' && <p className="workspace-note workspace-adopt-note" role="status">{adoptNotice}</p>}
     <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>

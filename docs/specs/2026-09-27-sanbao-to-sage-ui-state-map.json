@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 83,
-        "pending": 115,
+        "implementing": 85,
+        "pending": 113,
         "verified": 8
       },
       "applicationService": {
@@ -387,8 +387,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t03",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-workspace-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -409,7 +415,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the empty create form renders (source folder row, name, icon/colour groups, create disabled); known deviation: the observed flow is two-phase (pick a folder, then 创建 saves), while this form reuses the existing pick+create-in-one adopt route — picking a folder already completes the real adoption and the create button settles the local draft without a second request; icon/colour option labels are local placeholders (the observation recorded the options but not their lists) and selection persists nothing; the edit/remote/archive confirmations of the group are not assembled (P13 scope stays pending); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -454,8 +460,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t03",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-workspace-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -476,7 +488,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "after a real adoption the folder row carries the 主要 tag, the name fills automatically and create enables; the create click settles with the saving transient note — no fabricated persistence claim; known deviation: the observed flow is two-phase (pick a folder, then 创建 saves), while this form reuses the existing pick+create-in-one adopt route — picking a folder already completes the real adoption and the create button settles the local draft without a second request; icon/colour option labels are local placeholders (the observation recorded the options but not their lists) and selection persists nothing; the edit/remote/archive confirmations of the group are not assembled (P13 scope stays pending); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
