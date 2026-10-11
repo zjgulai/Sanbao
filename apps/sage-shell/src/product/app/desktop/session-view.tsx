@@ -46,11 +46,28 @@ function LiveProcessRow({ item }: { readonly item: DesktopTurnProcess['fileWrite
   </div>
 }
 
-/** ADR-0301: the settled turn's footer — outcome, duration, iterations and the file list. */
+/** ADR-0302: one bounded hunk rendered as removed/added lines (red/green, monospace). */
+function DiffHunk({ hunk, index }: {
+  readonly hunk: DesktopTurnProcess['fileWrites'][number]['hunks'][number]
+  readonly index: number
+}): ReactNode {
+  return <div className="diff-hunk" key={index}>
+    {hunk.old !== null
+      ? <pre className="diff-old">{hunk.old.split('\n').map((line, lineIndex) => <div key={lineIndex}>{`- ${line}`}</div>)}</pre>
+      : null}
+    {hunk.new !== null
+      ? <pre className="diff-new">{hunk.new.split('\n').map((line, lineIndex) => <div key={lineIndex}>{`+ ${line}`}</div>)}</pre>
+      : null}
+  </div>
+}
+
+/** ADR-0301: the settled turn's footer — outcome, duration, iterations and the file list.
+ *  ADR-0302 adds the round's change summary and the review surface (审阅 opens the same list). */
 function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
   readonly lastTurnEnd: string
   readonly turnProcess: DesktopTurnProcess
 }): ReactNode {
+  const [open, setOpen] = useState(false)
   const label = lastTurnEnd === 'completed' ? '已完成'
     : lastTurnEnd === 'error' ? '回合失败'
       : lastTurnEnd === 'aborted' ? '已停止'
@@ -60,18 +77,40 @@ function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
     meta.push(`耗时 ${formatDuration(turnProcess.durationMs)}`)
   }
   if (turnProcess.iterations !== null) meta.push(`${turnProcess.iterations} 步`)
+  const changed = turnProcess.fileWrites.filter((item) => item.added !== null || item.removed !== null)
+  const fileCount = new Set(turnProcess.fileWrites.map((item) => item.file).filter((file): file is string => file !== null)).size
+  const addedTotal = changed.reduce((sum, item) => sum + (item.added ?? 0), 0)
+  const removedTotal = changed.reduce((sum, item) => sum + (item.removed ?? 0), 0)
   return <div className="turn-process" data-turn-end={lastTurnEnd}>
     <span className="turn-process-label" role="status">{label}{meta.length === 0 ? '' : ` · ${meta.join(' · ')}`}</span>
+    {changed.length > 0
+      ? <span className="turn-process-summary">
+        本轮文件修改摘要：{fileCount} 个文件 · +{addedTotal}/-{removedTotal}
+        {' '}
+        <button className="text-button" aria-label="审阅本轮修改" onClick={() => setOpen((value) => !value)}>审阅</button>
+      </span>
+      : null}
     {turnProcess.fileWrites.length > 0
-      ? <details className="turn-process-files">
-        <summary>执行过程（{turnProcess.fileWrites.length}）</summary>
-        <ul>
-          {turnProcess.fileWrites.map((item, index) => <li key={index}>
-            {TOOL_VERB[item.name] ?? item.name} {item.file ?? '文件'} · {item.state === 'done' ? '完成' : item.state === 'failed' ? '失败' : '进行中'}
-            {item.durationMs !== null ? ` · ${formatDuration(item.durationMs)}` : ''}
-          </li>)}
-        </ul>
-      </details>
+      ? <div className="turn-process-files">
+        <button className="text-button" aria-label="执行过程" onClick={() => setOpen((value) => !value)}>执行过程（{turnProcess.fileWrites.length}）</button>
+        {open
+          ? <ul>
+            {turnProcess.fileWrites.map((item, index) => <li key={index}>
+              <div className="turn-item-head">
+                {TOOL_VERB[item.name] ?? item.name} {item.file ?? '文件'} · {item.state === 'done' ? '完成' : item.state === 'failed' ? '失败' : '进行中'}
+                {item.durationMs !== null ? ` · ${formatDuration(item.durationMs)}` : ''}
+                {item.added !== null || item.removed !== null ? ` · +${item.added ?? 0}/-${item.removed ?? 0}` : ''}
+              </div>
+              {item.hunks.length > 0
+                ? <details className="turn-item-diff">
+                  <summary>查看本次修改</summary>
+                  {item.hunks.map((hunk, hunkIndex) => <DiffHunk hunk={hunk} index={hunkIndex} key={hunkIndex} />)}
+                </details>
+                : null}
+            </li>)}
+          </ul>
+          : null}
+      </div>
       : null}
   </div>
 }

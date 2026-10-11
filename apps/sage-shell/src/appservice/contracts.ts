@@ -812,6 +812,13 @@ export interface SessionChannelStatus {
       readonly file: string | null
       readonly state: 'running' | 'done' | 'failed'
       readonly durationMs: number | null
+      /** ADR-0302: the bounded change facts of the tool run (null when none are known). */
+      readonly added: number | null
+      readonly removed: number | null
+      readonly hunks: readonly {
+        readonly old: string | null
+        readonly new: string | null
+      }[]
     }[]
   }
   readonly transcript: readonly SessionChannelEntry[]

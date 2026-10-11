@@ -242,8 +242,10 @@ describe('default desktop session submission lifecycle', () => {
     expect(footer?.textContent).toContain('已完成')
     expect(footer?.textContent).toContain('耗时 12s')
     expect(footer?.textContent).toContain('3 步')
+    // The process list is closed until asked for (执行过程 button, shared with 审阅).
+    expect(container.querySelector('.turn-process-files li')).toBeNull()
+    await click(control(container, '执行过程'))
     const files = container.querySelector('.turn-process-files')
-    expect(files?.querySelector('summary')?.textContent).toBe('执行过程（1）')
     expect(files?.textContent).toContain('编辑 demo.html · 完成 · 3s')
 
     // The executing window shows the running write row; the live stream subscription rides along.
@@ -261,6 +263,35 @@ describe('default desktop session submission lifecycle', () => {
     })
     const live = await mount(async () => executing)
     expect(live.container.querySelector('.process-live')?.textContent).toContain('正在写入 demo.html')
+  })
+
+  it('renders the change summary and the review diff with red/green lines (ADR-0302)', async () => {
+    const payload = desktopSessionPayload()
+    const settled = classifyDesktopState({
+      ...payload,
+      sessionChannel: {
+        ...payload.sessionChannel,
+        turnProcess: {
+          durationMs: 8000, iterations: 2,
+          fileWrites: [{
+            name: 'edit', file: 'demo.html', state: 'done', durationMs: 2000,
+            added: 2, removed: 2,
+            hunks: [{ old: 'line-a\nline-b', new: 'line-a\nline-c' }],
+          }],
+        },
+      },
+    })
+    const { container } = await mount(async () => settled)
+    const summary = container.querySelector('.turn-process-summary')
+    expect(summary?.textContent).toContain('本轮文件修改摘要：1 个文件 · +2/-2')
+
+    await click(control(container, '审阅本轮修改'))
+    const item = container.querySelector('.turn-process-files li')
+    expect(item?.textContent).toContain('编辑 demo.html · 完成 · 2s · +2/-2')
+    // 查看本次修改 (M02 entry) opens the bounded hunks with removed/added lines.
+    await click(item?.querySelector('summary') as HTMLElement)
+    expect(item?.querySelector('.diff-old')?.textContent).toContain('- line-b')
+    expect(item?.querySelector('.diff-new')?.textContent).toContain('+ line-c')
   })
 
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {

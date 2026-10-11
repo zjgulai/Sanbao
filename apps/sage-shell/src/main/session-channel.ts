@@ -85,7 +85,14 @@ interface FoldedUserMessage {
   readonly files: readonly { readonly attachmentId: string, readonly name: string, readonly bytes: number }[]
 }
 
-/** ADR-0301: one write/edit tool run inside the last turn (display facts only). */
+/** ADR-0301: one write/edit tool run inside the last turn (display facts only). ADR-0302 adds
+ *  the bounded diff facts from the tool result's own presentation meta (or, for a created file,
+ *  the call's own content) — display text only, capped, never a machine path. */
+interface FoldTurnHunk {
+  readonly old: string | null
+  readonly new: string | null
+}
+
 interface FoldTurnItem {
   readonly callId: string
   readonly name: string
@@ -93,6 +100,11 @@ interface FoldTurnItem {
   readonly state: 'running' | 'done' | 'failed'
   readonly startedAt: number | null
   readonly endedAt: number | null
+  readonly added: number | null
+  readonly removed: number | null
+  readonly hunks: readonly FoldTurnHunk[]
+  /** ADR-0302: a write call's own content, stashed at call time for the create fallback. */
+  readonly createContent: string | null
 }
 
 /** ADR-0301: the last turn's process facts the fold accumulates (reset on turn/start). */
@@ -106,6 +118,40 @@ interface FoldTurnProcess {
 const EMPTY_TURN_PROCESS: FoldTurnProcess = { startedAt: null, endedAt: null, steps: 0, items: [] }
 const WRITE_LIKE_TOOLS = new Set(['write', 'edit', 'apply_patch'])
 const MAX_TURN_ITEMS = 12
+// ADR-0302 diff bounds: at most 4 hunks per item, 60 lines per side.
+const MAX_ITEM_HUNKS = 4
+const MAX_HUNK_LINES = 60
+
+function boundLines(text: string): string {
+  const lines = text.split('\n')
+  if (lines.length <= MAX_HUNK_LINES) return text
+  return [...lines.slice(0, MAX_HUNK_LINES), '…'].join('\n')
+}
+
+function countLines(text: string): number {
+  return text === '' ? 0 : text.split('\n').length
+}
+
+/** The tool result's presentation diffs, bounded and validated; malformed pieces are dropped. */
+function hunksFromMeta(meta: unknown): { readonly hunks: readonly FoldTurnHunk[], readonly added: number, readonly removed: number } | undefined {
+  if (!isRecord(meta) || !Array.isArray(meta.diffs)) return undefined
+  const hunks: FoldTurnHunk[] = []
+  let added = 0
+  let removed = 0
+  for (const entry of meta.diffs) {
+    if (hunks.length >= MAX_ITEM_HUNKS) break
+    if (!isRecord(entry)) continue
+    const oldText = typeof entry.oldText === 'string' ? entry.oldText : null
+    const newText = typeof entry.newText === 'string' ? entry.newText : null
+    if (oldText === null && newText === null) continue
+    if (oldText !== null) removed += countLines(oldText)
+    if (newText !== null) added += countLines(newText)
+    hunks.push({ old: oldText === null ? null : boundLines(oldText), new: newText === null ? null : boundLines(newText) })
+  }
+  // An empty (or unparsable) diff set is "no diff facts": the create fallback may still apply.
+  if (hunks.length === 0 && added === 0 && removed === 0) return undefined
+  return { hunks, added, removed }
+}
 
 /** ADR-0301: the status face of the fold's turn process (bounded, display-only). */
 export function turnProcessView(process: FoldTurnProcess): {
@@ -116,6 +162,12 @@ export function turnProcessView(process: FoldTurnProcess): {
     readonly file: string | null
     readonly state: 'running' | 'done' | 'failed'
     readonly durationMs: number | null
+    readonly added: number | null
+    readonly removed: number | null
+    readonly hunks: readonly {
+      readonly old: string | null
+      readonly new: string | null
+    }[]
   }[]
 } {
   const durationMs = process.startedAt !== null && process.endedAt !== null && process.endedAt >= process.startedAt
@@ -131,6 +183,9 @@ export function turnProcessView(process: FoldTurnProcess): {
       durationMs: item.startedAt !== null && item.endedAt !== null && item.endedAt >= item.startedAt
         ? item.endedAt - item.startedAt
         : null,
+      added: item.added,
+      removed: item.removed,
+      hunks: item.hunks,
     })),
   }
 }
@@ -248,7 +303,11 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
     if (callId === null) return { ...fold, cursor: seq }
     const args = isRecord(data) ? (isRecord(data.arguments) ? data.arguments : undefined) : undefined
     const file = args === undefined ? null : baseNameOf(args.file_path) ?? baseNameOf(args.path)
-    const item: FoldTurnItem = { callId, name, file, state: 'running', startedAt: eventTime(event), endedAt: null }
+    const createContent = name === 'write' && args !== undefined && typeof args.content === 'string' ? args.content : null
+    const item: FoldTurnItem = {
+      callId, name, file, state: 'running', startedAt: eventTime(event), endedAt: null,
+      added: null, removed: null, hunks: [], createContent,
+    }
     const items = [...fold.turnProcess.items, item]
     return {
       ...fold, cursor: seq,
@@ -263,13 +322,28 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
     }
     const failed = isRecord(message) && message.isError === true
     const at = eventTime(event)
+    const meta = isRecord(data) ? data.meta : undefined
+    const fromMeta = hunksFromMeta(meta)
     return {
       ...fold, cursor: seq,
       turnProcess: {
         ...fold.turnProcess,
-        items: fold.turnProcess.items.map((item) => item.callId === callId && item.state === 'running'
-          ? { ...item, state: failed ? 'failed' as const : 'done' as const, endedAt: at }
-          : item),
+        items: fold.turnProcess.items.map((item) => {
+          if (item.callId !== callId || item.state !== 'running') return item
+          const diff = failed ? undefined
+            : fromMeta !== undefined ? fromMeta
+              // ADR-0302 create fallback: a new file's result meta carries no hunks; the call's
+              // own content is the insertion.
+              : item.createContent !== null
+                ? { hunks: [{ old: null, new: boundLines(item.createContent) }] as readonly FoldTurnHunk[], added: countLines(item.createContent), removed: 0 }
+                : undefined
+          return {
+            ...item,
+            state: failed ? 'failed' as const : 'done' as const,
+            endedAt: at,
+            ...(diff === undefined ? {} : { added: diff.added, removed: diff.removed, hunks: diff.hunks }),
+          }
+        }),
       },
     }
   }

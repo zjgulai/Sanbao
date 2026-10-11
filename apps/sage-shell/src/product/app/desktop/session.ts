@@ -33,6 +33,12 @@ export interface DesktopTurnProcess {
     readonly file: string | null
     readonly state: 'running' | 'done' | 'failed'
     readonly durationMs: number | null
+    readonly added: number | null
+    readonly removed: number | null
+    readonly hunks: readonly {
+      readonly old: string | null
+      readonly new: string | null
+    }[]
   }[]
 }
 
@@ -83,11 +89,26 @@ function parseTurnProcess(input: unknown): DesktopTurnProcess {
       if (item.file !== null && typeof item.file !== 'string') return []
       if (item.state !== 'running' && item.state !== 'done' && item.state !== 'failed') return []
       const itemDuration = item.durationMs
+      const countOf = (value: unknown): number | null =>
+        typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null
+      const hunks = Array.isArray(item.hunks)
+        ? (item.hunks as unknown[]).flatMap((hunk) => {
+          if (!isRecord(hunk)) return []
+          const oldText = hunk.old
+          const newText = hunk.new
+          if ((oldText !== null && typeof oldText !== 'string') || (newText !== null && typeof newText !== 'string')) return []
+          if (oldText === null && newText === null) return []
+          return [{ old: oldText as string | null, new: newText as string | null }]
+        })
+        : []
       return [{
         name: item.name,
         file: item.file as string | null,
         state: item.state as 'running' | 'done' | 'failed',
         durationMs: typeof itemDuration === 'number' && Number.isSafeInteger(itemDuration) && itemDuration >= 0 ? itemDuration : null,
+        added: countOf(item.added),
+        removed: countOf(item.removed),
+        hunks,
       }]
     })
     : []

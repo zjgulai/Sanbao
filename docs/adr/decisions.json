@@ -10023,6 +10023,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0302",
+      "title": "ADR-0302 · 执行模块第四刀：变更摘要与差异审阅",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "fold 提取 tool/result.meta.diffs（≤4 hunk、60 行/侧）；write 创建回退 call 侧 content；基名规则不变。",
+          "constraints": [
+            "meta trusted only when not an error",
+            "empty diffs = no diff facts"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "fileWrites 项扩 added/removed/hunks；desktop 宽容解析。",
+          "constraints": [
+            "unknown stays null, never guessed"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "footer 摘要 + 审阅按钮 + 逐项 +A/-R 与查看本次修改 hunks（danger/success token）；M02 入口 blocker 闭合。",
+          "constraints": [
+            "shared open state with the process list"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "审阅为回合流内联；撤销/复制路径/文件树/右侧面板未装，blocker 明写；三行迁 implementing。",
+          "constraints": [
+            "no placeholder entries"
+          ]
+        }
+      ]
     }
   ]
 }

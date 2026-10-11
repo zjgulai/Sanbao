@@ -80,8 +80,30 @@ describe('the turn process fold (ADR-0301)', () => {
     expect(view.durationMs).toBe(7000)
     expect(view.iterations).toBe(2)
     // The read tool never enters the file list; only the basename crosses the projection.
-    expect(view.fileWrites).toEqual([{ name: 'write', file: 'demo.html', state: 'done', durationMs: 1900 }])
+    expect(view.fileWrites).toEqual([{ name: 'write', file: 'demo.html', state: 'done', durationMs: 1900, added: null, removed: null, hunks: [] }])
     expect(JSON.stringify(view)).not.toContain('/Users/')
+  })
+
+  it('extracts bounded diff facts from the tool result meta, with the create fallback (ADR-0302)', () => {
+    const edited = foldSessionFrames([
+      { type: 'event', event: { type: 'turn/start', seq: 1, time: 0, data: { turn: 1 } } },
+      { type: 'event', event: { type: 'tool/call', seq: 2, time: 10, data: { turn: 1, step: 1, callId: 'e1', name: 'edit', arguments: { file_path: '/w/demo.html', old_string: 'a', new_string: 'b' } } } },
+      { type: 'event', event: { type: 'tool/result', seq: 3, time: 20, data: { turn: 1, step: 1, message: { callId: 'e1', content: [], isError: false }, meta: { diffs: [{ path: '/w/demo.html', oldText: 'line-a\nline-b', newText: 'line-a\nline-c' }] } } } },
+    ])
+    const viewed = turnProcessView(edited.turnProcess)
+    expect(viewed.fileWrites[0]).toMatchObject({ name: 'edit', file: 'demo.html', added: 2, removed: 2 })
+    expect(viewed.fileWrites[0]?.hunks).toEqual([{ old: 'line-a\nline-b', new: 'line-a\nline-c' }])
+
+    // A created file's result meta carries no hunks: the call's own content is the insertion.
+    const created = foldSessionFrames([
+      { type: 'event', event: { type: 'turn/start', seq: 1, time: 0, data: { turn: 1 } } },
+      { type: 'event', event: { type: 'tool/call', seq: 2, time: 10, data: { turn: 1, step: 1, callId: 'c1', name: 'write', arguments: { file_path: '/w/new.html', content: 'l1\nl2\nl3' } } } },
+      { type: 'event', event: { type: 'tool/result', seq: 3, time: 40, data: { turn: 1, step: 1, message: { callId: 'c1', content: [], isError: false }, meta: { operation: 'create', diffs: [] } } } },
+    ])
+    const createdView = turnProcessView(created.turnProcess)
+    expect(createdView.fileWrites[0]).toMatchObject({ file: 'new.html', added: 3, removed: 0, state: 'done' })
+    expect(createdView.fileWrites[0]?.hunks).toEqual([{ old: null, new: 'l1\nl2\nl3' }])
+    expect(JSON.stringify(createdView)).not.toContain('/w/')
   })
 
   it('marks a failed tool result and resets the process on the next turn start', () => {

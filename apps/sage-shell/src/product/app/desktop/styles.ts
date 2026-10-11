@@ -195,7 +195,14 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
+.sage-desktop .turn-process-summary { color: var(--sage-muted); }
 .sage-desktop .turn-process-files summary { cursor: pointer; color: var(--sage-muted); }
+.sage-desktop .turn-item-diff summary { cursor: pointer; color: var(--sage-muted); }
+.sage-desktop .turn-item-diff { margin-top: 4px; }
+.sage-desktop .diff-hunk { margin-top: 6px; border: 1px solid var(--sage-border); border-radius: 8px; overflow: hidden; }
+.sage-desktop .diff-hunk pre { margin: 0; padding: 6px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.55; overflow-x: auto; }
+.sage-desktop .diff-old { background: color-mix(in srgb, var(--sage-danger) 12%, transparent); color: var(--sage-danger); }
+.sage-desktop .diff-new { background: color-mix(in srgb, var(--sage-success) 12%, transparent); color: var(--sage-success); }
 .sage-desktop .turn-process-files ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .sage-desktop .artifact-rail { width: 224px; flex: 0 0 224px; display: flex; flex-direction: column; gap: 10px; padding: 18px 14px; border-left: 1px solid var(--sage-divider); overflow-y: auto; }
 .sage-desktop .artifact-rail-header { font-size: 11px; color: var(--sage-muted); }

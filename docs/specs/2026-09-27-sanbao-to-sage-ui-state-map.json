@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 25,
-        "pending": 173,
+        "implementing": 28,
+        "pending": 170,
         "verified": 8
       },
       "applicationService": {
@@ -1518,8 +1518,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1540,7 +1551,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the round change summary renders from the durable fold (files · +A/-R) with a working review entry; the 撤销 (undo) and per-file open entries are NOT wired (write-back and file-open surfaces unassembled); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -1665,8 +1676,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1687,7 +1709,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the review surface is inline in the turn flow (expandable list + bounded hunks), not a right-side review panel; copy-path and file-tree entries are NOT wired; only hunks carried by the log persist (created-file fallback from the call content); visualAcceptance pending"
         ]
       }
     },
@@ -1765,7 +1787,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "completed edit/write items list with file basename and per-item duration, collapsible; the 查看本次修改 (diff) entry is NOT wired — the diff surface belongs to the A01 rows, not yet assembled; visualAcceptance pending"
+          "completed edit/write items list with file basename, per-item duration and +A/-R, each with a 查看本次修改 diff entry (bounded hunks, ADR-0302); visualAcceptance pending"
         ]
       }
     },
@@ -1810,8 +1832,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1832,7 +1865,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "red/green replacement lines render from the tool result meta hunks (bounded 4 hunks × 60 lines); unchanged-line folding is the log’s own hunk granularity; the right-side panel update behavior is the inline surface; visualAcceptance pending"
         ]
       }
     },
