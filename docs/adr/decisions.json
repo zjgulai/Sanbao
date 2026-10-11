@@ -10413,6 +10413,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0312",
+      "title": "ADR-0312 · 设置叶区：十一叶真实机器上桌（导航批）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "settingsLeaves 新槽（闭合解析、畸形省略）+ 设置页「本机设置叶」区（title/state/source/note 逐字）。",
+          "constraints": [
+            "machine text displayed verbatim"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "叶区零写入口（无 button/input/select）。",
+          "constraints": [
+            "writeEntry null honored"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "槽缺省/畸形 → 无叶区；既有 8 select 与占位页不动。",
+          "constraints": [
+            "no empty shell"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "11 entry 行迁 implementing；叶页导航与 P06 伞行如实留 pending。",
+          "constraints": [
+            "summary regenerated"
+          ]
+        }
+      ]
     }
   ]
 }

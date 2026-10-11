@@ -10,6 +10,8 @@ import {
   type DevicePreferencesState,
 } from '../../src/product/app/desktop/device-preferences.js'
 import { DesktopSettingsView } from '../../src/product/app/desktop/settings-view.js'
+import { classifyDesktopState, type DesktopSettingsLeaf } from '../../src/product/app/desktop/client.js'
+import { desktopSessionPayload } from '../support/desktop-session-fixture.js'
 
 const stored: DevicePreferenceValues = {
   theme: 'dark',
@@ -44,12 +46,15 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-async function mount(controller: ReturnType<typeof createDevicePreferencesController>) {
+async function mount(
+  controller: ReturnType<typeof createDevicePreferencesController>,
+  leaves?: readonly DesktopSettingsLeaf[],
+) {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
-  act(() => { root.render(createElement(DesktopSettingsView, { controller })) })
+  act(() => { root.render(createElement(DesktopSettingsView, { controller, ...(leaves === undefined ? {} : { leaves }) })) })
   await act(async () => {
     await vi.waitFor(() => expect(controller.snapshot().read.kind).not.toBe('unavailable'))
   })
@@ -162,5 +167,44 @@ describe('desktop settings appearance view', () => {
     })
     expect(theme.value).toBe('dark')
     expect(container.querySelector('[role="status"]')?.textContent).toContain('保存未确认')
+  })
+})
+
+describe('the settings leaf region (ADR-0312)', () => {
+  const LEAVES: readonly DesktopSettingsLeaf[] = [
+    { leafId: 'connection', title: '连接', state: 'read', source: '运行时启动观察', note: 'Host 本次启动处于活跃世代；连接细节以运行时清单页为准。' },
+    { leafId: 'desktop-pet', title: '桌面宠物', state: 'unavailable', source: 'provider-not-wired', note: '未核验：这一版还没有桌面宠物 provider。' },
+  ]
+
+  it('renders every leaf row with its honest state, source and note', async () => {
+    const controller = createDevicePreferencesController({ root: null, createSignal: signal, fetcher: async () => Response.json(initial) })
+    const container = await mount(controller, LEAVES)
+    const region = container.querySelector('[aria-label="本机设置叶"]')
+    expect(region).not.toBeNull()
+    const rows = container.querySelectorAll('.settings-leaf')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]?.querySelector('strong')?.textContent).toBe('连接')
+    expect(rows[0]?.querySelector('.settings-leaf-state')?.textContent).toBe('已读')
+    expect(rows[0]?.textContent).toContain('来源：运行时启动观察')
+    expect(rows[1]?.querySelector('strong')?.textContent).toBe('桌面宠物')
+    expect(rows[1]?.querySelector('.settings-leaf-state')?.textContent).toBe('未核验')
+    expect(rows[1]?.textContent).toContain('provider-not-wired')
+    expect(rows[1]?.getAttribute('data-leaf-state')).toBe('unavailable')
+    // No write entry exists on any leaf row.
+    expect(region?.querySelectorAll('button, input, select')).toHaveLength(0)
+  })
+
+  it('renders no leaf region when the slot is absent', async () => {
+    const controller = createDevicePreferencesController({ root: null, createSignal: signal, fetcher: async () => Response.json(initial) })
+    const container = await mount(controller)
+    expect(container.querySelector('[aria-label="本机设置叶"]')).toBeNull()
+  })
+
+  it('omits the whole slot when the envelope carries a malformed leaf list', () => {
+    const payload = desktopSessionPayload()
+    const malformed = classifyDesktopState({ ...payload, settingsLeaves: [{ leafId: 'x' }] })
+    expect('settingsLeaves' in malformed).toBe(false)
+    const missingState = classifyDesktopState({ ...payload, settingsLeaves: [{ leafId: 'x', title: 'X', state: 'weird', source: 's', note: 'n' }] })
+    expect('settingsLeaves' in missingState).toBe(false)
   })
 })

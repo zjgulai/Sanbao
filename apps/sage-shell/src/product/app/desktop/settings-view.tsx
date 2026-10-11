@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
+import type { DesktopSettingsLeaf } from './client.js'
 import {
   DEVICE_PREFERENCE_KEYS,
   DEVICE_PREFERENCE_OPTIONS,
@@ -14,6 +15,8 @@ import {
 export interface DesktopSettingsViewProps {
   /** Supplying the controller keeps tests and the eventual page glue on the same narrow seam. */
   readonly controller?: DevicePreferencesController
+  /** ADR-0312: the eleven settings leaves (Ticket 046 machine). Absent = no leaf region. */
+  readonly leaves?: readonly DesktopSettingsLeaf[]
 }
 
 const FIELD_LABELS: Readonly<Record<DevicePreferenceKey, string>> = {
@@ -79,7 +82,7 @@ function statusText(snapshot: DevicePreferencesControllerSnapshot): string {
 
 /** The Settings appearance slice. Native controls preserve keyboard/focus behavior; unavailable
  *  reads show no invented defaults, and the controller owns all POST + authoritative GET logic. */
-export function DesktopSettingsView({ controller: suppliedController }: DesktopSettingsViewProps): ReactNode {
+export function DesktopSettingsView({ controller: suppliedController, leaves }: DesktopSettingsViewProps): ReactNode {
   const [controller] = useState(() => suppliedController ?? createDevicePreferencesController())
   const [snapshot, setSnapshot] = useState(() => controller.snapshot())
   const [draft, setDraft] = useState<DevicePreferenceValues | null>(() => draftFrom(controller.snapshot()))
@@ -136,5 +139,17 @@ export function DesktopSettingsView({ controller: suppliedController }: DesktopS
       </fieldset>
     </form>
     <p role="status" aria-live="polite">{statusText(snapshot)}</p>
+    {leaves !== undefined
+      ? <section className="settings-leaves" aria-label="本机设置叶">
+        <h3>本机设置叶</h3>
+        <ul>
+          {leaves.map((leaf) => <li key={leaf.leafId} className="settings-leaf" data-leaf-state={leaf.state}>
+            <strong>{leaf.title}</strong>
+            <span className="settings-leaf-state">{leaf.state === 'read' ? '已读' : '未核验'}</span>
+            <small>来源：{leaf.source} · {leaf.note}</small>
+          </li>)}
+        </ul>
+      </section>
+      : null}
   </section>
 }

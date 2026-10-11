@@ -211,6 +211,15 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
 /* ADR-0306: the extension-management page and the add-custom-MCP form. */
+/* ADR-0312: the settings leaf region (Ticket 046 machine rows). */
+.sage-desktop .settings-leaves { margin-top: 18px; }
+.sage-desktop .settings-leaves h3 { margin: 0 0 8px; font-size: 13px; }
+.sage-desktop .settings-leaves ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sage-desktop .settings-leaf { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border: 1px solid var(--sage-border); border-radius: 9px; }
+.sage-desktop .settings-leaf strong { font-size: 12px; }
+.sage-desktop .settings-leaf-state { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .settings-leaf[data-leaf-state="unavailable"] .settings-leaf-state { color: var(--sage-warning); }
+.sage-desktop .settings-leaf small { font-size: 11px; color: var(--sage-muted); }
 /* ADR-0311: the 工作区文件 submenu (search + real candidates). The root menu stops scrolling
    while the flyout is open (a scroll container would clip the absolute submenu), the flyout
    clears the base bottom:100% (an over-constrained absolute box collapses to zero height),

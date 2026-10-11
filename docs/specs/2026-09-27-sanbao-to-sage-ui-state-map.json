@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 87,
-        "pending": 111,
+        "implementing": 98,
+        "pending": 100,
         "verified": 8
       },
       "applicationService": {
@@ -2384,8 +2384,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2406,7 +2417,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -2725,8 +2736,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2747,7 +2769,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -2790,8 +2812,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2812,7 +2845,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -2855,8 +2888,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2877,7 +2921,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -2985,8 +3029,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3007,7 +3062,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3050,8 +3105,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3072,7 +3138,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3115,8 +3181,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3137,7 +3214,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3310,8 +3387,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3332,7 +3420,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3375,8 +3463,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3397,7 +3496,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3440,8 +3539,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3462,7 +3572,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },
@@ -3635,8 +3745,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3657,7 +3778,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the leaf row renders on the settings page from the Ticket 046 machine verbatim (state/source/note); the leaf SUBPAGE navigation (clicking into a leaf page) is not assembled — the machine offers no subpage content and writeEntry is null; real readings exist for 3 of the 11 leaves (connection/security/workspace-index), the rest stay honest provider-not-wired; P06 scope stays pending (39 further leaves)"
         ]
       }
     },

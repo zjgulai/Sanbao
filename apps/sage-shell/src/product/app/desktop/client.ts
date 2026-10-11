@@ -19,7 +19,19 @@ export type DesktopRead =
       readonly monitor?: DesktopRunMonitor
       /** Loop-Q R9: the knowledge readout slot ({state, reason} only). */
       readonly readoutKnowledge?: DesktopReadoutKnowledge
+      /** ADR-0312: the eleven settings leaves (Ticket 046 machine, read-only rows). */
+      readonly settingsLeaves?: readonly DesktopSettingsLeaf[]
     }
+
+/** ADR-0312: one settings leaf as the desktop renders it — title + honest state + where the fact
+ *  comes from. No write entry exists (the machine offers none). */
+export interface DesktopSettingsLeaf {
+  readonly leafId: string
+  readonly title: string
+  readonly state: 'read' | 'unavailable'
+  readonly source: string
+  readonly note: string
+}
 
 /** Loop-Q R9: the knowledge readout as the knowledge page displays it — the honest named
  *  state/reason pair; the slot is omitted entirely when the envelope carries nothing usable. */
@@ -248,6 +260,7 @@ export function classifyDesktopState(input: unknown): DesktopRead {
   const activeContext = parseActiveContext(input.activeContext)
   const artifacts = parseArtifacts(input.artifacts)
   const monitor = parseMonitor(input.runMonitor)
+  const settingsLeaves = parseSettingsLeaves(input.settingsLeaves)
   const readout = isRecord(input.readout) ? input.readout : null
   const readoutKnowledge = parseReadoutKnowledge(readout === null ? null : readout.knowledge)
   return {
@@ -260,7 +273,25 @@ export function classifyDesktopState(input: unknown): DesktopRead {
     ...(artifacts === null ? {} : { artifacts }),
     ...(monitor === null ? {} : { monitor }),
     ...(readoutKnowledge === null ? {} : { readoutKnowledge }),
+    ...(settingsLeaves === null ? {} : { settingsLeaves }),
   }
+}
+
+/** ADR-0312: closed-world parse; a malformed list or row omits the whole slot (the page then
+ *  shows no leaf region instead of half-read rows). */
+function parseSettingsLeaves(input: unknown): readonly DesktopSettingsLeaf[] | null {
+  if (!Array.isArray(input)) return null
+  const leaves: DesktopSettingsLeaf[] = []
+  for (const leaf of input) {
+    if (!isRecord(leaf)
+      || typeof leaf.leafId !== 'string' || leaf.leafId === ''
+      || typeof leaf.title !== 'string' || leaf.title === ''
+      || (leaf.state !== 'read' && leaf.state !== 'unavailable')
+      || typeof leaf.source !== 'string' || leaf.source === ''
+      || typeof leaf.note !== 'string') return null
+    leaves.push({ leafId: leaf.leafId, title: leaf.title, state: leaf.state, source: leaf.source, note: leaf.note })
+  }
+  return leaves
 }
 
 /** ADR-0304: tolerant parse — the steps axis is validated; each remaining axis degrades to an
