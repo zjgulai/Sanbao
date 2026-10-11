@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 47,
-        "pending": 151,
+        "implementing": 59,
+        "pending": 139,
         "verified": 8
       },
       "applicationService": {
@@ -3753,8 +3753,29 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t01",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-page.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-anchors.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3775,7 +3796,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "default home and read refusal only; successful task/session chain remains T02-T06"
+          "group expanded 2/2 leaves implementing (home workspace/anchor preview); designated-agent and search-hit leaves are not observed yet"
         ]
       }
     },
@@ -3818,8 +3839,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t03",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-search.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -3840,7 +3867,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 1/1 leaf implementing (search empty); the leaf evidence is candidate-untracked (.birdview) per its row — group coverage cites the tracked desktop search spec; result and cross-task leaves are not observed yet"
         ]
       }
     },
@@ -4728,8 +4755,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -4750,7 +4788,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 1/1 leaf implementing (review summary); pinned/floating and per-group expansion leaves are not observed yet"
         ]
       }
     },
@@ -4858,8 +4896,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-page.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -4880,7 +4924,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 1/1 leaf implementing (context menu); keyboard selection, detail and empty-search leaves are not observed yet"
         ]
       }
     },
@@ -5779,8 +5823,34 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/projection-read-routes.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -5801,7 +5871,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 2/2 leaves implementing (session running/streaming); process folding and thinking-detail leaves are not observed yet"
         ]
       }
     },
@@ -5844,8 +5914,24 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t07",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/clarifications.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-history.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -5866,7 +5952,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 3/3 leaves implementing (clarification waiting/custom/submitted); the SwitchMode confirmation leaf is not observed yet"
         ]
       }
     },
@@ -6234,8 +6320,24 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/read-policy-allowed-path.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6256,7 +6358,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 2/2 leaves implementing (interrupted/continued); the real failure branch leaf is not observed yet"
         ]
       }
     },
@@ -6364,8 +6466,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6386,7 +6499,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 1/1 leaf implementing (context usage); compaction and side-chat inheritance leaves are not observed yet"
         ]
       }
     },
@@ -6624,8 +6737,24 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/session-region.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6646,7 +6775,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 2/2 leaves implementing (reply completed/actions); thinking detail and process grouping are not observed leaves yet"
         ]
       }
     },
@@ -6689,8 +6818,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6711,7 +6851,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 2/2 leaves implementing (file writing/edit expanded)"
         ]
       }
     },
@@ -6949,8 +7089,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6971,7 +7122,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 3/3 leaves implementing (changes/diff created/modified); large-diff and loading states are not observed leaves yet"
         ]
       }
     },
@@ -7014,8 +7165,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7036,7 +7198,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "group expanded 1/1 leaf implementing (output.html); grouping, hover preview and plan-file de-dup were not observed as leaves — the group stays non-exhaustive"
         ]
       }
     },
