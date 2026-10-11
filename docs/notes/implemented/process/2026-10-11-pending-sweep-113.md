@@ -45,6 +45,10 @@ Loop-Q 推进至 85 implementing 后，剩余 113 pending 需要一次全量分�
 6. S05/S07/M03/M05 的 assemblable-now **仅指装配**：queued、blocked、图片解析等状态只能自然出现验证；行迁移只声明壳到位。
 7. 侦察中 16 条已 implementing 行被分区重复列出（噪声），已按矩阵现状剔除；本记录仅覆盖 113 条真实 pending。
 
+## 消费规则（2026-10-11 裁定）
+
+警示 1/2/3 的读法按 [ADR-0315](../../../adr/ADR-0315.md) 与[裁定记录](2026-10-11-sweep-consumption-rulings.md)修订：assemblable 只指壳装配；route `currentAuthority` 是权威维度的唯一事实家；admission 收口一律独立成批（Q1/Q2）；P13 扩叶前置按 Q3 收缩。原文保留，引用时以消费规则为准。
+
 ## Verification
 
 - 分级覆盖核验：113/113 pending 全覆盖（31+70+6+6）。

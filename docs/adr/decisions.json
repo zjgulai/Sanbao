@@ -10508,6 +10508,109 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0314",
+      "title": "ADR-0314 · T09 产物与工具结果批：逆向放大装配（A03/A04/A05/M03/M05/P12）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "Qoder 0.4.4 静态逆行为设计输入（版本戳+锚点）；全权 renderer 与多窗模型刻意不迁（安全模型差异）；观察仍是金标准。",
+          "constraints": [
+            "static anchors do not prove reachability"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "A03/A04：office/binary 拒绝具名+卡标签；文本族 too-large 具名 artifact-too-large；8-格式表仅对照。",
+          "constraints": [
+            "no bridge code leak to user text"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "A05：失败码→句子映射；exact-version 既有断言并入；不装版本历史（逆向证伪）。",
+          "constraints": [
+            "refuted-by-RE item stays out"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "M03：终端只读面板（精确 body、零输入控件）；PTY 双向维持不装（ADR-0243）；网络工具名归一只对到达项生效。",
+          "constraints": [
+            "no write face",
+            "no synthesized items"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "M05：非 write 工具结果文本→sync declarations→装配→同请求求值→desktop typed 视图；write 族事实家=turnProcess 不重复。",
+          "constraints": [
+            "one fact one home",
+            "bounded text with cut marker"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "P12：darwin hiddenInset+trafficLightPosition；仅自绘文档预留头空；HTML/PDF 不注入；单窗。",
+          "constraints": [
+            "no injection into artifact html"
+          ]
+        },
+        {
+          "id": "D7",
+          "text": "六伞行迁 ui implementing；appsvc 保持 blocked 不虚升；blocker 逐伞具名；summary 102→108。",
+          "constraints": [
+            "deriveSummary",
+            "no appsvc upgrade"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "对抗评审确认项全修复后才提交。",
+          "constraints": [
+            "each fix carries a spec case"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0315",
+      "title": "ADR-0315 · Sweep 消费规则：维度正交裁定（Q1–Q4）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "通用口径：assemblable 只指壳装配；currentAuthority 是权威维度唯一事实家；admission 收口独立成批；壳批不改 violation 计数。",
+          "constraints": [
+            "covers warning 1/2/3 readings"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "O04/P15/S09 入批照 ADR-0313 成例：纯壳、appsvc blocked、S03 样板 blocker、矩阵不动。",
+          "constraints": [
+            "no admission work in shell batches"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "P13 正交：矩阵=route 权威维度、ADR-0310=装配维度；violation 原样保留至 workspace admission 批。",
+          "constraints": [
+            "gate bypass count untouched"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "P13 归档/远端叶剔除（无机器）；编辑叶先补字段级观察。",
+          "constraints": [
+            "no expansion without observation"
+          ]
+        }
+      ]
     }
   ]
 }
