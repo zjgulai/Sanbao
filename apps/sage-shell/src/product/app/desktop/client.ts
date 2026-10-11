@@ -21,6 +21,10 @@ export type DesktopRead =
       readonly readoutKnowledge?: DesktopReadoutKnowledge
       /** ADR-0312: the eleven settings leaves (Ticket 046 machine, read-only rows). */
       readonly settingsLeaves?: readonly DesktopSettingsLeaf[]
+      /** ADR-0316 (R16 shell batch): the matter roster and the O04 administration reads. */
+      readonly matterList?: DesktopMatterList
+      readonly matterAdmin?: DesktopMatterAdmin
+      readonly matterGroups?: DesktopMatterGroups
     }
 
 /** ADR-0312: one settings leaf as the desktop renders it — title + honest state + where the fact
@@ -134,6 +138,57 @@ export type DesktopActiveContext =
       readonly workspaceRef: string
       readonly frameGeneration: number
     }
+
+/** ADR-0316 (R16): the matter roster (Ticket 032's list projection) — display facts only. */
+export interface DesktopMatterTrigger {
+  readonly kind: 'attempt-unknown' | 'attempt-failed' | 'pending-inputs'
+  readonly ref: string
+  readonly count: number | null
+}
+export interface DesktopMatterListItem {
+  readonly itemId: string
+  readonly matterRef: string | null
+  readonly title: string
+  readonly partition: 'action' | 'in-progress' | 'acceptance'
+  readonly triggers: readonly DesktopMatterTrigger[]
+  readonly acceptanceCandidateCount: number
+  readonly lifecycle: 'active' | 'archived'
+  readonly updatedAt: string
+}
+export interface DesktopMatterList {
+  readonly state: 'read' | 'unavailable'
+  readonly code: string | null
+  readonly items: readonly DesktopMatterListItem[]
+  readonly counts: { readonly action: number, readonly inProgress: number, readonly acceptance: number }
+}
+/** ADR-0316 (R16): the O04 administration reads (archive entries, trail, rename/batch read-backs). */
+export interface DesktopMatterAdmin {
+  readonly state: 'read' | 'unavailable'
+  readonly entries: readonly { readonly matterRef: string, readonly archivedAt: string, readonly ground: 'completed' | 'stopped' }[]
+  readonly trail: readonly { readonly at: string, readonly action: 'archive' | 'restore', readonly matterRef: string, readonly ground: 'completed' | 'stopped' | null }[]
+  readonly rename: { readonly matterRef: string, readonly requested: string, readonly effective: string, readonly at: string } | null
+  readonly batch: {
+    readonly operation: 'archive' | 'restore'
+    readonly rows: readonly { readonly matterRef: string, readonly outcome: 'ok' | 'refused', readonly code: string | null }[]
+    readonly okCount: number
+    readonly refusedCount: number
+  } | null
+}
+export interface DesktopMatterGroups {
+  readonly state: 'read' | 'unavailable'
+  readonly code: string | null
+  readonly groups: readonly { readonly groupId: string, readonly name: string, readonly memberCount: number, readonly createdAt: string, readonly updatedAt: string }[]
+  readonly trail: readonly { readonly at: string, readonly action: string, readonly groupId: string, readonly name: string, readonly count: number }[]
+  readonly rename: { readonly groupId: string, readonly requested: string, readonly effective: string, readonly at: string } | null
+  readonly batch: {
+    readonly operation: 'add' | 'remove'
+    readonly groupId: string
+    readonly rows: readonly { readonly itemId: string, readonly outcome: 'ok' | 'unchanged' | 'refused', readonly code: string | null }[]
+    readonly okCount: number
+    readonly unchangedCount: number
+    readonly refusedCount: number
+  } | null
+}
 
 const READ_DENIALS = new Set([
   'projection-read-unavailable',
@@ -261,6 +316,9 @@ export function classifyDesktopState(input: unknown): DesktopRead {
   const artifacts = parseArtifacts(input.artifacts)
   const monitor = parseMonitor(input.runMonitor)
   const settingsLeaves = parseSettingsLeaves(input.settingsLeaves)
+  const matterList = parseMatterList(input.matterList)
+  const matterAdmin = parseMatterAdmin(input.matterAdmin)
+  const matterGroups = parseMatterGroups(input.matterGroups)
   const readout = isRecord(input.readout) ? input.readout : null
   const readoutKnowledge = parseReadoutKnowledge(readout === null ? null : readout.knowledge)
   return {
@@ -274,6 +332,9 @@ export function classifyDesktopState(input: unknown): DesktopRead {
     ...(monitor === null ? {} : { monitor }),
     ...(readoutKnowledge === null ? {} : { readoutKnowledge }),
     ...(settingsLeaves === null ? {} : { settingsLeaves }),
+    ...(matterList === null ? {} : { matterList }),
+    ...(matterAdmin === null ? {} : { matterAdmin }),
+    ...(matterGroups === null ? {} : { matterGroups }),
   }
 }
 
@@ -363,6 +424,135 @@ function parseArtifacts(input: unknown): DesktopArtifacts | null {
     return null
   }
   return { state: input.state, cards, preview: parsedPreview }
+}
+
+/** ADR-0316 (R16): closed-world parsers — each validates the contract shape field by field and
+ *  a malformed slot is omitted, never displayed half-read (the parseSettingsLeaves discipline). */
+function parseMatterList(input: unknown): DesktopMatterList | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (input.code !== null && typeof input.code !== 'string') return null
+  if (!Array.isArray(input.items)) return null
+  const counts = input.counts
+  if (!isRecord(counts) || !safeCount(counts.action) || !safeCount(counts.inProgress) || !safeCount(counts.acceptance)) return null
+  const items: DesktopMatterListItem[] = []
+  for (const item of input.items) {
+    if (!isRecord(item) || typeof item.itemId !== 'string' || item.itemId === ''
+      || (item.matterRef !== null && typeof item.matterRef !== 'string')
+      || typeof item.title !== 'string'
+      || (item.partition !== 'action' && item.partition !== 'in-progress' && item.partition !== 'acceptance')
+      || !Array.isArray(item.triggers) || !safeCount(item.acceptanceCandidateCount)
+      || (item.lifecycle !== 'active' && item.lifecycle !== 'archived')
+      || typeof item.updatedAt !== 'string') return null
+    const triggers: DesktopMatterTrigger[] = []
+    for (const trigger of item.triggers) {
+      if (!isRecord(trigger)
+        || (trigger.kind !== 'attempt-unknown' && trigger.kind !== 'attempt-failed' && trigger.kind !== 'pending-inputs')
+        || typeof trigger.ref !== 'string' || trigger.ref === ''
+        || (trigger.count !== undefined && trigger.count !== null && (typeof trigger.count !== 'number' || !Number.isSafeInteger(trigger.count)))) return null
+      triggers.push({ kind: trigger.kind, ref: trigger.ref, count: typeof trigger.count === 'number' ? trigger.count : null })
+    }
+    items.push({
+      itemId: item.itemId, matterRef: item.matterRef, title: item.title, partition: item.partition,
+      triggers, acceptanceCandidateCount: item.acceptanceCandidateCount, lifecycle: item.lifecycle, updatedAt: item.updatedAt,
+    })
+  }
+  return {
+    state: input.state, code: typeof input.code === 'string' ? input.code : null, items,
+    counts: { action: counts.action, inProgress: counts.inProgress, acceptance: counts.acceptance },
+  }
+}
+
+function parseMatterAdmin(input: unknown): DesktopMatterAdmin | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (!Array.isArray(input.entries) || !Array.isArray(input.trail)) return null
+  const entries: DesktopMatterAdmin['entries'][number][] = []
+  for (const entry of input.entries) {
+    if (!isRecord(entry) || typeof entry.matterRef !== 'string' || entry.matterRef === ''
+      || typeof entry.archivedAt !== 'string'
+      || (entry.ground !== 'completed' && entry.ground !== 'stopped')) return null
+    entries.push({ matterRef: entry.matterRef, archivedAt: entry.archivedAt, ground: entry.ground })
+  }
+  const trail: DesktopMatterAdmin['trail'][number][] = []
+  for (const record of input.trail) {
+    if (!isRecord(record) || typeof record.at !== 'string'
+      || (record.action !== 'archive' && record.action !== 'restore')
+      || typeof record.matterRef !== 'string'
+      || (record.ground !== null && record.ground !== 'completed' && record.ground !== 'stopped')) return null
+    trail.push({ at: record.at, action: record.action, matterRef: record.matterRef, ground: record.ground })
+  }
+  let rename: DesktopMatterAdmin['rename'] = null
+  if (input.rename !== null && input.rename !== undefined) {
+    const candidate = input.rename
+    if (!isRecord(candidate) || typeof candidate.matterRef !== 'string' || typeof candidate.requested !== 'string'
+      || typeof candidate.effective !== 'string' || typeof candidate.at !== 'string') return null
+    rename = { matterRef: candidate.matterRef, requested: candidate.requested, effective: candidate.effective, at: candidate.at }
+  }
+  let batch: DesktopMatterAdmin['batch'] = null
+  if (input.batch !== null && input.batch !== undefined) {
+    const candidate = input.batch
+    if (!isRecord(candidate) || (candidate.operation !== 'archive' && candidate.operation !== 'restore')
+      || !Array.isArray(candidate.rows) || !safeCount(candidate.okCount) || !safeCount(candidate.refusedCount)) return null
+    const rows: { matterRef: string, outcome: 'ok' | 'refused', code: string | null }[] = []
+    for (const row of candidate.rows) {
+      if (!isRecord(row) || typeof row.matterRef !== 'string'
+        || (row.outcome !== 'ok' && row.outcome !== 'refused')
+        || (row.code !== null && typeof row.code !== 'string')) return null
+      rows.push({ matterRef: row.matterRef, outcome: row.outcome, code: row.code })
+    }
+    batch = { operation: candidate.operation, rows, okCount: candidate.okCount, refusedCount: candidate.refusedCount }
+  }
+  return { state: input.state, entries, trail, rename, batch }
+}
+
+const GROUP_TRAIL_ACTIONS = new Set(['create', 'rename', 'remove', 'add-members', 'remove-members'])
+const GROUP_MEMBER_CODES = new Set(['already-member', 'not-member', 'item-unknown'])
+
+function parseMatterGroups(input: unknown): DesktopMatterGroups | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (input.code !== null && typeof input.code !== 'string') return null
+  if (!Array.isArray(input.groups) || !Array.isArray(input.trail)) return null
+  const groups: DesktopMatterGroups['groups'][number][] = []
+  for (const group of input.groups) {
+    if (!isRecord(group) || typeof group.groupId !== 'string' || group.groupId === ''
+      || typeof group.name !== 'string' || !Array.isArray(group.memberIds)
+      || !group.memberIds.every((id) => typeof id === 'string')
+      || typeof group.createdAt !== 'string' || typeof group.updatedAt !== 'string') return null
+    groups.push({ groupId: group.groupId, name: group.name, memberCount: group.memberIds.length, createdAt: group.createdAt, updatedAt: group.updatedAt })
+  }
+  const trail: DesktopMatterGroups['trail'][number][] = []
+  for (const record of input.trail) {
+    if (!isRecord(record) || typeof record.at !== 'string'
+      || typeof record.action !== 'string' || !GROUP_TRAIL_ACTIONS.has(record.action)
+      || typeof record.groupId !== 'string' || typeof record.name !== 'string'
+      || !safeCount(record.count)) return null
+    trail.push({ at: record.at, action: record.action, groupId: record.groupId, name: record.name, count: record.count })
+  }
+  let rename: DesktopMatterGroups['rename'] = null
+  if (input.rename !== null && input.rename !== undefined) {
+    const candidate = input.rename
+    if (!isRecord(candidate) || typeof candidate.groupId !== 'string' || typeof candidate.requested !== 'string'
+      || typeof candidate.effective !== 'string' || typeof candidate.at !== 'string') return null
+    rename = { groupId: candidate.groupId, requested: candidate.requested, effective: candidate.effective, at: candidate.at }
+  }
+  let batch: DesktopMatterGroups['batch'] = null
+  if (input.batch !== null && input.batch !== undefined) {
+    const candidate = input.batch
+    if (!isRecord(candidate) || (candidate.operation !== 'add' && candidate.operation !== 'remove')
+      || typeof candidate.groupId !== 'string' || !Array.isArray(candidate.rows)
+      || !safeCount(candidate.okCount) || !safeCount(candidate.unchangedCount) || !safeCount(candidate.refusedCount)) return null
+    const rows: { itemId: string, outcome: 'ok' | 'unchanged' | 'refused', code: string | null }[] = []
+    for (const row of candidate.rows) {
+      if (!isRecord(row) || typeof row.itemId !== 'string'
+        || (row.outcome !== 'ok' && row.outcome !== 'unchanged' && row.outcome !== 'refused')
+        || (row.code !== null && (typeof row.code !== 'string' || !GROUP_MEMBER_CODES.has(row.code)))) return null
+      rows.push({ itemId: row.itemId, outcome: row.outcome, code: row.code })
+    }
+    batch = {
+      operation: candidate.operation, groupId: candidate.groupId, rows,
+      okCount: candidate.okCount, unchangedCount: candidate.unchangedCount, refusedCount: candidate.refusedCount,
+    }
+  }
+  return { state: input.state, code: typeof input.code === 'string' ? input.code : null, groups, trail, rename, batch }
 }
 
 export async function readDesktopState(): Promise<DesktopRead> {

@@ -34,6 +34,8 @@ export interface DesktopSession {
   readonly terminal: DesktopTerminal | null
   /** ADR-0314 (M05): the typed tool results (Ticket 033 kernel; session-log half of the source). */
   readonly toolResults: DesktopToolResults | null
+  /** ADR-0316 (R16/P15): the side-chat roster (Ticket 024 machine) — read rows only. */
+  readonly sideChats: DesktopSideChats | null
   readonly paused: boolean
   readonly streamBroken: boolean
   readonly canSubmit: boolean
@@ -143,6 +145,19 @@ export type DesktopToolResult =
 export type DesktopToolResults =
   | { readonly state: 'read', readonly results: readonly DesktopToolResult[] }
   | { readonly state: 'unavailable', readonly reason: string }
+export interface DesktopSideChat {
+  readonly sideChatId: string
+  readonly sessionId: string
+  readonly atSeq: number | null
+  readonly createdAt: string
+  readonly execution: 'idle' | 'executing' | 'not-read'
+  readonly lastTurnEnd: string | null
+}
+export interface DesktopSideChats {
+  readonly state: 'read' | 'unavailable'
+  readonly code: string | null
+  readonly items: readonly DesktopSideChat[]
+}
 
 export type DesktopSessionAction = { readonly kind: 'send'; readonly text: string } | { readonly kind: 'stop' | 'resume' }
 export type DesktopSessionOutcome =
@@ -399,6 +414,27 @@ function parseToolResults(input: unknown): DesktopToolResults | null {
   return { state: 'read', results }
 }
 
+function parseSideChats(input: unknown): DesktopSideChats | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'unavailable')) return null
+  if (input.code !== null && input.code !== undefined && typeof input.code !== 'string') return null
+  if (!Array.isArray(input.items)) return null
+  const items: DesktopSideChat[] = []
+  for (const item of input.items) {
+    if (!isRecord(item) || !reference(item.sideChatId) || !reference(item.sessionId)
+      || (item.atSeq !== null && item.atSeq !== undefined && (typeof item.atSeq !== 'number' || !Number.isSafeInteger(item.atSeq)))
+      || typeof item.createdAt !== 'string'
+      || (item.execution !== 'idle' && item.execution !== 'executing' && item.execution !== 'not-read')
+      || (item.lastTurnEnd !== null && item.lastTurnEnd !== undefined && typeof item.lastTurnEnd !== 'string')) return null
+    items.push({
+      sideChatId: item.sideChatId, sessionId: item.sessionId,
+      atSeq: typeof item.atSeq === 'number' ? item.atSeq : null,
+      createdAt: item.createdAt, execution: item.execution,
+      lastTurnEnd: typeof item.lastTurnEnd === 'string' ? item.lastTurnEnd : null,
+    })
+  }
+  return { state: input.state, code: typeof input.code === 'string' ? input.code : null, items }
+}
+
 export function parseDesktopSession(input: unknown): DesktopSession | null {
   if (!isRecord(input)) return null
   const { service, activeContext: active, matter, workspaces, matterLinks, sessionChannel: channel } = input
@@ -454,6 +490,7 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
     queue: parseQueue(channel.queue) ?? { state: 'unavailable', occurrences: [] },
     terminal: parseTerminal(input.terminal),
     toolResults: parseToolResults(input.toolResults),
+    sideChats: parseSideChats(input.sideChats),
     paused: channel.paused, streamBroken: channel.streamBroken,
     canSubmit: matter.actionability === 'allowed' && matter.authorizationState === 'authorized'
       && matter.compatibilityOutcome === 'equivalent' && matter.availabilityState === 'available' && !channel.streamBroken,

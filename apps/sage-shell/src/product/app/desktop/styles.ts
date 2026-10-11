@@ -240,6 +240,9 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .tool-result-note { margin: 0; font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .terminal-output { margin: 0; padding: 6px 8px; border: 1px solid var(--sage-border); border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-size: 11px; max-height: 260px; overflow: auto; }
 .sage-desktop .artifact-kind-note { font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .matter-section { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.sage-desktop .matter-row { display: flex; align-items: center; gap: 8px; }
+.sage-desktop .matter-admin-card, .sage-desktop .matter-groups-card { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--sage-border); border-radius: 6px; padding: 8px 10px; }
 .sage-desktop .plans-roster { display: flex; flex-direction: column; gap: 10px; }
 .sage-desktop .plan-roster { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--sage-border); border-radius: 9px; }
 .sage-desktop .plan-roster-title { margin: 0; font-size: 13px; color: var(--sage-ink); }

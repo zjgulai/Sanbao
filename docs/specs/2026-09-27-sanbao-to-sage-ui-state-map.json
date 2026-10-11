@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 108,
-        "pending": 90,
+        "implementing": 111,
+        "pending": 87,
         "verified": 8
       },
       "applicationService": {
@@ -4860,8 +4860,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t08",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-side-chats.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -4882,7 +4888,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——侧聊名册消费 /.sage/state sideChats 投影（读侧行+状态+派生/锚点）；新建/发送/带回/回看骑 violation 路由，壳内具名未接通零接线；会话多窗格仓内无机器（static-only）不装配；admission 收口具名独立批"
         ]
       }
     },
@@ -5278,8 +5284,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t08",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-matter-admin.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/desktop-client.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -5300,7 +5317,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；壳已装配——事项名册与管理读回（entries/trail/rename/batch）消费 /.sage/state projection；归档/恢复/批量/重命名骑 direct-provider-bypass violation 路由，零动作入口+具名说明行（选择态随 admission 批）；admission 收口具名独立批（16 条 bypass 家族共用）"
         ]
       }
     },
@@ -6626,8 +6643,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t08",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-side-chats.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -6648,7 +6671,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；侧聊半随 P15 装配；后台 Agent/进程展开面仓内无机器——runMonitor.background 轴维持 named unknown 不制造；瞬态仅自然出现验证；admission 收口具名独立批"
         ]
       }
     },

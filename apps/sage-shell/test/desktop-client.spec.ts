@@ -35,6 +35,9 @@ describe('desktop service response classification', () => {
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
       settingsLeaves: [],
+      matterList: { state: 'unavailable', code: 'matter-list-unavailable', items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
+      matterAdmin: { state: 'unavailable', entries: [], trail: [], rename: null, batch: null },
+      matterGroups: { state: 'unavailable', code: 'matter-groups-unavailable', groups: [], trail: [], rename: null, batch: null },
       readoutKnowledge: { state: 'not-wired', reason: 'knowledge-store-unavailable' },
       monitor: {
         state: 'unavailable',
@@ -95,6 +98,9 @@ describe('desktop service response classification', () => {
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
       settingsLeaves: [],
+      matterList: { state: 'unavailable', code: 'matter-list-unavailable', items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
+      matterAdmin: { state: 'unavailable', entries: [], trail: [], rename: null, batch: null },
+      matterGroups: { state: 'unavailable', code: 'matter-groups-unavailable', groups: [], trail: [], rename: null, batch: null },
       readoutKnowledge: { state: 'not-wired', reason: 'knowledge-store-unavailable' },
       monitor: {
         state: 'unavailable',

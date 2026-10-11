@@ -10612,6 +10612,57 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0316",
+      "title": "ADR-0316 · R16 壳批：事项名册/管理读回、事项分组与侧聊（O04/P15/S09）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "三槽+sideChats 闭合解析入 desktop；畸形整槽省略；面板只渲染事实。",
+          "constraints": [
+            "closed-world parse"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "读面全装、动作零入口：violation 路由不接通；具名说明行代替动作；选择态随 admission 批。",
+          "constraints": [
+            "never deepen bypass",
+            "no dead controls"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "侧聊名册+四动作具名未接通（不提交请求）；transcript 同批推迟。",
+          "constraints": [
+            "zero requests on action click"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "多窗格/后台 Agent 展开面无机器不装配、不占位；blocker 具名。",
+          "constraints": [
+            "no fake entries"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "S09 对齐最小化：后台轴维持 named unknown；清运行模式陈旧 outstanding 死条目。",
+          "constraints": [
+            "no new machine"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "三伞行迁 implementing；appsvc 保持 blocked；ownerTicket 维持 T08；blocker 照 S03 四要素含 violation 语义；summary 重算。",
+          "constraints": [
+            "matrix counts unchanged"
+          ]
+        }
+      ]
     }
   ]
 }

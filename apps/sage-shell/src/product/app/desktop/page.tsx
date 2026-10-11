@@ -31,12 +31,11 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点' | '运行模式'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
   模型: '模型选择尚未接通；配置与可用状态未知。',
-  运行模式: '运行模式尚未接通；不从运行时连接状态推断任务执行权限。',
 }
 // T03 follow-up (M-3): the send route caps the whole request body at 4096 bytes — far below the
 // 16384-character text limit once UTF-8 multi-byte text plus matter/workspace fields are counted.
@@ -73,6 +72,81 @@ function receiptCode(value: unknown): string | null {
 // option labels. Selection is a local draft fact only; nothing posts on selection.
 const CREATE_ICON_OPTIONS = ['方格', '闪电', '星标'] as const
 const CREATE_COLOR_OPTIONS = ['绿', '蓝', '橙'] as const
+
+// ADR-0316 (R16/O04): the matter roster and the administration read-backs. Every write (archive/
+// restore/batch/rename; groups' create/rename/remove/membership) rides a direct-provider-bypass
+// violation route — this version carries ZERO action entries and says so in one named line per
+// card (ADR-0315 D2 pure-shell posture); selection machinery lands with the admission batch.
+const MATTER_TRIGGER_LABEL: Record<string, string> = {
+  'attempt-unknown': '尝试结果未知', 'attempt-failed': '尝试失败', 'pending-inputs': '待继续输入',
+}
+const GROUP_TRAIL_LABEL: Record<string, string> = {
+  create: '建立', rename: '改名', remove: '移除', 'add-members': '加入成员', 'remove-members': '移出成员',
+}
+const MATTER_UNWIRED_NOTE = '归档/恢复/批量/重命名尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。'
+const GROUPS_UNWIRED_NOTE = '建立/改名/移除/成员变更尚未接通（写路径 admission 收口在独立批——本版不提供动作入口）。'
+
+function MatterSection({ state }: { readonly state: DesktopReadState }): ReactNode {
+  if (state.kind !== 'read') return null
+  const { matterList, matterAdmin, matterGroups } = state
+  if (matterList === undefined && matterAdmin === undefined && matterGroups === undefined) return null
+  return <section className="matter-section" aria-label="事项">
+    <h2>事项</h2>
+    {matterList !== undefined && (matterList.state !== 'read'
+      ? <p className="workspace-note" role="status">{`事项名册读取不可用（原因码 ${matterList.code ?? 'matter-list-unavailable'}）；不据此断言无事项。`}</p>
+      : <div className="matter-roster" aria-label="事项名册">
+        <p className="control-note" role="status">{`待我处理 ${String(matterList.counts.action)} · 进行中 ${String(matterList.counts.inProgress)} · 验收 ${String(matterList.counts.acceptance)}`}</p>
+        {matterList.items.length === 0
+          ? <p className="workspace-note" role="status">当前没有事项。</p>
+          : <ul className="workspace-list" aria-label="事项列表">{matterList.items.map(item => <li key={item.itemId} className="matter-row" data-matter-partition={item.partition}>
+            <strong>{item.title}</strong>
+            <span className="control-item-badge">{item.partition === 'action' ? '待我处理' : item.partition === 'in-progress' ? '进行中' : '验收'}</span>
+            {item.lifecycle === 'archived' ? <span className="control-item-badge">已归档</span> : null}
+            {item.triggers.length > 0
+              ? <small>{`触发：${item.triggers.map(trigger => MATTER_TRIGGER_LABEL[trigger.kind] + (trigger.count === null ? '' : `×${String(trigger.count)}`)).join(' · ')}`}</small>
+              : null}
+          </li>)}</ul>}
+      </div>)}
+    {matterAdmin !== undefined && (matterAdmin.state !== 'read'
+      ? <p className="workspace-note" role="status">事项管理读取不可用；不据此断言无归档记录。</p>
+      : <div className="matter-admin-card" aria-label="事项管理读回">
+        {matterAdmin.entries.length === 0 ? null : <ul className="workspace-list" aria-label="已归档事项">
+          {matterAdmin.entries.map(entry => <li key={entry.matterRef} className="matter-row">
+            <strong>{entry.matterRef}</strong>
+            <span className="control-item-badge">{entry.ground === 'completed' ? '已完成归档' : '已停止归档'}</span>
+            <small>{entry.archivedAt}</small>
+          </li>)}</ul>}
+        {matterAdmin.rename === null ? null
+          : <p className="control-note">{`最近重命名：${matterAdmin.rename.requested} → ${matterAdmin.rename.effective}（以服务回读为准）`}</p>}
+        {matterAdmin.batch === null ? null
+          : <p className="control-note">{`最近批量（${matterAdmin.batch.operation === 'archive' ? '归档' : '恢复'}）：共 ${String(matterAdmin.batch.rows.length)} · 受理 ${String(matterAdmin.batch.okCount)} / 拒绝 ${String(matterAdmin.batch.refusedCount)}`}</p>}
+        {matterAdmin.trail.length === 0 ? null : <ul className="workspace-list" aria-label="事项管理轨迹">
+          {matterAdmin.trail.slice(-6).map((record, index) => <li key={index} className="matter-row">
+            <small>{`${record.at} · ${record.action === 'archive' ? '归档' : '恢复'} ${record.matterRef}`}</small>
+          </li>)}</ul>}
+        <p className="control-note" role="status">{MATTER_UNWIRED_NOTE}</p>
+      </div>)}
+    {matterGroups !== undefined && (matterGroups.state !== 'read'
+      ? <p className="workspace-note" role="status">事项分组读取不可用（{matterGroups.code ?? 'matter-groups-unavailable'}）。</p>
+      : <div className="matter-groups-card" aria-label="事项分组读回">
+        {matterGroups.groups.length === 0
+          ? <p className="control-note" role="status">当前没有事项分组。</p>
+          : <ul className="workspace-list" aria-label="事项分组列表">{matterGroups.groups.map(group => <li key={group.groupId} className="matter-row">
+            <strong>{group.name}</strong>
+            <span className="control-item-badge">{`${String(group.memberCount)} 项`}</span>
+          </li>)}</ul>}
+        {matterGroups.rename === null ? null
+          : <p className="control-note">{`最近改名：${matterGroups.rename.requested} → ${matterGroups.rename.effective}（以服务回读为准）`}</p>}
+        {matterGroups.batch === null ? null
+          : <p className="control-note">{`最近成员批量（${matterGroups.batch.operation === 'add' ? '加入' : '移出'}）：受理 ${String(matterGroups.batch.okCount)} / 未变 ${String(matterGroups.batch.unchangedCount)} / 拒绝 ${String(matterGroups.batch.refusedCount)}`}</p>}
+        {matterGroups.trail.length === 0 ? null : <ul className="workspace-list" aria-label="事项分组轨迹">
+          {matterGroups.trail.slice(-6).map((record, index) => <li key={index} className="matter-row">
+            <small>{`${record.at} · ${GROUP_TRAIL_LABEL[record.action] ?? record.action} ${record.name}（${String(record.count)}）`}</small>
+          </li>)}</ul>}
+        <p className="control-note" role="status">{GROUPS_UNWIRED_NOTE}</p>
+      </div>)}
+  </section>
+}
 
 function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopReadState; readonly retry: () => void; readonly navigate: (page: Page) => void }): ReactNode {
   const [adoptBusy, setAdoptBusy] = useState(false)
@@ -186,6 +260,7 @@ function WorkspacePage({ state, retry, navigate }: { readonly state: DesktopRead
       {createNote !== '' && <p className="workspace-create-note" role="status">{createNote}</p>}
     </section>}
     {body}
+    <MatterSection state={state} />
     {adoptNotice !== '' && <p className="workspace-note workspace-adopt-note" role="status">{adoptNotice}</p>}
     <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>
   </section>
@@ -1017,6 +1092,7 @@ export function DesktopPage({
               queue={session.queue}
               terminal={session.terminal}
               toolResults={session.toolResults}
+              sideChats={session.sideChats}
               onApprovalAnswer={(requestId, outcome) => runSessionControl(() => answerDesktopApproval(session.context.matterRef, requestId, outcome))}
               onApprovalWithdraw={(requestId) => runSessionControl(() => withdrawDesktopApproval(session.context.matterRef, requestId))}
               onPendingChange={(action) => runSessionControl(() => action.kind === 'edit' ? editPendingInput(action.itemId, action.text) : removePendingInput(action.itemId))}

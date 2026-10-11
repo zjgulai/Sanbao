@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { MarkdownText } from '../markdown.js'
 import type { DesktopArtifacts } from './client.js'
-import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopTerminal, DesktopToolResultField, DesktopToolResults, DesktopTurnProcess } from './session.js'
+import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopSideChats, DesktopTerminal, DesktopToolResultField, DesktopToolResults, DesktopTurnProcess } from './session.js'
 import type { DesktopTerminalRead } from './terminal.js'
 import type { SessionControlResult } from './session-controls.js'
 
@@ -26,6 +26,8 @@ export interface DesktopSessionViewProps {
   readonly terminal?: DesktopTerminal | null
   readonly toolResults?: DesktopToolResults | null
   readonly onTerminalRead?: (terminalId: string) => Promise<DesktopTerminalRead>
+  /** ADR-0316 (R16/P15): the side-chat roster — read rows only; no action is wired. */
+  readonly sideChats?: DesktopSideChats | null
   readonly onApprovalAnswer?: (requestId: string, outcome: 'allowed-once' | 'rejected') => Promise<SessionControlResult>
   readonly onApprovalWithdraw?: (requestId: string) => Promise<SessionControlResult>
   readonly onPendingChange?: (action: { readonly kind: 'edit', readonly itemId: string, readonly text: string } | { readonly kind: 'remove', readonly itemId: string }) => Promise<SessionControlResult>
@@ -473,11 +475,40 @@ function TerminalSection({ terminal, onRead }: {
   </section>
 }
 
+/** ADR-0316 (R16/P15): the side-chat roster (Ticket 024 machine) — read rows only. Every action
+ *  rides a direct-provider-bypass violation route, so none is wired: a click names the state and
+ *  submits nothing (ADR-0315 D2 pure-shell posture; the transcript view waits for the same batch). */
+function SideChatsSection({ sideChats }: { readonly sideChats: DesktopSideChats }): ReactNode {
+  const [note, setNote] = useState('')
+  if (sideChats.state !== 'read') {
+    return <section className="side-chats-section" aria-label="侧聊">
+      <strong>侧聊</strong>
+      <p className="control-note" role="status">侧聊读取不可用（{sideChats.code ?? 'side-chats-unavailable'}）——不据此断言无侧聊。</p>
+    </section>
+  }
+  const name = (action: string) => () => setNote(`「${action}」尚未接通（写路径 admission 收口在独立批——本版不提交任何动作）。`)
+  return <section className="side-chats-section" aria-label="侧聊">
+    <strong>侧聊（{sideChats.items.length}）</strong>
+    {sideChats.items.length === 0
+      ? <p className="control-note" role="status">当前没有侧聊。</p>
+      : <ul>{sideChats.items.map((chat) => <li key={chat.sideChatId}>
+        <span className="control-item-text">{chat.sideChatId}</span>
+        <span className="control-item-badge">{chat.execution === 'executing' ? '执行中' : chat.execution === 'idle' ? '空闲' : '状态未读'}</span>
+        <span className="tool-result-note">派生自 {chat.sessionId}{chat.atSeq === null ? '（整段前缀）' : `（锚点 ${String(chat.atSeq)}）`}</span>
+        <button type="button" className="text-button" aria-label={`发送到侧聊 ${chat.sideChatId}`} onClick={name('发送到侧聊')}>发送到侧聊</button>
+        <button type="button" className="text-button" aria-label={`带回主对话 ${chat.sideChatId}`} onClick={name('带回主对话')}>带回主对话</button>
+        <button type="button" className="text-button" aria-label={`单独回看 ${chat.sideChatId}`} onClick={name('单独回看')}>单独回看</button>
+      </li>)}</ul>}
+    <button type="button" className="text-button" aria-label="新建侧聊" onClick={name('新建侧聊（派生主对话）')}>新建侧聊（派生主对话）</button>
+    {note !== '' ? <p className="control-note" role="status">{note}</p> : null}
+  </section>
+}
+
 export function DesktopSessionView({
   title, execution, lastTurnEnd, paused, streamBroken, messages, streaming = null,
   turnProcess, artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
   approvals = null, modelQueue = null, pending = [], queue = { state: 'read', occurrences: [] },
-  terminal = null, toolResults = null,
+  terminal = null, toolResults = null, sideChats = null,
   onApprovalAnswer, onApprovalWithdraw, onPendingChange, onQueueChange, onVerifyQueue, onTerminalRead,
 }: DesktopSessionViewProps): ReactNode {
   // ADR-0309: the side-panel entry (OBS: the button is visible on the first-run page; its click
@@ -546,6 +577,7 @@ export function DesktopSessionView({
         {toolResults !== null
           ? <ToolResultsSection toolResults={toolResults} {...(onArtifactOpen === undefined ? {} : { onArtifactOpen })} />
           : null}
+        {sideChats !== null ? <SideChatsSection sideChats={sideChats} /> : null}
         <ControlItemList label="待继续输入"
           items={pending.map((item) => ({
             id: item.itemId, text: item.text,
