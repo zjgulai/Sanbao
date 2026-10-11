@@ -232,6 +232,15 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .page-tools input { flex: 1; min-width: 140px; max-width: 240px; padding: 5px 9px; border: 1px solid var(--sage-border); border-radius: 5px; background: var(--sage-raised); color: var(--sage-ink); font-size: 12px; }
 .sage-desktop .page-tools input::placeholder { color: var(--sage-faint); }
 .sage-desktop .page-note { margin: 0; font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
+/* ADR-0308: the create-knowledge dialog, workspace scope and chips. */
+.sage-desktop .knowledge-dialog { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: var(--sage-surface); border: 1px solid var(--sage-border); border-radius: 12px; }
+.sage-desktop .knowledge-dialog-header { display: flex; align-items: center; justify-content: space-between; }
+.sage-desktop .knowledge-scope { display: flex; gap: 16px; border: 0; margin: 0; padding: 0; font-size: 13px; color: var(--sage-ink); }
+.sage-desktop .knowledge-scope label { display: flex; align-items: center; gap: 6px; }
+.sage-desktop .knowledge-workspace-scope { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.sage-desktop .knowledge-workspace-menu { position: static; margin-top: 4px; }
+.sage-desktop .knowledge-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.sage-desktop .knowledge-chip { padding: 2px 10px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 12px; color: var(--sage-ink); }
 /* ADR-0305: the quick appearance submenu inside the account menu. */
 .sage-desktop .appearance-menu { position: absolute; right: 12px; margin-top: 2px; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
 .sage-desktop .appearance-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--sage-ink); }

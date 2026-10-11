@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 66,
-        "pending": 132,
+        "implementing": 72,
+        "pending": 126,
         "verified": 8
       },
       "applicationService": {
@@ -9872,8 +9872,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9894,7 +9900,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the create dialog renders the observed shape (0/50 counter, 例如：工程手册 placeholder, user scope selected with its explanation, close/cancel, disabled create); Escape/mask/focus-return behaviors were not observed and are not assembled; the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10096,8 +10102,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10118,7 +10130,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the list-level filter menu opens from 全部工作区 with 全部工作区 plus real workspace titles (the observed qoder-ui-fixture was a prototype name); picking updates the trigger text; the filter semantics (list filtering) need the store provider; the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10163,8 +10175,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10185,7 +10203,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the Repo Wiki default shape renders (heading copy, search, the three filters 全部/已生成/未生成, right-side card/list toggle); the sample card with zero metrics is NOT fabricated (metric semantics were unverified) — the area stays the named not-wired note; the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10308,8 +10326,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10330,7 +10354,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the list view toggle exists and both views stay on the named not-wired note; the observed header-less single-row layout is not assertable without a source and stays registered; the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -12869,8 +12893,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -12891,7 +12921,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the workspace scope shows the 选择工作区 menu and the at-least-one hint with the create button disabled; menu Escape closes the menu only; multi-select chip removal and cross-scope retention were not observed; the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -12936,8 +12966,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -12958,7 +12994,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "name plus a picked workspace reaches the observed ready state (button enabled) — ready is NOT created; the create click answers the named refusal; the workspace list uses real workspace titles (the observed paper-plane was a prototype fixture); the real store/create chain needs its own provider ticket (T12); applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },

@@ -283,11 +283,86 @@ function notWiredNote(slot: DesktopReadoutKnowledge | undefined, fallbackReason:
   return <p className="page-note" role="status">{`知识库服务未接通（${reason}）`}</p>
 }
 
-export function KnowledgePage({ readoutKnowledge }: { readonly readoutKnowledge?: DesktopReadoutKnowledge }): ReactNode {
+export interface KnowledgeWorkspaceOption {
+  readonly workspaceId: string
+  readonly title: string
+}
+
+/** ADR-0308: the create-knowledge dialog (observed shape only) — the create action answers the
+ *  honest T12 refusal; nothing is created. The workspace menu uses the real workspace titles. */
+function CreateKnowledgeDialog({ workspaces, onClose }: {
+  readonly workspaces: readonly KnowledgeWorkspaceOption[]
+  readonly onClose: () => void
+}): ReactNode {
+  const [name, setName] = useState('')
+  const [scope, setScope] = useState<'user' | 'workspace'>('user')
+  const [selected, setSelected] = useState<readonly string[]>([])
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [notice, setNotice] = useState('')
+  const canCreate = name.trim() !== '' && (scope === 'user' || selected.length > 0)
+  return <div className="knowledge-dialog" role="dialog" aria-label="创建知识库">
+    <header className="knowledge-dialog-header">
+      <strong>创建知识库</strong>
+      <button type="button" className="icon-button" aria-label="关闭" onClick={onClose}>✕</button>
+    </header>
+    <label className="mcp-field">名称
+      <input aria-label="知识库名称" placeholder="例如：工程手册" maxLength={50} value={name}
+        onChange={(event) => setName(event.target.value)} />
+    </label>
+    <p className="page-note">{name.length}/50</p>
+    <fieldset className="knowledge-scope" aria-label="生效范围">
+      <label><input type="radio" name="knowledge-scope" aria-label="用户" checked={scope === 'user'}
+        onChange={() => setScope('user')} />用户</label>
+      <label><input type="radio" name="knowledge-scope" aria-label="工作区" checked={scope === 'workspace'}
+        onChange={() => setScope('workspace')} />工作区</label>
+    </fieldset>
+    {scope === 'user'
+      ? <p className="page-note">当前用户的所有现有及未来工作区均可使用此知识库。</p>
+      : <div className="knowledge-workspace-scope">
+        <button type="button" className="text-button" aria-label="选择工作区" aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(value => !value)}>选择工作区</button>
+        {menuOpen
+          ? <div className="small-menu knowledge-workspace-menu" role="menu" aria-label="工作区列表"
+            onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setMenuOpen(false) } }}>
+            {workspaces.length === 0
+              ? <p className="page-note">暂无工作区</p>
+              : workspaces.map((workspace) => <button key={workspace.workspaceId} type="button" role="menuitemcheckbox"
+                aria-label={`工作区选项 ${workspace.title}`} aria-checked={selected.includes(workspace.workspaceId)}
+                onClick={() => setSelected(selected.includes(workspace.workspaceId)
+                  ? selected.filter((id) => id !== workspace.workspaceId)
+                  : [...selected, workspace.workspaceId])}>{workspace.title}</button>)}
+          </div>
+          : null}
+        <p className="page-note">至少选择一个可以使用此知识库的工作区。</p>
+        {selected.length > 0
+          ? <div className="knowledge-chips" aria-label="已选工作区">
+            {selected.map((id) => <span className="knowledge-chip" key={id}>
+              {workspaces.find((workspace) => workspace.workspaceId === id)?.title ?? id}
+            </span>)}
+          </div>
+          : null}
+      </div>}
+    {notice !== '' ? <p className="page-note knowledge-dialog-notice" role="status">{notice}</p> : null}
+    <footer className="mcp-form-footer">
+      <button type="button" className="text-button" aria-label="取消" onClick={onClose}>取消</button>
+      <button type="button" className="send-button" aria-label="创建" disabled={!canCreate}
+        onClick={() => setNotice('创建尚未接通：知识库存储 provider 未建立；不会创建。')}>创建</button>
+    </footer>
+  </div>
+}
+
+export function KnowledgePage({ readoutKnowledge, workspaces = [] }: {
+  readonly readoutKnowledge?: DesktopReadoutKnowledge
+  readonly workspaces?: readonly KnowledgeWorkspaceOption[]
+}): ReactNode {
   const [view, setView] = useState<'知识库' | 'Repo Wiki'>('知识库')
   const [layout, setLayout] = useState<'卡片' | '列表'>('卡片')
-  const [wikiFilter, setWikiFilter] = useState<'全部' | '已生成'>('全部')
+  const [wikiFilter, setWikiFilter] = useState<'全部' | '已生成' | '未生成'>('全部')
   const [wikiQuery, setWikiQuery] = useState('')
+  const [wikiLayout, setWikiLayout] = useState<'卡片' | '列表'>('卡片')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [filter, setFilter] = useState<string>('全部工作区')
+  const [creating, setCreating] = useState(false)
   return <section className="knowledge-page" aria-label="知识中心">
     <h1>知识中心</h1>
     <div className="page-tabs" role="tablist" aria-label="知识视图">
@@ -298,18 +373,34 @@ export function KnowledgePage({ readoutKnowledge }: { readonly readoutKnowledge?
     </div>
     {view === '知识库'
       ? <>
-        <div className="page-tools" aria-label="视图切换">
+        <div className="page-tools" aria-label="知识库工具">
+          <button type="button" className="text-button" aria-label="全部工作区" aria-expanded={filterOpen}
+            onClick={() => setFilterOpen(value => !value)}>{filter}</button>
+          <button type="button" className="text-button" aria-label="创建知识库" onClick={() => setCreating(true)}>创建知识库</button>
           {(['卡片', '列表'] as const).map(label => <button key={label} type="button" aria-pressed={layout === label}
             className={layout === label ? 'active' : ''} onClick={() => setLayout(label)}>{label}</button>)}
         </div>
+        {filterOpen
+          ? <div className="small-menu" role="menu" aria-label="工作区筛选">
+            {['全部工作区', ...workspaces.map((workspace) => workspace.title)].map((label) => <button
+              key={label} type="button" role="menuitemradio" aria-checked={filter === label}
+              onClick={() => { setFilter(label); setFilterOpen(false) }}>{label}</button>)}
+          </div>
+          : null}
         {notWiredNote(readoutKnowledge, 'knowledge-store-unavailable')}
+        {creating ? <CreateKnowledgeDialog workspaces={workspaces} onClose={() => setCreating(false)} /> : null}
       </>
       : <>
+        <p className="page-note">将代码转化为 Repo Wiki／涵盖技术栈与架构。</p>
         <div className="page-tools" aria-label="Repo Wiki 筛选">
-          {(['全部', '已生成'] as const).map(label => <button key={label} type="button" aria-pressed={wikiFilter === label}
+          {(['全部', '已生成', '未生成'] as const).map(label => <button key={label} type="button" aria-pressed={wikiFilter === label}
             className={wikiFilter === label ? 'active' : ''} onClick={() => setWikiFilter(label)}>{label}</button>)}
           <input aria-label="搜索 Repo Wiki 项目" placeholder="搜索项目" value={wikiQuery}
             onChange={(event) => setWikiQuery(event.target.value)} />
+          <div className="page-tools" aria-label="Repo Wiki 视图切换">
+            {(['卡片', '列表'] as const).map(label => <button key={label} type="button" aria-pressed={wikiLayout === label}
+              className={wikiLayout === label ? 'active' : ''} onClick={() => setWikiLayout(label)}>{label}</button>)}
+          </div>
         </div>
         {notWiredNote(readoutKnowledge, 'knowledge-store-unavailable')}
       </>}
@@ -674,7 +765,11 @@ export function DesktopPage({
           : page === '扩展'
             ? <ExtensionsPage />
           : page === '知识中心'
-            ? <KnowledgePage {...(state.kind === 'read' && state.readoutKnowledge !== undefined ? { readoutKnowledge: state.readoutKnowledge } : {})} />
+            ? <KnowledgePage
+              {...(state.kind === 'read' && state.readoutKnowledge !== undefined ? { readoutKnowledge: state.readoutKnowledge } : {})}
+              {...(state.kind === 'read' && state.workspaces !== undefined && state.workspaces.state === 'read'
+                ? { workspaces: state.workspaces.entries.map((entry) => ({ workspaceId: entry.workspaceId, title: entry.title })) }
+                : {})} />
           : page === '站点'
             ? <SitesPage />
           : page === '运行模式'

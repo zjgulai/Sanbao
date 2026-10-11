@@ -40,6 +40,10 @@ const control = (container: HTMLElement, label: string): HTMLButtonElement => {
   return button!
 }
 const click = async (node: HTMLElement) => { await act(async () => { node.click() }) }
+const type = async (input: HTMLInputElement, value: string) => {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+  await act(async () => { input.dispatchEvent(new Event('input', { bubbles: true })) })
+}
 const section = (container: HTMLElement, label: string): HTMLElement => {
   const found = container.querySelector<HTMLElement>(`section[aria-label="${label}"]`)
   expect(found, `section ${label}`).not.toBeNull()
@@ -66,9 +70,10 @@ describe('knowledge-centre and sites page shells (Loop-Q R9)', () => {
     expect(tabs?.querySelectorAll('[role="tab"]')).toHaveLength(2)
     expect(tabs?.querySelector('[role="tab"][aria-label="知识库"]')?.getAttribute('aria-selected')).toBe('true')
     expect(tabs?.querySelector('[role="tab"][aria-label="Repo Wiki"]')?.getAttribute('aria-selected')).toBe('false')
-    const toggle = page.querySelector('[aria-label="视图切换"]')
+    const toggle = page.querySelector('[aria-label="知识库工具"]')
     expect(toggle?.textContent).toContain('卡片')
     expect(toggle?.textContent).toContain('列表')
+    expect(toggle?.textContent).toContain('创建知识库')
     const note = page.querySelector('[role="status"]')
     expect(note?.textContent).toContain('知识库服务未接通（knowledge-store-unavailable）')
     expect(page.textContent).not.toContain('还没有知识库')
@@ -129,16 +134,95 @@ describe('knowledge-centre and sites page shells (Loop-Q R9)', () => {
     expect(page.querySelector('[role="status"]')?.textContent).toContain('知识库服务未接通（knowledge-store-unavailable）')
   })
 
-  it('keeps neither page carrying submit, create or generate action buttons', async () => {
+  it('keeps every action path fail-closed: no submit forms, no fabricated generate entries', async () => {
     const container = await mount(async () => snapshot())
     await click(control(container, '知识中心'))
     const knowledge = section(container, '知识中心')
     expect(knowledge.querySelector('button[type="submit"]')).toBeNull()
-    expect(knowledge.textContent).not.toContain('创建')
-    expect(knowledge.textContent).not.toContain('生成')
+    // 创建知识库 opens the dialog (R10); its own 创建 answers the named refusal, never creates.
+    await click(control(knowledge, '创建知识库'))
+    expect(knowledge.querySelector('[role="dialog"]')).not.toBeNull()
+    await click(control(knowledge, '取消'))
+    expect(knowledge.querySelector('[role="dialog"]')).toBeNull()
     await click(control(container, '站点'))
     const sites = section(container, '站点')
     expect(sites.querySelector('button[type="submit"]')).toBeNull()
     expect(sites.textContent).not.toContain('创建站点')
+    expect(sites.textContent).not.toContain('生成')
+  })
+
+  it('opens the create dialog with the observed shape and fail-closed create (knowledge.create.open)', async () => {
+    const container = await mount(async () => snapshot())
+    await click(control(container, '知识中心'))
+    const page = section(container, '知识中心')
+    await click(control(page, '创建知识库'))
+    const dialog = page.querySelector('[role="dialog"]') as HTMLElement
+    expect(dialog.textContent).toContain('创建知识库')
+    const name = dialog.querySelector<HTMLInputElement>('input[aria-label="知识库名称"]')!
+    expect(name.placeholder).toBe('例如：工程手册')
+    expect(name.value).toBe('')
+    expect(name.maxLength).toBe(50)
+    expect(dialog.textContent).toContain('0/50')
+    expect(dialog.querySelector<HTMLInputElement>('input[aria-label="用户"]')?.checked).toBe(true)
+    expect(dialog.textContent).toContain('当前用户的所有现有及未来工作区均可使用此知识库')
+    expect(control(dialog, '创建').disabled).toBe(true)
+    expect(control(dialog, '关闭')).not.toBeNull()
+    expect(control(dialog, '取消')).not.toBeNull()
+  })
+
+  it('switches the create dialog to the workspace scope with selection chips (create.workspace / create.ready)', async () => {
+    const container = await mount(async () => snapshot())
+    await click(control(container, '知识中心'))
+    const page = section(container, '知识中心')
+    await click(control(page, '创建知识库'))
+    const dialog = page.querySelector('[role="dialog"]') as HTMLElement
+    await click(dialog.querySelector('input[aria-label="工作区"]') as HTMLElement)
+    expect(dialog.textContent).toContain('至少选择一个可以使用此知识库的工作区')
+    expect(control(dialog, '创建').disabled).toBe(true)
+    await click(control(dialog, '选择工作区'))
+    // The fixture carries one workspace; picking it plus a name reaches the observed ready state.
+    await click(control(dialog, '工作区选项 工作区'))
+    expect(dialog.querySelector('[aria-label="已选工作区"]')?.textContent).toContain('工作区')
+    await type(dialog.querySelector<HTMLInputElement>('input[aria-label="知识库名称"]')!, 'sanbao-fixture-kb')
+    expect(dialog.textContent).toContain('17/50')
+    const create = control(dialog, '创建')
+    expect(create.disabled).toBe(false)
+    // Ready is not created: the click answers the named T12 refusal.
+    await click(create)
+    expect(dialog.textContent).toContain('创建尚未接通')
+    expect(dialog.textContent).not.toContain('已创建')
+  })
+
+  it('opens the workspace filter menu from the knowledge list tools (workspace-filter.open)', async () => {
+    const container = await mount(async () => snapshot())
+    await click(control(container, '知识中心'))
+    const page = section(container, '知识中心')
+    await click(control(page, '全部工作区'))
+    const menu = page.querySelector('[aria-label="工作区筛选"]') as HTMLElement
+    expect(menu.textContent).toContain('全部工作区')
+    expect(menu.textContent).toContain('工作区')
+    await click(menu.querySelectorAll('[role="menuitemradio"]')[1] as HTMLElement)
+    // The trigger keeps its stable label; its text names the picked scope.
+    expect(control(page, '全部工作区').textContent).toBe('工作区')
+    expect(page.querySelector('[aria-label="工作区筛选"]')).toBeNull()
+  })
+
+  it('shows the Repo Wiki default shape: three filters, view toggle, never a zero metric (repo-wiki.default / repo-wiki.list)', async () => {
+    const container = await mount(async () => snapshot())
+    await click(control(container, '知识中心'))
+    const page = section(container, '知识中心')
+    await click(control(page, 'Repo Wiki'))
+    expect(page.textContent).toContain('将代码转化为 Repo Wiki／涵盖技术栈与架构')
+    const filter = page.querySelector('[aria-label="Repo Wiki 筛选"]') as HTMLElement
+    for (const label of ['全部', '已生成', '未生成']) {
+      expect(filter.textContent).toContain(label)
+    }
+    const viewToggle = filter.querySelector('[aria-label="Repo Wiki 视图切换"]') as HTMLElement
+    expect(viewToggle.textContent).toContain('卡片')
+    expect(viewToggle.textContent).toContain('列表')
+    // Both views stay on the named not-wired note — no fabricated card, no zero-metric row.
+    await click((viewToggle.querySelectorAll('button')[1] as HTMLElement))
+    expect(page.querySelector('[role="status"]')?.textContent).toContain('知识库服务未接通')
+    expect(page.textContent).not.toContain('去生成')
   })
 })

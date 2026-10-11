@@ -10248,6 +10248,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0308",
+      "title": "ADR-0308 · 知识/站点页壳第二批：创建弹窗与列表工具形状",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "创建弹窗形状（计数/范围/工作区菜单+提示+chips/禁用逻辑）；创建点击具名拒绝。",
+          "constraints": [
+            "ready != created"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "工作区选项用真实 workspaces 槽；虚构原型名不复制；过滤语义随 provider。",
+          "constraints": [
+            "no prototype fixture names"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "Repo Wiki 三态筛选+视图切换；不渲染零指标卡；去生成不装。",
+          "constraints": [
+            "metrics semantics unverified"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "6 行迁 implementing；未观察面与 provider 依赖入 blocker。",
+          "constraints": [
+            "summary regenerated"
+          ]
+        }
+      ]
     }
   ]
 }
