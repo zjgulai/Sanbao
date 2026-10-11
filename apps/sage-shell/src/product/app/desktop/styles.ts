@@ -227,6 +227,19 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .control-item-badge { padding: 1px 8px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 11px; }
 .sage-desktop .control-item-lock { font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .control-note { margin: 2px 0 0; font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .tool-results-section, .sage-desktop .terminal-section { display: flex; flex-direction: column; gap: 6px; margin: 0 30px 12px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .tool-results-section ul, .sage-desktop .terminal-section ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sage-desktop .tool-results-section li, .sage-desktop .terminal-section li { display: flex; align-items: center; gap: 8px; }
+.sage-desktop .tool-result-head { color: var(--sage-ink); font-weight: 600; }
+.sage-desktop .tool-result-row { display: flex; flex-direction: column; align-items: stretch; }
+.sage-desktop .tool-result-text { margin: 0; padding: 6px 8px; border: 1px solid var(--sage-border); border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-size: 11px; }
+.sage-desktop .tool-result-kvs { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.sage-desktop .tool-result-table { border-collapse: collapse; font-size: 11px; }
+.sage-desktop .tool-result-table th, .sage-desktop .tool-result-table td { border: 1px solid var(--sage-border); padding: 2px 6px; text-align: left; }
+.sage-desktop .tool-result-link { color: var(--sage-muted); }
+.sage-desktop .tool-result-note { margin: 0; font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .terminal-output { margin: 0; padding: 6px 8px; border: 1px solid var(--sage-border); border-radius: 6px; white-space: pre-wrap; word-break: break-word; font-size: 11px; max-height: 260px; overflow: auto; }
+.sage-desktop .artifact-kind-note { font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .plans-roster { display: flex; flex-direction: column; gap: 10px; }
 .sage-desktop .plan-roster { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--sage-border); border-radius: 9px; }
 .sage-desktop .plan-roster-title { margin: 0; font-size: 13px; color: var(--sage-ink); }

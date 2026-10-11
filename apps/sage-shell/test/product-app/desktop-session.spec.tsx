@@ -606,6 +606,158 @@ describe('default desktop session submission lifecycle', () => {
     expect(second.container.textContent).toContain('队列快照不可用——以服务恢复后为准。')
   })
 
+  it('lists terminals, pages the read-only output by the exact body, and names each gap (ADR-0314 M03)', async () => {
+    const fetcher = vi.fn(async (url: string) => url === '/.sage/session/terminal-read'
+      ? Response.json({ state: 'read', text: '第 1 行\n第 2 行', totalLines: 12, lineBegin: 0, lineEnd: 2, truncated: false })
+      : ack())
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withTerminal = classifyDesktopState({
+      ...payload,
+      terminal: {
+        state: 'read', reason: null,
+        terminals: [{ terminalId: 't-1', name: '构建', type: 'shell', status: { kind: 'exited', exitCode: 1, signal: null } }],
+      },
+    })
+    const { container } = await mount(async () => withTerminal)
+    const section = container.querySelector('[aria-label="集成终端"]')
+    expect(section?.textContent).toContain('构建 · shell')
+    expect(section?.textContent).toContain('已退出（exitCode 1）')
+    await click(control(container, '打开输出 构建'))
+    const call = fetcher.mock.calls.find(([url]) => url === '/.sage/session/terminal-read')
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ terminalId: 't-1' })
+    expect(container.textContent).toContain('第 1 行')
+    expect(container.textContent).toContain('只读运行观察（第 0–2 行 / 共 12 行）')
+    await click(control(container, '关闭输出 构建'))
+    expect(container.textContent).not.toContain('第 1 行')
+
+    const unavailable = classifyDesktopState({
+      ...payload,
+      terminal: { state: 'unavailable', reason: 'bridge-provider-unavailable', terminals: [] },
+    })
+    const second = await mount(async () => unavailable)
+    expect(second.container.querySelector('[aria-label="集成终端"]')?.textContent)
+      .toContain('终端不可用（bridge-provider-unavailable）。')
+    const noSession = classifyDesktopState({
+      ...payload,
+      terminal: { state: 'no-session', reason: null, terminals: [] },
+    })
+    const third = await mount(async () => noSession)
+    expect(third.container.querySelector('[aria-label="集成终端"]')?.textContent)
+      .toContain('还没有会话：没有终端可读。')
+    // A malformed terminal slot is omitted — absence is not an empty roster.
+    const malformed = classifyDesktopState({
+      ...payload,
+      terminal: { state: 'read', reason: null, terminals: [{ terminalId: '' }] },
+    })
+    const fourth = await mount(async () => malformed)
+    expect(fourth.container.querySelector('[aria-label="集成终端"]')).toBeNull()
+  })
+
+  it('renders typed tool results, names refusals and unsupported declarations, and opens an image artifact (ADR-0314 M05)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ state: 'opened' }))
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withResults = classifyDesktopState({
+      ...payload,
+      toolResults: {
+        state: 'read',
+        results: [
+          { resultId: 'r1', tool: 'bash', title: 'bash', at: '1720000000000', state: 'read', fields: [{ kind: 'text', text: '命令输出' }] },
+          { resultId: 'r2', tool: 'fetch', title: 'fetch', at: '', state: 'read', fields: [{ kind: 'refused', code: 'tool-result-image-not-permitted' }] },
+          { resultId: 'r3', tool: 'chart', title: 'chart', at: '', state: 'unsupported', declaredType: 'chart' },
+          { resultId: 'r4', tool: 'screenshot', title: 'screenshot', at: '', state: 'read', fields: [{ kind: 'image', name: '图.png', artifactId: 'art-9', version: 'v1' }] },
+          { resultId: 'r5', tool: 'search', title: 'search', at: '', state: 'read', fields: [{ kind: 'link', label: '文档', host: 'example.com', url: 'https://example.com/x' }] },
+          { resultId: 'r6', tool: 'stats', title: 'stats', at: '', state: 'read', fields: [{ kind: 'table', columns: ['列A', '列B'], rows: [['a', 'b']] }] },
+        ],
+      },
+    })
+    const { container } = await mount(async () => withResults)
+    const section = container.querySelector('[aria-label="工具结果"]')
+    expect(section?.textContent).toContain('工具结果（6）')
+    expect(section?.textContent).toContain('命令输出')
+    // ADR-0314 review: a title equal to the tool name renders once — never「bash · bash」.
+    expect(section?.textContent).not.toContain('bash · bash')
+    expect(section?.textContent).toContain('未受理（tool-result-image-not-permitted）。')
+    expect(section?.textContent).toContain('不支持的结果类型（chart）。')
+    // Link renders as plain text with host (no click action); table renders its columns and cells.
+    expect(section?.textContent).toContain('文档（example.com）')
+    expect(section?.textContent).toContain('列A')
+    expect(section?.textContent).toContain('b')
+    await click(control(container, '打开图片产物 图.png'))
+    const openCall = fetcher.mock.calls.find(([url]) => url === '/.sage/artifacts/open')
+    expect(JSON.parse(String(openCall?.[1]?.body))).toEqual({ artifactId: 'art-9' })
+
+    const unavailable = classifyDesktopState({
+      ...payload,
+      toolResults: { state: 'unavailable', reason: 'tool-results-provider-unavailable' },
+    })
+    const second = await mount(async () => unavailable)
+    expect(second.container.querySelector('[aria-label="工具结果"]')?.textContent)
+      .toContain('工具结果读取不可用（tool-results-provider-unavailable）——不据此断言无结果。')
+  })
+
+  it('maps every known open failure to a sentence and never promises an unwired system-open path (ADR-0314 review)', async () => {
+    const payload = desktopSessionPayload()
+    const withCards = classifyDesktopState({
+      ...payload,
+      artifacts: {
+        state: 'read',
+        cards: [
+          { artifactId: 'art-o', name: 'report.docx', kind: 'office', bytes: 10, state: 'ready' },
+          { artifactId: 'art-b', name: 'archive.zip', kind: 'binary', bytes: 10, state: 'ready' },
+        ],
+        preview: { state: 'failed', artifactId: 'art-o', name: 'report.docx', code: 'artifact-too-large', retryable: true },
+      },
+    })
+    const { container } = await mount(async () => withCards)
+    // The card labels state the honest fact and promise nothing unwired.
+    expect(container.textContent).toContain('原格式预览尚未接通')
+    expect(container.textContent).toContain('不支持预览')
+    expect(container.textContent).not.toContain('系统应用')
+    // The failed block speaks in a sentence; the raw code never reaches the user.
+    expect(container.textContent).toContain('打开失败：文件超过预览上限，未读取')
+    expect(container.textContent).not.toContain('artifact-too-large')
+  })
+
+  it('binds each terminal output page to its own row under late responses (ADR-0314 review)', async () => {
+    const slow = deferred<Response>()
+    const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/.sage/session/terminal-read') {
+        const body = JSON.parse(String(init?.body)) as { terminalId: string }
+        if (body.terminalId === 't-1') return slow.promise
+        return Response.json({ state: 'read', text: 'B 输出', totalLines: 3, lineBegin: 0, lineEnd: 1, truncated: false })
+      }
+      return ack()
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const payload = desktopSessionPayload()
+    const withTerminals = classifyDesktopState({
+      ...payload,
+      terminal: { state: 'read', reason: null, terminals: [
+        { terminalId: 't-1', name: '慢', type: 'shell', status: { kind: 'running' } },
+        { terminalId: 't-2', name: '快', type: 'shell', status: { kind: 'running' } },
+      ] },
+    })
+    const { container } = await mount(async () => withTerminals)
+    await click(control(container, '打开输出 慢'))
+    await click(control(container, '打开输出 快'))
+    expect(container.textContent).toContain('B 输出')
+    // The slow page for t-1 lands late — it must never render under t-2's open state.
+    await act(async () => { slow.resolve(Response.json({ state: 'read', text: 'A 输出', totalLines: 9, lineBegin: 0, lineEnd: 1, truncated: false })) })
+    expect(container.textContent).toContain('B 输出')
+    expect(container.textContent).not.toContain('A 输出')
+
+    // A route-named read refusal passes through with its own code (review fix: no flattening).
+    const refuse = vi.fn(async (url: string) => url === '/.sage/session/terminal-read'
+      ? Response.json({ state: 'unavailable', code: 'terminal-no-session' })
+      : ack())
+    vi.stubGlobal('fetch', refuse)
+    const second = await mount(async () => withTerminals)
+    await click(control(second.container, '打开输出 慢'))
+    expect(second.container.textContent).toContain('输出未受理（terminal-no-session）。')
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

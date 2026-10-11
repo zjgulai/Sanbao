@@ -146,6 +146,24 @@ describe('the production assembly forwards every wired family (ticket 033 repair
       .toMatchObject({ state: 'unavailable', reason: 'tool-results-provider-unavailable' })
   })
 
+  it('ADR-0314 review: toolResults reads the fold THIS request refreshed (evaluated after sessionChannel)', async () => {
+    let stash = 'previous-poll'
+    const service = assemble({
+      sessionChannel: async () => {
+        stash = 'this-request'
+        return {
+          state: 'unavailable' as const, sessionId: null, execution: 'idle' as const, lastTurnEnd: null, lastTurnEndEdge: null,
+          turnProcess: { durationMs: null, endedAt: null, iterations: null, fileWrites: [] }, contextUsage: null,
+          reply: { text: null, endKind: null, failed: false, actions: [] }, transcript: [], reconciled: false, streamBroken: false,
+          code: null, records: 0, unapplied: 0, paused: false, pending: [], queue: { state: 'unavailable' as const, occurrences: [] },
+        }
+      },
+      toolResults: () => ({ state: 'unavailable' as const, reason: stash }),
+    })
+    const state = await (await service.readState()).json() as { toolResults: { state: string, reason: string } }
+    expect(state.toolResults).toMatchObject({ state: 'unavailable', reason: 'this-request' })
+  })
+
   it('ticket 038: the input-selections slot and its select/clear reach the service', async () => {
     const service = assemble({
       inputSelections: async () => ({ state: 'read', skills: [{ name: 'm-skill', description: null, source: 'user', provider: 'p', userInvocable: true, modelInvocable: true }], skillsNote: null, plugins: [], pluginsNote: null, selected: [], code: null, at: 't' }),

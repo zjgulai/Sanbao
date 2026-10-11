@@ -238,7 +238,11 @@ export function createArtifactPreview(deps: ArtifactPreviewDeps): ArtifactPrevie
     } else {
       const read = asAnswer(await deps.callBridge('workspaceFiles/read', [{ workspaceRoot: record.workspaceRoot, path: record.path }]))
       if (mine !== generation) return { state: 'refused', code: 'artifact-superseded' }
-      if (!read.ok) return fail(read.code === 'bridge-file-not-text' ? 'artifact-not-text' : read.code, false)
+      if (!read.ok) {
+        return fail(read.code === 'bridge-file-too-large' ? 'artifact-too-large'
+          : read.code === 'bridge-file-not-text' ? 'artifact-not-text'
+            : read.code, read.code === 'bridge-file-too-large')
+      }
       const text = isRecord(read.result) && typeof read.result.text === 'string' ? read.result.text : null
       const version = isRecord(read.result) && typeof read.result.version === 'string' ? read.result.version : null
       if (text === null || version !== record.version) return fail('artifact-version-changed', true)

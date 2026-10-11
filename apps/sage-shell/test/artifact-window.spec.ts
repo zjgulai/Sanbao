@@ -4,6 +4,7 @@ import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createArtifactPreview, type PreviewContainer, type PreviewLoad } from '../src/main/artifact-preview.js'
 import type { ArtifactRecord } from '../src/main/artifacts.js'
+import { previewWindowChromeOptions, withWindowHeaderReserve } from '../src/main/preview-window.js'
 
 /**
  * Ticket 044 (US-205) at the module and route seams.
@@ -198,5 +199,23 @@ describe('the artifact window route (ticket 044)', () => {
     const unwired = createUnavailableFirstService(null, {})
     expect(await (await post({ action: 'open' }, unwired)).json()).toMatchObject({ code: 'artifact-window-unavailable' })
     expect(await (await post({ action: 'close' }, unwired)).json()).toMatchObject({ code: 'artifact-window-unavailable' })
+  })
+})
+
+describe('ADR-0314 (P12): the platform window chrome and the document header reserve', () => {
+  it('sets the inset traffic lights on darwin and keeps the stock frame elsewhere', () => {
+    expect(previewWindowChromeOptions('darwin')).toEqual({ titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 12 } })
+    expect(previewWindowChromeOptions('linux')).toEqual({})
+    expect(previewWindowChromeOptions('win32')).toEqual({})
+  })
+
+  it('reserves the header space only for the Sage-authored documents on darwin', () => {
+    const doc = '<html><head><style>x</style></head><body>hi</body></html>'
+    const reserved = withWindowHeaderReserve(doc, 'darwin')
+    expect(reserved).toContain('padding-top: 2.6rem')
+    expect(reserved).toContain('padding-inline-start: 72px')
+    expect(withWindowHeaderReserve(doc, 'linux')).toBe(doc)
+    // The artifact's own HTML is never rewritten: no head close means no injection anyway.
+    expect(withWindowHeaderReserve('<body>raw</body>', 'darwin')).toBe('<body>raw</body>')
   })
 })

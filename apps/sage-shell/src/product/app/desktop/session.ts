@@ -30,6 +30,10 @@ export interface DesktopSession {
   readonly pending: readonly DesktopPendingItem[]
   /** ADR-0313 (S07): the live queue snapshot (Ticket 008) — occurrences plus their readability. */
   readonly queue: DesktopQueue
+  /** ADR-0314 (M03): the read-only terminal roster (Ticket 043 machine); no write face exists. */
+  readonly terminal: DesktopTerminal | null
+  /** ADR-0314 (M05): the typed tool results (Ticket 033 kernel; session-log half of the source). */
+  readonly toolResults: DesktopToolResults | null
   readonly paused: boolean
   readonly streamBroken: boolean
   readonly canSubmit: boolean
@@ -115,6 +119,30 @@ export interface DesktopQueue {
   readonly state: 'read' | 'unavailable'
   readonly occurrences: readonly DesktopQueueOccurrence[]
 }
+export interface DesktopTerminalSession {
+  readonly terminalId: string
+  readonly name: string | null
+  readonly type: string
+  readonly status: { readonly kind: 'running' } | { readonly kind: 'exited', readonly exitCode: number | null, readonly signal: string | null }
+}
+export interface DesktopTerminal {
+  readonly state: 'read' | 'no-session' | 'unavailable'
+  readonly reason: string | null
+  readonly terminals: readonly DesktopTerminalSession[]
+}
+export type DesktopToolResultField =
+  | { readonly kind: 'text', readonly text: string }
+  | { readonly kind: 'key-values', readonly entries: readonly { readonly name: string, readonly value: string }[] }
+  | { readonly kind: 'table', readonly columns: readonly string[], readonly rows: readonly (readonly string[])[] }
+  | { readonly kind: 'link', readonly label: string, readonly host: string, readonly url: string }
+  | { readonly kind: 'image', readonly name: string, readonly artifactId: string, readonly version: string }
+  | { readonly kind: 'refused', readonly code: string }
+export type DesktopToolResult =
+  | { readonly resultId: string, readonly tool: string, readonly title: string, readonly at: string, readonly state: 'read', readonly fields: readonly DesktopToolResultField[] }
+  | { readonly resultId: string, readonly tool: string, readonly title: string, readonly at: string, readonly state: 'unsupported', readonly declaredType: string }
+export type DesktopToolResults =
+  | { readonly state: 'read', readonly results: readonly DesktopToolResult[] }
+  | { readonly state: 'unavailable', readonly reason: string }
 
 export type DesktopSessionAction = { readonly kind: 'send'; readonly text: string } | { readonly kind: 'stop' | 'resume' }
 export type DesktopSessionOutcome =
@@ -292,6 +320,85 @@ function parseQueue(input: unknown): DesktopQueue | null {
   return { state: input.state, occurrences }
 }
 
+function parseTerminal(input: unknown): DesktopTerminal | null {
+  if (!isRecord(input) || (input.state !== 'read' && input.state !== 'no-session' && input.state !== 'unavailable')) return null
+  if (!Array.isArray(input.terminals)) return null
+  if (input.reason !== null && input.reason !== undefined && typeof input.reason !== 'string') return null
+  const terminals: DesktopTerminalSession[] = []
+  for (const row of input.terminals) {
+    if (!isRecord(row) || !reference(row.terminalId) || typeof row.type !== 'string'
+      || (row.name !== null && row.name !== undefined && typeof row.name !== 'string')
+      || !isRecord(row.status)) return null
+    let status: DesktopTerminalSession['status']
+    if (row.status.kind === 'running') status = { kind: 'running' }
+    else if (row.status.kind === 'exited'
+      && (row.status.exitCode === null || typeof row.status.exitCode === 'number')
+      && (row.status.signal === null || typeof row.status.signal === 'string')) {
+      status = { kind: 'exited', exitCode: row.status.exitCode, signal: row.status.signal }
+    } else return null
+    terminals.push({ terminalId: row.terminalId, name: typeof row.name === 'string' ? row.name : null, type: row.type, status })
+  }
+  return { state: input.state, reason: typeof input.reason === 'string' ? input.reason : null, terminals }
+}
+
+function parseToolResultField(input: unknown): DesktopToolResultField | null {
+  if (!isRecord(input) || typeof input.kind !== 'string') return null
+  if (input.kind === 'text') return typeof input.text === 'string' ? { kind: 'text', text: input.text } : null
+  if (input.kind === 'key-values') {
+    if (!Array.isArray(input.entries)) return null
+    const entries: { name: string, value: string }[] = []
+    for (const entry of input.entries) {
+      if (!isRecord(entry) || typeof entry.name !== 'string' || typeof entry.value !== 'string') return null
+      entries.push({ name: entry.name, value: entry.value })
+    }
+    return { kind: 'key-values', entries }
+  }
+  if (input.kind === 'table') {
+    if (!Array.isArray(input.columns) || !input.columns.every((column) => typeof column === 'string') || !Array.isArray(input.rows)) return null
+    const rows: string[][] = []
+    for (const row of input.rows) {
+      if (!Array.isArray(row) || !row.every((cell) => typeof cell === 'string')) return null
+      rows.push(row as string[])
+    }
+    return { kind: 'table', columns: input.columns as string[], rows }
+  }
+  if (input.kind === 'link') {
+    return typeof input.label === 'string' && typeof input.host === 'string' && typeof input.url === 'string'
+      ? { kind: 'link', label: input.label, host: input.host, url: input.url } : null
+  }
+  if (input.kind === 'image') {
+    return reference(input.name) && reference(input.artifactId) && typeof input.version === 'string'
+      ? { kind: 'image', name: input.name, artifactId: input.artifactId, version: input.version } : null
+  }
+  if (input.kind === 'refused') return typeof input.code === 'string' ? { kind: 'refused', code: input.code } : null
+  return null
+}
+
+function parseToolResults(input: unknown): DesktopToolResults | null {
+  if (!isRecord(input)) return null
+  if (input.state === 'unavailable') return typeof input.reason === 'string' ? { state: 'unavailable', reason: input.reason } : null
+  if (input.state !== 'read' || !Array.isArray(input.results)) return null
+  const results: DesktopToolResult[] = []
+  for (const row of input.results) {
+    if (!isRecord(row) || !reference(row.resultId) || typeof row.tool !== 'string' || typeof row.title !== 'string'
+      || typeof row.at !== 'string') return null
+    if (row.state === 'unsupported') {
+      if (typeof row.declaredType !== 'string') return null
+      results.push({ resultId: row.resultId, tool: row.tool, title: row.title, at: row.at, state: 'unsupported', declaredType: row.declaredType })
+      continue
+    }
+    if (row.state !== 'read' || !Array.isArray(row.fields)) return null
+    const fields: DesktopToolResultField[] = []
+    for (const field of row.fields) {
+      const parsed = parseToolResultField(field)
+      if (parsed === null) return null
+      fields.push(parsed)
+    }
+    results.push({ resultId: row.resultId, tool: row.tool, title: row.title, at: row.at, state: 'read', fields })
+  }
+  return { state: 'read', results }
+}
+
 export function parseDesktopSession(input: unknown): DesktopSession | null {
   if (!isRecord(input)) return null
   const { service, activeContext: active, matter, workspaces, matterLinks, sessionChannel: channel } = input
@@ -345,6 +452,8 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
     pending: parsePending(channel.pending),
     // A malformed queue slot degrades to unavailable — absence must not read as "empty queue".
     queue: parseQueue(channel.queue) ?? { state: 'unavailable', occurrences: [] },
+    terminal: parseTerminal(input.terminal),
+    toolResults: parseToolResults(input.toolResults),
     paused: channel.paused, streamBroken: channel.streamBroken,
     canSubmit: matter.actionability === 'allowed' && matter.authorizationState === 'authorized'
       && matter.compatibilityOutcome === 'equivalent' && matter.availabilityState === 'available' && !channel.streamBroken,

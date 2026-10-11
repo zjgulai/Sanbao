@@ -17,6 +17,7 @@ import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
 import { answerDesktopApproval, editPendingInput, editQueueItem, removePendingInput, removeQueueItem, withdrawDesktopApproval, type SessionControlResult } from './session-controls.js'
+import { readDesktopTerminal } from './terminal.js'
 
 // Sanbao b861d04: ProductPages.tsx:31–36,73–75 and Controls.tsx:199–234.
 // Keep the research desktop's structure, not its routes, fixtures or optimistic send/clear behavior.
@@ -1014,10 +1015,13 @@ export function DesktopPage({
               modelQueue={session.modelQueue}
               pending={session.pending}
               queue={session.queue}
+              terminal={session.terminal}
+              toolResults={session.toolResults}
               onApprovalAnswer={(requestId, outcome) => runSessionControl(() => answerDesktopApproval(session.context.matterRef, requestId, outcome))}
               onApprovalWithdraw={(requestId) => runSessionControl(() => withdrawDesktopApproval(session.context.matterRef, requestId))}
               onPendingChange={(action) => runSessionControl(() => action.kind === 'edit' ? editPendingInput(action.itemId, action.text) : removePendingInput(action.itemId))}
               onQueueChange={(action) => runSessionControl(() => action.kind === 'edit' ? editQueueItem(action.itemId, action.text) : removeQueueItem(action.itemId))}
+              onTerminalRead={(terminalId) => readDesktopTerminal(terminalId)}
               onVerifyQueue={() => refreshNow()}
               {...(state.kind === 'read' && state.artifacts !== undefined ? { artifacts: state.artifacts } : {})}
               onArtifactOpen={(artifactId) => runArtifactAction(() => openDesktopArtifact(artifactId))}

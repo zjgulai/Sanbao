@@ -135,6 +135,24 @@ describe('desktop session reads source projections instead of prototype observat
     expect(section?.querySelector('button')).toBeNull()
   })
 
+  it('shows terminal rows and tool results without inventing controls for a display-only consumer (ADR-0314)', () => {
+    const node = renderSession({
+      execution: 'idle',
+      terminal: { state: 'read', reason: null, terminals: [{ terminalId: 't-1', name: null, type: 'shell', status: { kind: 'running' } }] },
+      toolResults: { state: 'read', results: [
+        { resultId: 'r1', tool: 'bash', title: 'bash', at: '', state: 'read', fields: [{ kind: 'key-values', entries: [{ name: '退出码', value: '0' }] }] },
+      ] },
+    })
+    const terminal = node.querySelector('[aria-label="集成终端"]')
+    expect(terminal?.textContent).toContain('t-1 · shell')
+    expect(terminal?.textContent).toContain('运行中')
+    // No onTerminalRead handler: the row renders, but there is no dead open control.
+    expect(terminal?.querySelector('button')).toBeNull()
+    const results = node.querySelector('[aria-label="工具结果"]')
+    expect(results?.textContent).toContain('bash')
+    expect(results?.textContent).toContain('退出码：0')
+  })
+
   it('keeps the service-scheduled retry delay exact (500ms is 0.5s, never rounded) (ADR-0313 review)', () => {
     const node = renderSession({
       modelQueue: { state: 'read', verdict: 'retrying', verifyOnly: false, reason: null,

@@ -121,6 +121,24 @@ const MAX_TURN_ITEMS = 12
 // ADR-0302 diff bounds: at most 4 hunks per item, 60 lines per side.
 const MAX_ITEM_HUNKS = 4
 const MAX_HUNK_LINES = 60
+// ADR-0314 (M05 session-log half): the non-write tool results retained for the typed tool-results
+// view — text only (the log carries no artifact references; images stay under the 015 home), and
+// the write family is excluded (its fact home is the turn process). Bounded both ways.
+const MAX_TOOL_RESULTS = 32
+const MAX_OPEN_TOOL_CALLS = 64
+// Characters (UTF-16 units), matching the kernel's own text bound — not bytes.
+const MAX_TOOL_RESULT_TEXT = 8192
+const TOOL_TEXT_CUT = '\n…（已截断）'
+function boundToolText(text: string): string {
+  return text.length <= MAX_TOOL_RESULT_TEXT ? text : text.slice(0, MAX_TOOL_RESULT_TEXT - TOOL_TEXT_CUT.length) + TOOL_TEXT_CUT
+}
+
+interface FoldedToolResult {
+  readonly resultId: string
+  readonly tool: string
+  readonly at: number | null
+  readonly text: string
+}
 
 function boundLines(text: string): string {
   const lines = text.split('\n')
@@ -234,9 +252,14 @@ interface Fold {
   /** ADR-0303: the newest snapshot's context-pressure projection (null until the host carries
    *  one). Fields stay independent — a fresh capacity may pair with an older pressure. */
   readonly contextPressure: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
+  /** ADR-0314: non-write tool results retained for the typed view (bounded, text only). */
+  readonly toolResults: readonly FoldedToolResult[]
+  /** ADR-0314: callId → tool name for calls whose result has not arrived yet; the result record
+   *  itself carries no name. Bounded by insertion order. */
+  readonly openToolCalls: ReadonlyMap<string, string>
 }
 
-const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [], turnProcess: EMPTY_TURN_PROCESS, contextPressure: null }
+const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [], turnProcess: EMPTY_TURN_PROCESS, contextPressure: null, toolResults: [], openToolCalls: new Map() }
 
 /** Fold the session log: an open turn is the only "executing" evidence; the final text is the last
  *  `assistant/message`. Unknown frames are counted, never interpreted. */
@@ -315,11 +338,20 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
     return { ...fold, cursor: seq, turnProcess: { ...fold.turnProcess, steps: fold.turnProcess.steps + 1 } }
   }
   if (event.type === 'tool/call') {
-    // ADR-0301: only the write/edit family feeds the file-process list; basename only.
+    // ADR-0314: every tool's name is remembered while its result is pending (the result record
+    // itself carries no name); the oldest pending call is dropped first, so the map stays bounded.
     const name = isRecord(data) && typeof data.name === 'string' ? data.name : null
-    if (name === null || !WRITE_LIKE_TOOLS.has(name)) return { ...fold, cursor: seq }
     const callId = isRecord(data) && typeof data.callId === 'string' && data.callId !== '' ? data.callId : null
-    if (callId === null) return { ...fold, cursor: seq }
+    if (name === null || callId === null) return { ...fold, cursor: seq }
+    const openToolCalls = new Map(fold.openToolCalls)
+    openToolCalls.set(callId, name)
+    while (openToolCalls.size > MAX_OPEN_TOOL_CALLS) {
+      const oldest = openToolCalls.keys().next().value
+      if (oldest === undefined) break
+      openToolCalls.delete(oldest)
+    }
+    // ADR-0301: only the write/edit family feeds the file-process list; basename only.
+    if (!WRITE_LIKE_TOOLS.has(name)) return { ...fold, cursor: seq, openToolCalls }
     const args = isRecord(data) ? (isRecord(data.arguments) ? data.arguments : undefined) : undefined
     const file = args === undefined ? null : baseNameOf(args.file_path) ?? baseNameOf(args.path)
     const createContent = name === 'write' && args !== undefined && typeof args.content === 'string' ? args.content : null
@@ -329,22 +361,36 @@ function applyEvent(fold: Fold, event: Record<string, unknown>): Fold {
     }
     const items = [...fold.turnProcess.items, item]
     return {
-      ...fold, cursor: seq,
+      ...fold, cursor: seq, openToolCalls,
       turnProcess: { ...fold.turnProcess, items: items.length > MAX_TURN_ITEMS ? items.slice(items.length - MAX_TURN_ITEMS) : items },
     }
   }
   if (event.type === 'tool/result') {
     const message = isRecord(data) ? data.message : undefined
     const callId = isRecord(message) && typeof message.callId === 'string' ? message.callId : null
-    if (callId === null || !fold.turnProcess.items.some((item) => item.callId === callId && item.state === 'running')) {
-      return { ...fold, cursor: seq }
+    if (callId === null) return { ...fold, cursor: seq }
+    const toolName = fold.openToolCalls.get(callId) ?? null
+    const openToolCalls = new Map(fold.openToolCalls)
+    openToolCalls.delete(callId)
+    // ADR-0314: retain the result text for the typed tool-results view — non-write tools only
+    // (the write family's home is the turn process), non-empty text only.
+    let toolResults = fold.toolResults
+    if (toolName !== null && !WRITE_LIKE_TOOLS.has(toolName)) {
+      const text = isRecord(message) ? textOf(message.content) ?? '' : ''
+      if (text !== '') {
+        const appended = [...toolResults, { resultId: callId, tool: toolName, at: eventTime(event), text: boundToolText(text) }]
+        toolResults = appended.length > MAX_TOOL_RESULTS ? appended.slice(appended.length - MAX_TOOL_RESULTS) : appended
+      }
+    }
+    if (!fold.turnProcess.items.some((item) => item.callId === callId && item.state === 'running')) {
+      return { ...fold, cursor: seq, toolResults, openToolCalls }
     }
     const failed = isRecord(message) && message.isError === true
     const at = eventTime(event)
     const meta = isRecord(data) ? data.meta : undefined
     const fromMeta = hunksFromMeta(meta)
     return {
-      ...fold, cursor: seq,
+      ...fold, cursor: seq, toolResults, openToolCalls,
       turnProcess: {
         ...fold.turnProcess,
         items: fold.turnProcess.items.map((item) => {
@@ -484,6 +530,10 @@ export interface SessionChannel {
     readonly requestId?: string
   }) => Promise<SessionSendOutcome>
   readonly read: (input: { readonly matterRef: string }) => Promise<SessionChannelStatus>
+  /** ADR-0314 (M05): the last read's non-write tool results AS the typed tool-results kernel
+   *  declarations — synchronous, so the state assembly reads them in the SAME request that
+   *  refreshed the fold. Empty when this matter has no completed read yet. */
+  readonly toolResultDeclarations: (matterRef: string) => readonly unknown[]
   /** ADR-0298: the live half of the same follow stream — assistant chunks are pushed as they
    *  arrive (bounded re-subscribes until the turn ends or the caller aborts). It never becomes
    *  history and never writes: the durable fold stays the final word. */
@@ -511,6 +561,8 @@ export interface SessionChannel {
 export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChannelDeps): SessionChannel {
   /** matterRef → sessionId; persisted so a restart reuses the session instead of re-sending. */
   let lastTranscript: { matterRef: string, rows: readonly SessionChannelEntry[] } | null = null
+  // ADR-0314: the latest read's tool-result declarations, keyed by matter (mirrors lastTranscript).
+  let lastToolResults: { readonly matterRef: string, readonly declarations: readonly unknown[] } | null = null
   const readBindings = (): Record<string, string> => {
     try {
       const value = JSON.parse(readFileSync(deps.bindingsFile, 'utf8')) as unknown
@@ -602,6 +654,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
       const sessionId = readBindings()[input.matterRef]
       if (sessionId === undefined) {
         // Nothing was ever sent for this matter: no session exists, and reading must not create one.
+        lastToolResults = { matterRef: input.matterRef, declarations: [] }
         return {
           state: 'no-session', sessionId: null, execution: 'idle', lastTurnEnd: null, lastTurnEndEdge: null,
           turnProcess: turnProcessView(EMPTY_TURN_PROCESS),
@@ -650,6 +703,10 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
             lastTurnEnd: pageFold.lastTurnEnd,
             lastTurnEndEdge: pageFold.lastTurnEndEdge,
             turnProcess: pageFold.turnProcess,
+            toolResults: pageFold.toolResults,
+            // Review fix: pending-call names merge instead of being replaced — a result arriving
+            // after reconciliation still knows its tool.
+            openToolCalls: new Map([...fold.openToolCalls, ...pageFold.openToolCalls]),
             contextPressure: pageFold.contextPressure ?? fold.contextPressure,
             unapplied: fold.unapplied + pageFold.unapplied,
             records: fold.records + page.result.records.length,
@@ -682,6 +739,20 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
       // stream read, placements and text previews included; a broken stream says unavailable.
       const queueSnapshot = await readQueue(deps, sessionId)
       lastTranscript = { matterRef: input.matterRef, rows: transcript }
+      // Review fix: a still-broken stream (reconcile failed) carries a partial fold — nothing is
+      // claimable from it, so the declarations go empty rather than shipping unverified partial
+      // text; the session slot itself already tells 连接中断.
+      lastToolResults = {
+        matterRef: input.matterRef,
+        declarations: (streamBroken ? [] : fold.toolResults).map((entry) => ({
+          resultId: entry.resultId,
+          tool: entry.tool,
+          title: entry.tool,
+          at: entry.at === null ? '' : String(entry.at),
+          type: 'text',
+          text: entry.text,
+        })),
+      }
       const reply: SessionReplyView = {
         text: fold.assistantText,
         endKind: fold.lastTurnEnd,
@@ -737,6 +808,11 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
       if (!answer.ok) return { state: 'refused', code: answer.code === 'bridge-queue-item-not-found' ? 'queue-item-not-found' : answer.code }
       return { state: 'ok' }
     },
+    toolResultDeclarations(matterRef) {
+      // ADR-0314: same-request sync read; a different matter's stash is never borrowed.
+      return lastToolResults !== null && lastToolResults.matterRef === matterRef ? lastToolResults.declarations : []
+    },
+
     async followLive(input) {
       // ADR-0298: bounded re-subscribes over the same session/follow seam the read uses.
       // Chunk indexes guard against a re-subscribe replaying chunks the consumer already saw;

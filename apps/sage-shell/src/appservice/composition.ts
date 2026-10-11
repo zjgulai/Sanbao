@@ -434,7 +434,6 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         preferences: options.preferences?.() ?? { requested: DEFAULT_DISPLAY_PREFERENCE_VALUES, savedAt: null, effectiveTheme: null, systemDark: null, applies: 'live' },
         attachments: options.attachments?.() ?? { state: 'unavailable' as const, items: [] },
         artifacts: options.artifacts?.() ?? { state: 'unavailable' as const, cards: [], preview: { state: 'closed' as const } },
-        toolResults: options.toolResults?.() ?? { state: 'unavailable' as const, reason: 'tool-results-provider-unavailable' },
         sessionHistory: options.sessionHistory?.() ?? { state: 'unavailable' as const, runs: [], hasMore: false, nextBeforeSeq: null, detail: null, at: null },
         sessionClarifications: await (options.sessionClarifications?.() ?? Promise.resolve({ state: 'unavailable' as const, pending: [], deferred: [], receipts: [], code: null, at: null })),
         sessionAnchors: options.sessionAnchors?.() ?? { state: 'unavailable' as const, anchors: [], located: null, code: null, at: null },
@@ -464,6 +463,10 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
           paused: false, pending: [],
           queue: { state: 'unavailable' as const, occurrences: [] },
         })),
+        // ADR-0314: evaluated AFTER sessionChannel so the tool-result declarations come from the
+        // fold THIS request refreshed — never the previous poll's stash (review finding: the
+        // order previously sat before sessionChannel and only runMonitor's own read rescued it).
+        toolResults: options.toolResults?.() ?? { state: 'unavailable' as const, reason: 'tool-results-provider-unavailable' },
         runtime,
       }
       return serviceJson(state, 200)

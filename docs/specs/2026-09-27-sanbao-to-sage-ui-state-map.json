@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 102,
-        "pending": 96,
+        "implementing": 108,
+        "pending": 90,
         "verified": 8
       },
       "applicationService": {
@@ -4628,8 +4628,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/artifact-window.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/artifact-preview.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -4650,7 +4661,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；逆向（Qoder 0.4.4 static-bundle）证实其预览窗=全权 renderer（挂全量 IPC 面）+多实例去重注册表——Sage 刻意不迁（保持非特权容器与单窗）；本批只装 chrome 平台化（darwin titleBarStyle/trafficLightPosition + 自绘文档头预留，HTML/PDF 不注入）；caller-binding 补全（独立批）前 window/fullscreen/close 三 route 保持 partial；真实窗口观感留 electronAcceptance"
         ]
       }
     },
@@ -7108,8 +7119,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/terminal.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7130,7 +7152,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；desktop 终端只读面板落地（清单+有界页+exitCode；POST body 精确 {terminalId}；区内零输入控件）；PTY 双向不装（ADR-0243 只读口径，用户 2026-10-11 确认维持）；网络半边=工具名归一（映射表仅对到达 item 生效，无预造条目）；外链卡 hover 预览属 D-036 排除面（不可迁）"
         ]
       }
     },
@@ -7238,8 +7260,24 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/tool-results.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/app-service-wiring.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7260,7 +7298,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；session-log 半边装配落地（用户裁定 2a）：非 write 工具结果文本进 typed 视图（write 族事实家=turnProcess 不重复；32 条/8192 字符有界、截断带标记）；composition 同请求求值收敛；desktop 工具结果区消费（图片→既有版本化 artifact open）；图片网格待 READY image artifact（自然条件）；插件 declarations 源头不采用（不引 Compatibility/Registry 链）"
         ]
       }
     },
@@ -7455,8 +7493,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/artifact-preview.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7477,7 +7521,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；表格/文档/不可用预览三形态与 A04 同机器落地（csv 表格、office 拒绝具名、binary 不支持具名+卡标签）；缩略图三形态无 provider（自然条件）"
         ]
       }
     },
@@ -7520,8 +7564,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/artifact-preview.spec.ts",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7542,7 +7592,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；逆向 8-格式描述符表对照落装：office/binary 拒绝具名且卡上标签「原格式预览尚未接通／不支持预览」；文本族 too-large 具名 artifact-too-large（不泄漏 bridge 码）；工作区文件/图片字节显示随真实产物自然验证；批注流无 provider（不装）"
         ]
       }
     },
@@ -7585,8 +7635,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t09",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/artifact-preview.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7607,7 +7668,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "组未展开（账本无叶）；三态收口=closed/opening/ready/failed + format 拒绝具名（打开失败码→句子映射，不显示裸 code）；exact-version 双读校验与同版本重试为既有断言并入；逆向证伪「Qoder 有通用产物版本历史 UI」（其亦无）——不装版本清单（不可迁）；文件更新通知（watch→刷新 pill）留自然条件"
         ]
       }
     },

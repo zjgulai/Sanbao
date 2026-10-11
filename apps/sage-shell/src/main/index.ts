@@ -64,6 +64,7 @@ import { createSiteTemplates } from './site-templates.js'
 import { createApprovals } from './approvals.js'
 import { createModelQueue } from './model-queue.js'
 import { createTerminal } from './terminal.js'
+import { createToolResults } from './tool-results.js'
 import { createFeedback } from './feedback.js'
 import { createPendingInputs } from './pending-inputs.js'
 import { createPreferences } from './preferences.js'
@@ -645,6 +646,14 @@ async function main(paths: SagePaths): Promise<void> {
     artifactWindowClose: () => artifactPreview.closeWindow(),
     artifactFullscreen: (request: { readonly on: boolean }) => artifactPreview.setExpanded(request.on),
   }
+  // ADR-0314 (M05, session-log half): the typed tool results read from the SAME fold the
+  // conversation reads — non-write results, text only, no second observation surface. Images stay
+  // governed by the 015 artifact home (artifactRecord), and the kernel's refusal-by-name is
+  // unchanged. No new route: the slot rides the existing /.sage/state envelope.
+  const toolResults = createToolResults({
+    declarations: () => sessionChannel.toolResultDeclarations(scopedMatterRef()),
+    artifactRecord: (artifactId) => artifacts.recordFor(artifactId),
+  })
   // Ticket 033 (D-036): the only external-link path — validate, then the system browser; Sage
   // never fetches, probes or reads the site.
   const externalLinks = createExternalLinks({
@@ -709,6 +718,7 @@ async function main(paths: SagePaths): Promise<void> {
     sessionApprovalWithdraw: (request: { readonly matterRef: string, readonly requestId: string }) => approvals.withdraw(request),
     modelQueue: () => modelQueue.read({ matterRef: scopedMatterRef() }),
     terminal: () => terminal.status({ matterRef: scopedMatterRef() }),
+    toolResults: () => toolResults.list(),
     feedback: () => feedback.status(),
     feedbackSubmit: (request: { readonly action: 'submit', readonly text: string, readonly code?: string, readonly stage?: string, readonly correlation?: string }) => feedback.submit(request),
     feedbackVerify: (request: { readonly action: 'verify', readonly requestId: string }) => feedback.verify(request),

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { MarkdownText } from '../markdown.js'
 import type { DesktopArtifacts } from './client.js'
-import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopTurnProcess } from './session.js'
+import type { DesktopApprovals, DesktopModelQueue, DesktopPendingItem, DesktopQueue, DesktopTerminal, DesktopToolResultField, DesktopToolResults, DesktopTurnProcess } from './session.js'
+import type { DesktopTerminalRead } from './terminal.js'
 import type { SessionControlResult } from './session-controls.js'
 
 export interface DesktopSessionViewProps {
@@ -21,6 +22,10 @@ export interface DesktopSessionViewProps {
   readonly modelQueue?: DesktopModelQueue | null
   readonly pending?: readonly DesktopPendingItem[]
   readonly queue?: DesktopQueue
+  /** ADR-0314: the read-only terminal roster (M03) and the typed tool results (M05). */
+  readonly terminal?: DesktopTerminal | null
+  readonly toolResults?: DesktopToolResults | null
+  readonly onTerminalRead?: (terminalId: string) => Promise<DesktopTerminalRead>
   readonly onApprovalAnswer?: (requestId: string, outcome: 'allowed-once' | 'rejected') => Promise<SessionControlResult>
   readonly onApprovalWithdraw?: (requestId: string) => Promise<SessionControlResult>
   readonly onPendingChange?: (action: { readonly kind: 'edit', readonly itemId: string, readonly text: string } | { readonly kind: 'remove', readonly itemId: string }) => Promise<SessionControlResult>
@@ -49,7 +54,12 @@ function formatDelayMs(ms: number): string {
   return ms % 1000 === 0 ? `${ms / 1000}s` : `${(ms / 1000).toFixed(1)}s`
 }
 
-const TOOL_VERB: Record<string, string> = { write: '写入', edit: '编辑', apply_patch: '编辑' }
+// ADR-0314 (M03): the network tools' display names — the map applies only to names that
+// actually arrive from the base log; no item is ever synthesized from these keys.
+const TOOL_VERB: Record<string, string> = {
+  write: '写入', edit: '编辑', apply_patch: '编辑',
+  WebFetch: '打开网页', WebSearch: '搜索网页', web_fetch: '打开网页', web_search: '搜索网页',
+}
 
 /** ADR-0301: the live file activity row — elapsed counts from the moment Sage observed the run. */
 function LiveProcessRow({ item }: { readonly item: DesktopTurnProcess['fileWrites'][number] }): ReactNode {
@@ -133,6 +143,23 @@ export function TurnProcessFooter({ lastTurnEnd, turnProcess }: {
   </div>
 }
 
+// Review fix: every refusal code the failed state can carry gets its own sentence — the raw
+// identifier never reaches the user (walkthrough step 17); unknown codes keep the identifier as
+// the honest fallback.
+const ARTIFACT_FAILURE_SENTENCE: Readonly<Record<string, string>> = {
+  'artifact-source-absent': '文件已不在工作区',
+  'artifact-version-changed': '文件版本已变化——不会静默切到新版本',
+  'artifact-not-text': '非文本内容，无法预览',
+  'artifact-too-large': '文件超过预览上限，未读取',
+  'artifact-format-deferred': '原格式预览尚未接通',
+  'artifact-format-unsupported': '不支持预览',
+  'artifact-csv-parse-failed': '表格解析未通过',
+  'artifact-load-failed': '预览装载失败',
+  'artifact-preview-window-unavailable': '预览窗口不可用',
+  'artifact-window-closed': '预览窗口已关闭',
+  'artifact-window-load-failed': '预览窗口装载失败',
+}
+
 function bytesLabel(bytes: number | null): string {
   if (bytes === null) return '大小未知'
   if (bytes < 1024) return `${bytes} B`
@@ -156,6 +183,11 @@ function ArtifactRail({ artifacts, onArtifactOpen, onArtifactRetry, onArtifactCl
       ? <p className="artifact-empty">尚无观察到产出物</p>
       : artifacts.cards.map((card) => <div className="artifact-card" key={card.artifactId}>
         <div className="artifact-card-title"><span className="artifact-name">{card.name}</span><span className="artifact-kind">{card.kind}</span></div>
+        {card.kind === 'office'
+          ? <div className="artifact-kind-note">原格式预览尚未接通</div>
+          : card.kind === 'binary'
+            ? <div className="artifact-kind-note">不支持预览</div>
+            : null}
         <div className="artifact-card-meta">{card.state === 'ready' ? bytesLabel(card.bytes) : card.state === 'absent' ? '已不在工作区' : '尚未确认'}</div>
         <div className="artifact-card-actions">
           <button className="text-button" aria-label={`面板打开 ${card.name}`} onClick={() => onArtifactOpen?.(card.artifactId)}>打开</button>
@@ -190,7 +222,7 @@ function ArtifactRail({ artifacts, onArtifactOpen, onArtifactRetry, onArtifactCl
       : null}
     {preview.state === 'failed'
       ? <div className="artifact-preview-status" data-artifact-preview="failed" role="status">
-        <p>打开失败：{preview.code}</p>
+        <p>打开失败：{ARTIFACT_FAILURE_SENTENCE[preview.code] ?? preview.code}</p>
         {preview.retryable ? <button className="text-button" aria-label="重试打开" onClick={() => onArtifactRetry?.()}>重试</button> : null}
       </div>
       : null}
@@ -335,11 +367,118 @@ function ControlItemList({ label, items, onEdit, onRemove }: {
   </div>
 }
 
+/** ADR-0314 (M05): the typed tool results (Ticket 033 kernel) — text / key-values / table / link /
+ *  image fields render through owned shapes only; an unsupported declared type and a refused field
+ *  are named, never approximated. Images open through the existing artifact action. */
+function ToolResultFieldView({ field, onArtifactOpen }: {
+  readonly field: DesktopToolResultField
+  readonly onArtifactOpen?: (artifactId: string) => void
+}): ReactNode {
+  if (field.kind === 'text') return <pre className="tool-result-text">{field.text}</pre>
+  if (field.kind === 'key-values') return <div className="tool-result-kvs">
+    {field.entries.map((entry, index) => <span className="tool-result-kv" key={index}>{entry.name}：{entry.value}</span>)}
+  </div>
+  if (field.kind === 'table') return <table className="tool-result-table">
+    <thead><tr>{field.columns.map((column, index) => <th key={index}>{column}</th>)}</tr></thead>
+    <tbody>{field.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody>
+  </table>
+  if (field.kind === 'link') return <span className="tool-result-link">{field.label}（{field.host}）</span>
+  if (field.kind === 'image') {
+    return onArtifactOpen !== undefined
+      ? <button type="button" className="text-button" aria-label={`打开图片产物 ${field.name}`} onClick={() => onArtifactOpen(field.artifactId)}>{field.name}</button>
+      : <span className="tool-result-link">{field.name}</span>
+  }
+  return <span className="tool-result-note">未受理（{field.code}）。</span>
+}
+
+function ToolResultsSection({ toolResults, onArtifactOpen }: {
+  readonly toolResults: DesktopToolResults
+  readonly onArtifactOpen?: (artifactId: string) => void
+}): ReactNode {
+  if (toolResults.state !== 'read') {
+    // An unavailable read is named with its reason — never rendered as "no results".
+    return <section className="tool-results-section" aria-label="工具结果">
+      <strong>工具结果</strong>
+      <p className="control-note" role="status">工具结果读取不可用（{toolResults.reason}）——不据此断言无结果。</p>
+    </section>
+  }
+  if (toolResults.results.length === 0) return null
+  return <section className="tool-results-section" aria-label="工具结果">
+    <strong>工具结果（{toolResults.results.length}）</strong>
+    <ul>{toolResults.results.map((result) => {
+      // The log's event.time unit is not pinned by any evidence — no absolute timestamp is
+      // fabricated from it (review fix); the row shows the title and tool only.
+      return <li key={result.resultId} className="tool-result-row">
+        <div className="tool-result-head">{result.title === result.tool ? result.title : `${result.title} · ${result.tool}`}</div>
+        {result.state === 'unsupported'
+          ? <p className="tool-result-note">不支持的结果类型（{result.declaredType}）。</p>
+          : result.fields.map((field, index) => <ToolResultFieldView field={field} {...(onArtifactOpen === undefined ? {} : { onArtifactOpen })} key={index} />)}
+      </li>
+    })}</ul>
+  </section>
+}
+
+/** ADR-0314 (M03): the read-only terminal roster and bounded output pages (the Ticket 043 route).
+ *  Opening/closing the output never touches the run, and nothing here writes. */
+function TerminalSection({ terminal, onRead }: {
+  readonly terminal: DesktopTerminal
+  readonly onRead?: (terminalId: string) => Promise<DesktopTerminalRead>
+}): ReactNode {
+  const [openedId, setOpenedId] = useState<string | null>(null)
+  // Review fix: the page carries the terminal it belongs to — a late response for terminal A can
+  // never render under terminal B's open state.
+  const [page, setPage] = useState<{ readonly terminalId: string, readonly read: DesktopTerminalRead } | null>(null)
+  if (terminal.state !== 'read') {
+    return <section className="terminal-section" aria-label="集成终端">
+      <strong>集成终端（只读运行观察）</strong>
+      <p className="control-note" role="status">{terminal.state === 'no-session'
+        ? '还没有会话：没有终端可读。'
+        : `终端不可用（${terminal.reason ?? 'terminal-unavailable'}）。`}</p>
+    </section>
+  }
+  // Request-sequence token (review fix): a late response for a previous terminal is dropped —
+  // it neither renders under another row nor overwrites the current row's page.
+  const requestSeq = useRef(0)
+  const toggle = (terminalId: string) => {
+    if (openedId === terminalId) { requestSeq.current += 1; setOpenedId(null); setPage(null); return }
+    if (onRead === undefined) return
+    const seq = ++requestSeq.current
+    setOpenedId(terminalId)
+    setPage(null)
+    void onRead(terminalId).then((result) => { if (requestSeq.current === seq) setPage({ terminalId, read: result }) })
+  }
+  const showPage = page !== null && openedId !== null && page.terminalId === openedId
+  return <section className="terminal-section" aria-label="集成终端">
+    <strong>集成终端（只读运行观察：打开/关闭不影响执行；输出不进对话历史、不作产物）</strong>
+    {terminal.terminals.length === 0
+      ? <p className="control-note" role="status">当前没有被观察到的终端。</p>
+      : <ul>{terminal.terminals.map((session) => <li key={session.terminalId}>
+        <span className="control-item-text">{session.name ?? session.terminalId} · {session.type}</span>
+        <span className="control-item-badge">{session.status.kind === 'exited'
+          ? `已退出${session.status.exitCode === null ? '' : `（exitCode ${session.status.exitCode}）`}${session.status.signal === null ? '' : `（${session.status.signal}）`}`
+          : '运行中'}</span>
+        {onRead !== undefined
+          ? <button type="button" className="text-button" aria-label={`${openedId === session.terminalId ? '关闭输出' : '打开输出'} ${session.name ?? session.terminalId}`}
+            onClick={() => toggle(session.terminalId)}>{openedId === session.terminalId ? '关闭输出' : '打开输出（只读）'}</button>
+          : null}
+      </li>)}</ul>}
+    {showPage && page !== null
+      ? page.read.state === 'read'
+        ? <>
+          <pre className="terminal-output">{page.read.text}</pre>
+          <p className="control-note" role="status">只读运行观察（第 {page.read.lineBegin}–{page.read.lineEnd} 行 / 共 {page.read.totalLines} 行）{page.read.truncated ? '——本页有截断标注' : ''}</p>
+        </>
+        : <p className="control-note" role="status">输出未受理（{page.read.code}）。</p>
+      : null}
+  </section>
+}
+
 export function DesktopSessionView({
   title, execution, lastTurnEnd, paused, streamBroken, messages, streaming = null,
   turnProcess, artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
   approvals = null, modelQueue = null, pending = [], queue = { state: 'read', occurrences: [] },
-  onApprovalAnswer, onApprovalWithdraw, onPendingChange, onQueueChange, onVerifyQueue,
+  terminal = null, toolResults = null,
+  onApprovalAnswer, onApprovalWithdraw, onPendingChange, onQueueChange, onVerifyQueue, onTerminalRead,
 }: DesktopSessionViewProps): ReactNode {
   // ADR-0309: the side-panel entry (OBS: the button is visible on the first-run page; its click
   // path was not observed) — it toggles the artifact rail locally. No provider is involved.
@@ -404,6 +543,9 @@ export function DesktopSessionView({
             ? <TurnProcessFooter lastTurnEnd={lastTurnEnd} turnProcess={turnProcess} />
             : null}
         </div>
+        {toolResults !== null
+          ? <ToolResultsSection toolResults={toolResults} {...(onArtifactOpen === undefined ? {} : { onArtifactOpen })} />
+          : null}
         <ControlItemList label="待继续输入"
           items={pending.map((item) => ({
             id: item.itemId, text: item.text,
@@ -429,6 +571,9 @@ export function DesktopSessionView({
         />
         {queue.state === 'unavailable'
           ? <p className="control-note" role="status">队列快照不可用——以服务恢复后为准。</p>
+          : null}
+        {terminal !== null
+          ? <TerminalSection terminal={terminal} {...(onTerminalRead === undefined ? {} : { onRead: onTerminalRead })} />
           : null}
       </div>
       {railVisible

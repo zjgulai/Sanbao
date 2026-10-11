@@ -24,6 +24,23 @@ const PREVIEW_SCHEME = 'sage-preview://'
 const PREVIEW_PANEL_WIDTH = SAGE_PREVIEW_PANEL_WIDTH
 const PREVIEW_PANEL_TOPBAR = 64
 
+/** ADR-0314 (P12): the platform window chrome — the traffic lights sit inset over the document
+ *  on macOS; other platforms keep the stock window frame. Pure and exported for the spec. */
+export function previewWindowChromeOptions(platform: NodeJS.Platform = process.platform): {
+  readonly titleBarStyle?: 'hiddenInset'
+  readonly trafficLightPosition?: { readonly x: number, readonly y: number }
+} {
+  return platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 12 } } : {}
+}
+
+/** ADR-0314 (P12): the Sage-authored documents (text/image/csv) reserve the top strip and the
+ *  inline start so the inset macOS traffic lights never cover the header row. The artifact's own
+ *  HTML and the PDF viewer are untouched — only documents this window owns get the reserve. */
+export function withWindowHeaderReserve(body: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== 'darwin' || !body.includes('</head>')) return body
+  return body.replace('</head>', '<style>body { padding-top: 2.6rem !important; } header { padding-inline-start: 72px; }</style></head>')
+}
+
 let protocolRegistered = false
 
 function ensurePreviewProtocol(): void {
@@ -55,11 +72,15 @@ export function createPreviewWindowContainer(options: { readonly window: () => B
   const parent = options.window()
   if (parent === null || parent.isDestroyed()) return { failed: 'artifact-preview-window-unavailable' }
   ensurePreviewProtocol()
+  // ADR-0314 (P12): the platform window chrome — the traffic lights sit inset over the document
+  // (macOS), and the Sage-authored documents reserve their header space for them below. The
+  // document itself is still whatever the artifact preview prepared; nothing else changed.
   const window = new BrowserWindow({
     parent,
     width: 960,
     height: 720,
     show: true,
+    ...previewWindowChromeOptions(),
     webPreferences: {
       partition: PREVIEW_PARTITION,
       sandbox: true,
@@ -82,7 +103,7 @@ export function createPreviewWindowContainer(options: { readonly window: () => B
       token = randomUUID()
       const entry = input.kind === 'pdf'
         ? { bytes: Buffer.from(input.data, 'base64'), mime: 'application/pdf' }
-        : { bytes: Buffer.from(input.body, 'utf8'), mime: 'text/html' }
+        : { bytes: Buffer.from(input.kind === 'document' ? withWindowHeaderReserve(input.body) : input.body, 'utf8'), mime: 'text/html' }
       served.set(token, entry)
       await window.loadURL(`${PREVIEW_SCHEME}artifact/${token}`)
     },

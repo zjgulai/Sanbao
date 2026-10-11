@@ -133,6 +133,10 @@ describe('an open reads the card\'s exact version (US-035)', () => {
     const tooLarge = harness({ read: async () => ({ ok: false, code: 'bridge-file-too-large' }) })
     await expect(tooLarge.preview.open(record({ kind: 'image', name: 'huge.png' })))
       .resolves.toMatchObject({ preview: { state: 'failed', code: 'artifact-too-large', retryable: true } })
+    // ADR-0314 (A04): the text family names the same bound — the raw bridge code never leaks.
+    const textTooLarge = harness({ read: async () => ({ ok: false, code: 'bridge-file-too-large' }) })
+    await expect(textTooLarge.preview.open(record()))
+      .resolves.toMatchObject({ preview: { state: 'failed', code: 'artifact-too-large', retryable: true } })
     const notText = harness({ read: async () => ({ ok: false, code: 'bridge-file-not-text' }) })
     await expect(notText.preview.open(record()))
       .resolves.toMatchObject({ preview: { state: 'failed', code: 'artifact-not-text', retryable: false } })

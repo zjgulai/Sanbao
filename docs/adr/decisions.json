@@ -10546,10 +10546,11 @@
         },
         {
           "id": "D5",
-          "text": "M05：非 write 工具结果文本→sync declarations→装配→同请求求值→desktop typed 视图；write 族事实家=turnProcess 不重复。",
+          "text": "M05：非 write 工具结果文本→sync declarations→装配→同请求求值（toolResults 位于 sessionChannel 之后）→desktop typed 视图；write 族事实家=turnProcess 不重复；文本=会话内容类（有界 8192，截断带标记）。",
           "constraints": [
             "one fact one home",
-            "bounded text with cut marker"
+            "bounded text with cut marker",
+            "text is conversation-content class"
           ]
         },
         {

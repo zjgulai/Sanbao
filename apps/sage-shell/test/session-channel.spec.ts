@@ -63,6 +63,16 @@ const assistantEvent = (seq: number, text: string) => ({
 const turnStart = (seq: number) => ({ type: 'event', event: { type: 'turn/start', seq, time: 1, data: { turn: 1 } } })
 const turnEnd = (seq: number, reason: string) => ({ type: 'event', event: { type: 'turn/end', seq, time: 1, data: { turn: 1, reason } } })
 const snapshot = (records: readonly unknown[], cursor: number) => ({ type: 'snapshot', header: {}, cursor, records, hasMore: false, projections: {} })
+const toolCall = (seq: number, name: string, callId: string, args?: Record<string, unknown>) => ({
+  type: 'event',
+  event: {
+    type: 'tool/call', seq, time: 2, data: { name, callId, turn: 1, step: 1, ...(args === undefined ? {} : { arguments: args }) },
+  },
+})
+const toolResult = (seq: number, callId: string, text: string) => ({
+  type: 'event',
+  event: { type: 'tool/result', seq, time: 3, data: { message: { callId, isError: false, content: [{ type: 'text', text }] }, meta: {} } },
+})
 
 describe('the turn process fold (ADR-0301)', () => {
   it('folds duration, iterations and write/edit items with basenames only', () => {
@@ -141,6 +151,67 @@ describe('the turn process fold (ADR-0301)', () => {
     ])
     expect(turnProcessView(next.turnProcess).fileWrites).toEqual([])
     expect(turnProcessView(next.turnProcess).iterations).toBeNull()
+  })
+})
+
+describe('ADR-0314: non-write tool results become the typed view declarations (M05)', () => {
+  it('retains a non-write result text once and excludes the write family', async () => {
+    const { channel: instance } = await channel({
+      'session/create': { ok: true, result: { sessionId: 'session-1' } },
+      'session/prompt': { ok: true, result: { accepted: true } },
+      'session/follow': { ok: true, result: { frames: 1 } },
+    }, [snapshot([
+      turnStart(1),
+      toolCall(2, 'bash', 'c1', { command: 'ls' }),
+      toolResult(3, 'c1', 'file-a\nfile-b'),
+      toolCall(4, 'write', 'c2', { file_path: '/w/a.txt' }),
+      toolResult(5, 'c2', 'Wrote file'),
+    ], 5)])
+    await instance.send({ matterRef: 'receipt:1', workspaceRoot: '/a', text: '开始吧' })
+    const status = await instance.read({ matterRef: 'receipt:1' })
+    expect(status).toMatchObject({ state: 'read' })
+    expect(status.turnProcess.fileWrites.map((item) => [item.name, item.file])).toEqual([['write', 'a.txt']])
+    expect(instance.toolResultDeclarations('receipt:1')).toEqual([
+      { resultId: 'c1', tool: 'bash', title: 'bash', at: '3', type: 'text', text: 'file-a\nfile-b' },
+    ])
+    // Nothing is invented for a matter with no read of its own.
+    expect(instance.toolResultDeclarations('receipt:other')).toEqual([])
+  })
+
+  it('claims nothing from a still-broken stream (ADR-0314 review)', async () => {
+    const { channel: instance } = await channel({
+      'session/create': { ok: true, result: { sessionId: 'session-1' } },
+      'session/prompt': { ok: true, result: { accepted: true } },
+      'session/follow': { ok: false, code: 'bridge-stream-overflow' },
+    }, [snapshot([turnStart(1), toolCall(2, 'bash', 'c1'), toolResult(3, 'c1', 'partial text')], 3)])
+    await instance.send({ matterRef: 'receipt:1', workspaceRoot: '/a', text: '开始吧' })
+    const status = await instance.read({ matterRef: 'receipt:1' })
+    expect(status).toMatchObject({ state: 'read', streamBroken: true })
+    // The partial fold is not claimable — the declarations go empty, never unverified partial text.
+    expect(instance.toolResultDeclarations('receipt:1')).toEqual([])
+  })
+
+  it('cuts a long text with a kept marker at the kernel bound, and drops empty texts', async () => {
+    const long = 'x'.repeat(9000)
+    const { channel: instance } = await channel({
+      'session/create': { ok: true, result: { sessionId: 'session-1' } },
+      'session/prompt': { ok: true, result: { accepted: true } },
+      'session/follow': { ok: true, result: { frames: 1 } },
+    }, [snapshot([
+      turnStart(1),
+      toolCall(2, 'WebFetch', 'c1'),
+      toolResult(3, 'c1', long),
+      toolCall(4, 'bash', 'c2'),
+      toolResult(5, 'c2', ''),
+      toolResult(6, 'never-called', 'orphan text'),
+    ], 6)])
+    await instance.send({ matterRef: 'receipt:1', workspaceRoot: '/a', text: '开始吧' })
+    await instance.read({ matterRef: 'receipt:1' })
+    const declarations = instance.toolResultDeclarations('receipt:1') as Array<{ readonly resultId: string, readonly text: string }>
+    expect(declarations).toHaveLength(1)
+    expect(declarations[0]!.resultId).toBe('c1')
+    expect(declarations[0]!.text.length).toBeLessThanOrEqual(8192)
+    expect(declarations[0]!.text.endsWith('…（已截断）')).toBe(true)
   })
 })
 
