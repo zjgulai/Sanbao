@@ -68,6 +68,39 @@ describe('route-skeleton', () => {
   })
 })
 
+describe('the typed admission failure rides the wire (ADR-0324)', () => {
+  it('serves the runner’s own stage instead of the route’s generic envelope', async () => {
+    const typed = {
+      state: 'unavailable' as const,
+      code: 'projection-read-unavailable' as const,
+      stage: 'initial-context' as const,
+      retryable: true as const,
+      correlation: 'c-1',
+    }
+    const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state'), {
+      callerBinding: { correlation: 'c-1' },
+      providers: { ...providers, runProjectionRead: async () => typed },
+    })
+    expect(r.status).toBe(200)
+    expect(await r.json()).toEqual(typed)
+  })
+
+  it('keeps the route envelope for a malformed result and for a thrown runner', async () => {
+    for (const runner of [
+      async () => ({ state: 'unavailable', code: 'made-up', stage: 'x', retryable: true, correlation: 'c-1' }),
+      async () => { throw new Error('probe') },
+      async () => ({ state: 'read', value: 'not-a-response' }),
+    ]) {
+      const r = await handleSageServiceRequest(req('dsh-app://app/.sage/state'), {
+        callerBinding: { correlation: 'c-1' },
+        providers: { ...providers, runProjectionRead: runner as never },
+      })
+      expect(r.status).toBe(200)
+      expect(await r.json()).toMatchObject({ code: 'projection-read-unavailable', stage: 'read-policy', retryable: true })
+    }
+  })
+})
+
 describe('auth routes', () => {
   const providers = {
     readState: async () => new Response('{}'),

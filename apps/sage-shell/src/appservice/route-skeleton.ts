@@ -119,6 +119,33 @@ function transportDenial(status: number, headers: Record<string, string> = {}): 
   return new Response(null, { status, headers: { 'cache-control': 'no-store', ...headers } })
 }
 
+/** CTX-01C (ADR-0324): the admission's own typed failure is the honest diagnosis fact, so it
+ * rides the wire unchanged. The generic blocked() envelope used to rewrite every failure's stage
+ * to 'read-policy', which hid the real failing step from the operator. Only an absent runner, a
+ * malformed result or a thrown provider still collapses to the route's own envelope. */
+function isProjectionReadTypedFailure(value: unknown): value is {
+  readonly state: 'unavailable' | 'denied' | 'stale'
+  readonly code: 'projection-read-unavailable' | 'projection-read-denied' | 'projection-read-stale'
+  readonly stage: string
+  readonly retryable: boolean
+  readonly correlation: string
+} {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  const record = value as Record<string, unknown>
+  const expectedCode = record.state === 'unavailable'
+    ? 'projection-read-unavailable'
+    : record.state === 'denied'
+      ? 'projection-read-denied'
+      : record.state === 'stale'
+        ? 'projection-read-stale'
+        : null
+  return expectedCode !== null
+    && record.code === expectedCode
+    && typeof record.stage === 'string' && record.stage.length > 0
+    && typeof record.retryable === 'boolean'
+    && typeof record.correlation === 'string' && record.correlation.length > 0
+}
+
 /** READ-01A: exact parsing stays ahead of this helper; raw providers run only inside the
  * main-owned admission callback. Missing/malformed runners fail closed through each route's
  * existing typed unavailable shape. */
@@ -126,16 +153,16 @@ async function runProjectionRead(
   deps: ServiceDeps,
   operation: ProjectionReadOperation,
   candidate: ProjectionReadCandidate,
-  read: (scope: ProjectionReadScope) => Promise<Response>,
+  read: (scope: ProjectionReadScope | null) => Promise<Response>,
   blocked: () => Response | Promise<Response>,
 ): Promise<Response> {
   const runner = deps.providers.runProjectionRead
   if (runner === undefined) return blocked()
   try {
     const result = await runner({ operation, candidate }, read)
-    return result.state === 'read' && result.value instanceof Response
-      ? result.value
-      : blocked()
+    if (result.state === 'read' && result.value instanceof Response) return result.value
+    if (isProjectionReadTypedFailure(result)) return serviceJson(result, 200)
+    return blocked()
   } catch {
     return blocked()
   }
@@ -614,7 +641,11 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
         deps,
         'edit-drafts.create',
         { kind: 'opaque', resource: 'file-reference', id: create.referenceId },
-        (scope) => deps.providers.createEditDraft({ referenceId: create.referenceId, matterRef: scope.matterRef }),
+        // Only the device aggregation read (ADR-0324, state.read only) passes a null scope;
+        // this matter-bound source read refuses instead of inventing a matter.
+        (scope) => scope === null
+          ? Promise.resolve(serviceJson({ state: 'refused', code: 'edit-draft-unavailable' }, 200))
+          : deps.providers.createEditDraft({ referenceId: create.referenceId, matterRef: scope.matterRef }),
         () => serviceJson({ state: 'refused', code: 'edit-draft-unavailable' }, 200),
       )
     }

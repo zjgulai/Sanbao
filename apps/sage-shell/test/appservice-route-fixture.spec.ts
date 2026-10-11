@@ -17,6 +17,9 @@ function providers(env: NodeJS.ProcessEnv) {
     viewState,
     vault: createTokenVault({ mintSessionRef: () => 'session-ref-fixture' }),
     adapter: { startLogin: async () => ({ ok: false as const, code: 'idp-unreachable' as const }) },
+    // Production wires the request-scoped caller binding into the assembly (main/index.ts);
+    // without it every read stops at the caller step before its real admission stage shows.
+    callerBinding: { correlation: 'c-fixture' },
     ...(fixtureProjection === undefined ? {} : { fixtureProjection }),
   })
 }
@@ -41,9 +44,12 @@ describe('app service route with the production assembly (WT-02D.1)', () => {
       providers: providers({}),
     })
     const body = await response.json() as Record<string, unknown>
+    // ADR-0324: a signed-out caller fails the device aggregation read at its own stage; the
+    // typed envelope rides the wire (previously collapsed to the generic read-policy shape).
     expect(body).toMatchObject({
+      state: 'unavailable',
       code: 'projection-read-unavailable',
-      stage: 'read-policy',
+      stage: 'initial-context',
       retryable: true,
     })
     expect(body).not.toHaveProperty('matter')
@@ -138,7 +144,7 @@ describe('app service route with the production assembly (WT-02D.1)', () => {
       }),
     })
     const body = await response.json() as Record<string, unknown>
-    expect(body).toMatchObject({ code: 'projection-read-unavailable', stage: 'read-policy' })
+    expect(body).toMatchObject({ code: 'projection-read-unavailable', stage: 'initial-context' })
     expect(body).not.toHaveProperty('matter')
   })
 
@@ -148,7 +154,7 @@ describe('app service route with the production assembly (WT-02D.1)', () => {
       providers: providers({ SAGE_FIXTURE_STAGE: 'running' }),
     })
     const body = await response.json() as Record<string, unknown>
-    expect(body).toMatchObject({ code: 'projection-read-unavailable', stage: 'read-policy' })
+    expect(body).toMatchObject({ code: 'projection-read-unavailable', stage: 'initial-context' })
     expect(body).not.toHaveProperty('matter')
   })
 })

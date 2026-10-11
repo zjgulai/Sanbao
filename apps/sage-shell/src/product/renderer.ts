@@ -549,10 +549,11 @@ export function renderSageDocument(): string {
       return value;
     }
 
+    // CTX-01C (ADR-0324): the stage is the admission's honest diagnosis fact and must not be
+    // pinned here — any stage of the typed envelope is the route's blocked face.
     function isProjectionReadUnavailableRouteDenial(value) {
       return isRecord(value)
         && value.code === 'projection-read-unavailable'
-        && value.stage === 'read-policy'
         && value.retryable === true
         && isNonEmptyString(value.correlation)
         && !hasOwn(value, 'service')

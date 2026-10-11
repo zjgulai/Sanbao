@@ -1726,7 +1726,9 @@ export type ProjectionReadCandidate =
 
 export type ProjectionReadRouteRunner = (
   intent: ProjectionReadIntent<ProjectionReadCandidate>,
-  read: (scope: ProjectionReadScope) => Promise<Response>,
+  /** The matter-bound scope, or `null` for the pre-selection device aggregation read
+   *  (ADR-0324): that read carries no matter fact, so it passes no scope. */
+  read: (scope: ProjectionReadScope | null) => Promise<Response>,
 ) => Promise<ProjectionReadAdmissionResult<Response>>
 
 export interface ServiceProviders {

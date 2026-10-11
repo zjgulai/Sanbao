@@ -45,14 +45,28 @@ const SELECTED_RECEIPT = {
   },
 }
 
-/** The route's own blocked fallback for this family (route-skeleton.ts), both for denial and
- *  for staleness: the renderer never learns which admission stage discarded the read. */
-const BLOCKED_CANDIDATES_RECEIPT = {
-  state: 'refused',
-  code: 'file-candidates-unavailable',
-  entries: [],
-  truncated: false,
-  path: '',
+/** ADR-0324 (CTX-01C): the admission's typed failure rides the wire with its real stage — the
+ *  route's own blocked fallback only covers absent runners, malformed results and throws. */
+const DENIED_CANDIDATES_RECEIPT = {
+  state: 'denied',
+  code: 'projection-read-denied',
+  stage: 'candidate-match',
+  retryable: false,
+  correlation: CALLER.correlation,
+}
+const STALE_CANDIDATES_RECEIPT = {
+  state: 'stale',
+  code: 'projection-read-stale',
+  stage: 'fresh-scope',
+  retryable: false,
+  correlation: CALLER.correlation,
+}
+const POLICY_DENIED_CANDIDATES_RECEIPT = {
+  state: 'denied',
+  code: 'projection-read-denied',
+  stage: 'read-policy',
+  retryable: false,
+  correlation: CALLER.correlation,
 }
 
 /** The instance policy file the whole path re-reads. Four local-read grants, no decision
@@ -280,7 +294,7 @@ describe('T03 authorized read path over the real kernel chain', () => {
 
     const response = await harness.post('/.sage/workspace/files/candidates', { workspaceRoot: '/other/root', path: 'sub' })
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual(BLOCKED_CANDIDATES_RECEIPT)
+    expect(await response.json()).toEqual(DENIED_CANDIDATES_RECEIPT)
     // Policy allowed (so the refusal is the candidate-match denial) and the raw provider never ran.
     expect(harness.authorizeProjectionRead).toHaveBeenCalledTimes(1)
     expect(harness.authorizeProjectionRead.mock.results[0]?.value).toMatchObject({ state: 'allowed' })
@@ -296,7 +310,7 @@ describe('T03 authorized read path over the real kernel chain', () => {
 
     const response = await harness.post('/.sage/workspace/files/candidates', { workspaceRoot: '/controlled/root', path: 'sub' })
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual(BLOCKED_CANDIDATES_RECEIPT)
+    expect(await response.json()).toEqual(STALE_CANDIDATES_RECEIPT)
     // The context still names frame generation 7; the fresh frame observation moved to 8.
     expect(harness.authorizeProjectionRead).toHaveBeenCalledTimes(1)
     expect(harness.listFileCandidates).not.toHaveBeenCalled()
@@ -311,7 +325,7 @@ describe('T03 authorized read path over the real kernel chain', () => {
 
     const response = await harness.post('/.sage/workspace/files/candidates', { workspaceRoot: '/controlled/root', path: 'sub' })
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual(BLOCKED_CANDIDATES_RECEIPT)
+    expect(await response.json()).toEqual(POLICY_DENIED_CANDIDATES_RECEIPT)
     // The fresh file re-read produced another digest, so read time denied the scope that
     // selection had minted under version 1.
     expect(harness.authorizeProjectionRead.mock.results[0]?.value).toEqual({ state: 'denied' })
@@ -337,11 +351,18 @@ describe('T03 authorized read path over the real kernel chain', () => {
       operation: 'state.read',
     })
 
-    // Search spans multiple matters and global sessions: its collection has no main-owned
-    // object resolver yet, so the read stops at candidate match with the route's own refusal.
+    // Search spans multiple matters and global sessions: this policy carries no search grant,
+    // so the read stops at read-policy with the typed envelope (even with a grant it would
+    // stop at candidate match — its collection has no main-owned object resolver yet).
     const search = await harness.post('/.sage/search', { query: 'alpha' })
     expect(search.status).toBe(200)
-    expect(await search.json()).toEqual({ state: 'refused', code: 'search-unavailable' })
+    expect(await search.json()).toEqual({
+      state: 'denied',
+      code: 'projection-read-denied',
+      stage: 'read-policy',
+      retryable: false,
+      correlation: CALLER.correlation,
+    })
     expect(harness.searchProvider).not.toHaveBeenCalled()
   })
 

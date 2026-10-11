@@ -13,6 +13,7 @@ const baseline = Object.freeze({
   compositionText: read('apps/sage-shell/src/appservice/composition.ts'),
   callerBindingText: read('apps/sage-shell/src/main/appservice-binding.ts'),
   mainAppServiceText: read('apps/sage-shell/src/main/app-service.ts'),
+  projectionReadAdmissionText: read('apps/sage-shell/src/appservice/projection-read-admission.ts'),
   mainIndexText: read('apps/sage-shell/src/main/index.ts'),
   matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
   sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
@@ -355,7 +356,9 @@ test('a local-system route cannot claim compliance without its exact runner sour
   assert.notEqual(droppedAssembly, baseline.mainAppServiceText)
   expectNamedFailure(check({ mainAppServiceText: droppedAssembly }), '/.sage/bootstrap')
 
-  const readyBypass = baseline.mainAppServiceText.replace(
+  // replaceAll: the same frame guard also stands in the device aggregation read (ADR-0324);
+  // the mutation must relax the bootstrap runner, not only the first textual occurrence.
+  const readyBypass = baseline.mainAppServiceText.replaceAll(
     'return frame === undefined || !frame.ready || frame.contaminated',
     'return frame === undefined',
   )
@@ -509,6 +512,39 @@ test('the device state collection cannot silently revert to unavailable or open 
   )
   assert.notEqual(widenedCollection, baseline.mainAppServiceText)
   expectNamedFailure(check({ mainAppServiceText: widenedCollection }), 'projection-read main assembly is missing or bypassed')
+})
+
+test('the device aggregation read cannot widen, duplicate or lose its admission steps (ADR-0324)', () => {
+  // A relaxed guard (dropping the inactive-context condition) must fail the registered fact.
+  const relaxedGuard = baseline.mainAppServiceText.replace(
+    "if (intent.operation === 'state.read' && options.activeMatterContext?.snapshot() === null) {",
+    "if (intent.operation === 'state.read') {",
+  )
+  assert.notEqual(relaxedGuard, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: relaxedGuard }), 'the device aggregation read (ADR-0324)')
+
+  // A second call site must fail the single-site pin.
+  const duplicatedSite = baseline.mainAppServiceText.replace(
+    'admitDeviceAggregateRead<Response>({',
+    'admitDeviceAggregateRead<Response>({ correlation: \'x\', operation: intent.operation, ports: {} }) as never || admitDeviceAggregateRead<Response>({',
+  )
+  assert.notEqual(duplicatedSite, baseline.mainAppServiceText)
+  expectNamedFailure(check({ mainAppServiceText: duplicatedSite }), 'the device aggregation read (ADR-0324)')
+
+  // The kernel must keep its session and frame steps and the post-read echo.
+  const droppedSessionStep = baseline.projectionReadAdmissionText.replace(
+    'const sessionStep = await checkStep(ports.verifyIdentitySession, callerRequest, isIdentitySessionFact)',
+    'const sessionStep = { ok: true, value: { sessionRef: "session:test" } }',
+  )
+  assert.notEqual(droppedSessionStep, baseline.projectionReadAdmissionText)
+  expectNamedFailure(check({ projectionReadAdmissionText: droppedSessionStep }), 'the device aggregation read (ADR-0324)')
+
+  const droppedEcho = baseline.projectionReadAdmissionText.replace(
+    'if (postSessionStep.value.sessionRef !== sessionStep.value.sessionRef) {',
+    'if (false) {',
+  )
+  assert.notEqual(droppedEcho, baseline.projectionReadAdmissionText)
+  expectNamedFailure(check({ projectionReadAdmissionText: droppedEcho }), 'the device aggregation read (ADR-0324)')
 })
 test('a read route cannot claim projection admission without its route wrapper', () => {
   const routeSkeletonText = baseline.routeSkeletonText.replace(

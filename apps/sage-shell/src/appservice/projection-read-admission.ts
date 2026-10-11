@@ -428,3 +428,99 @@ export async function admitProjectionRead<TCandidate, TValue>(input: {
 
   return { state: 'read', correlation, value }
 }
+
+/** The signed-in identity session is the whole authority scope of the device aggregation read. */
+export interface ProjectionReadIdentitySessionFact {
+  readonly sessionRef: string
+}
+
+/** The frame observation the device aggregation read is admitted against. */
+export interface DeviceAggregateReadFrameFact {
+  readonly frameGeneration: number
+}
+
+export interface DeviceAggregateReadPorts<TValue> {
+  readonly verifyCaller?: (
+    request: ProjectionReadRequestBase,
+  ) => Promise<ProjectionReadStepResult<ProjectionReadCallerFact>>
+  readonly verifyIdentitySession?: (
+    request: ProjectionReadCallerBoundRequest,
+  ) => Promise<ProjectionReadStepResult<ProjectionReadIdentitySessionFact>>
+  readonly verifyFrame?: (
+    request: ProjectionReadCallerBoundRequest,
+  ) => Promise<ProjectionReadStepResult<DeviceAggregateReadFrameFact>>
+  readonly read?: (
+    request: ProjectionReadCallerBoundRequest,
+  ) => Promise<ProjectionReadStepResult<TValue>>
+  /** Runtime decoding is mandatory because a generic TypeScript return type is not evidence. */
+  readonly validatesReadValue?: (value: unknown) => value is TValue
+}
+
+function isIdentitySessionFact(value: unknown): value is ProjectionReadIdentitySessionFact {
+  return hasRefs(value, 'sessionRef')
+}
+
+function isFrameFact(value: unknown): value is DeviceAggregateReadFrameFact {
+  return isRecord(value) && isGeneration(value.frameGeneration)
+}
+
+/**
+ * CTX-01C (ADR-0324): the pre-selection device aggregation read.
+ *
+ * While the active matter context is inactive, `/.sage/state` is how the renderer learns the
+ * matter roster and the CAS generation — the only bootstrap that can ever activate the first
+ * matter, and therefore the only read that must succeed without a matter. It is a session-scoped
+ * device read: a main-verified caller, a signed-in identity session and a ready, uncontaminated
+ * frame are the whole admission. It carries no matter fact (the aggregation's matter slot stays
+ * production-null) and no policy or scope step exists to pass. The runner admits exactly one
+ * operation (`state.read`) through it, and only while the context is inactive; every matter-bound
+ * read keeps the full chain above, unchanged.
+ *
+ * The identity session and the frame are observed again after the read: a read that races a
+ * sign-out or a frame move is discarded as unavailable instead of presented as current.
+ */
+export async function admitDeviceAggregateRead<TValue>(input: {
+  readonly operation: ProjectionReadOperation
+  readonly correlation: string
+  readonly ports: DeviceAggregateReadPorts<TValue>
+}): Promise<ProjectionReadAdmissionResult<TValue>> {
+  const { operation, correlation, ports } = input
+  if (!isProjectionReadOperation(operation)) {
+    return failure('unavailable', 'caller', correlation)
+  }
+  const base: ProjectionReadRequestBase = { operation, correlation }
+
+  const callerStep = await checkStep(ports.verifyCaller, base, isCallerFact)
+  if (!callerStep.ok) return failure(callerStep.state, 'caller', correlation)
+  const callerRequest: ProjectionReadCallerBoundRequest = {
+    ...base,
+    caller: { bindingRef: callerStep.value.bindingRef },
+  }
+
+  const sessionStep = await checkStep(ports.verifyIdentitySession, callerRequest, isIdentitySessionFact)
+  if (!sessionStep.ok) return failure(sessionStep.state, 'initial-context', correlation)
+
+  const frameStep = await checkStep(ports.verifyFrame, callerRequest, isFrameFact)
+  if (!frameStep.ok) return failure(frameStep.state, 'fresh-scope', correlation)
+
+  if (ports.validatesReadValue === undefined) {
+    return failure('unavailable', 'read', correlation)
+  }
+  const readStep = await checkStep(ports.read, callerRequest, ports.validatesReadValue)
+  if (!readStep.ok) return failure(readStep.state, 'read', correlation)
+  const value = readStep.value
+
+  // Torn reads stay unavailable: identity or frame must not have moved during the read.
+  const postSessionStep = await checkStep(ports.verifyIdentitySession, callerRequest, isIdentitySessionFact)
+  if (!postSessionStep.ok) return failure('unavailable', 'read', correlation)
+  if (postSessionStep.value.sessionRef !== sessionStep.value.sessionRef) {
+    return failure('unavailable', 'read', correlation)
+  }
+  const postFrameStep = await checkStep(ports.verifyFrame, callerRequest, isFrameFact)
+  if (!postFrameStep.ok) return failure('unavailable', 'read', correlation)
+  if (postFrameStep.value.frameGeneration !== frameStep.value.frameGeneration) {
+    return failure('unavailable', 'read', correlation)
+  }
+
+  return { state: 'read', correlation, value }
+}

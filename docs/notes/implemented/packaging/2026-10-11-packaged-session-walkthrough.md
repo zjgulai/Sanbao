@@ -80,7 +80,7 @@ cd apps/sage-shell && ELECTRON_RUN_AS_NODE=1 ./node_modules/.bin/electron \
 （脚本幂等：已存在即零写入。存储边界要求数据根 0700 与规范物理路径——脚本已处理 realpath。）
 
 4. **启动 app 并登录**：系统浏览器完成 Logto 登录，界面收敛为已登录。
-5. **选择事项** → 打开「真机会话走查：首条消息的工作事项」→ 触发 `/.sage/context/select` → 选择流 ensure 进入工作修订。
+5. **选择事项**（**前置**——数据根里若尚无接入：先走「工作区」页「接入工作区」选一个真实目录，再在关联卡把「真机会话走查：首条消息的工作事项」与该工作区「关联」并「设为默认」；选择流要求默认工作区在 live fold 里。旧数据根已接入过则跳过）→ 打开「真机会话走查：首条消息的工作事项」→ 触发 `/.sage/context/select` → 选择流 ensure 进入工作修订。
 6. **验证（不发送）**：检查数据根 store 出现第二条 `revision-entered`（`revision:sage.<uuid>`）：
 
 ```bash

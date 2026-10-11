@@ -125,7 +125,7 @@ function bridgeBackedEditDrafts(references: readonly FileReferenceRecord[]) {
 function run(
   options: SageAppServiceOptions,
   intent: ProjectionReadIntent<ProjectionReadCandidate>,
-  read: (scope: ProjectionReadScope) => Promise<Response>,
+  read: (scope: ProjectionReadScope | null) => Promise<Response>,
 ) {
   const runner = createSageAppServiceProviders(options).runProjectionRead
   expect(runner).toBeDefined()
@@ -361,7 +361,15 @@ describe('production projection-read assembly', () => {
     }), { callerBinding: { correlation: 'caller:one' }, providers })
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ state: 'refused', code: 'edit-draft-unavailable' })
+    // ADR-0324: the admission's typed failure rides the wire — unknown and cross-scope
+    // references share the candidate-match stage instead of the route's generic collapse.
+    expect(await response.json()).toEqual({
+      state: 'unavailable',
+      code: 'projection-read-unavailable',
+      stage: 'candidate-match',
+      retryable: true,
+      correlation: 'caller:one',
+    })
     expect(calls).toEqual({ stat: 0, read: 0 })
     expect(store.list()).toEqual({ state: 'read', drafts: [] })
   })
@@ -435,5 +443,82 @@ describe('production projection-read assembly', () => {
     expect(nonFixture).toMatchObject({ state: 'unavailable', stage: 'caller' })
     expect(raw).toHaveBeenCalledTimes(1)
     expect(projectionReadScope.current()).toBeUndefined()
+  })
+})
+
+describe('CTX-01C device aggregation read while the context is inactive (ADR-0324)', () => {
+  const inactiveOptions = (overrides: Partial<SageAppServiceOptions> = {}) =>
+    productionOptions({ activeMatterContext: createActiveMatterContext(), ...overrides })
+
+  it('admits state.read for a signed-in session with no active matter and passes no scope', async () => {
+    const { options } = inactiveOptions()
+    const raw = vi.fn(async (scope: ProjectionReadScope | null) => {
+      expect(scope).toBeNull()
+      return Response.json({ aggregate: true })
+    })
+    const result = await run(options, {
+      operation: 'state.read',
+      candidate: { kind: 'collection', collection: 'state' },
+    }, raw)
+
+    expect(result.state).toBe('read')
+    expect(result).toMatchObject({ correlation: 'caller:one' })
+    expect(raw).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails closed at initial-context without a signed-in session and never reads', async () => {
+    const { options } = inactiveOptions({ vault: createTokenVault({ mintSessionRef: () => 'unused' }) })
+    const raw = vi.fn(async () => Response.json({ aggregate: true }))
+    const result = await run(options, {
+      operation: 'state.read',
+      candidate: { kind: 'collection', collection: 'state' },
+    }, raw)
+
+    expect(result).toMatchObject({
+      state: 'unavailable', code: 'projection-read-unavailable', stage: 'initial-context', retryable: true,
+    })
+    expect(raw).not.toHaveBeenCalled()
+  })
+
+  it('fails closed at fresh-scope while the frame is not ready and never reads', async () => {
+    const { options } = inactiveOptions({
+      framePolicySnapshot: () => ({ generation: 7, ready: false, contaminated: false, contaminationReasons: [] }),
+    })
+    const raw = vi.fn(async () => Response.json({ aggregate: true }))
+    const result = await run(options, {
+      operation: 'state.read',
+      candidate: { kind: 'collection', collection: 'state' },
+    }, raw)
+
+    expect(result).toMatchObject({ state: 'unavailable', stage: 'fresh-scope' })
+    expect(raw).not.toHaveBeenCalled()
+  })
+
+  it('discards the aggregate when the session signs out during the read', async () => {
+    const vault = signedInVault()
+    const { options } = inactiveOptions({ vault })
+    const raw = vi.fn(async () => {
+      vault.signOut()
+      return Response.json({ aggregate: true })
+    })
+    const result = await run(options, {
+      operation: 'state.read',
+      candidate: { kind: 'collection', collection: 'state' },
+    }, raw)
+
+    expect(result).toMatchObject({ state: 'unavailable', stage: 'read' })
+    expect(result).not.toHaveProperty('value')
+  })
+
+  it('keeps every other operation on the full chain while the context is inactive', async () => {
+    const { options } = inactiveOptions()
+    const raw = vi.fn(async () => Response.json({ history: true }))
+    const result = await run(options, {
+      operation: 'session.history.list',
+      candidate: { kind: 'active-matter' },
+    }, raw)
+
+    expect(result).toMatchObject({ state: 'unavailable', stage: 'initial-context' })
+    expect(raw).not.toHaveBeenCalled()
   })
 })

@@ -582,7 +582,10 @@ function expectUnavailableProjection(run: ProbeRun): void {
     matterStage: null,
     matterProjectionSource: null,
     routeCode: 'projection-read-unavailable',
-    routeStage: 'read-policy',
+    // ADR-0324: the typed failure carries its real stage. This probe assembly omits the
+    // request-scoped caller binding the production main wires in, so the honest stop is the
+    // caller step — the pin still fails if the stage ever collapses back to a generic value.
+    routeStage: 'caller',
     routeRetryable: true,
     serviceStatus: null,
     runtimeStatus: null,

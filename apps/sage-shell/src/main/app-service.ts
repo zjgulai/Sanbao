@@ -11,7 +11,7 @@ import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../
 import { serviceJson } from '../appservice/errors.js'
 import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, SessionAttemptStatus, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner, LocalSystemBootstrapState } from '../appservice/contracts.js'
 import type { DevicePreferencesState } from '../appservice/contracts.js'
-import { admitProjectionRead } from '../appservice/projection-read-admission.js'
+import { admitDeviceAggregateRead, admitProjectionRead } from '../appservice/projection-read-admission.js'
 import type { ProjectionReadOperation, ProjectionReadScope } from '../appservice/projection-read-admission.js'
 import { admitLocalSystemRead } from '../appservice/local-system-admission.js'
 import type { CommandPipelinePorts, SageDispatchIntent } from '../appservice/command-contracts.js'
@@ -419,6 +419,38 @@ function createProjectionReadRunner(options: SageAppServiceOptions): ProjectionR
       } catch {
         return { state: 'unavailable', code: 'projection-read-unavailable', stage: 'read', retryable: true, correlation }
       }
+    }
+
+    // CTX-01C (ADR-0324): while the active context is inactive, exactly one read may bootstrap
+    // selection — the device aggregation (`state.read`), which is how the renderer learns the
+    // matter roster and the CAS generation. It is session-scoped and carries no matter fact; an
+    // absent caller, a signed-out vault or a not-ready frame still fails closed, and every
+    // other operation (and every active-context read) keeps the full chain below, unchanged.
+    if (intent.operation === 'state.read' && options.activeMatterContext?.snapshot() === null) {
+      const binding = options.callerBinding
+      return admitDeviceAggregateRead<Response>({
+        operation: intent.operation,
+        correlation,
+        ports: {
+          verifyCaller: async () => binding === undefined || binding === null
+            ? { state: 'unavailable' as const }
+            : { state: 'allowed' as const, value: { bindingRef: binding.correlation } },
+          verifyIdentitySession: async () => {
+            const session = options.vault.identitySession()
+            return session === null
+              ? { state: 'unavailable' as const }
+              : { state: 'allowed' as const, value: { sessionRef: session.sessionRef } }
+          },
+          verifyFrame: async () => {
+            const frame = options.framePolicySnapshot?.()
+            return frame === undefined || !frame.ready || frame.contaminated
+              ? { state: 'unavailable' as const }
+              : { state: 'allowed' as const, value: { frameGeneration: frame.generation } }
+          },
+          read: async () => ({ state: 'allowed' as const, value: await read(null) }),
+          validatesReadValue: (value: unknown): value is Response => value instanceof Response,
+        },
+      })
     }
 
     return admitProjectionRead<ProjectionReadCandidate, Response>({

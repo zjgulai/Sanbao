@@ -1168,7 +1168,10 @@ async function run() {
     requireCondition(wire.matterPresent === false, 'fail-closed route returned a matter projection')
     requireCondition(wire.matterProjectionSource === null, 'fail-closed route returned projection provenance')
     requireCondition(wire.routeCode === 'projection-read-unavailable', 'fail-closed route did not return the projection-read-unavailable code')
-    requireCondition(wire.routeStage === 'read-policy', 'fail-closed route denial stage drifted')
+    // ADR-0324: the admission's typed failure carries its real stage. This probe assembly
+    // omits the request-scoped caller binding the production main wires in, so the honest
+    // stop is the caller step — the pin still catches any collapse back to a generic stage.
+    requireCondition(wire.routeStage === 'caller', 'fail-closed route denial stage drifted')
     requireCondition(wire.routeRetryable === true, 'fail-closed route denial lost its retryable flag')
   }
   requireCondition(JSON.stringify(stageFacts.decisionIds) === JSON.stringify(wire.decisionIds), 'decision DOM retained rows outside the current wire state')

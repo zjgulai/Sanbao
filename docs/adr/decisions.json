@@ -10978,6 +10978,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0324",
+      "title": "ADR-0324 · CTX-01C 设备聚合读：冷启动 bootstrap + 失败信封直传真实 stage",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "设备聚合读：仅 state.read + context inactive 放行；caller/会话/frame 三步 fail closed。",
+          "constraints": [
+            "single call site",
+            "no other operation",
+            "stages from the shared vocabulary"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "无 matter 事实、null scope；其余 op 与 active 读原链不动。",
+          "constraints": [
+            "matter slot stays production-null",
+            "read param widened to ProjectionReadScope | null"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "读后回响 identity/frame，移动即 discarded unavailable。",
+          "constraints": [
+            "torn read never presented"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "admission 类型化失败直传 wire；兜底仅 runner 缺席/畸形/抛错。",
+          "constraints": [
+            "renderer predicate drops the stage pin",
+            "negative pins kept"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "门禁 pin + selftest 突变 + 正负 spec；分母不变 19/16/10。",
+          "constraints": [
+            "deliberate edit"
+          ]
+        }
+      ]
     }
   ]
 }

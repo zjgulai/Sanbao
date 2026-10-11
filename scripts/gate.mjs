@@ -695,6 +695,7 @@ const CHECKS = [
         compositionText: readRepoText('apps/sage-shell/src/appservice/composition.ts'),
         callerBindingText: readRepoText('apps/sage-shell/src/main/appservice-binding.ts'),
         mainAppServiceText: readRepoText('apps/sage-shell/src/main/app-service.ts'),
+        projectionReadAdmissionText: readRepoText('apps/sage-shell/src/appservice/projection-read-admission.ts'),
         mainIndexText: readRepoText('apps/sage-shell/src/main/index.ts'),
         matterCustodyText: readRepoText('apps/sage-shell/src/main/matter-custody.ts'),
         sessionCoreIdentityText: readRepoText('apps/sage-shell/src/main/session-core-identity.ts'),
