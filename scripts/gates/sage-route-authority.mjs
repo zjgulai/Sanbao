@@ -75,6 +75,8 @@ const PROTECTED_ADMISSION_PATHS = new Set([
   '/.sage/session/approval-answer',
   '/.sage/session/approval-withdraw',
   '/.sage/corrections',
+  // L1-A (ADR-0320): the matter-governance family's admin route (four ops).
+  '/.sage/matter-admin',
 ])
 
 const EDIT_DRAFT_CREATE_PATH = '/.sage/edit-drafts/create'
@@ -216,10 +218,21 @@ function providerUsesRunCommand(compositionText, providers) {
 }
 
 function providerUsesProtectedAdmission(compositionText, providers) {
-  const helperIsBound = compositionText.includes('function admitSessionCoreProtectedEffect(')
+  // Two protected-effect families exist (ADR-0320): the session-core helper and the matter-
+  // governance helper. A route counts as admitted when its provider blocks call a helper that
+  // is actually bound in this composition.
+  const sessionHelperBound = compositionText.includes('function admitSessionCoreProtectedEffect(')
     && compositionText.includes('return admitProtectedEffect({')
-  return helperIsBound && providers.some((provider) =>
-    extractMethodBlock(compositionText, provider)?.includes('admitSessionCoreProtectedEffect(') === true)
+  const matterHelperBound = compositionText.includes('function admitMatterGovernanceProtectedEffect(')
+    && compositionText.includes('return admitMatterGovernanceEffect({')
+  if (!sessionHelperBound && !matterHelperBound) return false
+  return providers.some((provider) => {
+    const block = extractMethodBlock(compositionText, provider)
+    if (block === null) return false
+    if (sessionHelperBound && block.includes('admitSessionCoreProtectedEffect(')) return true
+    if (matterHelperBound && block.includes('admitMatterGovernanceProtectedEffect(')) return true
+    return false
+  })
 }
 
 function correctionProtectedAdmissionViolations(compositionText) {
@@ -652,7 +665,8 @@ function sessionPromptDispatchViolations(input) {
   const dispatchText = typeof input?.sessionPromptDispatchText === 'string' ? input.sessionPromptDispatchText : ''
   const recorderText = typeof input?.sessionDispatchUnknownText === 'string' ? input.sessionDispatchUnknownText : ''
   const closeText = typeof input?.sessionControlCloseText === 'string' ? input.sessionControlCloseText : ''
-  if (appServiceText === '' || admissionText === '' || compositionText === '' || dispatchText === '' || recorderText === '' || closeText === '') {
+  const matterText = typeof input?.matterGovernanceAdmissionText === 'string' ? input.matterGovernanceAdmissionText : ''
+  if (appServiceText === '' || admissionText === '' || compositionText === '' || dispatchText === '' || recorderText === '' || closeText === '' || matterText === '') {
     violations.push('session-prompt dispatch sources are unavailable')
     return violations
   }
@@ -746,6 +760,14 @@ function sessionPromptDispatchViolations(input) {
   if (!closeText.includes('succeedAttempt(readMatter.matter,')
     || !closeText.includes('failAttempt(readMatter.matter,')) {
     violations.push('the control closure must author its events through the domain kernel')
+  }
+  // L1-A (ADR-0320): the matter-governance family — the admin route rides its own admission,
+  // and the renderer's matterRef is paired against the active context, never authority.
+  if (!compositionText.includes('admitMatterGovernanceProtectedEffect(')) {
+    violations.push('the matter-admin route must ride the matter-governance admission')
+  }
+  if (!matterText.includes('intentCandidate.matterRef !== context.matterRef')) {
+    violations.push('the matter family must pair the candidate matter against the active context')
   }
   // The recorder: domain-authored payload, idempotent marker append, best-effort only.
   if (!recorderText.includes('markDispatchUnknown(readMatter.matter, {')
@@ -1768,13 +1790,13 @@ export function checkSageRouteAuthority(input) {
     && route.runCommand.actual === false
     && isRecord(route.currentAuthority)
     && route.currentAuthority.status === 'violation')
-  if (protectedBypasses.length !== 22) {
-    failGlobal(`expected 22 protected-effect bypass violations, registered ${protectedBypasses.length}`)
+  if (protectedBypasses.length !== 21) {
+    failGlobal(`expected 21 protected-effect bypass violations, registered ${protectedBypasses.length}`)
   }
 
   const directProviderBypasses = protectedBypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')
-  if (directProviderBypasses.length !== 16) {
-    failGlobal(`expected 16 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
+  if (directProviderBypasses.length !== 15) {
+    failGlobal(`expected 15 direct-provider-bypass violations, registered ${directProviderBypasses.length}`)
   }
 
   const admittedProtectedRoutes = matrix.routes.filter((route) => isRecord(route)
@@ -1783,8 +1805,8 @@ export function checkSageRouteAuthority(input) {
     && route.protectedAdmission.actual === true
     && isRecord(route.currentAuthority)
     && route.currentAuthority.status === 'compliant')
-  if (admittedProtectedRoutes.length !== 13) {
-    failGlobal(`expected 13 protected-effect admitted routes, registered ${admittedProtectedRoutes.length}`)
+  if (admittedProtectedRoutes.length !== 14) {
+    failGlobal(`expected 14 protected-effect admitted routes, registered ${admittedProtectedRoutes.length}`)
   }
 
   const custodyViolations = matterCustodyViolations(input)
@@ -1848,7 +1870,7 @@ export function checkSageRouteAuthority(input) {
       failed: 0,
       typedSkips: [],
       reason: '60 Sage routes match the checked-in authority truth matrix',
-      note: '15 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) and the real persistence step — pre-write re-verification plus the atomic attempt and evaluation-evidence append over the Sage-owned store (T05 mid step 9, ADR-0288) — the real dispatch step — shared re-verification, cheap port re-runs, then the sole channel call with its own outcome detail (T05 mid step 10, ADR-0289) — the governed first-revision prepare over the same front ports (T05 prepare, ADR-0290) — where the selection kernel ensures the runnable revision before its CAS, so the bound context names the revision that runs (ADR-0291) — the turn-end closure that completes the attempt, light `attempt-succeeded` for completed turns and the existing `attempt-failed` for error kinds, keyed on the cursor-edged turn end (ADR-0293), and the send-path reconcile that heals a stuck attempt from the observable fold before the next admission (ADR-0293 alternative C). The admission-visible inventory observation is served only while the live Host snapshot still names the same active epoch (ADR-0294), and the plugin readout lists rows only for that same epoch (ADR-0295). Completed turns on decision-demanding scopes stay open for the review path (ADR-0295). The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 13 protected-effect routes enter unavailable-first admission; 22 protected-effect bypasses remain registered as violations, including 16 direct-provider bypasses and one protected route with an admitted source read. B batch stage 3 (ADR-0317): the dispatch step serves all seven registered session-control operations through their own real handlers — each success carries a per-operation receipt, the approval receipt is shape-checked and identity-paired across the kernel seam, and an unwired handler keeps exactly its own operation not-dispatched (retryable admission-unavailable). B batch stage 4: a control operation closes its attempt synchronously with the proven outcome — succeeded or failed through the domain kernel, outcome-unknown keeps the durable marker and the attempt stays open fail-closed. Gate pass is registry/source agreement, not full product availability.',
+      note: '15 read-only routes enter projection-read admission; projection reads evaluate the main-owned read policy (identity session + instance-local organization policy grants, local-read only) and stay unavailable without a session, grants or a bound selection; the device state collection rides the active-matter grant (T03/A), file-reference is the only admitted opaque resolver for edit-drafts/create source reads, and search plus other opaque-object reads still need their own main-owned object resolvers. 2 local-system routes enter device-local admission: bootstrap exposes only the runtime enum, auth status and requested theme/density; device-preferences exposes only the eight requested values, savedAt and observed effectiveTheme. Each remains unavailable-first without its own main-owned runner. The home-page creation branch rides the real custodian over the Sage-owned authoritative store (T04): appendId idempotent per attempt, formal identity derived from the service-issued correlation, and a receipt only from a proven commit. The session family evaluates the real Identity / Policy step for the registered session.send (T05 first cut): an unregistered operation answers not-ready before any policy read, a missing grant is a denial, and the chain now also passes the real target step over the shipped requirement bundle (T05 mid, ADR-0282) and the real compatibility step over the shipped matrix publication at the last trusted observation instant (T05 mid step 6, ADR-0284) and the real registry step (T05 mid step 7, ADR-0286) — which resolves the approved first-party capability of the operation from the same published-snapshot provider the inventory observed, binding snapshot generation, requirement declaration and approval state — the real preflight step over the live runtime-effective observation of the Host epoch (T05 mid step 8, ADR-0287) and the real persistence step — pre-write re-verification plus the atomic attempt and evaluation-evidence append over the Sage-owned store (T05 mid step 9, ADR-0288) — the real dispatch step — shared re-verification, cheap port re-runs, then the sole channel call with its own outcome detail (T05 mid step 10, ADR-0289) — the governed first-revision prepare over the same front ports (T05 prepare, ADR-0290) — where the selection kernel ensures the runnable revision before its CAS, so the bound context names the revision that runs (ADR-0291) — the turn-end closure that completes the attempt, light `attempt-succeeded` for completed turns and the existing `attempt-failed` for error kinds, keyed on the cursor-edged turn end (ADR-0293), and the send-path reconcile that heals a stuck attempt from the observable fold before the next admission (ADR-0293 alternative C). The admission-visible inventory observation is served only while the live Host snapshot still names the same active epoch (ADR-0294), and the plugin readout lists rows only for that same epoch (ADR-0295). Completed turns on decision-demanding scopes stay open for the review path (ADR-0295). The runtime inventory composition carries the Capability Registry at its kernel-sealed published face (C2D.2A; first-party publication, ADR-0285): a shipped first-party snapshot — admitted only through the kernel parse plus re-seal round trip — supersedes the bundled empty default, releasing the descriptor stage end to end. The first session-prompt target publication (T05 mid): owner-approved policy statements and plan constants compose through the candidate line into a sealed requirement over a freshly re-observed descriptor (strict exact model face), the sealed snapshot ships in the shell-owned publications tree and is kernel-parsed once at startup. 14 protected-effect routes enter unavailable-first admission; 21 protected-effect bypasses remain registered as violations, including 15 direct-provider bypasses and one protected route with an admitted source read. L1-A (ADR-0320): the matter-governance family is the second protected-effect family — its five-step profile (caller/context/candidate/identity/dispatch) admits the four matter.admin writes over the real identity policy, the renderer matterRef is only a candidate paired against the active context, and each dispatched receipt carries the provider-owned read-back status. B batch stage 3 (ADR-0317): the dispatch step serves all seven registered session-control operations through their own real handlers — each success carries a per-operation receipt, the approval receipt is shape-checked and identity-paired across the kernel seam, and an unwired handler keeps exactly its own operation not-dispatched (retryable admission-unavailable). B batch stage 4: a control operation closes its attempt synchronously with the proven outcome — succeeded or failed through the domain kernel, outcome-unknown keeps the durable marker and the attempt stays open fail-closed. Gate pass is registry/source agreement, not full product availability.',
       violations: [],
     }
   }

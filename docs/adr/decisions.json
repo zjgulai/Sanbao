@@ -10806,6 +10806,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0320",
+      "title": "ADR-0320 · L1-A 事项治理 admission 家族：五步面 + matter-admin 四 op 收口",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "家族五步纯函数模块，共享 kernel 守卫；session kernel 零改动。",
+          "constraints": [
+            "additive exports only"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "matter kind 必须等于活动 context.matterRef；renderer ref 非权威。",
+          "constraints": [
+            "stale at candidate-match"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "四 kind 收据随 detail 带 provider status；守卫 shape 校验；路由身份配对。",
+          "constraints": [
+            "mismatch -> outcome-unknown"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "payload 守卫/复检/映射照 B 批纪律。",
+          "constraints": [
+            "not-dispatched retryable"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "无独立 intent 册（域事件即耐久记录）；后续具名。",
+          "constraints": [
+            "no fabricated ledger"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "门禁事实有意翻转：22→21 / 16→15 / 13→14 + 两族识别 + 两枚新钉。",
+          "constraints": [
+            "selftest fixtures synced"
+          ]
+        }
+      ]
     }
   ]
 }

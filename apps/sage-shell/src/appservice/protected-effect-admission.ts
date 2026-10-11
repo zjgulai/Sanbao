@@ -260,11 +260,11 @@ type CheckedStep<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly state: PreDispatchFailureState }
 
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function isRef(value: unknown): value is string {
+export function isRef(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0
 }
 
@@ -272,11 +272,11 @@ function hasRefs(value: unknown, ...keys: readonly string[]): value is Readonly<
   return isRecord(value) && keys.every((key) => isRef(value[key]))
 }
 
-function isCallerFact(value: unknown): value is CallerAdmissionFact {
+export function isCallerFact(value: unknown): value is CallerAdmissionFact {
   return hasRefs(value, 'bindingRef')
 }
 
-function isActiveContext(value: unknown): value is RequestScopedActiveContext {
+export function isActiveContext(value: unknown): value is RequestScopedActiveContext {
   return hasRefs(
     value,
     'callerBindingRef',
@@ -287,11 +287,11 @@ function isActiveContext(value: unknown): value is RequestScopedActiveContext {
   ) && value.scope === 'request'
 }
 
-function isIdentityPolicyFact(value: unknown): value is FreshIdentityPolicyFact {
+export function isIdentityPolicyFact(value: unknown): value is FreshIdentityPolicyFact {
   return hasRefs(value, 'decisionRef', 'actorScopeRef')
 }
 
-function isMatchedCandidateFact(value: unknown): value is MatchedCandidateFact {
+export function isMatchedCandidateFact(value: unknown): value is MatchedCandidateFact {
   return hasRefs(value, 'candidateRef')
 }
 
@@ -343,7 +343,7 @@ function isSessionCoreDispatchDetail(value: unknown): value is SessionCoreDispat
   return false
 }
 
-async function checkStep<Request, Fact>(
+export async function checkStep<Request, Fact>(
   provider: ((request: Request) => Promise<ProtectedEffectStepResult<Fact>>) | undefined,
   request: Request,
   validates: (value: unknown) => value is Fact,

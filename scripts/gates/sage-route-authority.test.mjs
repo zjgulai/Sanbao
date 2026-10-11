@@ -39,6 +39,7 @@ const baseline = Object.freeze({
   sessionSendReconcileText: read('apps/sage-shell/src/main/session-send-reconcile.ts'),
   sessionDispatchUnknownText: read('apps/sage-shell/src/main/session-dispatch-unknown.ts'),
   sessionControlCloseText: read('apps/sage-shell/src/main/session-control-close.ts'),
+  matterGovernanceAdmissionText: read('apps/sage-shell/src/appservice/matter-governance-admission.ts'),
   runtimeInventoryCurrencyText: read('apps/sage-shell/src/main/runtime-inventory-currency.ts'),
   sageReadoutText: read('apps/sage-shell/src/main/sage-readout.ts'),
 })
@@ -99,9 +100,9 @@ test('current 62-route registry matches source without claiming product availabi
   )
   assert.match(result.note, /15 read-only routes enter projection-read admission/)
   assert.match(result.note, /2 local-system routes enter device-local admission/)
-  assert.match(result.note, /13 protected-effect routes enter unavailable-first admission/)
-  assert.match(result.note, /22 protected-effect bypasses remain registered as violations/)
-  assert.match(result.note, /16 direct-provider bypasses/)
+  assert.match(result.note, /14 protected-effect routes enter unavailable-first admission/)
+  assert.match(result.note, /21 protected-effect bypasses remain registered as violations/)
+  assert.match(result.note, /15 direct-provider bypasses/)
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
   assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)

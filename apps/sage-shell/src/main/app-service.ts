@@ -25,6 +25,8 @@ import type { SessionPromptAttemptStorePort } from './session-prompt-attempt-sto
 import { createSageAuthorityRuntime } from './authority-runtime.js'
 import { assembleAuthorizationRequest } from './authorization-assembly.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
+import type { MatterGovernanceAdmissionPorts } from '../appservice/matter-governance-admission.js'
+import { createMatterAdminDispatchPort } from './matter-admin-dispatch.js'
 import { createSessionPromptDispatchPort } from './session-prompt-dispatch.js'
 import { createSessionPromptPersistencePort } from './session-prompt-persistence.js'
 import { createSessionControlCloseRecorder } from './session-control-close.js'
@@ -751,7 +753,25 @@ function createSessionCoreProtectedEffectPorts(
 ): {
   readonly ports: ProtectedEffectAdmissionPorts
   readonly prepareSessionPrompt?: SessionPrepareRunner
+  /** L1-A (ADR-0320): the matter-governance family rides the same front closures. */
+  readonly matterPorts: MatterGovernanceAdmissionPorts
 } {
+  // The live context/session/frame reads are one closure set for every family and every step
+  // (ADR-0288/0289/0320): the session re-verify, the matter re-verify and the dispatches all
+  // re-read through these same instances.
+  const readContextClosure = () => {
+    const snapshot = options.activeMatterContext?.snapshot()
+    if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) return null
+    return {
+      sessionRef: snapshot.sessionRef,
+      matterRef: snapshot.matterId,
+      revisionRef: snapshot.revisionId,
+      contextGeneration: snapshot.contextGeneration,
+      frameGeneration: snapshot.frameGeneration,
+    }
+  }
+  const readIdentitySessionClosure = () => options.vault.identitySession()
+  const readFrameClosure = () => options.framePolicySnapshot?.()
   // Shared re-verification reads for steps 9 and 10 (ADR-0288/0289): one closure set, one home.
   const reverifyReads = options.activeMatterContext === undefined
     || options.framePolicySnapshot === undefined
@@ -759,19 +779,9 @@ function createSessionCoreProtectedEffectPorts(
     || options.runtimeEffective === undefined
     ? undefined
     : {
-        readContext: () => {
-          const snapshot = options.activeMatterContext?.snapshot()
-          if (snapshot === undefined || snapshot === null || snapshot.sessionRef === null) return null
-          return {
-            sessionRef: snapshot.sessionRef,
-            matterRef: snapshot.matterId,
-            revisionRef: snapshot.revisionId,
-            contextGeneration: snapshot.contextGeneration,
-            frameGeneration: snapshot.frameGeneration,
-          }
-        },
-        readIdentitySession: () => options.vault.identitySession(),
-        readFrame: () => options.framePolicySnapshot?.(),
+        readContext: readContextClosure,
+        readIdentitySession: readIdentitySessionClosure,
+        readFrame: readFrameClosure,
         runtimeEffective: options.runtimeEffective,
         attempts: options.sessionPromptAttempts,
       }
@@ -1011,8 +1021,34 @@ function createSessionCoreProtectedEffectPorts(
           }),
         }),
   }
+  // L1-A (ADR-0320): the matter-governance family shares the front closures (caller / context /
+  // candidate / identity) — the intents differ, the behavior cannot. The cast at this one seam
+  // is type-level only: the closures read fields both intents carry.
+  const matterPorts: MatterGovernanceAdmissionPorts = {
+    verifyCaller: (request) => verifyCallerPort(request as never),
+    resolveActiveContext: (request) => activeContextPort(request as never),
+    matchCandidate: (request) => candidatePort(request as never),
+    ...(identityPolicyPort === undefined ? {} : { resolveIdentityPolicy: (request) => identityPolicyPort(request as never) }),
+    ...(options.matterAdminArchive === undefined
+      || options.matterAdminRestore === undefined
+      || options.matterAdminBatch === undefined
+      || options.matterAdminRename === undefined
+      ? {}
+      : {
+          dispatch: createMatterAdminDispatchPort({
+            archive: options.matterAdminArchive,
+            restore: options.matterAdminRestore,
+            batch: options.matterAdminBatch,
+            rename: options.matterAdminRename,
+            readContext: readContextClosure,
+            readIdentitySession: readIdentitySessionClosure,
+            readFrame: readFrameClosure,
+          }),
+        }),
+  }
   return {
     ports,
+    matterPorts,
     ...(prepareSessionPrompt === undefined ? {} : { prepareSessionPrompt }),
   }
 }
@@ -1039,6 +1075,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     bootstrapRead: createLocalSystemBootstrapRunner(options),
     devicePreferencesRead: createDevicePreferencesRunner(options),
     protectedEffectPorts: sessionCoreAssembly.ports,
+    matterGovernancePorts: sessionCoreAssembly.matterPorts,
     ...(sessionCoreAssembly.prepareSessionPrompt === undefined
       ? {}
       : { prepareSessionPrompt: sessionCoreAssembly.prepareSessionPrompt }),

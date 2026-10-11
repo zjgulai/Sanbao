@@ -1,8 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { afterEach, describe, expect, it } from 'vitest'
+
+import { createSessionCoreIdentityPort } from '../src/main/session-core-identity.js'
+import { admitMatterGovernanceEffect } from '../src/appservice/matter-governance-admission.js'
+import { resolveSagePaths } from '../src/profile/paths.js'
 
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
 import { createMatterAdmin } from '../src/main/matter-admin.js'
+import { createMatterAdminDispatchPort } from '../src/main/matter-admin-dispatch.js'
 import { createMatterList } from '../src/main/matter-list.js'
 
 /**
@@ -47,10 +57,40 @@ function harness(options: { readonly wired?: boolean, readonly rename?: (request
     matterLinks: () => ({ state: 'read', links: [], trail: [] }),
     matterList: () => list.derive(),
     matterAdmin: admin.list,
-    matterAdminArchive: admin.archive,
-    matterAdminRestore: admin.restore,
-    matterAdminBatch: admin.batch,
-    matterAdminRename: admin.rename,
+    // L1-A (ADR-0320): the four writes now ride the matter-governance admission family — the
+    // harness supplies the front steps as allowed stubs and the REAL dispatch port bound to the
+    // real provider store, so the route-level facts below are exercised through the full chain.
+    matterGovernancePorts: {
+      verifyCaller: async () => ({ state: 'allowed', value: { bindingRef: 'c-029' } }),
+      resolveActiveContext: async () => ({
+        state: 'allowed',
+        value: {
+          scope: 'request',
+          callerBindingRef: 'c-029',
+          sessionRef: 'session:1',
+          matterRef: 'receipt:42',
+          revisionRef: 'revision:1',
+          generation: '1',
+        },
+      }),
+      matchCandidate: async () => ({ state: 'allowed', value: { candidateRef: 'receipt:42' } }),
+      resolveIdentityPolicy: async () => ({ state: 'allowed', value: { decisionRef: 'decision:1', actorScopeRef: 'actor:1' } }),
+      dispatch: createMatterAdminDispatchPort({
+        archive: admin.archive,
+        restore: admin.restore,
+        batch: admin.batch,
+        rename: admin.rename,
+        readContext: () => ({
+          sessionRef: 'session:1',
+          matterRef: 'receipt:42',
+          revisionRef: 'revision:1',
+          contextGeneration: 1,
+          frameGeneration: 7,
+        }),
+        readIdentitySession: () => ({ sessionRef: 'session:1' }),
+        readFrame: () => ({ generation: 7, ready: true, contaminated: false }),
+      }),
+    },
   })
   const post = (path: string, body: unknown) => handleSageServiceRequest(
     new Request(`dsh-app://app${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
@@ -126,7 +166,7 @@ describe('the matter-admin routes (ticket 029)', () => {
   it('keeps an unwired family honest and parses bodies exactly', async () => {
     const unwired = harness({ wired: false })
     expect(await (await unwired.post('/.sage/matter-admin', { action: 'archive', matterRef: 'receipt:42', ground: 'completed' })).json())
-      .toMatchObject({ state: 'refused', code: 'matter-admin-unavailable' })
+      .toMatchObject({ state: 'refused', code: 'protected-effect-unavailable' })
     expect((await unwired.readState()).matterAdmin).toEqual({ state: 'unavailable', entries: [], trail: [], rename: null, batch: null })
 
     const h = harness()
@@ -145,5 +185,145 @@ describe('the matter-admin routes (ticket 029)', () => {
     for (const body of bad) {
       expect((await h.post('/.sage/matter-admin', body)).status, JSON.stringify(body)).toBe(400)
     }
+  })
+})
+
+describe('L1-A: the admission layer over the real identity policy (ADR-0320)', () => {
+  const cleanups: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    let cleanup = cleanups.pop()
+    while (cleanup !== undefined) {
+      await cleanup()
+      cleanup = cleanups.pop()
+    }
+  })
+
+  async function policy(grants: readonly unknown[]) {
+    const container = await mkdtemp(join(tmpdir(), 'sage-matter-admin-admission-'))
+    const home = join(container, 'home')
+    await mkdir(home, { recursive: true })
+    cleanups.push(() => rm(container, { recursive: true, force: true }))
+    const paths = resolveSagePaths({ home, platform: 'darwin', root: join(container, 'Sage') })
+    await mkdir(paths.root, { recursive: true })
+    await writeFile(paths.organizationPolicyFile, JSON.stringify({
+      schemaVersion: 'sage.organization-policy.v1',
+      organizationId: 'organization:sage',
+      policy: { identity: 'policy:local', version: '1' },
+      validFrom: '2026-10-01T00:00:00Z',
+      expiresAt: '2027-10-01T00:00:00Z',
+      membership: { mode: 'instance-operator', roleRefs: ['role:owner'] },
+      grants,
+    }), 'utf8')
+    return {
+      policyPath: paths.organizationPolicyFile,
+      readFileBytes: (path: string) => readFileSync(path),
+      now: () => '2026-10-03T00:30:00.000Z',
+    }
+  }
+
+  const GRANT = {
+    roleRef: 'role:owner',
+    operation: 'matter.admin.archive',
+    actionScope: 'matter.admin',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } as const
+
+  const frontStubs = {
+    verifyCaller: async () => ({ state: 'allowed' as const, value: { bindingRef: 'caller:1' } }),
+    resolveActiveContext: async () => ({
+      state: 'allowed' as const,
+      value: {
+        scope: 'request' as const,
+        callerBindingRef: 'caller:1',
+        sessionRef: 'session:active',
+        matterRef: 'receipt:42',
+        revisionRef: 'revision:1',
+        generation: '1',
+      },
+    }),
+    matchCandidate: async () => ({ state: 'allowed' as const, value: { candidateRef: 'receipt:42' } }),
+  }
+
+  const intent = {
+    family: 'matter-governance' as const,
+    requestId: 'fixture-1',
+    operation: 'matter.admin.archive' as const,
+    candidate: { kind: 'matter' as const, matterRef: 'receipt:42' },
+    payload: { ground: 'completed' as const },
+  }
+
+  it('evaluates the real identity step: exact grant passes, a mismatched scope is a denial', async () => {
+    const granted = await policy([GRANT])
+    const identity = createSessionCoreIdentityPort({
+      vault: {
+        identitySession: () => ({
+          sessionRef: 'session:active',
+          identityHandle: 'actor:local',
+          issuer: 'https://issuer.invalid',
+          authenticatedAt: '2026-10-01T00:00:00.000Z',
+          expiresAt: '2026-11-01T00:00:00.000Z',
+        }),
+      } as never,
+      authority: granted,
+    })
+    const allowed = await admitMatterGovernanceEffect({
+      intent,
+      correlation: 'caller:1',
+      ports: {
+        ...frontStubs,
+        resolveIdentityPolicy: (request) => identity(request as never),
+        // The chain passes identity; without a dispatch port it stops retryable, never unknown.
+      },
+    })
+    expect(allowed).toMatchObject({ state: 'unavailable', code: 'protected-effect-unavailable', stage: 'dispatch', retryable: true })
+
+    const ungranted = await policy([{ ...GRANT, actionScope: 'matter.other' }])
+    const deniedIdentity = createSessionCoreIdentityPort({ vault: { identitySession: () => ({
+      sessionRef: 'session:active',
+      identityHandle: 'actor:local',
+      issuer: 'https://issuer.invalid',
+      authenticatedAt: '2026-10-01T00:00:00.000Z',
+      expiresAt: '2026-11-01T00:00:00.000Z',
+    }) } as never, authority: ungranted })
+    const denied = await admitMatterGovernanceEffect({
+      intent,
+      correlation: 'caller:1',
+      ports: { ...frontStubs, resolveIdentityPolicy: (request) => deniedIdentity(request as never) },
+    })
+    expect(denied).toMatchObject({ state: 'denied', code: 'protected-effect-denied', stage: 'identity-policy' })
+
+    // Signed out: unavailable before any policy read.
+    const signedOut = createSessionCoreIdentityPort({ vault: { identitySession: () => null } as never, authority: granted })
+    const noSession = await admitMatterGovernanceEffect({
+      intent,
+      correlation: 'caller:1',
+      ports: { ...frontStubs, resolveIdentityPolicy: (request) => signedOut(request as never) },
+    })
+    expect(noSession).toMatchObject({ state: 'unavailable', stage: 'identity-policy' })
+  })
+
+  it('keeps a dispatched-but-mismatched receipt on the conservative unknown path', async () => {
+    const providers = createUnavailableFirstService(null, {
+      draftList: () => ({ state: 'unlocked', drafts: [] }),
+      matterLinks: () => ({ state: 'read', links: [], trail: [] }),
+      matterList: () => ({ state: 'ready', items: [], trail: [] } as never),
+      matterAdmin: () => ({ state: 'unavailable', entries: [], trail: [], rename: null, batch: null }),
+      matterGovernancePorts: {
+        ...frontStubs,
+        resolveIdentityPolicy: async () => ({ state: 'allowed', value: { decisionRef: 'decision:1', actorScopeRef: 'actor:1' } }),
+        dispatch: async () => ({
+          state: 'receipt',
+          receiptRef: 'receipt:matter-archive:other',
+          detail: { kind: 'matter-archived', matterRef: 'matter:other', ground: 'completed', status: { state: 'read', entries: [], trail: [], rename: null, batch: null } },
+        }),
+      },
+    })
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/matter-admin', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'archive', matterRef: 'receipt:42', ground: 'completed' }),
+    }), { callerBinding: { correlation: 'c-029' }, providers } as never)
+    expect(await response.json()).toEqual({ state: 'refused', code: 'protected-effect-outcome-unknown' })
   })
 })

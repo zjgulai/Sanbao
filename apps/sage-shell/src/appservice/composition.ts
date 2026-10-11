@@ -15,6 +15,11 @@ import { serviceJson } from './errors.js'
 import { runCommand } from './command-pipeline.js'
 import type { CommandDenied, CommandPipelinePorts, CommandResult, SageActionIntentV2, SageDispatchIntent } from './command-contracts.js'
 import type { ActionConfirmationsWiring } from './action-confirmations.js'
+import {
+  admitMatterGovernanceEffect,
+  type MatterGovernanceAdmissionPorts,
+  type MatterGovernanceAdmissionResult,
+} from './matter-governance-admission.js'
 import { admitProtectedEffect } from './protected-effect-admission.js'
 import type {
   ProtectedEffectAdmissionPorts,
@@ -60,6 +65,8 @@ export interface ServiceOptions {
   // ADR-0289/0290: the withheld-dispatch era of AUTH-02A has ended — the assembled ports now
   // include the real dispatch step; the route still fails closed because the chain itself does.
   readonly protectedEffectPorts?: ProtectedEffectAdmissionPorts
+  /** L1-A (ADR-0320): the matter-governance family's five-step ports. Absent = unavailable-first. */
+  readonly matterGovernancePorts?: MatterGovernanceAdmissionPorts
   /** T05 prepare (ADR-0290): the governed local preparation write before the first send. */
   readonly prepareSessionPrompt?: (request: { readonly matterRef: string, readonly text: string }) => Promise<
     | { readonly state: 'prepared' }
@@ -336,6 +343,32 @@ async function admitSessionCoreProtectedEffect(
 }
 
 function protectedEffectFailureCode(result: ProtectedEffectAdmissionResult): string {
+  return result.state === 'dispatched' ? 'protected-effect-outcome-unknown' : result.code
+}
+
+async function admitMatterGovernanceProtectedEffect(
+  options: ServiceOptions,
+  operation: 'matter.admin.archive' | 'matter.admin.restore' | 'matter.admin.batch' | 'matter.admin.rename',
+  candidate: { readonly kind: 'matter', readonly matterRef: string } | { readonly kind: 'active-session' },
+  payload: Readonly<Record<string, unknown>>,
+): Promise<MatterGovernanceAdmissionResult> {
+  const correlation = options.protectedEffectCorrelation?.() ?? randomUUID()
+  return admitMatterGovernanceEffect({
+    intent: {
+      family: 'matter-governance',
+      // The same per-request identity rule the session family follows (ADR-0288): the caller
+      // correlation stays the correlation; the requestId is service-issued per request.
+      requestId: randomUUID(),
+      operation,
+      candidate,
+      payload,
+    },
+    correlation,
+    ports: options.matterGovernancePorts ?? {},
+  })
+}
+
+function matterGovernanceFailureCode(result: MatterGovernanceAdmissionResult): string {
   return result.state === 'dispatched' ? 'protected-effect-outcome-unknown' : result.code
 }
 
@@ -1195,31 +1228,67 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
       return serviceJson(outcome, 200)
     },
     async archiveMatter(request: { readonly matterRef: string, readonly ground: 'completed' | 'stopped' }): Promise<Response> {
-      const run = options.matterAdminArchive
-      const outcome: MatterAdminOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-admin-unavailable' }
-        : run(request)
+      // L1-A (ADR-0320): the route maps the dispatched receipt 1:1; the renderer's matterRef is
+      // only a candidate the admission matched against the active context.
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.admin.archive',
+        { kind: 'matter', matterRef: request.matterRef },
+        { ground: request.ground },
+      )
+      const outcome: MatterAdminOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-archived'
+        && admission.detail.matterRef === request.matterRef
+        && admission.detail.ground === request.ground
+        ? { state: 'ok', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async restoreMatter(request: { readonly matterRef: string }): Promise<Response> {
-      const run = options.matterAdminRestore
-      const outcome: MatterAdminOutcome = run === undefined
-        ? { state: 'refused', code: 'matter-admin-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.admin.restore',
+        { kind: 'matter', matterRef: request.matterRef },
+        {},
+      )
+      const outcome: MatterAdminOutcome = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-restored'
+        && admission.detail.matterRef === request.matterRef
+        ? { state: 'ok', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async batchMatters(request: { readonly operation: 'archive' | 'restore', readonly targets: readonly string[], readonly ground?: 'completed' | 'stopped' }): Promise<Response> {
-      const run = options.matterAdminBatch
-      const outcome: MatterBatchResult = run === undefined
-        ? { state: 'refused', code: 'matter-admin-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.admin.batch',
+        { kind: 'active-session' },
+        {
+          operation: request.operation,
+          targets: request.targets,
+          ...(request.ground === undefined ? {} : { ground: request.ground }),
+        },
+      )
+      const outcome: MatterBatchResult = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-batch'
+        && admission.detail.operation === request.operation
+        ? { state: 'batch', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async renameMatter(request: { readonly matterRef: string, readonly title: string }): Promise<Response> {
-      const run = options.matterAdminRename
-      const outcome: MatterRenameResult = run === undefined
-        ? { state: 'refused', code: 'matter-admin-unavailable' }
-        : run(request)
+      const admission = await admitMatterGovernanceProtectedEffect(
+        options,
+        'matter.admin.rename',
+        { kind: 'matter', matterRef: request.matterRef },
+        { title: request.title },
+      )
+      const outcome: MatterRenameResult = admission.state === 'dispatched'
+        && admission.detail.kind === 'matter-renamed'
+        && admission.detail.matterRef === request.matterRef
+        && admission.detail.title === request.title
+        ? { state: 'renamed', status: admission.detail.status }
+        : { state: 'refused', code: matterGovernanceFailureCode(admission) }
       return serviceJson(outcome, 200)
     },
     async createMatterGroup(request: { readonly name: string, readonly targets?: readonly string[] }): Promise<Response> {

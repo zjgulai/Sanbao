@@ -101,4 +101,33 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'external-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // L1-A (ADR-0320): the matter-governance family — local writes over Sage-owned stores.
+  'matter.admin.archive': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.admin.archive',
+    actionScope: 'matter.admin',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.admin.restore': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.admin.restore',
+    actionScope: 'matter.admin',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.admin.batch': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.admin.batch',
+    actionScope: 'matter.admin',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'matter.admin.rename': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'matter.admin.rename',
+    actionScope: 'matter.admin',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

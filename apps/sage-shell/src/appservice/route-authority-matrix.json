@@ -10,8 +10,17 @@
     "CB1": {
       "status": "partial",
       "symbol": "verifySageServiceCaller",
-      "checks": ["exact-sage-app-url", "origin-if-present", "frame-not-contaminated"],
-      "missing": ["origin-required", "frame-ready", "active-session", "read-policy"]
+      "checks": [
+        "exact-sage-app-url",
+        "origin-if-present",
+        "frame-not-contaminated"
+      ],
+      "missing": [
+        "origin-required",
+        "frame-ready",
+        "active-session",
+        "read-policy"
+      ]
     }
   },
   "routes": [
@@ -21,16 +30,30 @@
       "method": "GET",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["read"],
+      "operations": [
+        "read"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext plus device state aggregate; the state collection rides the active-matter grant",
-      "providers": ["readState", "readBlockedState"],
+      "providers": [
+        "readState",
+        "readBlockedState"
+      ],
       "persistence": "none; reads assembled snapshots",
       "runtimeLevel": "L3/L4 aggregate behind unified admission; projection reads evaluate the main-owned read policy; the device state collection rides the active-matter grant while search and opaque-object reads still need their own main-owned object resolvers",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_BOOTSTRAP_PATH",
@@ -38,16 +61,29 @@
       "method": "GET",
       "classification": "local-system",
       "policyProfile": "local-system",
-      "operations": ["read"],
+      "operations": [
+        "read"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device runtime/auth/display facts only; no matter, session, workspace or business object",
-      "providers": ["bootstrapRead"],
+      "providers": [
+        "bootstrapRead"
+      ],
       "persistence": "none; reads assembled snapshots only",
       "runtimeLevel": "L3 device-local entry facts behind local-system admission; unavailable-first without its main-owned runner",
-      "runCommand": { "required": false, "actual": false },
-      "localSystemAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "localSystemAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "local-system-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "local-system-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_DEVICE_PREFERENCES_PATH",
@@ -55,16 +91,29 @@
       "method": "GET",
       "classification": "local-system",
       "policyProfile": "local-system",
-      "operations": ["read"],
+      "operations": [
+        "read"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device display preferences only; no matter, session, workspace or business object",
-      "providers": ["devicePreferencesRead"],
+      "providers": [
+        "devicePreferencesRead"
+      ],
       "persistence": "reads sealed device preferences; this route performs no write",
       "runtimeLevel": "L4 device-local preference projection behind local-system admission; unavailable-first without its own main-owned runner",
-      "runCommand": { "required": false, "actual": false },
-      "localSystemAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "localSystemAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "local-system-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "local-system-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_CONTEXT_SELECT_PATH",
@@ -72,16 +121,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "context-selection",
-      "operations": ["select"],
+      "operations": [
+        "select"
+      ],
       "callerBinding": "CB1",
       "activeContext": "renderer submits only matterId plus observed CAS generation; main re-resolves session, read access, current revision, default link, fresh workspace and frame",
-      "providers": ["selectActiveMatter"],
+      "providers": [
+        "selectActiveMatter"
+      ],
       "persistence": "none; Electron-main in-memory generation-bound context",
       "runtimeLevel": "L1 explicit selection contract; the read-access grant is evaluated by the main-owned read policy (identity session + instance-local policy, local-read only); absent session/grants stay unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "contextSelection": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "contextSelection": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "active-context-selection-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "active-context-selection-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_ACTIONS_PATH",
@@ -89,15 +151,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["dispatch"],
+      "operations": [
+        "dispatch"
+      ],
       "callerBinding": "CB1",
       "activeContext": "intent matterId and revisionId",
-      "providers": ["dispatch"],
+      "providers": [
+        "dispatch"
+      ],
       "persistence": "command attempt and receipt ports",
       "runtimeLevel": "L1 command kernel; production authority steps remain unavailable-first",
-      "runCommand": { "required": true, "actual": true },
+      "runCommand": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "runCommand" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "runCommand"
+      }
     },
     {
       "sourceConstant": "SAGE_ACTIONS_PREPARE_PATH",
@@ -105,15 +177,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "prepare-only",
-      "operations": ["prepare"],
+      "operations": [
+        "prepare"
+      ],
       "callerBinding": "CB1",
       "activeContext": "exact caller-supplied action intent",
-      "providers": ["prepareActionConfirmation"],
+      "providers": [
+        "prepareActionConfirmation"
+      ],
       "persistence": "run-local confirmation store",
       "runtimeLevel": "L3 local confirmation seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "prepare-only-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "prepare-only-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_LOGIN_PATH",
@@ -121,15 +203,25 @@
       "method": "GET",
       "classification": "protected-effect",
       "policyProfile": "auth-lifecycle",
-      "operations": ["login"],
+      "operations": [
+        "login"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device auth lifecycle",
-      "providers": ["login"],
+      "providers": [
+        "login"
+      ],
       "persistence": "run-local auth vault",
       "runtimeLevel": "L3 live auth seam; identity authority incomplete",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "auth-special-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "auth-special-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_LOGOUT_PATH",
@@ -137,15 +229,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "auth-lifecycle",
-      "operations": ["logout"],
+      "operations": [
+        "logout"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device auth lifecycle",
-      "providers": ["logout"],
+      "providers": [
+        "logout"
+      ],
       "persistence": "run-local auth vault",
       "runtimeLevel": "L3 live auth seam; identity authority incomplete",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "auth-special-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "auth-special-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_WORKSPACE_ADOPT_PATH",
@@ -153,15 +255,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["adopt"],
+      "operations": [
+        "adopt"
+      ],
       "callerBinding": "CB1",
       "activeContext": "interactive workspace picker result",
-      "providers": ["adoptWorkspace"],
+      "providers": [
+        "adoptWorkspace"
+      ],
       "persistence": "host-owned workspace registry",
       "runtimeLevel": "L3 live workspace seam unverified",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_WORKSPACE_MUTATE_PATH",
@@ -169,15 +281,27 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["rename", "delete-registration", "reorder"],
+      "operations": [
+        "rename",
+        "delete-registration",
+        "reorder"
+      ],
       "callerBinding": "CB1",
       "activeContext": "workspace mutation body",
-      "providers": ["mutateWorkspace"],
+      "providers": [
+        "mutateWorkspace"
+      ],
       "persistence": "host-owned workspace registry",
       "runtimeLevel": "L3 live workspace seam unverified",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_FILES_CANDIDATES_PATH",
@@ -185,16 +309,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["list-candidates"],
+      "operations": [
+        "list-candidates"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller workspaceRoot and path are candidates only",
-      "providers": ["listFileCandidates"],
+      "providers": [
+        "listFileCandidates"
+      ],
       "persistence": "none",
       "runtimeLevel": "L3 host file seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_FILES_REFERENCE_PATH",
@@ -202,16 +339,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["create-reference"],
+      "operations": [
+        "create-reference"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller workspaceRoot and path are candidates only",
-      "providers": ["createFileReference"],
+      "providers": [
+        "createFileReference"
+      ],
       "persistence": "run-local sealed reference store",
       "runtimeLevel": "L3 file reference seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_FILES_USE_PATH",
@@ -219,16 +369,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["use-reference"],
+      "operations": [
+        "use-reference"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller referenceId is an opaque candidate pending resolver",
-      "providers": ["useFileReference"],
+      "providers": [
+        "useFileReference"
+      ],
       "persistence": "run-local sealed reference store",
       "runtimeLevel": "L3 file reference seam behind unified admission; object resolver and production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_CREATE_PATH",
@@ -236,15 +399,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create"],
+      "operations": [
+        "create"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device draft collection",
-      "providers": ["createDraft"],
+      "providers": [
+        "createDraft"
+      ],
       "persistence": "durable local draft store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_UPDATE_PATH",
@@ -252,15 +425,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["update"],
+      "operations": [
+        "update"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller draftId",
-      "providers": ["updateDraft"],
+      "providers": [
+        "updateDraft"
+      ],
       "persistence": "durable local draft store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_CONVERT_PATH",
@@ -268,15 +451,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["convert"],
+      "operations": [
+        "convert"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller draftId rebuilt as an exact command intent",
-      "providers": ["convertDraft"],
+      "providers": [
+        "convertDraft"
+      ],
       "persistence": "durable draft attempt and command receipt",
       "runtimeLevel": "L1 command kernel plus L4 draft attempt; custodian wired over the Sage-owned authoritative store",
-      "runCommand": { "required": true, "actual": true },
+      "runCommand": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "runCommand" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "runCommand"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_RECONCILE_PATH",
@@ -284,15 +477,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["reconcile"],
+      "operations": [
+        "reconcile"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller draftId and stored attempt correlation",
-      "providers": ["reconcileDraft"],
+      "providers": [
+        "reconcileDraft"
+      ],
       "persistence": "durable draft attempt store",
       "runtimeLevel": "L4 local record plus the custodian reconciliation query",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_CANCEL_PATH",
@@ -300,15 +503,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["cancel-confirm"],
+      "operations": [
+        "cancel-confirm"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller draftId",
-      "providers": ["cancelDraftConfirm"],
+      "providers": [
+        "cancelDraftConfirm"
+      ],
       "persistence": "durable draft attempt store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_DRAFT_PREPARE_CONFIRM_PATH",
@@ -316,15 +529,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "prepare-only",
-      "operations": ["prepare-confirm"],
+      "operations": [
+        "prepare-confirm"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller draftId rebuilt as an exact command intent",
-      "providers": ["prepareDraftConfirmation"],
+      "providers": [
+        "prepareDraftConfirmation"
+      ],
       "persistence": "run-local confirmation store",
       "runtimeLevel": "L3 local confirmation seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "prepare-only-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "prepare-only-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_MATTER_LINK_PATH",
@@ -332,15 +555,27 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["add", "remove", "set-primary"],
+      "operations": [
+        "add",
+        "remove",
+        "set-primary"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef and workspace refs",
-      "providers": ["linkWorkspace"],
+      "providers": [
+        "linkWorkspace"
+      ],
       "persistence": "durable local matter projection",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_SEND_PATH",
@@ -348,16 +583,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["send"],
+      "operations": [
+        "send"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound matter/session context; renderer workspaceRoot is not authority",
-      "providers": ["sendSessionPrompt"],
+      "providers": [
+        "sendSessionPrompt"
+      ],
       "persistence": "host session plus local matter binding",
       "runtimeLevel": "L3 host session seam unverified",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_STOP_PATH",
@@ -365,16 +613,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["stop"],
+      "operations": [
+        "stop"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound matter/session context",
-      "providers": ["stopSession"],
+      "providers": [
+        "stopSession"
+      ],
       "persistence": "host session lifecycle",
       "runtimeLevel": "L3 host session seam unverified",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_RESUME_PATH",
@@ -382,16 +643,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["resume"],
+      "operations": [
+        "resume"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound matter/session context; renderer workspaceRoot is not authority",
-      "providers": ["resumeSession"],
+      "providers": [
+        "resumeSession"
+      ],
       "persistence": "host session lifecycle",
       "runtimeLevel": "L3 host session seam unverified",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_PENDING_PATH",
@@ -399,16 +673,30 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["edit", "remove"],
+      "operations": [
+        "edit",
+        "remove"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound active session context; request carries only item candidate",
-      "providers": ["updatePendingInput"],
+      "providers": [
+        "updatePendingInput"
+      ],
       "persistence": "durable local pending-input state",
       "runtimeLevel": "L4 local source record behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_QUEUE_PATH",
@@ -416,16 +704,30 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["edit", "remove"],
+      "operations": [
+        "edit",
+        "remove"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound active session context; request carries only queue item candidate",
-      "providers": ["updateQueueItem"],
+      "providers": [
+        "updateQueueItem"
+      ],
       "persistence": "host queue state",
       "runtimeLevel": "L3 host session seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_HISTORY_PATH",
@@ -433,16 +735,31 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["list", "detail"],
+      "operations": [
+        "list",
+        "detail"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext owned by projectionReadScope; no draft-recency fallback",
-      "providers": ["sessionHistoryList", "sessionHistoryDetail"],
+      "providers": [
+        "sessionHistoryList",
+        "sessionHistoryDetail"
+      ],
       "persistence": "local bindings plus host history",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_STREAM_PATH",
@@ -450,16 +767,29 @@
       "method": "GET",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["follow"],
+      "operations": [
+        "follow"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext owned by projectionReadScope; no draft-recency fallback",
-      "providers": ["sessionStream"],
+      "providers": [
+        "sessionStream"
+      ],
       "persistence": "none; the stream never becomes history",
       "runtimeLevel": "L3 host stream seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_ATTEMPT_STATUS_PATH",
@@ -467,16 +797,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["status"],
+      "operations": [
+        "status"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext owned by projectionReadScope; no draft-recency fallback",
-      "providers": ["sessionAttemptStatus"],
+      "providers": [
+        "sessionAttemptStatus"
+      ],
       "persistence": "none; read-only over the matter event store and the session fold",
       "runtimeLevel": "L3 read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_CLARIFICATION_ANSWER_PATH",
@@ -484,16 +827,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["answer"],
+      "operations": [
+        "answer"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef is only a candidate matched against main-owned generation-bound context",
-      "providers": ["sessionClarificationAnswer"],
+      "providers": [
+        "sessionClarificationAnswer"
+      ],
       "persistence": "host wait state",
       "runtimeLevel": "L3 host session seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_ANCHORS_PATH",
@@ -501,16 +857,31 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["read", "locate"],
+      "operations": [
+        "read",
+        "locate"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext owned by projectionReadScope; no draft-recency fallback",
-      "providers": ["sessionAnchorsRead", "sessionAnchorLocate"],
+      "providers": [
+        "sessionAnchorsRead",
+        "sessionAnchorLocate"
+      ],
       "persistence": "host history",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_EDITS_PATH",
@@ -518,16 +889,33 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["save", "resend", "verify"],
+      "operations": [
+        "save",
+        "resend",
+        "verify"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound active session context plus caller message or edit candidate",
-      "providers": ["sessionEditsSave", "sessionEditsResend", "sessionEditsVerify"],
+      "providers": [
+        "sessionEditsSave",
+        "sessionEditsResend",
+        "sessionEditsVerify"
+      ],
       "persistence": "run-local edit versions plus host resend",
       "runtimeLevel": "L3/L4 mixed local and host seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_SELECTIONS_PATH",
@@ -535,15 +923,27 @@
       "method": "POST",
       "classification": "local-preference",
       "policyProfile": "local-preference",
-      "operations": ["select", "clear"],
+      "operations": [
+        "select",
+        "clear"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main-owned generation-bound active session context; renderer supplies only desired mode",
-      "providers": ["inputSelectionsSelect", "inputSelectionsClear"],
+      "providers": [
+        "inputSelectionsSelect",
+        "inputSelectionsClear"
+      ],
       "persistence": "run-local selection state",
       "runtimeLevel": "L3 local preference seam",
-      "runCommand": { "required": false, "actual": false },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "partial", "mode": "local-main-with-partial-caller-binding" }
+      "currentAuthority": {
+        "status": "partial",
+        "mode": "local-main-with-partial-caller-binding"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_PLAN_MODE_PATH",
@@ -551,16 +951,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["switch"],
+      "operations": [
+        "switch"
+      ],
       "callerBinding": "CB1",
       "activeContext": "main current matter inferred from latest converted draft",
-      "providers": ["sessionPlanModeSwitch"],
+      "providers": [
+        "sessionPlanModeSwitch"
+      ],
       "persistence": "host session mode",
       "runtimeLevel": "L3 host session seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_APPROVAL_ANSWER_PATH",
@@ -568,16 +981,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["answer"],
+      "operations": [
+        "answer"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef is only a candidate matched against main-owned generation-bound context",
-      "providers": ["sessionApprovalAnswer"],
+      "providers": [
+        "sessionApprovalAnswer"
+      ],
       "persistence": "approval wait and receipt state",
       "runtimeLevel": "L3 host approval seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_APPROVAL_WITHDRAW_PATH",
@@ -585,16 +1011,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["withdraw"],
+      "operations": [
+        "withdraw"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef is only a candidate matched against main-owned generation-bound context",
-      "providers": ["sessionApprovalWithdraw"],
+      "providers": [
+        "sessionApprovalWithdraw"
+      ],
       "persistence": "approval wait and receipt state",
       "runtimeLevel": "L3 host approval seam behind protected admission; authority remains unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SESSION_TERMINAL_READ_PATH",
@@ -602,16 +1041,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["read"],
+      "operations": [
+        "read"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller terminalId is a candidate within that scope",
-      "providers": ["terminalRead"],
+      "providers": [
+        "terminalRead"
+      ],
       "persistence": "none; host scrollback read",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_FEEDBACK_PATH",
@@ -619,15 +1071,29 @@
       "method": "POST",
       "classification": "unsupported",
       "policyProfile": "mixed-read-unsupported",
-      "operations": ["submit", "verify"],
+      "operations": [
+        "submit",
+        "verify"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device-wide feedback receipt namespace",
-      "providers": ["feedbackSubmit", "feedbackVerify"],
+      "providers": [
+        "feedbackSubmit",
+        "feedbackVerify"
+      ],
       "persistence": "run-local receipts; submission sink absent",
       "runtimeLevel": "L3 local verify plus named unavailable submit",
-      "runCommand": { "required": false, "actual": false },
-      "unsupportedOperations": ["submit"],
-      "currentAuthority": { "status": "unsupported", "mode": "named-unavailable" }
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "unsupportedOperations": [
+        "submit"
+      ],
+      "currentAuthority": {
+        "status": "unsupported",
+        "mode": "named-unavailable"
+      }
     },
     {
       "sourceConstant": "SAGE_PREFERENCES_PATH",
@@ -635,15 +1101,25 @@
       "method": "POST",
       "classification": "local-preference",
       "policyProfile": "local-preference",
-      "operations": ["save"],
+      "operations": [
+        "save"
+      ],
       "callerBinding": "CB1",
       "activeContext": "device display preferences",
-      "providers": ["savePreferences"],
+      "providers": [
+        "savePreferences"
+      ],
       "persistence": "encrypted local preferences",
       "runtimeLevel": "L4 local device state",
-      "runCommand": { "required": false, "actual": false },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "partial", "mode": "local-main-with-partial-caller-binding" }
+      "currentAuthority": {
+        "status": "partial",
+        "mode": "local-main-with-partial-caller-binding"
+      }
     },
     {
       "sourceConstant": "SAGE_ATTACHMENT_PICK_PATH",
@@ -651,15 +1127,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["pick"],
+      "operations": [
+        "pick"
+      ],
       "callerBinding": "CB1",
       "activeContext": "interactive picker selection",
-      "providers": ["pickAttachments"],
+      "providers": [
+        "pickAttachments"
+      ],
       "persistence": "run-local attachment candidate state",
       "runtimeLevel": "L3 Electron picker seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_ATTACHMENT_UPLOAD_PATH",
@@ -667,16 +1153,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["upload"],
+      "operations": [
+        "upload"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request matterRef is a candidate only; itemId is an opaque clue and renderer workspaceRoot is not authority",
-      "providers": ["uploadAttachment"],
+      "providers": [
+        "uploadAttachment"
+      ],
       "persistence": "none; production dispatch is withheld after admission",
       "runtimeLevel": "L1 unavailable-first admission; target resolver and production upload authority remain absent",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_ATTACHMENT_CANCEL_PATH",
@@ -684,16 +1183,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["cancel"],
+      "operations": [
+        "cancel"
+      ],
       "callerBinding": "CB1",
       "activeContext": "active session is resolved server-side; itemId is an opaque clue and not authority",
-      "providers": ["cancelAttachment"],
+      "providers": [
+        "cancelAttachment"
+      ],
       "persistence": "none; production dispatch is withheld after admission",
       "runtimeLevel": "L1 unavailable-first admission; attachment target resolver and production cancel authority remain absent",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SEARCH_PATH",
@@ -701,16 +1213,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["search"],
+      "operations": [
+        "search"
+      ],
       "callerBinding": "CB1",
       "activeContext": "global query candidate; one request-scoped matter cannot authorize the collection",
-      "providers": ["search"],
+      "providers": [
+        "search"
+      ],
       "persistence": "none",
       "runtimeLevel": "L3 aggregate search behind unified admission; production collection policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_SIDE_CHAT_PATH",
@@ -718,15 +1243,31 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create", "send", "read", "return"],
+      "operations": [
+        "create",
+        "send",
+        "read",
+        "return"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef or sideChatId",
-      "providers": ["createSideChat", "sendSideChat", "readSideChat", "returnSideChat"],
+      "providers": [
+        "createSideChat",
+        "sendSideChat",
+        "readSideChat",
+        "returnSideChat"
+      ],
       "persistence": "durable local side-chats.json plus host send",
       "runtimeLevel": "L3/L4 mixed local and host seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_OBSERVE_PATH",
@@ -734,16 +1275,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["observe"],
+      "operations": [
+        "observe"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller matterRef and workspaceRoot are candidates only",
-      "providers": ["observeArtifacts"],
+      "providers": [
+        "observeArtifacts"
+      ],
       "persistence": "run-local observation cache",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_OPEN_PATH",
@@ -751,16 +1305,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["open-preview"],
+      "operations": [
+        "open-preview"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller artifactId is an opaque candidate pending resolver",
-      "providers": ["openArtifact"],
+      "providers": [
+        "openArtifact"
+      ],
       "persistence": "run-local preview state",
       "runtimeLevel": "L3 local read surface behind unified admission; object resolver and production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_CLOSE_PATH",
@@ -768,15 +1335,25 @@
       "method": "POST",
       "classification": "local-preference",
       "policyProfile": "local-preference",
-      "operations": ["close-preview"],
+      "operations": [
+        "close-preview"
+      ],
       "callerBinding": "CB1",
       "activeContext": "singleton side preview",
-      "providers": ["closeArtifact"],
+      "providers": [
+        "closeArtifact"
+      ],
       "persistence": "run-local preview state",
       "runtimeLevel": "L3 local window state",
-      "runCommand": { "required": false, "actual": false },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "partial", "mode": "local-main-with-partial-caller-binding" }
+      "currentAuthority": {
+        "status": "partial",
+        "mode": "local-main-with-partial-caller-binding"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_RETRY_PATH",
@@ -784,16 +1361,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["retry-observation"],
+      "operations": [
+        "retry-observation"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; current artifact is an opaque candidate pending resolver",
-      "providers": ["retryArtifact"],
+      "providers": [
+        "retryArtifact"
+      ],
       "persistence": "run-local observation cache",
       "runtimeLevel": "L3 host read seam behind unified admission; object resolver and production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_FULLSCREEN_PATH",
@@ -801,15 +1391,25 @@
       "method": "POST",
       "classification": "local-preference",
       "policyProfile": "local-preference",
-      "operations": ["set-fullscreen"],
+      "operations": [
+        "set-fullscreen"
+      ],
       "callerBinding": "CB1",
       "activeContext": "singleton side preview",
-      "providers": ["fullscreenArtifact"],
+      "providers": [
+        "fullscreenArtifact"
+      ],
       "persistence": "run-local preview layout",
       "runtimeLevel": "L3 local window state",
-      "runCommand": { "required": false, "actual": false },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "partial", "mode": "local-main-with-partial-caller-binding" }
+      "currentAuthority": {
+        "status": "partial",
+        "mode": "local-main-with-partial-caller-binding"
+      }
     },
     {
       "sourceConstant": "SAGE_ARTIFACTS_WINDOW_PATH",
@@ -817,15 +1417,27 @@
       "method": "POST",
       "classification": "local-preference",
       "policyProfile": "local-preference",
-      "operations": ["open", "close"],
+      "operations": [
+        "open",
+        "close"
+      ],
       "callerBinding": "CB1",
       "activeContext": "singleton separate preview window",
-      "providers": ["artifactWindowOpen", "artifactWindowClose"],
+      "providers": [
+        "artifactWindowOpen",
+        "artifactWindowClose"
+      ],
       "persistence": "run-local Electron window state",
       "runtimeLevel": "L3 local window state",
-      "runCommand": { "required": false, "actual": false },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "partial", "mode": "local-main-with-partial-caller-binding" }
+      "currentAuthority": {
+        "status": "partial",
+        "mode": "local-main-with-partial-caller-binding"
+      }
     },
     {
       "sourceConstant": "SAGE_EXTERNAL_LINK_PATH",
@@ -833,15 +1445,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["open"],
+      "operations": [
+        "open"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller URL",
-      "providers": ["openExternalLink"],
+      "providers": [
+        "openExternalLink"
+      ],
       "persistence": "none; delegates to system browser",
       "runtimeLevel": "L3 Electron shell seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_CREATE_PATH",
@@ -849,16 +1471,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create"],
+      "operations": [
+        "create"
+      ],
       "callerBinding": "CB1",
       "activeContext": "fresh file-reference projection-read scope binds matterRef and trustedWorkspaceRoot; local edit-draft creation remains a separate protected effect",
-      "providers": ["createEditDraft"],
+      "providers": [
+        "createEditDraft"
+      ],
       "persistence": "run-local edit-draft store",
       "runtimeLevel": "L3 local edit seam; source read is admitted, complete protected command authority remains unavailable",
-      "runCommand": { "required": true, "actual": false },
-      "sourceReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
+      "sourceReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "protected-effect-source-read-admitted" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "protected-effect-source-read-admitted"
+      }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_UPDATE_PATH",
@@ -866,15 +1501,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["update"],
+      "operations": [
+        "update"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller edit draftId",
-      "providers": ["updateEditDraft"],
+      "providers": [
+        "updateEditDraft"
+      ],
       "persistence": "run-local edit-draft store",
       "runtimeLevel": "L3 local edit seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_DIFF_PATH",
@@ -882,16 +1527,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["diff"],
+      "operations": [
+        "diff"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller edit draftId is an opaque candidate pending resolver",
-      "providers": ["diffEditDraft"],
+      "providers": [
+        "diffEditDraft"
+      ],
       "persistence": "run-local edit-draft store read",
       "runtimeLevel": "L3 local read seam behind unified admission; object resolver and production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_PREPARE_WRITEBACK_PATH",
@@ -899,15 +1557,25 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "prepare-only",
-      "operations": ["prepare-writeback"],
+      "operations": [
+        "prepare-writeback"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller edit draftId",
-      "providers": ["prepareEditDraftWriteback"],
+      "providers": [
+        "prepareEditDraftWriteback"
+      ],
       "persistence": "run-local confirmation store",
       "runtimeLevel": "L3 local confirmation seam",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "prepare-only-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "prepare-only-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_EDIT_DRAFTS_WRITEBACK_PATH",
@@ -915,15 +1583,27 @@
       "method": "POST",
       "classification": "unsupported",
       "policyProfile": "unsupported-operation",
-      "operations": ["writeback"],
+      "operations": [
+        "writeback"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller edit draftId",
-      "providers": ["writebackEditDraft"],
+      "providers": [
+        "writebackEditDraft"
+      ],
       "persistence": "run-local edit-draft store; executor absent",
       "runtimeLevel": "named unavailable operation",
-      "runCommand": { "required": false, "actual": false },
-      "unsupportedOperations": ["writeback"],
-      "currentAuthority": { "status": "unsupported", "mode": "named-unavailable" }
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "unsupportedOperations": [
+        "writeback"
+      ],
+      "currentAuthority": {
+        "status": "unsupported",
+        "mode": "named-unavailable"
+      }
     },
     {
       "sourceConstant": "SAGE_ACTION_ITEMS_PATH",
@@ -931,15 +1611,31 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create", "update", "start", "complete"],
+      "operations": [
+        "create",
+        "update",
+        "start",
+        "complete"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef or action item id",
-      "providers": ["createActionItem", "updateActionItem", "startActionItem", "completeActionItem"],
+      "providers": [
+        "createActionItem",
+        "updateActionItem",
+        "startActionItem",
+        "completeActionItem"
+      ],
       "persistence": "run-local action-item store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_CORRECTIONS_PATH",
@@ -947,16 +1643,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["submit"],
+      "operations": [
+        "submit"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request matterRef is a candidate only; renderer workspaceRoot is not authority",
-      "providers": ["submitCorrection"],
+      "providers": [
+        "submitCorrection"
+      ],
       "persistence": "host correction stream",
       "runtimeLevel": "L3 host correction seam unverified",
-      "runCommand": { "required": false, "actual": false },
-      "protectedAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "protected-effect-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_PROJECTS_PATH",
@@ -964,15 +1673,29 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create", "assign", "unassign"],
+      "operations": [
+        "create",
+        "assign",
+        "unassign"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller project or matter refs",
-      "providers": ["createProject", "assignProject", "unassignProject"],
+      "providers": [
+        "createProject",
+        "assignProject",
+        "unassignProject"
+      ],
       "persistence": "run-local project store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_MATTER_ADMIN_PATH",
@@ -980,15 +1703,37 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "mixed-protected-unsupported",
-      "operations": ["archive", "restore", "batch", "rename"],
+      "operations": [
+        "archive",
+        "restore",
+        "batch",
+        "rename"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matter refs",
-      "providers": ["archiveMatter", "restoreMatter", "batchMatters", "renameMatter"],
+      "providers": [
+        "archiveMatter",
+        "restoreMatter",
+        "batchMatters",
+        "renameMatter"
+      ],
       "persistence": "run-local matter projection; rename unavailable",
       "runtimeLevel": "L4 local source record with named unsupported operation",
-      "runCommand": { "required": true, "actual": false },
-      "unsupportedOperations": ["rename"],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "unsupportedOperations": [
+        "rename"
+      ],
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "protected-effect-admission-unavailable-first"
+      },
+      "protectedAdmission": {
+        "required": true,
+        "actual": true
+      }
     },
     {
       "sourceConstant": "SAGE_MATTER_GROUPS_PATH",
@@ -996,15 +1741,31 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "business-command",
-      "operations": ["create", "rename", "remove", "assign"],
+      "operations": [
+        "create",
+        "rename",
+        "remove",
+        "assign"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller group and matter refs",
-      "providers": ["createMatterGroup", "renameMatterGroup", "removeMatterGroup", "assignMatterGroup"],
+      "providers": [
+        "createMatterGroup",
+        "renameMatterGroup",
+        "removeMatterGroup",
+        "assignMatterGroup"
+      ],
       "persistence": "run-local matter-group store",
       "runtimeLevel": "L4 local source record",
-      "runCommand": { "required": true, "actual": false },
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     },
     {
       "sourceConstant": "SAGE_RUN_LOG_PATH",
@@ -1012,16 +1773,29 @@
       "method": "POST",
       "classification": "read-only",
       "policyProfile": "projection-read",
-      "operations": ["read"],
+      "operations": [
+        "read"
+      ],
       "callerBinding": "CB1",
       "activeContext": "request-scoped ActiveContext; caller workspaceRoot and log path are candidates only",
-      "providers": ["readRunLog"],
+      "providers": [
+        "readRunLog"
+      ],
       "persistence": "none; host file read",
       "runtimeLevel": "L3 host read seam behind unified admission; production read policy unavailable-first",
-      "runCommand": { "required": false, "actual": false },
-      "projectionReadAdmission": { "required": true, "actual": true },
+      "runCommand": {
+        "required": false,
+        "actual": false
+      },
+      "projectionReadAdmission": {
+        "required": true,
+        "actual": true
+      },
       "unsupportedOperations": [],
-      "currentAuthority": { "status": "compliant", "mode": "projection-read-admission-unavailable-first" }
+      "currentAuthority": {
+        "status": "compliant",
+        "mode": "projection-read-admission-unavailable-first"
+      }
     },
     {
       "sourceConstant": "SAGE_PLANS_PATH",
@@ -1029,15 +1803,33 @@
       "method": "POST",
       "classification": "protected-effect",
       "policyProfile": "mixed-protected-prepare-unsupported",
-      "operations": ["create", "accept", "prepare-step", "execute-step"],
+      "operations": [
+        "create",
+        "accept",
+        "prepare-step",
+        "execute-step"
+      ],
       "callerBinding": "CB1",
       "activeContext": "caller matterRef and plan or step refs",
-      "providers": ["createPlan", "acceptPlan", "preparePlanStep", "executePlanStep"],
+      "providers": [
+        "createPlan",
+        "acceptPlan",
+        "preparePlanStep",
+        "executePlanStep"
+      ],
       "persistence": "run-local plan store; execution provider absent",
       "runtimeLevel": "L4 local source record plus named unavailable execute",
-      "runCommand": { "required": true, "actual": false },
-      "unsupportedOperations": ["execute-step"],
-      "currentAuthority": { "status": "violation", "mode": "direct-provider-bypass" }
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
+      "unsupportedOperations": [
+        "execute-step"
+      ],
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
     }
   ]
 }

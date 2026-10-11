@@ -88,7 +88,7 @@ describe('route authority truth matrix', () => {
     ])
   })
 
-  it('records two runCommand routes, thirteen admitted protected routes, one source-read-admitted route, one context selection route, and 22 remaining bypasses', () => {
+  it('records two runCommand routes, fourteen admitted protected routes, one source-read-admitted route, one context selection route, and 21 remaining bypasses', () => {
     const protectedRoutes = matrix.routes.filter((route) => route.classification === 'protected-effect')
     const throughRunCommand = protectedRoutes.filter((route) => route.runCommand.actual)
     const throughProtectedAdmission = protectedRoutes.filter((route) => route.protectedAdmission?.actual === true)
@@ -100,6 +100,8 @@ describe('route authority truth matrix', () => {
       '/.sage/attachments/cancel',
       '/.sage/attachments/upload',
       '/.sage/corrections',
+      // L1-A (ADR-0320): the matter-governance family's first admitted route.
+      '/.sage/matter-admin',
       '/.sage/session/approval-answer',
       '/.sage/session/approval-withdraw',
       '/.sage/session/clarification-answer',
@@ -120,9 +122,9 @@ describe('route authority truth matrix', () => {
       !route.runCommand.required
       && route.contextSelection?.required === true
       && route.currentAuthority.mode === 'active-context-selection-unavailable-first')).toBe(true)
-    expect(bypasses).toHaveLength(22)
+    expect(bypasses).toHaveLength(21)
     expect(bypasses.every((route) => route.runCommand.required && route.currentAuthority.status === 'violation')).toBe(true)
-    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(16)
+    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(15)
     expect(matrix.routes.find((route) => route.path === '/.sage/edit-drafts/create')).toMatchObject({
       sourceReadAdmission: { required: true, actual: true },
       currentAuthority: { status: 'violation', mode: 'protected-effect-source-read-admitted' },

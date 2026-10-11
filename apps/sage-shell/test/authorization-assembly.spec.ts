@@ -16,13 +16,14 @@ describe('action authority table (WT-02D.2A)', () => {
   it('freezes the registered table and keeps every entry’s mapping pinned', () => {
     // The table grew from the fixture-anchored v1 entry to a second, custody-side entry
     // (ADR-0201), a third session-family entry (ADR-0275), the governed prepare write
-    // (ADR-0290) and the six session-control rows (ADR-0317). The pin stays exact on purpose:
-    // a new action type must be a deliberate edit here.
+    // (ADR-0290), the six session-control rows (ADR-0317) and the four matter-governance rows
+    // (ADR-0320). The pin stays exact on purpose: a new action type must be a deliberate edit.
     expect(Object.keys(ACTION_AUTHORITY_TABLE)).toEqual([
       'start-attempt', 'create-matter', 'session.send', 'session.prepare',
       'session.approval.answer', 'session.approval.withdraw',
       'session.pending.edit', 'session.pending.remove',
       'session.queue.edit', 'session.queue.remove',
+      'matter.admin.archive', 'matter.admin.restore', 'matter.admin.batch', 'matter.admin.rename',
     ])
     expect(ACTION_AUTHORITY_TABLE['start-attempt']).toEqual({
       requiredRoleRef: 'role:owner',
@@ -66,6 +67,17 @@ describe('action authority table (WT-02D.2A)', () => {
         actionScope,
         effectClass,
         requiresDecision,
+      })
+    }
+    for (const operation of [
+      'matter.admin.archive', 'matter.admin.restore', 'matter.admin.batch', 'matter.admin.rename',
+    ] as const) {
+      expect(ACTION_AUTHORITY_TABLE[operation]).toEqual({
+        requiredRoleRef: 'role:owner',
+        operation,
+        actionScope: 'matter.admin',
+        effectClass: 'local-write',
+        requiresDecision: false,
       })
     }
     expect(Object.isFrozen(ACTION_AUTHORITY_TABLE)).toBe(true)
