@@ -382,7 +382,8 @@ describe('default desktop session submission lifecycle', () => {
     const { container } = await mount(async () => snapshot())
     await click(control(container, '扩展'))
     expect(container.querySelector('.extensions-page')).not.toBeNull()
-    expect(container.textContent).toContain('连接器')
+    expect(container.querySelector('.extensions-page h1')?.textContent).toBe('扩展管理')
+    expect(container.textContent).toContain('管理本机已安装的插件、技能、连接器和智能体。')
   })
 
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {

@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 72,
-        "pending": 126,
+        "implementing": 82,
+        "pending": 116,
         "verified": 8
       },
       "applicationService": {
@@ -7958,8 +7958,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t06",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session-view.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7980,7 +7986,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the side-panel entry is visible on the session page and locally toggles the artifact rail (empty state 「尚无观察到产出物」 when nothing was observed); the observed page did not record the click path — panel types, layouts and tabs are not verified and stay registered; visualAcceptance pending"
         ]
       }
     },
@@ -10679,8 +10685,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10701,7 +10718,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the four-tab shell (插件/技能/连接器/智能体) with 「—」 counts, subtitle and the market/refresh/search tools renders; the connector tab keeps the ADR-0306 add-MCP entry; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10747,8 +10764,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10769,7 +10797,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the skills tab shares the installed shell with its named not-wired data area; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10815,8 +10843,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10837,7 +10876,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the connectors tab shares the installed shell and keeps the ADR-0306 add-MCP entry with its local draft form; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10883,8 +10922,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10905,7 +10955,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the agents tab has NO add entry (as observed) and shares the named not-wired data area; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10951,8 +11001,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10973,7 +11034,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the add menu opens with the two observed entries (通过 Qoder 创建 / 上传 Plugin) and their hint lines; any pick answers the named refusal — create/upload/install flows are not assembled; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -11019,8 +11080,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -11041,7 +11113,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the skills add menu mirrors the observed two entries (通过 Qoder 创建 / 上传 Skill); any pick answers the named refusal; no extensions store exists — the data area shows the named not-wired state (extensions-store-unavailable) and the count reads 「—」 (a 0 would claim a store reading); the observed empty-list copy belongs to the store semantics and is not assembled; 刷新 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -11086,8 +11158,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -11108,7 +11191,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the skills market shell renders (top tools, 发现 Skills heading/subtitle, 热门/最新 sort pair, 全部 category, search); no market provider exists — no entries, cards, recommendation slots or install buttons are rendered; the data area shows the named not-wired state (market-provider-unavailable); the captured 24-item snapshots stay evidence, never fixtures; 刷新市场 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -11153,8 +11236,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -11175,7 +11269,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the plugins market shell renders (发现 Plugins)；no market provider exists — no entries, cards, recommendation slots or install buttons are rendered; the data area shows the named not-wired state (market-provider-unavailable); the captured 24-item snapshots stay evidence, never fixtures; 刷新市场 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -11622,8 +11716,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-extensions.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-mcp-form.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -11644,7 +11749,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the connectors market shell renders (发现 Connectors)；no market provider exists — no entries, cards, recommendation slots or install buttons are rendered; the data area shows the named not-wired state (market-provider-unavailable); the captured 24-item snapshots stay evidence, never fixtures; 刷新市场 answers a named refusal; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },

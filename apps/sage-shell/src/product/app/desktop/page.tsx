@@ -11,6 +11,7 @@ import { useDesktopSession, type DesktopReadState } from './session-controller.j
 import type { DesktopSession } from './session.js'
 import type { DesktopArtifacts } from './client.js'
 import { McpForm } from './mcp-form.js'
+import { ExtensionsMarketView } from './extensions-market.js'
 import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
@@ -173,21 +174,85 @@ function SearchResult({ outcome }: { readonly outcome: DesktopSearchOutcome }): 
 // under a new query.
 /** ADR-0304: the task monitor page — the steps axis, the honest unknown axes, and the review
  *  card (updated time from the log's own stamp; outputs/sources stay honest when empty). */
-/** ADR-0306: the extension-management page — the observed add-custom-MCP entry lives under
- *  the connector section; the form itself is a local unsaved draft (see mcp-form.tsx). */
+/** Loop-Q R11 line A: the installed-extension tabs (QDR.P04.installed.*). Counts stay "—" and
+ *  the data area names the not-wired extension store — "no provider" is never rendered as an
+ *  empty list ("暂无已安装…"), because those words claim a working store that does not exist. */
+const EXTENSION_KINDS = ['插件', '技能', '连接器', '智能体'] as const
+type ExtensionKind = (typeof EXTENSION_KINDS)[number]
+const EXTENSION_ADD_MENUS: Partial<Record<ExtensionKind, { readonly trigger: string; readonly items: readonly [readonly [string, string], readonly [string, string]] }>> = {
+  插件: {
+    trigger: '添加插件',
+    items: [
+      ['通过 Qoder 创建', '在新任务中创建个性化 Plugin，并保存在本地使用。'],
+      ['上传 Plugin', '导入 Plugin ZIP，仅安装到本机。'],
+    ],
+  },
+  技能: {
+    trigger: '添加技能',
+    items: [
+      ['通过 Qoder 创建', '在新任务中创建个性化 Skill，并保存在本地使用。'],
+      ['上传 Skill', '导入 ZIP 或 SKILL.md，仅安装到本机。'],
+    ],
+  },
+}
+const EXTENSION_ADD_NOTE = '创建/上传尚未接通：扩展安装治理链未建立；不会创建或安装。'
+
+/** ADR-0306 + Loop-Q R11 line A: the extension-management page. ADR-0306's add-custom-MCP entry
+ *  and form are preserved inside the connector tab; the form is a local unsaved draft (see
+ *  mcp-form.tsx). The market button switches to the observed market shell (see
+ *  extensions-market.tsx); 刷新 is local only — no provider is polled, no text changes. */
 export function ExtensionsPage(): ReactNode {
+  const [kind, setKind] = useState<ExtensionKind>('插件')
+  const [market, setMarket] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [query, setQuery] = useState('')
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [addNote, setAddNote] = useState('')
+  const setMarketKind = (next: ExtensionKind) => { setKind(next); setAdding(false); setAddMenuOpen(false); setAddNote('') }
+  if (market) {
+    return <section className="extensions-page" aria-label="扩展市场">
+      <ExtensionsMarketView kind={kind === '智能体' ? '插件' : kind} onKind={setMarketKind}
+        onBack={() => setMarket(false)} />
+    </section>
+  }
   return <section className="extensions-page" aria-label="扩展管理">
     <h1>扩展管理</h1>
-    <div className="connector-section">
-      <div className="connector-header">
-        <strong>连接器</strong>
-        <button type="button" className="text-button" aria-label="添加 MCP" onClick={() => setAdding(true)}>添加 MCP</button>
-      </div>
-      {adding
-        ? <McpForm onClose={() => setAdding(false)} />
-        : <p className="extensions-note">尚未添加自定义连接器。安装、启用与授权仍分别治理（T10）。</p>}
+    <p className="page-note">管理本机已安装的插件、技能、连接器和智能体。</p>
+    <div className="page-tools" aria-label="已安装工具">
+      <button type="button" className="text-button" aria-label="市场" onClick={() => setMarket(true)}>市场</button>
+      <button type="button" className="text-button" aria-label="刷新已安装项"
+        onClick={() => setAddNote('刷新尚未接通：扩展服务未建立；未取得任何读数。')}>刷新</button>
+      <input aria-label="搜索已安装项" placeholder="搜索已安装项" value={query}
+        onChange={(event) => setQuery(event.target.value)} />
     </div>
+    <div className="page-tabs" role="tablist" aria-label="扩展类型">
+      {EXTENSION_KINDS.map((label) => <button key={label} type="button" role="tab" aria-label={label}
+        aria-selected={kind === label} className={kind === label ? 'active' : ''}
+        onClick={() => { setKind(label); setAdding(false); setAddMenuOpen(false); setAddNote('') }}>{label}
+        <span className="extensions-count">—</span></button>)}
+    </div>
+    {(EXTENSION_ADD_MENUS[kind] !== undefined) && <div className="page-tools" aria-label={`${kind}添加工具`}>
+      <div className="relative">
+        <button type="button" className="text-button" aria-label={EXTENSION_ADD_MENUS[kind]!.trigger}
+          aria-haspopup="menu" aria-expanded={addMenuOpen} onClick={() => setAddMenuOpen(value => !value)}>添加</button>
+        {addMenuOpen
+          ? <div className="small-menu extensions-add-menu" role="menu" aria-label={`${kind}添加菜单`}>
+            {EXTENSION_ADD_MENUS[kind]!.items.map(([label, hint]) => <button key={label} type="button"
+              role="menuitem" aria-label={`${kind}添加 ${label}`} onClick={() => setAddNote(EXTENSION_ADD_NOTE)}>
+              <strong>{label}</strong><small>{hint}</small>
+            </button>)}
+          </div>
+          : null}
+      </div>
+    </div>}
+    {kind === '连接器' && <div className="page-tools" aria-label="连接器添加工具">
+      <button type="button" className="text-button" aria-label="添加 MCP" onClick={() => setAdding(true)}>添加 MCP</button>
+    </div>}
+    {addNote !== '' && <p className="extensions-note" role="status">{addNote}</p>}
+    <div className="extensions-empty" role="status">扩展服务未接通（extensions-store-unavailable）</div>
+    {kind === '连接器' && adding
+      ? <McpForm onClose={() => setAdding(false)} />
+      : null}
   </section>
 }
 

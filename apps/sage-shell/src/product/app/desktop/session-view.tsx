@@ -184,9 +184,14 @@ export function DesktopSessionView({
   title, execution, lastTurnEnd, paused, streamBroken, messages, streaming = null,
   turnProcess, artifacts, onArtifactOpen, onArtifactRetry, onArtifactClose, onArtifactFullscreen, onArtifactWindow,
 }: DesktopSessionViewProps): ReactNode {
+  // ADR-0309: the side-panel entry (OBS: the button is visible on the first-run page; its click
+  // path was not observed) — it toggles the artifact rail locally. No provider is involved.
+  const [sidePanelOpen, setSidePanelOpen] = useState(false)
   const runningWrite = execution === 'executing'
     ? turnProcess?.fileWrites.find((item) => item.state === 'running')
     : undefined
+  const railVisible = sidePanelOpen || (artifacts !== undefined && artifacts.state === 'read'
+    && (artifacts.cards.length > 0 || artifacts.preview.state !== 'closed'))
   // ADR-0298: the viewport follows the output while it grows, as the observed product does.
   const scroller = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -210,6 +215,8 @@ export function DesktopSessionView({
     <header className="session-header">
       <strong>{title}</strong>
       <span className="session-state" data-session-state={state} role="status">{label}</span>
+      <button type="button" className="text-button side-panel-toggle" aria-label="侧面板"
+        aria-pressed={sidePanelOpen} onClick={() => setSidePanelOpen((value) => !value)}>侧面板</button>
     </header>
     <div className={`session-layout${artifacts !== undefined && (artifacts.preview.state === 'opening' || artifacts.preview.state === 'ready') ? ' preview-open' : ''}`}>
       <div className="conversation">
@@ -233,10 +240,9 @@ export function DesktopSessionView({
             : null}
         </div>
       </div>
-      {artifacts !== undefined && artifacts.state === 'read'
-        && (artifacts.cards.length > 0 || artifacts.preview.state !== 'closed')
+      {railVisible
         ? <ArtifactRail
-          artifacts={artifacts}
+          artifacts={artifacts ?? { state: 'read', cards: [], preview: { state: 'closed' } }}
           {...(onArtifactOpen === undefined ? {} : { onArtifactOpen })}
           {...(onArtifactRetry === undefined ? {} : { onArtifactRetry })}
           {...(onArtifactClose === undefined ? {} : { onArtifactClose })}

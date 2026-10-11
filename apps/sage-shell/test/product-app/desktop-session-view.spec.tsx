@@ -101,11 +101,31 @@ describe('desktop session reads source projections instead of prototype observat
     expect(node.textContent).toContain('正文一段')
   })
 
+  it('toggles the artifact rail from the side-panel entry (P14.sidepanel.entry)', async () => {
+    const node = renderSession()
+    // No cards and no preview: the rail is closed until the side-panel button asks for it.
+    expect(node.querySelector('.artifact-rail')).toBeNull()
+    const toggle = node.querySelector<HTMLButtonElement>('button[aria-label="侧面板"]')!
+    expect(toggle).not.toBeNull()
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    await act(async () => { toggle.click() })
+    const rail = node.querySelector('.artifact-rail')
+    expect(rail).not.toBeNull()
+    expect(rail?.textContent).toContain('尚无观察到产出物')
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => { toggle.click() })
+    expect(node.querySelector('.artifact-rail')).toBeNull()
+  })
+
   it('does not synthesize an answer or an outgoing prompt for an empty transcript', () => {
     const node = renderSession({ messages: [], execution: 'idle' })
     expect(node.querySelector('.assistant-message')).toBeNull()
     expect(node.querySelector('.user-message')).toBeNull()
     expect(node.textContent).toContain('当前会话尚无可读消息')
-    expect(node.querySelector('textarea, input, button')).toBeNull()
+    // The ordinary side-panel entry exists on this page (observed); nothing else is synthesized.
+    expect(node.querySelector('textarea, input')).toBeNull()
+    const otherButtons = [...node.querySelectorAll('button')]
+      .filter((button) => button.getAttribute('aria-label') !== '侧面板')
+    expect(otherButtons).toHaveLength(0)
   })
 })

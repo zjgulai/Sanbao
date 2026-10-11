@@ -145,7 +145,10 @@ describe('the add-custom-MCP form (ADR-0306)', () => {
   it('opens the form from the extension-management connector section', async () => {
     const container = await mount(createElement(ExtensionsPage))
     expect(container.querySelector('.extensions-page')).not.toBeNull()
-    expect(container.textContent).toContain('连接器')
+    expect(container.querySelector('h1')?.textContent).toBe('扩展管理')
+    // The ADR-0306 entry lives inside the connector tab (Loop-Q R11 four-tab structure).
+    await click(control(container, '连接器'))
+    expect(container.querySelector('[role="tab"][aria-label="连接器"]')?.getAttribute('aria-selected')).toBe('true')
     await click(control(container, '添加 MCP'))
     expect(container.querySelector('[aria-label="添加自定义 MCP"]')).not.toBeNull()
     // Discard the untouched draft closes without confirmation.

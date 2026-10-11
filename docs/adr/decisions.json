@@ -10284,6 +10284,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0309",
+      "title": "ADR-0309 · 扩展管理重构、市场壳与侧面板入口（R11 双线）",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "扩展管理四标签壳 + 计数「—」+ 两项添加菜单具名拒绝 + 连接器保留 McpForm；数据区具名未接通。",
+          "constraints": [
+            "observed empty copy not assembled without a store"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "市场壳（三标签/标题副标题/排序/类别/搜索）+ 具名未接通；无条目/推荐/安装按钮；刷新具名拒绝。",
+          "constraints": [
+            "24-item snapshots stay evidence"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "侧面板入口本地开合 rail（空态文案）；点击路径未核验入 blocker。",
+          "constraints": [
+            "existing rail conditions unchanged"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "10 行迁 implementing；summary 生成器重算。",
+          "constraints": [
+            "deriveSummary"
+          ]
+        }
+      ]
     }
   ]
 }

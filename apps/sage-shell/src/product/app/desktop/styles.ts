@@ -200,7 +200,15 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .extensions-page h1 { margin: 0; font-size: 16px; }
 .sage-desktop .connector-section { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 12px; }
 .sage-desktop .connector-header { display: flex; align-items: center; justify-content: space-between; }
-.sage-desktop .extensions-note { margin: 0; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .extensions-note { margin: 0; font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
+/* Loop-Q R11 line A: installed tabs + market shell. Geometry only; the data area shows the named
+   not-wired reason inside a dashed placeholder, never rows or empty-list wording. */
+.sage-desktop .extensions-count { margin-left: 6px; font-size: 11px; color: var(--sage-muted); }
+.sage-desktop .extensions-empty { padding: 24px 18px; border: 1px dashed var(--sage-divider); border-radius: 10px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .extensions-add-menu { position: static; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+.sage-desktop .extensions-add-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.sage-desktop .extensions-add-menu strong { font-size: 12px; font-weight: 500; color: var(--sage-ink); }
+.sage-desktop .extensions-add-menu small { font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .mcp-form { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--sage-divider); border-radius: 10px; }
 .sage-desktop .mcp-form-header { display: flex; align-items: center; justify-content: space-between; }
 .sage-desktop .mcp-tabs { display: flex; gap: 6px; }
