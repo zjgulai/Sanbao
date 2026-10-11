@@ -10,6 +10,7 @@ import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import type { DesktopSession } from './session.js'
 import type { DesktopArtifacts } from './client.js'
+import { listDesktopFileCandidates, type DesktopFileCandidate } from './files.js'
 import { McpForm } from './mcp-form.js'
 import { ExtensionsMarketView } from './extensions-market.js'
 import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
@@ -724,17 +725,56 @@ function HomeContent({ navigate, suggest, workspace }: { readonly navigate: (pag
   </div>
 }
 
-function ContextMenu({ notice }: { readonly notice: (message: string) => void }): ReactNode {
+/** ADR-0311: the observed file-candidates submenu state (O02.files.menu.open). */
+type FilesMenuState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'read'; readonly entries: readonly DesktopFileCandidate[]; readonly truncated: boolean }
+  | { readonly kind: 'refused'; readonly code: string }
+
+function ContextMenu({ notice, workspaceRoot }: {
+  readonly notice: (message: string) => void
+  readonly workspaceRoot?: string
+}): ReactNode {
   const [open, setOpen] = useState(false)
+  // ADR-0311: the 工作区文件 submenu — real candidates from the T03 route. The local substring
+  // filter is an inference of this implementation: the observation verified NO filtering
+  // behavior at all (neither server-side nor local); it is registered as such in the blockers.
+  const [filesOpen, setFilesOpen] = useState(false)
+  const [filesQuery, setFilesQuery] = useState('')
+  const [files, setFiles] = useState<FilesMenuState>({ kind: 'idle' })
+  const filesItem = useRef<HTMLButtonElement>(null)
+  const filesInput = useRef<HTMLInputElement>(null)
+  const filesEpoch = useRef(0)
   const root = useRef<HTMLDivElement>(null)
   const menu = useRef<HTMLDivElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
-  const close = () => { setOpen(false); opener.current?.focus() }
+  // Every close path goes through the same reset: a stale submenu must never resurface on reopen.
+  const resetSubmenu = () => { setFilesOpen(false); setFilesQuery(''); setFiles({ kind: 'idle' }); filesEpoch.current += 1 }
+  const close = () => { setOpen(false); resetSubmenu(); opener.current?.focus() }
+  const openFilesMenu = () => {
+    if (workspaceRoot === undefined) return
+    setFilesOpen(true)
+    setFilesQuery('')
+    setFiles({ kind: 'loading' })
+    const epoch = ++filesEpoch.current
+    void listDesktopFileCandidates(workspaceRoot, '').then((result) => {
+      // A slower earlier open must never overwrite a newer one's result.
+      if (epoch !== filesEpoch.current) return
+      setFiles(result.state === 'read'
+        ? { kind: 'read', entries: result.entries, truncated: result.truncated }
+        : { kind: 'refused', code: result.code })
+    })
+  }
+  const backToRoot = () => { resetSubmenu(); filesItem.current?.focus() }
+  useEffect(() => {
+    if (filesOpen) filesInput.current?.focus()
+  }, [filesOpen])
   useEffect(() => {
     if (!open) return
     menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
     const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false)
+      if (event.target instanceof Node && !root.current?.contains(event.target)) { setOpen(false); resetSubmenu() }
     }
     document.addEventListener('pointerdown', outside)
     return () => document.removeEventListener('pointerdown', outside)
@@ -742,6 +782,13 @@ function ContextMenu({ notice }: { readonly notice: (message: string) => void })
   const keys = (event: KeyboardEvent) => {
     if (event.nativeEvent.isComposing) return
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return }
+    // While the file submenu is open the root item cycling stays quiet; Left returns to the root.
+    if (filesOpen) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); event.stopPropagation(); backToRoot() }
+      return
+    }
+    // Observed exit, second half: Left at the context root returns to the input entry.
+    if (event.key === 'ArrowLeft') { event.preventDefault(); event.stopPropagation(); close(); return }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
     const items = Array.from(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])
     if (!items.length) return
@@ -752,25 +799,65 @@ function ContextMenu({ notice }: { readonly notice: (message: string) => void })
     items[next]?.focus()
   }
   return <div className="relative" ref={root} onKeyDown={open ? keys : undefined}
-    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
+    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) { setOpen(false); resetSubmenu() } }}>
     <button className="icon-button" aria-label="添加上下文" aria-haspopup="menu" aria-expanded={open}
       aria-controls={open ? 'desktop-context-menu' : undefined} ref={opener}
       onClick={() => { if (open) close(); else setOpen(true) }}><Icon name="plus" /></button>
-    {open && <div className="small-menu context-menu" id="desktop-context-menu" ref={menu} role="menu" aria-label="上下文类型">
-      {contextItems.map(item => <button type="button" role="menuitem" key={item.label} aria-label={`${item.label}：不可用`}
-        onClick={() => { notice(`${item.label}尚未接通，当前不可用；未添加上下文，草稿已保留。`); close() }}>
-        <span className="composer-context-item"><Icon name={item.icon} size={14} />{item.label}</span><small>不可用</small>
-      </button>)}
+    {open && <div className={`small-menu context-menu${filesOpen ? ' files-open' : ''}`} id="desktop-context-menu" ref={menu} role="menu" aria-label="上下文类型">
+      {contextItems.map(item => item.label === '工作区文件' && workspaceRoot !== undefined
+        ? <div key={item.label} className="context-files">
+          <button type="button" role="menuitem" ref={filesItem} aria-label="工作区文件" aria-haspopup="menu"
+            aria-expanded={filesOpen} className={filesOpen ? 'active' : ''}
+            onClick={() => { if (filesOpen) backToRoot(); else openFilesMenu() }}>
+            <span className="composer-context-item"><Icon name={item.icon} size={14} />{item.label}</span>
+          </button>
+          {filesOpen && <div className="small-menu context-files-menu" aria-label="工作区文件">
+            <input ref={filesInput} className="context-files-search" aria-label="搜索工作区文件"
+              placeholder="搜索工作区文件" value={filesQuery} aria-controls="context-files-rows"
+              onChange={(event) => setFilesQuery(event.target.value)}
+              onKeyDown={(event) => {
+                // Left always stays out of the root handler: with an empty query it means "back
+                // to the root", with a query it keeps its native caret move.
+                if (event.key === 'ArrowLeft') { event.stopPropagation(); if (filesQuery === '') { event.preventDefault(); backToRoot() } }
+              }} />
+            {files.kind === 'loading' ? <p className="context-files-note" role="status">正在读取文件候选……</p> : null}
+            {files.kind === 'refused'
+              ? <p className="context-files-note" role="status">文件候选未接通（{files.code}）</p>
+              : null}
+            {files.kind === 'read'
+              ? (() => {
+                const query = filesQuery.trim().toLowerCase()
+                const rows = query === '' ? files.entries : files.entries.filter((entry) => entry.name.toLowerCase().includes(query))
+                return <>
+                  {rows.length === 0
+                    ? <p className="context-files-note" role="status">没有匹配的文件</p>
+                    : <div id="context-files-rows" role="menu" aria-label="文件候选">
+                      {rows.map((entry) => <button type="button" role="menuitem" key={entry.path} aria-label={`选择文件 ${entry.name}`}
+                        onClick={() => { notice('选择文件作为上下文尚未接通；未附加任何内容，草稿已保留。') }}>
+                        <span className="composer-context-item"><Icon name="file" size={14} />{entry.name}</span>
+                      </button>)}
+                    </div>}
+                  {files.truncated ? <p className="context-files-note">仅显示前 {files.entries.length} 项。</p> : null}
+                </>
+              })()
+              : null}
+          </div>}
+        </div>
+        : <button type="button" role="menuitem" key={item.label} aria-label={`${item.label}：不可用`}
+          onClick={() => { notice(`${item.label}尚未接通，当前不可用；未添加上下文，草稿已保留。`); close() }}>
+          <span className="composer-context-item"><Icon name={item.icon} size={14} />{item.label}</span><small>不可用</small>
+        </button>)}
     </div>}
   </div>
 }
 
-function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, contextUsage, onAction }: {
+function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, contextUsage, workspaceRoot, onAction }: {
   readonly draft: string; readonly changeDraft: (text: string) => void
   readonly notice: string; readonly setNotice: (text: string) => void; readonly navigate: (page: Page) => void
   readonly busy: boolean; readonly uncertain: boolean; readonly hasSession: boolean
   readonly executing: boolean; readonly paused: boolean
   readonly contextUsage: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
+  readonly workspaceRoot: string | undefined
   readonly onAction: (kind: 'send' | 'stop' | 'resume') => Promise<void>
 }): ReactNode {
   const composing = useRef(false)
@@ -790,7 +877,7 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
           }
         }} />
       <div className="composer-toolbar"><div className="composer-tools">
-        <ContextMenu notice={setNotice} />
+        <ContextMenu notice={setNotice} {...(workspaceRoot === undefined ? {} : { workspaceRoot })} />
         <button className="text-button" aria-label="模型状态未知" onClick={() => navigate('模型')}>模型未知 <Icon name="down" size={12} /></button>
       </div>
         {executing && <button className="text-button" aria-label="停止生成" disabled={busy || uncertain} onClick={() => { void onAction('stop') }}>停止生成</button>}
@@ -924,7 +1011,7 @@ export function DesktopPage({
                   <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
         <Composer draft={draft} changeDraft={changeDraft} notice={notice} setNotice={setNotice} navigate={navigate}
           busy={busy} uncertain={uncertain} hasSession={session !== undefined}
-          executing={session?.execution === 'executing'} paused={session?.paused === true} contextUsage={session?.contextUsage ?? null} onAction={actOnSession} />
+          executing={session?.execution === 'executing'} paused={session?.paused === true} contextUsage={session?.contextUsage ?? null} workspaceRoot={session?.context.workspaceRoot} onAction={actOnSession} />
       </div>
     </main>
   </div>

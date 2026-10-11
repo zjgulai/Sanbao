@@ -211,6 +211,15 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
 /* ADR-0306: the extension-management page and the add-custom-MCP form. */
+/* ADR-0311: the 工作区文件 submenu (search + real candidates). The root menu stops scrolling
+   while the flyout is open (a scroll container would clip the absolute submenu), the flyout
+   clears the base bottom:100% (an over-constrained absolute box collapses to zero height),
+   and the flyout itself carries the bounded scroll. */
+.sage-desktop .small-menu.context-menu.files-open { overflow: visible; }
+.sage-desktop .context-files { position: relative; }
+.sage-desktop .context-files-menu { position: absolute; left: 100%; top: 0; bottom: auto; min-width: 220px; max-height: min(390px, 60dvh); overflow-y: auto; display: flex; flex-direction: column; background: var(--sage-surface); border: 1px solid var(--sage-border); border-radius: 7px; padding: 5px; box-shadow: var(--sage-shadow); z-index: 26; }
+.sage-desktop .context-files-search { margin: 6px 8px; padding: 5px 9px; }
+.sage-desktop .context-files-note { margin: 4px 10px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .extensions-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
 .sage-desktop .extensions-page h1 { margin: 0; font-size: 16px; }
 .sage-desktop .connector-section { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 12px; }
