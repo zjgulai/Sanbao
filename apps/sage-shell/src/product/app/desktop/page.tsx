@@ -10,6 +10,7 @@ import { DesktopSettingsView } from './settings-view.js'
 import { useDesktopSession, type DesktopReadState } from './session-controller.js'
 import type { DesktopSession } from './session.js'
 import type { DesktopArtifacts } from './client.js'
+import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
 
@@ -281,8 +282,21 @@ export interface DesktopAccountState {
 
 // Sanbao Controls.tsx:199–234 account menu: structure only — the status and the two auth acts
 // come from the local-system bootstrap read; login fires only from the explicit menu click.
-function AccountEntry({ account, navigate }: { readonly account: DesktopAccountState, readonly navigate: (page: Page) => void }): ReactNode {
+// ADR-0305: the quick appearance submenu (OBS04) — the same controller the settings page uses.
+// The four observed entries map to theme (明暗模式), language, fontStyle and contentWidth; the
+// theme palettes / text size / ui scale stay N/A by ADR-0283 and are deliberately absent.
+const QUICK_APPEARANCE_FIELDS = [
+  { key: 'theme', label: '明暗模式' },
+  { key: 'language', label: '语言' },
+  { key: 'fontStyle', label: '字体风格' },
+  { key: 'contentWidth', label: '内容宽度' },
+] as const
+
+function AccountEntry({ account, navigate, preferences }: { readonly account: DesktopAccountState, readonly navigate: (page: Page) => void, readonly preferences: DevicePreferencesController }): ReactNode {
   const [open, setOpen] = useState(false)
+  const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const [preferenceState, setPreferenceState] = useState(() => preferences.snapshot())
+  useEffect(() => preferences.subscribe(setPreferenceState), [preferences])
   const root = useRef<HTMLDivElement>(null)
   const menu = useRef<HTMLDivElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
@@ -329,12 +343,29 @@ function AccountEntry({ account, navigate }: { readonly account: DesktopAccountS
         disabled={account.busy} onClick={() => { void account.onAction('logout') }}>退出登录</button>}
       {account.read.kind !== 'read' && <button type="button" role="menuitem" aria-label="重新读取账号状态"
         disabled={account.busy} onClick={() => { void account.onRefresh() }}>重新读取账号状态</button>}
+      <button type="button" role="menuitem" aria-label="外观" aria-haspopup="menu" aria-expanded={appearanceOpen}
+        onClick={() => setAppearanceOpen(value => !value)}>外观</button>
+      {appearanceOpen && <div className="small-menu appearance-menu" role="menu" aria-label="快捷外观">
+        {preferenceState.read.kind !== 'read'
+          ? <p className="appearance-note">偏好不可读（{preferenceState.read.code ?? 'device-preferences-unavailable'}）</p>
+          : QUICK_APPEARANCE_FIELDS.map((field) => <label key={field.key} className="appearance-field">
+            {field.label}
+            <select
+              aria-label={field.label}
+              value={preferenceState.read.kind === 'read' ? preferenceState.read.value.requested[field.key] : ''}
+              disabled={preferenceState.saving}
+              onChange={(event) => { void preferences.save({ [field.key]: event.target.value } as DevicePreferencePatch) }}
+            >
+              {(DEVICE_PREFERENCE_OPTIONS[field.key] as readonly string[]).map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>)}
+      </div>}
       <button type="button" role="menuitem" aria-label="账号与设置页" onClick={() => { close(); navigate('账号与设置') }}>账号与设置</button>
     </div>}
   </div>
 }
 
-function Sidebar({ page, navigate, account }: { readonly page: Page; readonly navigate: (page: Page) => void; readonly account: DesktopAccountState }): ReactNode {
+function Sidebar({ page, navigate, account, preferences }: { readonly page: Page; readonly navigate: (page: Page) => void; readonly account: DesktopAccountState; readonly preferences: DevicePreferencesController }): ReactNode {
   const [collapsed, setCollapsed] = useState(false)
   const row = (label: Page, icon: DesktopIconName) => <button type="button"
     className={`sidebar-row ${page === label ? 'active' : ''}`} aria-label={label}
@@ -360,7 +391,7 @@ function Sidebar({ page, navigate, account }: { readonly page: Page; readonly na
       <div className="sidebar-bottom">
         {navigation.map(item => <div key={item.label}>{row(item.label, item.icon)}</div>)}
         <div className="sidebar-divider" />
-        <AccountEntry account={account} navigate={navigate} />
+        <AccountEntry account={account} navigate={navigate} preferences={preferences} />
       </div>
     </nav>
   </aside>
@@ -550,7 +581,7 @@ export function DesktopPage({
     setNotice('建议已填入草稿，尚未发送。')
   }
   return <div className="sage-desktop product-window">
-    <Sidebar page={page} navigate={navigate} account={{ read: accountRead, busy: accountBusy, onAction: actOnAccount, onRefresh: refreshAccount }} />
+    <Sidebar page={page} navigate={navigate} account={{ read: accountRead, busy: accountBusy, onAction: actOnAccount, onRefresh: refreshAccount }} preferences={preferencesController} />
     <main className="product-surface" aria-label="Sage 桌面">
       <div className="home-page"><div className="home-top"><span />
         <button className="text-button" onClick={() => navigate('移动端')}><Icon name="monitor" size={15} />下载移动端 <Icon name="chevron" size={12} /></button>

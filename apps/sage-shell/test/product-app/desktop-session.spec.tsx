@@ -24,7 +24,11 @@ function deferred<T>() {
   const promise = new Promise<T>(yes => { resolve = yes })
   return { promise, resolve }
 }
-async function mount(readState: () => Promise<DesktopRead>, readBootstrap: () => Promise<DesktopBootstrapRead> = unavailableBootstrap) {
+async function mount(
+  readState: () => Promise<DesktopRead>,
+  readBootstrap: () => Promise<DesktopBootstrapRead> = unavailableBootstrap,
+  preferencesController: DevicePreferencesController = inertPreferencesController,
+) {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
@@ -33,7 +37,7 @@ async function mount(readState: () => Promise<DesktopRead>, readBootstrap: () =>
       root.render(createElement(DesktopPage, {
         readState: reader,
         readBootstrap,
-        preferencesController: inertPreferencesController,
+        preferencesController,
       }))
     })
   }
@@ -336,6 +340,42 @@ describe('default desktop session submission lifecycle', () => {
     await click(control(second.container, '运行模式'))
     expect(second.container.textContent).toContain('步骤：不可读（monitor-not-read）')
     expect(second.container.textContent).toContain('设备：未知（device-binding-unavailable）')
+  })
+
+  it('opens the quick appearance submenu and saves through the shared controller (ADR-0305)', async () => {
+    const saves: unknown[] = []
+    const read = {
+      kind: 'read' as const,
+      value: {
+        requested: { theme: 'light' as const, language: 'zh' as const, density: 'comfortable' as const, fontStyle: 'sans' as const, contentWidth: 'standard' as const, terminalTheme: 'follow' as const, fileIcons: 'product' as const, iconAppearance: 'system' as const },
+        savedAt: null, effectiveTheme: 'light' as const,
+      },
+    }
+    const controller: DevicePreferencesController = {
+      snapshot: () => ({ read, saving: false, lastSave: 'idle' }),
+      subscribe: () => () => undefined,
+      refresh: async () => read,
+      save: async (patch) => { saves.push(patch); return { outcome: 'saved', read } },
+    }
+    const { container } = await mount(async () => snapshot(), unavailableBootstrap, controller)
+    await click(control(container, '账号与设置'))
+    await click(control(container, '外观'))
+    const appearance = container.querySelector('[aria-label="快捷外观"]')
+    expect(appearance).not.toBeNull()
+    for (const label of ['明暗模式', '语言', '字体风格', '内容宽度']) {
+      expect(container.querySelector(`select[aria-label="${label}"]`)).not.toBeNull()
+    }
+    const select = container.querySelector<HTMLSelectElement>('select[aria-label="明暗模式"]')!
+    expect(select.value).toBe('light')
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, 'dark')
+    await act(async () => { select.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(saves).toEqual([{ theme: 'dark' }])
+
+    // An unreadable controller shows the honest note instead of invented values.
+    const plain = await mount(async () => snapshot())
+    await click(control(plain.container, '账号与设置'))
+    await click(control(plain.container, '外观'))
+    expect(plain.container.querySelector('.appearance-note')?.textContent).toContain('偏好不可读')
   })
 
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {

@@ -10132,6 +10132,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0305",
+      "title": "ADR-0305 · 弹层族第一刀：账号菜单快捷外观子菜单",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "账号菜单「外观」子菜单四项（明暗模式/语言/字体风格/内容宽度）select 渲染。",
+          "constraints": [
+            "options from DEVICE_PREFERENCE_OPTIONS"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "读订阅 device-preferences controller；变更即 save；不可读示 code。",
+          "constraints": [
+            "one authority",
+            "no invented values"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "不复制设置页控件逻辑；复用 controller 与选项表。",
+          "constraints": [
+            "no second implementation"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "5 行迁 implementing；theme/text-size/ui-scale 保持 N/A；blocker 登记视觉与菜单形态差异。",
+          "constraints": [
+            "summary regenerated"
+          ]
+        }
+      ]
     }
   ]
 }

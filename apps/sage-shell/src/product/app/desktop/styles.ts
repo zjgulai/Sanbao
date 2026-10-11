@@ -195,6 +195,11 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
+/* ADR-0305: the quick appearance submenu inside the account menu. */
+.sage-desktop .appearance-menu { position: absolute; right: 12px; margin-top: 2px; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+.sage-desktop .appearance-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--sage-ink); }
+.sage-desktop .appearance-field select { max-width: 130px; }
+.sage-desktop .appearance-note { margin: 0; font-size: 12px; color: var(--sage-muted); }
 /* ADR-0304: the task monitor page — axes, the review card and its honest empty sections. */
 .sage-desktop .monitor-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
 .sage-desktop .monitor-page h1 { margin: 0; font-size: 16px; }
