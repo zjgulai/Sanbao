@@ -219,6 +219,19 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .mcp-discard p { margin: 0; font-size: 13px; color: var(--sage-ink); }
 .sage-desktop .mcp-discard-actions { display: flex; gap: 10px; }
 .sage-desktop .mcp-discard-confirm { color: var(--sage-danger); }
+/* Loop-Q R9: the knowledge-centre and sites page shells — geometry only, palette from
+   product/theme-tokens.ts; the data area shows the named not-wired reason, never rows. */
+.sage-desktop .knowledge-page, .sage-desktop .sites-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
+.sage-desktop .knowledge-page h1, .sage-desktop .sites-page h1 { margin: 0; font-size: 16px; }
+.sage-desktop .page-tabs { display: flex; gap: 6px; }
+.sage-desktop .page-tabs [role="tab"] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; background: transparent; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .page-tabs [role="tab"].active { color: var(--sage-ink); border-color: var(--sage-brand); }
+.sage-desktop .page-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sage-desktop .page-tools [aria-pressed] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .page-tools [aria-pressed].active { color: var(--sage-ink); border-color: var(--sage-brand); }
+.sage-desktop .page-tools input { flex: 1; min-width: 140px; max-width: 240px; padding: 5px 9px; border: 1px solid var(--sage-border); border-radius: 5px; background: var(--sage-raised); color: var(--sage-ink); font-size: 12px; }
+.sage-desktop .page-tools input::placeholder { color: var(--sage-faint); }
+.sage-desktop .page-note { margin: 0; font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
 /* ADR-0305: the quick appearance submenu inside the account menu. */
 .sage-desktop .appearance-menu { position: absolute; right: 12px; margin-top: 2px; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
 .sage-desktop .appearance-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--sage-ink); }

@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 59,
-        "pending": 139,
+        "implementing": 66,
+        "pending": 132,
         "verified": 8
       },
       "applicationService": {
@@ -7503,8 +7503,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7525,7 +7536,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the sidebar entry reaches the real knowledge page (h1 + tabs); page internals beyond the shell are not verified; no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -7570,8 +7581,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -7592,7 +7614,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the sidebar entry reaches the real sites page (h1 + tabs); no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -9772,8 +9794,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9794,7 +9827,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the knowledge page shell renders the observed tab split and view toggle; the data area answers the named not-wired reason instead of the observed empty-list copy (no provider = no list claim); no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -9906,8 +9939,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -9928,7 +9972,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the sites page shell renders the observed tab split; the data area answers the named not-wired reason instead of the observed empty-list copy; no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10186,8 +10230,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10208,7 +10263,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the Repo Wiki tab renders the 全部/已生成 filter pair; the data area stays the named not-wired note (no fabricated generated-empty); no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -10387,8 +10442,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -10409,7 +10475,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 共享给我的 tab renders and keeps the named not-wired note; sharing details are not assembled; no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },
@@ -12937,8 +13003,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t12",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-knowledge-sites.spec.tsx",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -12959,7 +13036,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the Repo Wiki search input accepts a query, keeps it, and the data area stays the named not-wired note — never a fabricated no-match; no knowledge/sites provider exists — the data area shows the named not-wired state (never an empty list); the real store/publish chain needs its own provider ticket; applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },

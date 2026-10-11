@@ -303,7 +303,9 @@ describe('T01 composer has no business write authority', () => {
     // 工作区 no longer shows the outstanding placeholder; it is covered by the T03 describes below.
     // 搜索 likewise left this loop: T03-D wires it to the real search route (desktop-search.spec.tsx).
     // 扩展 left this loop too: ADR-0306 gives it the extension-management page (desktop-mcp-form.spec.tsx).
-    for (const label of ['知识中心', '站点', '自动化']) {
+    // 知识中心/站点 also left this loop: Loop-Q R9 upgrades them to real page shells
+    // (desktop-knowledge-sites.spec.tsx) — they never showed the outstanding placeholder again.
+    for (const label of ['自动化']) {
       click(button(container, label))
       expect(node(container, 'h1').textContent).toBe(label)
       expect(node(container, '.outstanding-feature').textContent).toContain('尚未接通')

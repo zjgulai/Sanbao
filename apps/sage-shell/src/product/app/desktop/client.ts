@@ -17,7 +17,25 @@ export type DesktopRead =
       readonly artifacts?: DesktopArtifacts
       /** ADR-0304: the run-monitor slot (steps + the honest unknown axes). */
       readonly monitor?: DesktopRunMonitor
+      /** Loop-Q R9: the knowledge readout slot ({state, reason} only). */
+      readonly readoutKnowledge?: DesktopReadoutKnowledge
     }
+
+/** Loop-Q R9: the knowledge readout as the knowledge page displays it — the honest named
+ *  state/reason pair; the slot is omitted entirely when the envelope carries nothing usable. */
+export interface DesktopReadoutKnowledge {
+  readonly state: string
+  readonly reason: string
+}
+
+// Loop-Q R9: tolerant like parseMonitor — a present {state, reason} pair of nonempty strings is
+// carried; anything missing or malformed omits the slot instead of failing the read.
+function parseReadoutKnowledge(input: unknown): DesktopReadoutKnowledge | null {
+  if (!isRecord(input)) return null
+  return typeof input.state === 'string' && input.state !== '' && typeof input.reason === 'string' && input.reason !== ''
+    ? { state: input.state, reason: input.reason }
+    : null
+}
 
 /** ADR-0304: the run monitor as the desktop displays it — the steps axis plus honest
  *  state/reason rows (an unknown axis keeps its named reason; it is never a zero). */
@@ -230,6 +248,8 @@ export function classifyDesktopState(input: unknown): DesktopRead {
   const activeContext = parseActiveContext(input.activeContext)
   const artifacts = parseArtifacts(input.artifacts)
   const monitor = parseMonitor(input.runMonitor)
+  const readout = isRecord(input.readout) ? input.readout : null
+  const readoutKnowledge = parseReadoutKnowledge(readout === null ? null : readout.knowledge)
   return {
     kind: 'read',
     runtime: { status: runtime.status, message: RUNTIME_MESSAGES[runtime.status], retryable: runtime.retryable },
@@ -239,6 +259,7 @@ export function classifyDesktopState(input: unknown): DesktopRead {
     ...(activeContext === null ? {} : { activeContext }),
     ...(artifacts === null ? {} : { artifacts }),
     ...(monitor === null ? {} : { monitor }),
+    ...(readoutKnowledge === null ? {} : { readoutKnowledge }),
   }
 }
 

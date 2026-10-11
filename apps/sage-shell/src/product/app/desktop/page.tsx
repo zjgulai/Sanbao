@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 import { SAGE_LOGIN_PATH, SAGE_LOGOUT_PATH, SAGE_REQUEST_TIMEOUT_MS } from '../../contracts.js'
-import { readDesktopBootstrapState, readDesktopState, type DesktopBootstrapRead, type DesktopRead } from './client.js'
+import { readDesktopBootstrapState, readDesktopState, type DesktopBootstrapRead, type DesktopRead, type DesktopReadoutKnowledge } from './client.js'
 import { adoptDesktopWorkspace } from './adopt.js'
 import { Icon, TreeStamp, type DesktopIconName } from './icons.js'
 import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, type DesktopSearchSessions } from './search.js'
@@ -27,10 +27,8 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
-  知识中心: '知识中心尚未接通；不会展示虚构知识条目。',
-  站点: '站点尚未接通；没有创建、发布或打开站点。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
   模型: '模型选择尚未接通；配置与可用状态未知。',
@@ -273,6 +271,62 @@ function SearchPage({ navigate }: { readonly navigate: (page: Page) => void }): 
     {notice !== '' && <p className="search-note" role="status">{notice}</p>}
     {outcome !== undefined && <SearchResult outcome={outcome} />}
     <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button>
+  </section>
+}
+
+// Loop-Q R9 (OBS02/OBS03): the knowledge-centre and sites page shells. No knowledge-store,
+// Repo Wiki or sites provider exists yet, so the data area shows the named not-wired reason and
+// never an empty-list phrase — "no provider" is not "empty list". The tabs, view toggles and the
+// search input structure the page only; nothing here posts, creates or generates.
+function notWiredNote(slot: DesktopReadoutKnowledge | undefined, fallbackReason: string): ReactNode {
+  const reason = slot !== undefined && slot.state === 'not-wired' ? slot.reason : fallbackReason
+  return <p className="page-note" role="status">{`知识库服务未接通（${reason}）`}</p>
+}
+
+export function KnowledgePage({ readoutKnowledge }: { readonly readoutKnowledge?: DesktopReadoutKnowledge }): ReactNode {
+  const [view, setView] = useState<'知识库' | 'Repo Wiki'>('知识库')
+  const [layout, setLayout] = useState<'卡片' | '列表'>('卡片')
+  const [wikiFilter, setWikiFilter] = useState<'全部' | '已生成'>('全部')
+  const [wikiQuery, setWikiQuery] = useState('')
+  return <section className="knowledge-page" aria-label="知识中心">
+    <h1>知识中心</h1>
+    <div className="page-tabs" role="tablist" aria-label="知识视图">
+      <button type="button" role="tab" aria-label="知识库" aria-selected={view === '知识库'} className={view === '知识库' ? 'active' : ''}
+        onClick={() => setView('知识库')}>知识库</button>
+      <button type="button" role="tab" aria-label="Repo Wiki" aria-selected={view === 'Repo Wiki'} className={view === 'Repo Wiki' ? 'active' : ''}
+        onClick={() => setView('Repo Wiki')}>Repo Wiki</button>
+    </div>
+    {view === '知识库'
+      ? <>
+        <div className="page-tools" aria-label="视图切换">
+          {(['卡片', '列表'] as const).map(label => <button key={label} type="button" aria-pressed={layout === label}
+            className={layout === label ? 'active' : ''} onClick={() => setLayout(label)}>{label}</button>)}
+        </div>
+        {notWiredNote(readoutKnowledge, 'knowledge-store-unavailable')}
+      </>
+      : <>
+        <div className="page-tools" aria-label="Repo Wiki 筛选">
+          {(['全部', '已生成'] as const).map(label => <button key={label} type="button" aria-pressed={wikiFilter === label}
+            className={wikiFilter === label ? 'active' : ''} onClick={() => setWikiFilter(label)}>{label}</button>)}
+          <input aria-label="搜索 Repo Wiki 项目" placeholder="搜索项目" value={wikiQuery}
+            onChange={(event) => setWikiQuery(event.target.value)} />
+        </div>
+        {notWiredNote(readoutKnowledge, 'knowledge-store-unavailable')}
+      </>}
+  </section>
+}
+
+export function SitesPage(): ReactNode {
+  const [view, setView] = useState<'我的站点' | '共享给我的'>('我的站点')
+  return <section className="sites-page" aria-label="站点">
+    <h1>站点</h1>
+    <div className="page-tabs" role="tablist" aria-label="站点视图">
+      <button type="button" role="tab" aria-label="我的站点" aria-selected={view === '我的站点'} className={view === '我的站点' ? 'active' : ''}
+        onClick={() => setView('我的站点')}>我的站点</button>
+      <button type="button" role="tab" aria-label="共享给我的" aria-selected={view === '共享给我的'} className={view === '共享给我的' ? 'active' : ''}
+        onClick={() => setView('共享给我的')}>共享给我的</button>
+    </div>
+    <p className="page-note" role="status">站点服务未接通（sites-store-unavailable）</p>
   </section>
 }
 
@@ -619,6 +673,10 @@ export function DesktopPage({
               onArtifactWindow={(action) => runArtifactAction(() => setDesktopArtifactWindow(action))} />)
           : page === '扩展'
             ? <ExtensionsPage />
+          : page === '知识中心'
+            ? <KnowledgePage {...(state.kind === 'read' && state.readoutKnowledge !== undefined ? { readoutKnowledge: state.readoutKnowledge } : {})} />
+          : page === '站点'
+            ? <SitesPage />
           : page === '运行模式'
             ? <MonitorPage state={state}
               {...(session === undefined ? {} : { session })}

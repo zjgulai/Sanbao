@@ -34,6 +34,7 @@ describe('desktop service response classification', () => {
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
+      readoutKnowledge: { state: 'not-wired', reason: 'knowledge-store-unavailable' },
       monitor: {
         state: 'unavailable',
         steps: { state: 'unavailable', lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' },
@@ -92,6 +93,7 @@ describe('desktop service response classification', () => {
       workspaces: { state: 'unavailable', reason: 'not-read', entries: [], order: [], archivedSessions: 0, frames: 0, unapplied: 0 },
       matterLinks: { state: 'unavailable', links: [] },
       artifacts: { state: 'unavailable', cards: [], preview: { state: 'closed' } },
+      readoutKnowledge: { state: 'not-wired', reason: 'knowledge-store-unavailable' },
       monitor: {
         state: 'unavailable',
         steps: { state: 'unavailable', lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' },

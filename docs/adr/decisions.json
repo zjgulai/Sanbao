@@ -10212,6 +10212,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0307",
+      "title": "ADR-0307 · 知识/站点页壳第一批：诚实不可用而非空列表",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "知识中心/站点升为实页壳（双 tab/视图切换/筛选/搜索），形态依观察。",
+          "constraints": [
+            "no submit/create/generate buttons"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "数据区具名未接通（readoutKnowledge 槽优先、fallback 常量）；绝不空列表；搜索可输入且保留。",
+          "constraints": [
+            "no provider != empty list"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "loading 骨架与 wide 依赖面留 pending；不放假声明。",
+          "constraints": [
+            "registered blockers"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "7 行迁 implementing；summary 生成器重算。",
+          "constraints": [
+            "deriveSummary"
+          ]
+        }
+      ]
     }
   ]
 }
