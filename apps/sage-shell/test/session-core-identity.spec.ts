@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createSessionCoreIdentityPort } from '../src/main/session-core-identity.js'
+import { ACTION_AUTHORITY_TABLE } from '../src/main/action-authority-table.js'
 import { createTokenVault } from '../src/main/token-vault.js'
 import type { TokenVault, VaultSession } from '../src/main/token-vault.js'
 import { resolveSagePaths } from '../src/profile/paths.js'
@@ -48,6 +49,17 @@ function policy(grants: readonly unknown[]): Record<string, unknown> {
     grants,
   }
 }
+
+describe('ADR-0317: the session-control registry rows', () => {
+  it('registers the six operations with their ruled effect classes', () => {
+    expect(ACTION_AUTHORITY_TABLE['session.approval.answer']).toMatchObject({ operation: 'session.approval.answer', actionScope: 'session.approval', effectClass: 'external-write', requiresDecision: true })
+    expect(ACTION_AUTHORITY_TABLE['session.approval.withdraw']).toMatchObject({ operation: 'session.approval.withdraw', actionScope: 'session.approval', effectClass: 'external-write', requiresDecision: false })
+    expect(ACTION_AUTHORITY_TABLE['session.pending.edit']).toMatchObject({ effectClass: 'local-write', requiresDecision: false })
+    expect(ACTION_AUTHORITY_TABLE['session.pending.remove']).toMatchObject({ effectClass: 'local-write', requiresDecision: false })
+    expect(ACTION_AUTHORITY_TABLE['session.queue.edit']).toMatchObject({ effectClass: 'external-write', requiresDecision: false })
+    expect(ACTION_AUTHORITY_TABLE['session.queue.remove']).toMatchObject({ effectClass: 'external-write', requiresDecision: false })
+  })
+})
 
 describe('the session-family identity port (ADR-0275)', () => {
   let home: string

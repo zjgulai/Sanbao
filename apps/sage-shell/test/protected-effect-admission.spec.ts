@@ -297,6 +297,37 @@ describe('admitProtectedEffect', () => {
     expect(JSON.stringify(result)).not.toContain('secret')
   })
 
+  it('carries each session-control receipt detail through the dispatched result (ADR-0317)', async () => {
+    const details = [
+      { kind: 'approval-answer-recorded' as const, requestId: 'approval:1' },
+      { kind: 'approval-withdraw-recorded' as const, requestId: 'approval:1' },
+      { kind: 'pending-edited' as const, itemId: 'pending:1' },
+      { kind: 'pending-removed' as const, itemId: 'pending:1' },
+      { kind: 'queue-edited' as const, itemId: 'queue:1' },
+      { kind: 'queue-removed' as const, itemId: 'queue:1' },
+    ]
+    for (const detail of details) {
+      const { ports } = recordingPorts()
+      const dispatchSpy = vi.fn(async () => ({ state: 'receipt' as const, receiptRef: `receipt:${detail.kind}`, detail }))
+      const result = await admitProtectedEffect({ intent, correlation: `corr-${detail.kind}`, ports: { ...ports, dispatch: dispatchSpy } })
+      expect(result).toMatchObject({ state: 'dispatched', detail })
+    }
+  })
+
+  it('answers outcome-unknown for a malformed session-control detail (ADR-0317)', async () => {
+    const malformed = [
+      { kind: 'approval-answer-recorded' },
+      { kind: 'pending-edited', itemId: '' },
+      { kind: 'queue-removed', itemId: 7 },
+    ]
+    for (const detail of malformed) {
+      const { ports } = recordingPorts()
+      const dispatchSpy = vi.fn(async () => ({ state: 'receipt' as const, receiptRef: 'receipt-1', detail: detail as never }))
+      const result = await admitProtectedEffect({ intent, correlation: 'corr-bad-detail', ports: { ...ports, dispatch: dispatchSpy } })
+      expect(result).toMatchObject({ state: 'outcome-unknown' })
+    }
+  })
+
   it('preserves an explicit unknown dispatch outcome without replaying it', async () => {
     const { ports, calls } = recordingPorts()
     const dispatchSpy = vi.fn(async () => {

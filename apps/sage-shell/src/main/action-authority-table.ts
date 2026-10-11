@@ -55,4 +55,50 @@ export const ACTION_AUTHORITY_TABLE: Readonly<Record<string, ActionAuthorityEntr
     effectClass: 'local-write',
     requiresDecision: false,
   } satisfies ActionAuthorityEntry),
+  // B batch (ADR-0317): the session-control write path. Answering a wait IS itself a decision
+  // that releases an external effect, so it carries requiresDecision; withdrawing merely closes
+  // the wait. Pending-input edits touch only the Sage-owned store (local-write, same class as
+  // session.prepare); queue edits change content queued for the model (external-write).
+  'session.approval.answer': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.approval.answer',
+    actionScope: 'session.approval',
+    effectClass: 'external-write',
+    requiresDecision: true,
+  } satisfies ActionAuthorityEntry),
+  'session.approval.withdraw': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.approval.withdraw',
+    actionScope: 'session.approval',
+    effectClass: 'external-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'session.pending.edit': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.pending.edit',
+    actionScope: 'session.pending',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'session.pending.remove': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.pending.remove',
+    actionScope: 'session.pending',
+    effectClass: 'local-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'session.queue.edit': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.queue.edit',
+    actionScope: 'session.queue',
+    effectClass: 'external-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
+  'session.queue.remove': Object.freeze({
+    requiredRoleRef: 'role:owner',
+    operation: 'session.queue.remove',
+    actionScope: 'session.queue',
+    effectClass: 'external-write',
+    requiresDecision: false,
+  } satisfies ActionAuthorityEntry),
 })

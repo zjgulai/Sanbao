@@ -10663,6 +10663,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0317",
+      "title": "ADR-0317 · 审批写路径落装（B 批）阶段一：声明层与 kernel 六态",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "表六行 + effectClass 裁定（answer 需决策；pending local-write；queue withdraw external-write）。",
+          "constraints": [
+            "exact pin in authorization-assembly.spec"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "kernel 六态 detail + 守卫；畸形 detail 拒绝为 outcome-unknown。",
+          "constraints": [
+            "named receipt identity per route"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "本阶段后已登录无 grant → denied；未登录 → unavailable；端到端生效待阶段二。",
+          "constraints": [
+            "fail closed"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "阶段二 publications 再封印（owner decision=需用户裁定）；三至七按序 dispatch/persistence/composition/gate/文案。",
+          "constraints": [
+            "no fabricated owner decisions"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "表钉子扩十行 + 六行逐条断言。",
+          "constraints": [
+            "deliberate edit per new action type"
+          ]
+        }
+      ]
     }
   ]
 }

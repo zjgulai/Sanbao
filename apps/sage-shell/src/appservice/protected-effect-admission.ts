@@ -133,6 +133,14 @@ export type SessionCoreDispatchDetail =
       readonly kind: 'session-send-deferred'
       readonly itemId: string
     }
+  // B batch (ADR-0317): the session-control receipts — one per operation, each carrying the
+  // identity the route answered on (never a bare "ok").
+  | { readonly kind: 'approval-answer-recorded', readonly requestId: string }
+  | { readonly kind: 'approval-withdraw-recorded', readonly requestId: string }
+  | { readonly kind: 'pending-edited', readonly itemId: string }
+  | { readonly kind: 'pending-removed', readonly itemId: string }
+  | { readonly kind: 'queue-edited', readonly itemId: string }
+  | { readonly kind: 'queue-removed', readonly itemId: string }
 
 export type ProtectedEffectDispatchResult =
   | { readonly state: 'receipt'; readonly receiptRef: string; readonly detail?: SessionCoreDispatchDetail }
@@ -311,6 +319,9 @@ function isSessionCoreDispatchDetail(value: unknown): value is SessionCoreDispat
       && (value.mode === 'queue' || value.mode === 'steer')
   }
   if (value.kind === 'session-send-deferred') return isRef(value.itemId)
+  if (value.kind === 'approval-answer-recorded' || value.kind === 'approval-withdraw-recorded') return isRef(value.requestId)
+  if (value.kind === 'pending-edited' || value.kind === 'pending-removed'
+    || value.kind === 'queue-edited' || value.kind === 'queue-removed') return isRef(value.itemId)
   return false
 }
 
