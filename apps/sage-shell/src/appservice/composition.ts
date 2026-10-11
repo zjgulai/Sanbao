@@ -458,6 +458,7 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         sessionChannel: await (options.sessionChannel?.() ?? Promise.resolve({
           state: 'unavailable' as const, sessionId: null, execution: 'idle' as const, lastTurnEnd: null, lastTurnEndEdge: null,
           turnProcess: { durationMs: null, iterations: null, fileWrites: [] },
+          contextUsage: null,
           reply: { text: null, endKind: null, failed: false, actions: [] },
           transcript: [], reconciled: false, streamBroken: false, code: null, records: 0, unapplied: 0,
           paused: false, pending: [],

@@ -380,11 +380,12 @@ function ContextMenu({ notice }: { readonly notice: (message: string) => void })
   </div>
 }
 
-function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, onAction }: {
+function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, contextUsage, onAction }: {
   readonly draft: string; readonly changeDraft: (text: string) => void
   readonly notice: string; readonly setNotice: (text: string) => void; readonly navigate: (page: Page) => void
   readonly busy: boolean; readonly uncertain: boolean; readonly hasSession: boolean
   readonly executing: boolean; readonly paused: boolean
+  readonly contextUsage: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
   readonly onAction: (kind: 'send' | 'stop' | 'resume') => Promise<void>
 }): ReactNode {
   const composing = useRef(false)
@@ -420,7 +421,12 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
       </p>}
       {notice && <p className="composer-local-note" role="status">{notice}</p>}
     </div>
-    <p>{uncertain ? '结果未知 · 重新读取不代表允许重发' : hasSession ? '操作结果以服务回执和会话记录为准' : '思考、创作、执行，都从这里开始 · 发送尚未接通'}</p>
+    <p>
+      {contextUsage !== null && contextUsage.pressureTokens !== null && contextUsage.contextWindow !== null
+        ? <span className="context-usage" title={`${contextUsage.pressureTokens} / ${contextUsage.contextWindow} tokens`}>上下文 {Math.round((contextUsage.pressureTokens / contextUsage.contextWindow) * 100)}%</span>
+        : null}
+      {uncertain ? '结果未知 · 重新读取不代表允许重发' : hasSession ? '操作结果以服务回执和会话记录为准' : '思考、创作、执行，都从这里开始 · 发送尚未接通'}
+    </p>
   </div>
 }
 
@@ -518,7 +524,7 @@ export function DesktopPage({
                   <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
         <Composer draft={draft} changeDraft={changeDraft} notice={notice} setNotice={setNotice} navigate={navigate}
           busy={busy} uncertain={uncertain} hasSession={session !== undefined}
-          executing={session?.execution === 'executing'} paused={session?.paused === true} onAction={actOnSession} />
+          executing={session?.execution === 'executing'} paused={session?.paused === true} contextUsage={session?.contextUsage ?? null} onAction={actOnSession} />
       </div>
     </main>
   </div>

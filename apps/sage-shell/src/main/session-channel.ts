@@ -195,6 +195,20 @@ function eventTime(event: Record<string, unknown>): number | null {
   return typeof event.time === 'number' && Number.isSafeInteger(event.time) && event.time >= 0 ? event.time : null
 }
 
+/** ADR-0303: the snapshot's context-pressure projection, validated; null when absent or malformed
+ *  (the host may carry none at all — the surface then simply has no occupancy figure). */
+function contextPressureOf(projections: unknown): { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null {
+  if (!isRecord(projections)) return null
+  const pressure = projections.contextPressure
+  if (!isRecord(pressure)) return null
+  const tokens = typeof pressure.pressureTokens === 'number' && Number.isSafeInteger(pressure.pressureTokens) && pressure.pressureTokens >= 0
+    ? pressure.pressureTokens : null
+  const window = typeof pressure.contextWindow === 'number' && Number.isSafeInteger(pressure.contextWindow) && pressure.contextWindow > 0
+    ? pressure.contextWindow : null
+  if (tokens === null && window === null) return null
+  return { pressureTokens: tokens, contextWindow: window }
+}
+
 /** Display basename only — a machine path never crosses this fold. */
 function baseNameOf(value: unknown): string | null {
   if (typeof value !== 'string' || value === '') return null
@@ -215,9 +229,12 @@ interface Fold {
   /** Only attachment-bearing user messages are folded: plain text history rows stayed hidden (005). */
   readonly userMessages: readonly FoldedUserMessage[]
   readonly turnProcess: FoldTurnProcess
+  /** ADR-0303: the newest snapshot's context-pressure projection (null until the host carries
+   *  one). Fields stay independent — a fresh capacity may pair with an older pressure. */
+  readonly contextPressure: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
 }
 
-const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [], turnProcess: EMPTY_TURN_PROCESS }
+const EMPTY_FOLD: Fold = { assistantText: null, cursor: -1, executingTurn: null, lastTurnEnd: null, lastTurnEndEdge: null, records: 0, unapplied: 0, userMessages: [], turnProcess: EMPTY_TURN_PROCESS, contextPressure: null }
 
 /** Fold the session log: an open turn is the only "executing" evidence; the final text is the last
  *  `assistant/message`. Unknown frames are counted, never interpreted. */
@@ -243,7 +260,7 @@ export function foldSessionFrames(frames: readonly unknown[]): Fold {
       const records = Array.isArray(frame.records) ? frame.records : []
       const snapshotFold = foldSessionRecords(records)
       const cursor = typeof frame.cursor === 'number' && Number.isSafeInteger(frame.cursor) ? frame.cursor : snapshotFold.cursor
-      fold = { ...snapshotFold, cursor, records: records.length }
+      fold = { ...snapshotFold, cursor, records: records.length, contextPressure: contextPressureOf(frame.projections) }
       continue
     }
     if (frame.type === 'assistant-stream') {
@@ -586,6 +603,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         return {
           state: 'no-session', sessionId: null, execution: 'idle', lastTurnEnd: null, lastTurnEndEdge: null,
           turnProcess: turnProcessView(EMPTY_TURN_PROCESS),
+          contextUsage: null,
           reply: { text: null, endKind: null, failed: false, actions: [] },
           transcript: [],
           reconciled: false, streamBroken: false, code: null, records: 0, unapplied: 0,
@@ -630,6 +648,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
             lastTurnEnd: pageFold.lastTurnEnd,
             lastTurnEndEdge: pageFold.lastTurnEndEdge,
             turnProcess: pageFold.turnProcess,
+            contextPressure: pageFold.contextPressure ?? fold.contextPressure,
             unapplied: fold.unapplied + pageFold.unapplied,
             records: fold.records + page.result.records.length,
             userMessages: appendUserMessages(fold.userMessages, pageFold.userMessages),
@@ -676,6 +695,7 @@ export function createSessionChannel(callBridge: BridgeCaller, deps: SessionChan
         lastTurnEnd: fold.lastTurnEnd,
         lastTurnEndEdge: fold.lastTurnEndEdge,
         turnProcess: turnProcessView(fold.turnProcess),
+        contextUsage: fold.contextPressure,
         reply,
         transcript,
         reconciled,

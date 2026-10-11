@@ -183,6 +183,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
           lastTurnEnd: pageFold.lastTurnEnd,
           lastTurnEndEdge: pageFold.lastTurnEndEdge,
           turnProcess: pageFold.turnProcess,
+          contextPressure: pageFold.contextPressure ?? fold.contextPressure,
           unapplied: fold.unapplied + pageFold.unapplied,
           records: fold.records + page.result.records.length,
         }
@@ -217,6 +218,7 @@ export function createSideChats(deps: SideChatsDeps): SideChats {
       lastTurnEnd: fold.lastTurnEnd,
       lastTurnEndEdge: fold.lastTurnEndEdge,
       turnProcess: turnProcessView(fold.turnProcess),
+      contextUsage: fold.contextPressure,
       reply,
       transcript,
       reconciled,

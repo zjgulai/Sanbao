@@ -106,6 +106,26 @@ describe('the turn process fold (ADR-0301)', () => {
     expect(JSON.stringify(createdView)).not.toContain('/w/')
   })
 
+  it('folds the snapshot context-pressure projection when the host carries one (ADR-0303)', () => {
+    const withPressure = foldSessionFrames([
+      { type: 'snapshot', header: {}, cursor: 3, records: [], hasMore: false, projections: { contextPressure: { pressureTokens: 12000, contextWindow: 80000 } } },
+    ])
+    expect(withPressure.contextPressure).toEqual({ pressureTokens: 12000, contextWindow: 80000 })
+
+    // Absent or malformed projections leave the surface without a figure (null, never a guess).
+    const absent = foldSessionFrames([{ type: 'snapshot', header: {}, cursor: 0, records: [], hasMore: false, projections: {} }])
+    expect(absent.contextPressure).toBeNull()
+    const malformed = foldSessionFrames([
+      { type: 'snapshot', header: {}, cursor: 0, records: [], hasMore: false, projections: { contextPressure: { pressureTokens: -5, contextWindow: 0 } } },
+    ])
+    expect(malformed.contextPressure).toBeNull()
+    // Partial projections survive with their valid half.
+    const partial = foldSessionFrames([
+      { type: 'snapshot', header: {}, cursor: 0, records: [], hasMore: false, projections: { contextPressure: { contextWindow: 80000 } } },
+    ])
+    expect(partial.contextPressure).toEqual({ pressureTokens: null, contextWindow: 80000 })
+  })
+
   it('marks a failed tool result and resets the process on the next turn start', () => {
     const failed = foldSessionFrames([
       { type: 'event', event: { type: 'turn/start', seq: 1, time: 0, data: { turn: 1 } } },

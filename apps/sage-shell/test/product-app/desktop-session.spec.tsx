@@ -294,6 +294,20 @@ describe('default desktop session submission lifecycle', () => {
     expect(item?.querySelector('.diff-new')?.textContent).toContain('+ line-c')
   })
 
+  it('shows the context-occupancy chip only when the projection carries both figures (ADR-0303)', async () => {
+    const payload = desktopSessionPayload()
+    const withUsage = classifyDesktopState({
+      ...payload,
+      sessionChannel: { ...payload.sessionChannel, contextUsage: { pressureTokens: 12000, contextWindow: 80000 } },
+    })
+    const { container } = await mount(async () => withUsage)
+    expect(container.querySelector('.context-usage')?.textContent).toBe('上下文 15%')
+
+    // A context without the projection renders no chip (absent, never an invented number).
+    const plain = await mount(async () => snapshot())
+    expect(plain.container.querySelector('.context-usage')).toBeNull()
+  })
+
   it('does not clear a new-context draft or display a previous request receipt after reader replacement', async () => {
     const pending = deferred<Response>()
     vi.stubGlobal('fetch', () => pending.promise)

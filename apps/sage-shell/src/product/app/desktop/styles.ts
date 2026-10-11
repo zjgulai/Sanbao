@@ -195,6 +195,8 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .turn-process-label { color: var(--sage-muted); }
+/* ADR-0303: the context-occupancy chip — reference only, never a gating number. */
+.sage-desktop .context-usage { display: inline-block; margin-right: 10px; padding: 1px 8px; border: 1px solid var(--sage-border); border-radius: 999px; font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .turn-process-summary { color: var(--sage-muted); }
 .sage-desktop .turn-process-files summary { cursor: pointer; color: var(--sage-muted); }
 .sage-desktop .turn-item-diff summary { cursor: pointer; color: var(--sage-muted); }

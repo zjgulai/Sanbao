@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 28,
-        "pending": 170,
+        "implementing": 29,
+        "pending": 169,
         "verified": 8
       },
       "applicationService": {
@@ -1182,7 +1182,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the desktop task-monitor surface does not exist yet — the review card needs its own monitor-region slice (registered as the next Loop-Q round); the observed card itself (产出/来源 empty) needs the real task chain; visualAcceptance pending"
         ]
       }
     },
@@ -1227,8 +1227,19 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t10",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/session-channel.spec.ts",
+              "countsAsVerification": false
+            },
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-session.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -1249,7 +1260,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the occupancy chip renders the host’s own contextPressure projection (percent = pressure/window); whether the real host delivers snapshot.projections is verified on-device; 明细（context breakdown）与压缩（compaction）未复刻——row notes 亦未观测该两面；applicationService/hostIntegration/visualAcceptance still pending"
         ]
       }
     },

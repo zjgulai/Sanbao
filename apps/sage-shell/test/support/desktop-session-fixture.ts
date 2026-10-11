@@ -33,6 +33,7 @@ export function desktopSessionPayload() {
     ],
     reconciled: true, streamBroken: false, code: null, records: 2, unapplied: 0,
     turnProcess: { durationMs: null, iterations: null, fileWrites: [] },
+    contextUsage: null,
     paused: false, pending: [], queue: { state: 'read', occurrences: [] },
   } satisfies SessionChannelStatus
   // ADR-0300: the artifact slot rides the same envelope; the default fixture carries none.

@@ -821,6 +821,12 @@ export interface SessionChannelStatus {
       }[]
     }[]
   }
+  /** ADR-0303: the host's context-pressure projection (newest snapshot), or null when the host
+   *  carries none. Reference only — never a billing or gating input. */
+  readonly contextUsage: {
+    readonly pressureTokens: number | null
+    readonly contextWindow: number | null
+  } | null
   readonly transcript: readonly SessionChannelEntry[]
   /** true when the final text was (re)read from history — the post-break reconciliation. */
   readonly reconciled: boolean

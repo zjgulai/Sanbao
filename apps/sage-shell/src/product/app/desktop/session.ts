@@ -18,6 +18,8 @@ export interface DesktopSession {
   readonly lastTurnEnd: string | null
   /** ADR-0301: the last turn's process facts (display-only; tolerant parse below). */
   readonly turnProcess: DesktopTurnProcess
+  /** ADR-0303: the host's context-pressure projection, or null when absent. */
+  readonly contextUsage: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
   readonly paused: boolean
   readonly streamBroken: boolean
   readonly canSubmit: boolean
@@ -119,6 +121,18 @@ function parseTurnProcess(input: unknown): DesktopTurnProcess {
   }
 }
 
+/** ADR-0303: display-only, tolerant — absent or malformed pieces stay null. */
+function parseContextUsage(input: unknown): { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null {
+  if (!isRecord(input)) return null
+  const countOf = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null
+  const pressureTokens = countOf(input.pressureTokens)
+  const contextWindow = typeof input.contextWindow === 'number' && Number.isSafeInteger(input.contextWindow) && input.contextWindow > 0
+    ? input.contextWindow : null
+  if (pressureTokens === null && contextWindow === null) return null
+  return { pressureTokens, contextWindow }
+}
+
 export function parseDesktopSession(input: unknown): DesktopSession | null {
   if (!isRecord(input)) return null
   const { service, activeContext: active, matter, workspaces, matterLinks, sessionChannel: channel } = input
@@ -165,6 +179,7 @@ export function parseDesktopSession(input: unknown): DesktopSession | null {
     },
     title: matter.matter.goal, messages, execution: channel.execution, lastTurnEnd: channel.lastTurnEnd,
     turnProcess: parseTurnProcess(channel.turnProcess),
+    contextUsage: parseContextUsage(channel.contextUsage),
     paused: channel.paused, streamBroken: channel.streamBroken,
     canSubmit: matter.actionability === 'allowed' && matter.authorizationState === 'authorized'
       && matter.compatibilityOutcome === 'equivalent' && matter.availabilityState === 'available' && !channel.streamBroken,

@@ -10060,6 +10060,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0303",
+      "title": "ADR-0303 · 执行模块第五刀：上下文占用提示（快照投影）与 P16 复盘",
+      "status": "accepted（2026-10-11）",
+      "date": "2026-10-11",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "快照分支提取 contextPressure 投影（字段独立、非法即 null）；页面重放有者优先。",
+          "constraints": [
+            "never guessed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "SessionChannelStatus.contextUsage 三构造齐；desktop 宽容解析。",
+          "constraints": [
+            "null when absent"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "composer 提示行「上下文 NN%」chip（两值齐备才渲染，title 附原值）。",
+          "constraints": [
+            "reference only, never gating"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "S10 迁 implementing；明细/压缩不装如实登记；P16 转监控面刀，blocker 改写。",
+          "constraints": [
+            "no fake closure"
+          ]
+        }
+      ]
     }
   ]
 }
