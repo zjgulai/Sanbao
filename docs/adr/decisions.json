@@ -11481,6 +11481,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0337",
+      "title": "ADR-0337 · VF-2 P06 设置族几何精修：白卡无边框容器 + 卡外分组标签 + 发丝分隔线 + 重模糊弹窗",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "分组容器换形：标签卡外、ul=白卡无边框+ring 阴影；nav/search 同步。",
+          "constraints": [
+            "aria unchanged"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "新 token divider-hairline（#f0f7f4/#262624）进唯一家+锚定表。",
+          "constraints": [
+            "no literal in CSS"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "行节奏：分隔线+padding 10px；标题 24px；组距 24px。",
+          "constraints": [
+            "geometry only"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "弹窗：遮罩 blur(18px)+72% 白洗；卡无边框。",
+          "constraints": [
+            "matches live dialog"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "零行为改动；全 spec 绿。",
+          "constraints": [
+            "interaction contracts intact"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "图标方块独立小批（内容决策）。",
+          "constraints": [
+            "not in this batch"
+          ]
+        }
+      ]
     }
   ]
 }

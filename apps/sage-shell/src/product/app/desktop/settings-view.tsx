@@ -218,7 +218,7 @@ function ObservedGroupsPane({ heading, note, groups, extraRows }: {
       <p>{note}</p>
     </header>
     {groups.map((group) => <section className="settings-observed-group" key={group.group} aria-label={group.group}>
-      <h3>{group.group}</h3>
+      <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
           <strong>{row.label}</strong>
@@ -325,7 +325,7 @@ function ShortcutsPane(): ReactNode {
         : null}
     </section>
     {groups.map((group) => <section className="settings-observed-group" key={group.group} aria-label={group.group}>
-      <h3>{group.group}</h3>
+      <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
           <strong>{row.label}</strong>
@@ -354,7 +354,7 @@ function VoicePane(): ReactNode {
       <p>集中配置语音输入与实时语音。本机未接线：不录音、不保存任何偏好。</p>
     </header>
     {VOICE_GROUPS.map((group) => <section className="settings-observed-group" key={group.group} aria-label={group.group}>
-      <h3>{group.group}</h3>
+      <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
           <strong>{row.label}</strong>

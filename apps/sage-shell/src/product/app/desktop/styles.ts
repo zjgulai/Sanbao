@@ -155,22 +155,27 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .settings-appearance label { min-width: 0; display: grid; grid-template-columns: minmax(110px, 1fr) minmax(140px, 1fr); align-items: center; gap: var(--sage-density-row-gap); }
 .sage-desktop .settings-appearance select { min-width: 0; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
 .sage-desktop .settings-appearance button[type="submit"] { justify-self: end; min-height: var(--sage-density-control-min-height); margin-top: var(--sage-density-row-gap); padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 5px; }
-/* R17-A (QDR.P06): the settings shell — observed navigation beside the pane. */
+/* R17-A (QDR.P06) · VF-2 geometry re-based onto the Qoder 0.4.4 live readings
+ * (assets/qoder-reference/screenshots/base-20261013, pixel-sampled): white cards without
+ * borders on the canvas, 12px card radius with the surface ring shadow, group labels outside
+ * the card in quaternary gray, hairline row separators (divider-hairline token), 26px tinted icon tiles,
+ * 24px page titles, ~460px centered content column. */
 .sage-desktop .settings-shell { min-width: 0; display: grid; grid-template-columns: minmax(160px, 200px) minmax(0, 1fr); gap: 18px; width: min(1080px, calc(100% - 80px)); margin: 0 auto 27px; padding: var(--sage-density-main-padding) 0; }
-.sage-desktop .settings-nav { min-width: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); }
+.sage-desktop .settings-nav { min-width: 0; display: flex; flex-direction: column; gap: 8px; align-self: start; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-divider); border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); }
 .sage-desktop .settings-nav ul { display: grid; gap: 2px; margin: 4px 0 0; padding: 0; list-style: none; }
 .sage-desktop .settings-nav button[aria-current="page"] { font-weight: 600; color: var(--sage-ink); }
 .sage-desktop .settings-search { display: grid; gap: 4px; color: var(--sage-muted); }
-.sage-desktop .settings-search input { min-width: 0; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
+.sage-desktop .settings-search input { min-width: 0; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-divider); border-radius: 6px; padding: 2px 7px; background: var(--sage-surface); }
 .sage-desktop .settings-nav-empty { margin: 0; color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .settings-pane { min-width: 0; }
-.sage-desktop .settings-observed { min-width: 0; display: grid; gap: 16px; }
-.sage-desktop .settings-observed h2 { margin: 0; font-size: 28px; font-weight: 500; }
+.sage-desktop .settings-observed { min-width: 0; display: grid; gap: 24px; }
+.sage-desktop .settings-observed h2 { margin: 0; font-size: 24px; font-weight: 500; }
 .sage-desktop .settings-observed header p, .sage-desktop .settings-observed-note { margin: 10px 0 0; color: var(--sage-muted); overflow-wrap: anywhere; }
-.sage-desktop .settings-observed-group { min-width: 0; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); }
-.sage-desktop .settings-observed-group h3 { margin: 0 0 8px; font-size: 13px; color: var(--sage-muted); }
-.sage-desktop .settings-observed-group ul { display: grid; gap: var(--sage-density-row-gap); margin: 0; padding: 0; list-style: none; }
-.sage-desktop .settings-observed-row { min-width: 0; display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto auto; align-items: center; gap: var(--sage-density-row-gap); }
+.sage-desktop .settings-observed-group { min-width: 0; display: grid; gap: 8px; padding: 0; border: 0; background: none; box-shadow: none; }
+.sage-desktop .settings-observed-group h3 { margin: 0; font-size: 12px; font-weight: 400; color: var(--sage-faint); }
+.sage-desktop .settings-observed-group ul { display: grid; margin: 0; padding: var(--sage-density-card-padding); border: 0; border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); list-style: none; }
+.sage-desktop .settings-observed-group li + li { border-top: 1px solid var(--sage-divider-hairline); }
+.sage-desktop .settings-observed-row { min-width: 0; display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto auto; align-items: center; gap: var(--sage-density-row-gap); padding: 10px 0; }
 .sage-desktop .settings-observed-row small { color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .settings-observed-state { justify-self: end; font-size: 12px; color: var(--sage-muted); white-space: nowrap; }
 .sage-desktop .settings-profile-identity { display: flex; align-items: center; gap: 10px; }
@@ -181,9 +186,11 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .matter-admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 9px 0; }
 .sage-desktop .matter-admin-actions input { min-width: 0; width: 180px; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
 .sage-desktop .settings-inline-input input { min-width: 0; width: 160px; min-height: var(--sage-density-control-min-height); border: 1px solid var(--sage-border); border-radius: 5px; padding: 2px 7px; background: var(--sage-surface); }
-/* R17-C: the shortcut-edit modal shell (observed; recording/saving stay disabled). */
-.sage-desktop .settings-modal-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--sage-overlay); }
-.sage-desktop .settings-modal { min-width: 280px; max-width: 420px; display: grid; gap: 10px; padding: var(--sage-density-card-padding); border: 1px solid var(--sage-border); border-radius: var(--sage-radius); background: var(--sage-raised); box-shadow: var(--sage-shadow); }
+/* R17-C: the shortcut-edit modal shell (observed; recording/saving stay disabled).
+ * VF-2: the backdrop/match the Qoder live dialog (base-20261012 add-dialog screenshot):
+ * heavy blur + white wash behind a floating white card — the 模糊与玻璃效果 default-on look. */
+.sage-desktop .settings-modal-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--sage-surface) 72%, transparent); backdrop-filter: blur(18px); }
+.sage-desktop .settings-modal { min-width: 280px; max-width: 420px; display: grid; gap: 10px; padding: var(--sage-density-card-padding); border: 0; border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); }
 .sage-desktop .settings-modal h3 { margin: 0; font-size: 15px; }
 .sage-desktop .settings-modal p { margin: 0; color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .settings-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }

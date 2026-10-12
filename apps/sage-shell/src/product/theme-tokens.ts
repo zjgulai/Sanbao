@@ -17,6 +17,7 @@ export const SAGE_THEME_TOKEN_NAMES = Object.freeze([
   'muted',
   'faint',
   'divider',
+  'divider-hairline',
   'border',
   'brand',
   'focus',
@@ -33,11 +34,12 @@ export type SageThemeTokenName = (typeof SAGE_THEME_TOKEN_NAMES)[number]
 export type SageResolvedTheme = 'light' | 'dark'
 export type SageThemeTokens = Readonly<Record<SageThemeTokenName, string>>
 
-// VF-1 (ADR-0335): values re-based onto Qoder 0.4.4 mint-light/dark live readings
+// VF-1 (ADR-0336): values re-based onto Qoder 0.4.4 mint-light/dark live readings
 // (assets/qoder-reference/re-0.4.4/ + screenshots/base-2026101{2,3}). The sidebar/overlay
 // greens are Qoder's accent-mix derivation flattened to literals (mix(accent 18%/28%, white));
 // the derivation is recorded in the ADR. WCAG deviations are Qoder's own values, deliberately
-// preserved for fidelity — see the ADR deviation list.
+// preserved for fidelity — see the ADR deviation list. divider-hairline is the VF-2 card-row
+// separator sampled from the live settings screenshots (#f0f7f4 light / #262624 dark).
 const LIGHT_THEME_TOKENS: SageThemeTokens = Object.freeze({
   canvas: '#f9f9f9',
   sidebar: '#dff1ea',
@@ -48,6 +50,7 @@ const LIGHT_THEME_TOKENS: SageThemeTokens = Object.freeze({
   muted: '#636261',
   faint: '#838280',
   divider: '#eeeae5',
+  'divider-hairline': '#f0f7f4',
   border: '#ddd8d2',
   brand: '#4fa98f',
   focus: '#3b81e9',
@@ -70,6 +73,7 @@ const DARK_THEME_TOKENS: SageThemeTokens = Object.freeze({
   muted: '#b4b4ac',
   faint: '#7b7b74',
   divider: '#20201e',
+  'divider-hairline': '#262624',
   border: '#31312d',
   brand: '#5cb870',
   focus: '#0b83f1',
