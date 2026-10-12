@@ -64,7 +64,13 @@ export function createFileCandidates(callBridge: BridgeCaller) {
     if (path !== '' && !isWorkspaceRelativePath(path)) {
       return { state: 'refused', code: 'file-path-outside-workspace', entries: [], truncated: false, path: '' }
     }
-    const answer = asAnswer(await callBridge('workspaceFiles/list', [{ workspaceRoot, path }]))
+    // ADR-0331: the empty path means the workspace root, and the base's listing contract rejects
+    // an empty path as a bad request — it names a directory the way its own client does, by the
+    // ABSOLUTE root ('' rides nowhere). Translate here so `` keeps meaning root for our callers.
+    const answer = asAnswer(await callBridge('workspaceFiles/list', [{
+      workspaceRoot,
+      path: path === '' ? workspaceRoot : path,
+    }]))
     if (!answer.ok) {
       return { state: 'refused', code: answer.code ?? 'bridge-answer-unrecognised', entries: [], truncated: false, path: '' }
     }

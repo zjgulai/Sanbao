@@ -183,6 +183,9 @@ describe('candidates come from the confined listing only', () => {
     const root = await list({ workspaceRoot: '/Users/someone/project', path: '' })
     expect(root.entries).toEqual([{ name: 'a.md', path: 'a.md' }])
     expect(root.truncated).toBe(true)
+    // ADR-0331: the empty path means the workspace root, and the base's listing contract
+    // rejects an empty path — the absolute root is the name that rides the bridge.
+    expect(bridge.calls[0]?.payload).toEqual([{ workspaceRoot: '/Users/someone/project', path: '/Users/someone/project' }])
 
     expect(await list({ workspaceRoot: '/Users/someone/project', path: '../outside' }))
       .toMatchObject({ state: 'refused', code: 'file-path-outside-workspace', entries: [] })

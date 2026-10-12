@@ -11236,6 +11236,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0331",
+      "title": "ADR-0331 · 候选列举的空路径翻译：'' = 根，绝对根才过 base 的列举契约",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "createFileCandidates：'' 翻译为 workspaceRoot 后上桥。",
+          "constraints": [
+            "non-empty rules unchanged"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "翻译只在 shell 边界；renderer/base 语义不动。",
+          "constraints": [
+            "no syntax leakage"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "装版实测 + spec 载荷断言。",
+          "constraints": [
+            "byte-level payload assert"
+          ]
+        }
+      ]
     }
   ]
 }
