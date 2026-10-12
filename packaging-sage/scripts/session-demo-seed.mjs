@@ -13,9 +13,9 @@
  *      ../../packaging-sage/scripts/session-demo-seed.mjs [--root "<SAGE_ROOT>"] [--home "<HOME>"]
  *  Default root: ~/Library/Application Support/Sage (the installed app's data root).
  */
-import { mkdirSync, realpathSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
@@ -24,12 +24,19 @@ const pathsModule = await import(`file://${join(shellLib, 'profile/paths.js')}`)
 const domainModule = await import(`file://${join(shellLib, 'domain/business-matter.js')}`)
 const codecModule = await import(`file://${join(shellLib, 'domain/business-matter-codec.js')}`)
 const storeModule = await import(`file://${join(shellLib, 'persistence/business-matter-event-store.js')}`)
+const draftStoreModule = await import(`file://${join(shellLib, 'main/draft-store.js')}`)
+const { randomBytes, randomUUID } = await import('node:crypto')
 
 const args = process.argv.slice(2)
 const valueOf = (flag) => {
   const index = args.indexOf(flag)
   return index >= 0 ? args[index + 1] : undefined
 }
+const workspaceId = valueOf('--workspace-id') ?? 'workspace:sage-walkthrough'
+// Default the adopted workspace to this repository root — derived from the script's own
+// location, never a machine-absolute literal.
+const repoRoot = resolve(new URL('../../', import.meta.url).pathname)
+const workspacePath = realpathSync(resolve(valueOf('--workspace-path') ?? repoRoot))
 // The store boundary demands the canonical physical path; /tmp-style symlinked prefixes fail it.
 const root = realpathSync(resolve(valueOf('--root') ?? join(homedir(), 'Library', 'Application Support', 'Sage')))
 const home = resolve(valueOf('--home') ?? homedir())
@@ -94,4 +101,66 @@ try {
   }
 } finally {
   store.close()
+}
+
+// The matter roster derives from draft facts (US-093): a matter appears only through its
+// converted draft. Seed the record a real 草案→转化 leaves behind, so the roster row — the
+// only context-selection surface — names the demo matter. Idempotent per matterRef.
+const draftStore = draftStoreModule.createDraftStore({
+  draftsDir: paths.draftsDir,
+  now: () => new Date().toISOString(),
+  nextId: () => randomUUID(),
+  randomKey: () => randomBytes(32),
+})
+const existing = draftStore.list(true)
+const already = existing.state === 'ready'
+  && existing.drafts.some((draft) => draft.matterRef === matterId)
+if (already) {
+  process.stdout.write(`[session-demo-seed] converted draft for ${matterId} already present; nothing written\n`)
+} else {
+  const created = draftStore.create('真机会话走查：首条消息的工作事项。', true)
+  const draftId = created.state === 'ready' ? created.drafts[0]?.draftId : undefined
+  if (draftId === undefined) throw new Error('draft store refused the demo draft')
+  const updated = draftStore.update(draftId, {
+    fields: {
+      goal: '真机会话走查：首条消息的工作事项。',
+      deliverable: '一次受治理的会话发送。',
+      responsibility: 'role:owner',
+      projectRef: '',
+    },
+  }, true)
+  if (updated === undefined || updated.state !== 'ready') throw new Error('draft store refused the field update')
+  const committed = draftStore.commitConversion(draftId, matterId)
+  process.stdout.write(`[session-demo-seed] draft ${draftId} -> ${String(committed?.status)} ${String(committed?.matterRef)}\n`)
+  if (committed?.status !== 'converted') process.exitCode = 1
+}
+
+// The live workspace fold reads the base's own `workspace` domain storage
+// (<root>/harness/storages/workspace.json). The native picker backend is disabled by the shell
+// overlay ("in-app browsing until its native picker bridge exists"), so the walkthrough adopts
+// its environment here — same shape the base's create writes. Idempotent by workspace id.
+const workspaceStorePath = join(root, 'harness', 'storages', 'workspace.json')
+const workspaceStore = existsSync(workspaceStorePath)
+  ? JSON.parse(readFileSync(workspaceStorePath, 'utf8'))
+  : { unit: { name: 'workspace', version: 2 }, global: { initialized: true, workspaceIds: [], archivedSessionIds: [], pinnedSessionIds: [] }, tables: { workspaces: {} } }
+workspaceStore.global ??= { initialized: true, workspaceIds: [], archivedSessionIds: [], pinnedSessionIds: [] }
+workspaceStore.tables ??= { workspaces: {} }
+workspaceStore.tables.workspaces ??= {}
+if (workspaceStore.tables.workspaces[workspaceId] !== undefined) {
+  process.stdout.write(`[session-demo-seed] workspace ${workspaceId} already present; nothing written\n`)
+} else {
+  const timestamp = new Date().toISOString()
+  workspaceStore.tables.workspaces[workspaceId] = {
+    path: workspacePath,
+    title: workspacePath.split('/').filter(Boolean).at(-1) ?? workspacePath,
+    sessionIds: [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+  if (!Array.isArray(workspaceStore.global.workspaceIds)) workspaceStore.global.workspaceIds = []
+  if (!workspaceStore.global.workspaceIds.includes(workspaceId)) workspaceStore.global.workspaceIds.push(workspaceId)
+  workspaceStore.global.initialized = true
+  mkdirSync(dirname(workspaceStorePath), { recursive: true, mode: 0o700 })
+  writeFileSync(workspaceStorePath, `${JSON.stringify(workspaceStore, null, 2)}\n`, { mode: 0o600 })
+  process.stdout.write(`[session-demo-seed] workspace ${workspaceId} -> ${workspacePath}\n`)
 }

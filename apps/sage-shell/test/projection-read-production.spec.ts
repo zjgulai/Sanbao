@@ -521,4 +521,69 @@ describe('CTX-01C device aggregation read while the context is inactive (ADR-032
     expect(result).toMatchObject({ state: 'unavailable', stage: 'initial-context' })
     expect(raw).not.toHaveBeenCalled()
   })
+
+  it('serves the aggregate without running matter-scoped providers while the context is inactive', async () => {
+    // The real main providers throw outside an admitted matter scope (scopedMatterRef). The
+    // inactive assembly must answer each scoped slot with its own unavailable face instead.
+    const throwing = vi.fn(() => { throw new Error('projection read scope unavailable') })
+    const throwingAsync = vi.fn(async () => { throw new Error('projection read scope unavailable') })
+    const { options } = inactiveOptions({
+      attachments: throwing as never,
+      sideChats: throwing as never,
+      toolResults: throwing as never,
+      artifacts: throwing as never,
+      sessionChannel: throwingAsync as never,
+      runMonitor: throwingAsync as never,
+      sessionClarifications: throwingAsync as never,
+    })
+    const providers = createSageAppServiceProviders(options)
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state'), {
+      callerBinding: { correlation: 'caller:one' },
+      providers,
+    })
+
+    expect(response.status).toBe(200)
+    const body = await response.json() as Record<string, unknown>
+    expect(body.activeContext).toMatchObject({ state: 'inactive' })
+    expect(body.attachments).toMatchObject({ state: 'unavailable', items: [] })
+    expect(body.sideChats).toMatchObject({ code: 'side-chat-unavailable', items: [] })
+    expect(body.toolResults).toMatchObject({ reason: 'tool-results-provider-unavailable' })
+    expect(body.artifacts).toMatchObject({ state: 'unavailable', cards: [] })
+    expect(body.sessionChannel).toMatchObject({ state: 'unavailable', transcript: [] })
+    expect(body.runMonitor).toMatchObject({ state: 'unavailable', matterRef: null })
+    expect(body.sessionClarifications).toMatchObject({ state: 'unavailable', pending: [] })
+    expect(throwing).not.toHaveBeenCalled()
+    expect(throwingAsync).not.toHaveBeenCalled()
+  })
+
+  it('keeps calling matter-scoped providers when no context port is wired (fixture assemblies)', async () => {
+    const attachments = vi.fn(() => ({ state: 'read' as const, items: [] }))
+    const { options } = productionOptions({
+      attachments: attachments as never,
+      // The fixture bypass runs the aggregate inside the fixture scope; an absent context port
+      // must not change which providers run (the guard only applies to a present, inactive one).
+      fixtureProjection: () => ({
+        schemaVersion: 'sage.matter-view-state.v1',
+        projectionSource: 'fixture',
+        matter: {
+          matterId: 'matter:fixture', goal: 'Fixture', responsiblePartyRoleRef: 'role:fixture',
+          stage: 'clarifying', conclusion: undefined, currentRevisionId: 'revision:fixture.1',
+          revisionCount: 1, evidenceCount: 0, unknownCount: 0, dependencyCount: 0,
+          pendingClarification: undefined,
+        },
+        compatibilityOutcome: 'unknown', authorizationState: 'unknown', availabilityState: 'unknown',
+        actionability: 'blocked', denialReason: 'fixture-only', actions: [], decisions: [], attempts: [],
+        artifacts: [], receipts: [],
+      }),
+    })
+    delete (options as { activeMatterContext?: unknown }).activeMatterContext
+    const providers = createSageAppServiceProviders(options)
+    const response = await handleSageServiceRequest(new Request('dsh-app://app/.sage/state'), {
+      callerBinding: { correlation: 'caller:one' },
+      providers,
+    })
+
+    expect(response.status).toBe(200)
+    expect(attachments).toHaveBeenCalledTimes(1)
+  })
 })

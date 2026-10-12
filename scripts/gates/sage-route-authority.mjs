@@ -1405,7 +1405,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, projectionReadAdmissionText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null, activeMatterSelectionText: string|null, sessionTurnCloseText: string|null, sessionChannelText: string|null, sessionSendReconcileText: string|null, runtimeInventoryCurrencyText: string|null, sageReadoutText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, projectionReadAdmissionText: string|null, hostProcessText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null, activeMatterSelectionText: string|null, sessionTurnCloseText: string|null, sessionChannelText: string|null, sessionSendReconcileText: string|null, runtimeInventoryCurrencyText: string|null, sageReadoutText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -1424,6 +1424,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.projectionReadAdmissionText !== 'string') {
     return failAll(discovered, ['projection-read admission module unavailable; the device aggregation read cannot be checked'])
+  }
+  if (typeof input?.hostProcessText !== 'string') {
+    return failAll(discovered, ['host-process source unavailable; the bridge-result terminal contract cannot be checked'])
   }
   if (typeof input?.mainIndexText !== 'string') {
     return failAll(discovered, ['main index unavailable; projection-read owner cannot be checked'])
@@ -1798,6 +1801,15 @@ export function checkSageRouteAuthority(input) {
     && input.projectionReadAdmissionText.includes("return failure(frameStep.state, 'fresh-scope', correlation)")
   if (!deviceAggregateReadMatches) {
     failGlobal('the device aggregation read (ADR-0324) is missing, widened beyond state.read, or lost its admission steps')
+  }
+
+  // ADR-0325: the bridge terminal resolves the declared ANSWER ({ok:true, result}) — every
+  // consumer parses that shape via its own asAnswer; resolving message.result alone handed them
+  // a bare payload that every reader classified as 'bridge-answer-unrecognised'.
+  const bridgeResultContractMatches = input.hostProcessText.includes('pending.resolve({ ok: true, result: message.result })')
+    && !input.hostProcessText.includes('pending.resolve(message.result)')
+  if (!bridgeResultContractMatches) {
+    failGlobal('the bridge-result terminal must resolve the declared answer shape (ADR-0325)')
   }
 
   const projectionReadOwnerMatches = input.mainIndexText.includes("import { projectionReadScope } from './projection-read-scope.js'")

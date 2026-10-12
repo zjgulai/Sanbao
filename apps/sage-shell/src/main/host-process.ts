@@ -469,7 +469,11 @@ export class ShellHostProcess {
         const pending = this.bridgePending.get(message.callId)
         if (pending === undefined) return
         this.bridgePending.delete(message.callId)
-        if (message.ok === true) pending.resolve(message.result)
+        // Every consumer parses the bridge ANSWER (`{ok:true, result}` / `{ok:false, code}` via
+        // its own asAnswer): resolving `message.result` alone handed them a bare payload that
+        // every reader classified as 'bridge-answer-unrecognised' — the fold, the adoption pick
+        // and the whole request surface answered unavailable. Resolve the declared answer shape.
+        if (message.ok === true) pending.resolve({ ok: true, result: message.result })
         else pending.reject(new BridgeCallError(message.code, `sage shell: bridge call refused with ${JSON.stringify(message.code)}`))
         return
       }

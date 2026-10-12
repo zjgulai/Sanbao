@@ -14,6 +14,7 @@ const baseline = Object.freeze({
   callerBindingText: read('apps/sage-shell/src/main/appservice-binding.ts'),
   mainAppServiceText: read('apps/sage-shell/src/main/app-service.ts'),
   projectionReadAdmissionText: read('apps/sage-shell/src/appservice/projection-read-admission.ts'),
+  hostProcessText: read('apps/sage-shell/src/main/host-process.ts'),
   mainIndexText: read('apps/sage-shell/src/main/index.ts'),
   matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
   sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
@@ -545,6 +546,15 @@ test('the device aggregation read cannot widen, duplicate or lose its admission 
   )
   assert.notEqual(droppedEcho, baseline.projectionReadAdmissionText)
   expectNamedFailure(check({ projectionReadAdmissionText: droppedEcho }), 'the device aggregation read (ADR-0324)')
+})
+
+test('the bridge terminal cannot regress to the bare result payload (ADR-0325)', () => {
+  const reverted = baseline.hostProcessText.replace(
+    'pending.resolve({ ok: true, result: message.result })',
+    'pending.resolve(message.result)',
+  )
+  assert.notEqual(reverted, baseline.hostProcessText)
+  expectNamedFailure(check({ hostProcessText: reverted }), 'the bridge-result terminal must resolve the declared answer shape (ADR-0325)')
 })
 test('a read route cannot claim projection admission without its route wrapper', () => {
   const routeSkeletonText = baseline.routeSkeletonText.replace(

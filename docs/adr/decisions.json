@@ -11025,6 +11025,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0325",
+      "title": "ADR-0325 · 桥终局契约修正：`bridge-result` 必须 resolve 声明契约对象",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "bridge-result ok:true resolve({ok:true,result})（声明契约对象）；ok:false 保持 reject 带 code。",
+          "constraints": [
+            "single transport-layer fix"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "消费者零改动；不做双形态兼容。",
+          "constraints": [
+            "asAnswer family unchanged"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "门禁 pin：resolve({ok:true,result}) 存在、resolve(message.result) 不得回。",
+          "constraints": [
+            "deliberate edit"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "种子扩展（已转化草案 + base 工作区存储条目）；原生 picker 记尚未接通。",
+          "constraints": [
+            "same seed methodology",
+            "walkthrough text corrected"
+          ]
+        }
+      ]
     }
   ]
 }

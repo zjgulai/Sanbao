@@ -124,7 +124,10 @@ describe('main-side read-only bridge', () => {
     const answer = { type: 'bridge-result', callId: frame?.callId, ok: true as const, result: { namespaces: [] } }
     expect(isHostEvent(answer)).toBe(true)
     child.emit('message', answer)
-    await expect(call).resolves.toEqual({ namespaces: [] })
+    // ADR-0325: the client resolves the declared ANSWER shape every consumer parses via its
+    // own asAnswer — a bare `message.result` resolved every request-path reader as
+    // 'bridge-answer-unrecognised'.
+    await expect(call).resolves.toEqual({ ok: true, result: { namespaces: [] } })
     expect(bridgeFrames(child)).toHaveLength(1)
   })
 

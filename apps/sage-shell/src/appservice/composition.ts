@@ -460,6 +460,17 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
     },
     async readState(): Promise<Response> {
       const snap = snapshot()
+      const activeContext = options.activeMatterContext?.()
+        ?? { state: 'unavailable' as const, contextGeneration: null }
+      // CTX-01C (ADR-0324): the device aggregation read also serves while the context is
+      // inactive. Matter-scoped providers refuse to run outside an admitted matter scope
+      // (their scopedMatterRef throws by design), so the inactive assembly answers each such
+      // slot with its own unavailable face instead of running the provider. Only the explicit
+      // 'inactive' state takes this path — an absent context port (fixture/test assemblies)
+      // keeps calling every provider exactly as before.
+      const runMatterScoped = activeContext.state !== 'inactive'
+      const scopedOr = <T>(read: (() => T) | undefined, fallback: T): T =>
+        runMatterScoped && read !== undefined ? read() : fallback
       const modelConfigRead = options.modelConfig?.()
       const modelConfig = modelConfigRead === undefined
         ? { source: 'settings-describe' as const, state: 'unavailable' as const, reason: 'not-read' as const, writable: null, hasDocument: null, namespaces: [], connectivityTest: 'untested' as const }
@@ -473,8 +484,7 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
           correlation: randomUUID(),
           command: lastCommand,
         },
-        activeContext: options.activeMatterContext?.()
-          ?? { state: 'unavailable' as const, contextGeneration: null },
+        activeContext,
         matter: options.fixtureProjection?.() ?? null,
         capability: capabilityStatus(options.runtimeEffective?.()),
         modelConfig,
@@ -492,29 +502,29 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         matterLinks: options.matterLinks?.() ?? { state: 'unavailable' as const, links: [], trail: [] },
         settingsLeaves: options.settingsLeaves?.() ?? [],
         preferences: options.preferences?.() ?? { requested: DEFAULT_DISPLAY_PREFERENCE_VALUES, savedAt: null, effectiveTheme: null, systemDark: null, applies: 'live' },
-        attachments: options.attachments?.() ?? { state: 'unavailable' as const, items: [] },
-        artifacts: options.artifacts?.() ?? { state: 'unavailable' as const, cards: [], preview: { state: 'closed' as const } },
-        sessionHistory: options.sessionHistory?.() ?? { state: 'unavailable' as const, runs: [], hasMore: false, nextBeforeSeq: null, detail: null, at: null },
-        sessionClarifications: await (options.sessionClarifications?.() ?? Promise.resolve({ state: 'unavailable' as const, pending: [], deferred: [], receipts: [], code: null, at: null })),
-        sessionAnchors: options.sessionAnchors?.() ?? { state: 'unavailable' as const, anchors: [], located: null, code: null, at: null },
-        sessionEdits: options.sessionEdits?.() ?? { state: 'read' as const, records: [], code: null, at: null },
-        inputSelections: await (options.inputSelections?.() ?? Promise.resolve({ state: 'unavailable' as const, skills: [], skillsNote: null, plugins: [], pluginsNote: null, selected: [], code: 'input-selections-unavailable', at: null })),
-        sessionPlanMode: await (options.sessionPlanMode?.() ?? Promise.resolve({ state: 'unavailable' as const, reason: 'plan-mode-provider-unavailable', active: null, pending: false })),
+        attachments: scopedOr(options.attachments, { state: 'unavailable' as const, items: [] }),
+        artifacts: scopedOr(options.artifacts, { state: 'unavailable' as const, cards: [], preview: { state: 'closed' as const } }),
+        sessionHistory: scopedOr(options.sessionHistory, { state: 'unavailable' as const, runs: [], hasMore: false, nextBeforeSeq: null, detail: null, at: null }),
+        sessionClarifications: await scopedOr(options.sessionClarifications, Promise.resolve({ state: 'unavailable' as const, pending: [], deferred: [], receipts: [], code: null, at: null })),
+        sessionAnchors: scopedOr(options.sessionAnchors, { state: 'unavailable' as const, anchors: [], located: null, code: null, at: null }),
+        sessionEdits: scopedOr(options.sessionEdits, { state: 'read' as const, records: [], code: null, at: null }),
+        inputSelections: await scopedOr(options.inputSelections, Promise.resolve({ state: 'unavailable' as const, skills: [], skillsNote: null, plugins: [], pluginsNote: null, selected: [], code: 'input-selections-unavailable', at: null })),
+        sessionPlanMode: await scopedOr(options.sessionPlanMode, Promise.resolve({ state: 'unavailable' as const, reason: 'plan-mode-provider-unavailable', active: null, pending: false })),
         siteTemplates: await (options.siteTemplates?.() ?? Promise.resolve({ state: 'unavailable' as const, reason: 'site-templates-provider-unavailable', entries: [] })),
-        sessionApprovals: await (options.sessionApprovals?.() ?? Promise.resolve({ state: 'unavailable' as const, pending: [], lapsed: [], receipts: [], code: 'approval-relay-unavailable', at: null })),
-        modelQueue: await (options.modelQueue?.() ?? Promise.resolve({ state: 'unavailable' as const, verdict: 'idle' as const, retries: [], verifyOnly: false, reason: 'model-queue-provider-unavailable', at: null })),
-        terminal: await (options.terminal?.() ?? Promise.resolve({ state: 'unavailable' as const, reason: 'terminals-provider-unavailable', terminals: [] })),
+        sessionApprovals: await scopedOr(options.sessionApprovals, Promise.resolve({ state: 'unavailable' as const, pending: [], lapsed: [], receipts: [], code: 'approval-relay-unavailable', at: null })),
+        modelQueue: await scopedOr(options.modelQueue, Promise.resolve({ state: 'unavailable' as const, verdict: 'idle' as const, retries: [], verifyOnly: false, reason: 'model-queue-provider-unavailable', at: null })),
+        terminal: await scopedOr(options.terminal, Promise.resolve({ state: 'unavailable' as const, reason: 'terminals-provider-unavailable', terminals: [] })),
         feedback: options.feedback?.() ?? { state: 'read' as const, receipts: [] },
         matterList: options.matterList?.() ?? { state: 'unavailable' as const, code: 'matter-list-unavailable', items: [], counts: { action: 0, inProgress: 0, acceptance: 0 } },
-        sideChats: options.sideChats?.() ?? { state: 'unavailable' as const, code: 'side-chat-unavailable', items: [] },
+        sideChats: scopedOr(options.sideChats, { state: 'unavailable' as const, code: 'side-chat-unavailable', items: [] }),
         editDrafts: options.editDrafts?.() ?? { state: 'unavailable' as const, drafts: [] },
         actionItems: options.actionItems?.() ?? { state: 'unavailable' as const, items: [], corrections: [] },
         projects: options.projects?.() ?? { state: 'unavailable' as const, projects: [], trail: [] },
         matterAdmin: options.matterAdmin?.() ?? { state: 'unavailable' as const, entries: [], trail: [], rename: null, batch: null },
         matterGroups: options.matterGroups?.() ?? { state: 'unavailable' as const, code: 'matter-groups-unavailable', groups: [], trail: [], rename: null, batch: null },
-        runMonitor: (await options.runMonitor?.()) ?? { state: 'unavailable' as const, matterRef: null, steps: { state: 'unavailable' as const, lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' }, budget: { reserved: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, consumed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, billed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const } }, device: { state: 'unknown' as const, reason: 'device-binding-unavailable' as const }, background: { state: 'unknown' as const, reason: 'background-host-unavailable' as const }, context: { state: 'unknown' as const, reason: 'context-usage-unavailable' as const, compaction: 'unknown' as const } },
+        runMonitor: (await scopedOr<Promise<RunMonitorView | null>>(options.runMonitor, Promise.resolve(null))) ?? { state: 'unavailable' as const, matterRef: null, steps: { state: 'unavailable' as const, lastTurnEnd: null, observedRecords: 0, reason: 'monitor-not-read' }, budget: { reserved: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, consumed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const }, billed: { state: 'unknown' as const, reason: 'usage-provider-unavailable' as const } }, device: { state: 'unknown' as const, reason: 'device-binding-unavailable' as const }, background: { state: 'unknown' as const, reason: 'background-host-unavailable' as const }, context: { state: 'unknown' as const, reason: 'context-usage-unavailable' as const, compaction: 'unknown' as const } },
         plans: options.plans?.() ?? { state: 'unavailable' as const, plans: [], lastStepRun: null },
-        sessionChannel: await (options.sessionChannel?.() ?? Promise.resolve({
+        sessionChannel: await scopedOr(options.sessionChannel, Promise.resolve({
           state: 'unavailable' as const, sessionId: null, execution: 'idle' as const, lastTurnEnd: null, lastTurnEndEdge: null,
           turnProcess: { durationMs: null, endedAt: null, iterations: null, fileWrites: [] },
           contextUsage: null,
@@ -526,7 +536,7 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         // ADR-0314: evaluated AFTER sessionChannel so the tool-result declarations come from the
         // fold THIS request refreshed — never the previous poll's stash (review finding: the
         // order previously sat before sessionChannel and only runMonitor's own read rescued it).
-        toolResults: options.toolResults?.() ?? { state: 'unavailable' as const, reason: 'tool-results-provider-unavailable' },
+        toolResults: scopedOr(options.toolResults, { state: 'unavailable' as const, reason: 'tool-results-provider-unavailable' }),
         runtime,
       }
       return serviceJson(state, 200)
