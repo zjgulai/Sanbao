@@ -69,8 +69,9 @@ function testPublication() {
     targetContractVersion: 'sage.compatibility-target-semantic.v2',
     runtimeContractVersion: 'sage.runtime-descriptor.v2',
     issuer: { identity: 'authority:sage-compatibility', version: '2.0.0', digest: `sha256:${'a'.repeat(64)}` },
-    validFrom: '2026-10-10T00:00:00.000Z',
-    expiresAt: '2026-10-11T00:00:00.000Z',
+    // ADR-0326: mirrors the shipped window and always covers the recorded evidence instant.
+    validFrom: '2026-10-11T00:00:00.000Z',
+    expiresAt: '2027-10-11T00:00:00.000Z',
     rules: [{
       ruleId: 'rule:sage-session-prompt-v1',
       targetSemanticDigest: TARGET_SEMANTIC_DIGEST,

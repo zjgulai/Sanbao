@@ -51,7 +51,7 @@ const REVISION_ID = 'revision:sage.persist-1'
 const ATTEMPT_ID = 'attempt:sage.persist-fixture-1'
 const EVALUATION_ID = 'evaluation:sage.persist-fixture-1'
 const RULE_ID = 'rule:sage-session-prompt-v1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:a9a0feb0d94e9937b02145dae15cb4ba2107476039a55d48b35827d7a6488319'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
 
 const reobs = JSON.parse(readFileSync(join(APP_ROOT, 'test/support/reobs-runtime-inventory.json'), 'utf8')) as {
   kind: string
@@ -92,8 +92,9 @@ function testPublication() {
     targetContractVersion: 'sage.compatibility-target-semantic.v2',
     runtimeContractVersion: 'sage.runtime-descriptor.v2',
     issuer: { identity: 'authority:sage-compatibility', version: '2.0.0', digest: `sha256:${'a'.repeat(64)}` },
-    validFrom: '2026-10-10T00:00:00.000Z',
-    expiresAt: '2026-10-11T00:00:00.000Z',
+    // ADR-0326: mirrors the shipped window and always covers the recorded evidence instant.
+    validFrom: '2026-10-11T00:00:00.000Z',
+    expiresAt: '2027-10-11T00:00:00.000Z',
     rules: [{
       ruleId: RULE_ID,
       targetSemanticDigest: TARGET_SEMANTIC_DIGEST,

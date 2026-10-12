@@ -38,6 +38,14 @@ const { parseCompatibilityMatrixBundleV2 } = await lib('security/compatibility-m
 const { computeRuntimeDescriptorDigestV2, computeInventoryEvidenceDigestV2 } = await lib('security/compatibility.js')
 
 const write = process.argv.includes('--write')
+// ADR-0326 refresh mode: a cross-generation re-observation. The caller restores the v1 base
+// publications (the same input this runner composes from) and passes the fresh recording via
+// --fixture; the two v1-round-trip checks below belong to the one-shot migration and are
+// skipped — the caller proves composition fidelity externally by dry-composing with the
+// previous fixture and diffing against the currently shipped publication bytes.
+const refresh = process.argv.includes('--refresh')
+const fixtureArgIndex = process.argv.indexOf('--fixture')
+const fixtureOverride = fixtureArgIndex >= 0 ? process.argv[fixtureArgIndex + 1] : undefined
 const fail = (message) => { console.error(`[publish-session-controls] ABORT: ${message}`); process.exit(1) }
 const note = (message) => { console.log(`[publish-session-controls] ${message}`) }
 
@@ -51,7 +59,8 @@ const matrixLoad = loadSessionPromptCompatibilityPublication()
 if (!matrixLoad.ok) fail(`base matrix publication unreadable: ${matrixLoad.reason}`)
 
 const reobsPath = join(shellRoot, 'test', 'support', 'reobs-runtime-inventory.json')
-const reobs = JSON.parse(readFileSync(reobsPath, 'utf8'))
+const reobsReadPath = fixtureOverride === undefined ? reobsPath : resolve(fixtureOverride)
+const reobs = JSON.parse(readFileSync(reobsReadPath, 'utf8'))
 const descriptor = reobs.descriptor
 
 // The registry snapshot the base requirement's rules were sealed against must be the one this
@@ -73,24 +82,33 @@ const base = {
 }
 
 // Generation guard: this runner extends the SHIPPED v1 publications. If the base already
-// carries the control operations, landing again would duplicate them — restore v1 first.
+// carries the control operations, landing again would duplicate them — restore v1 first. In
+// refresh mode the v1 base is REQUIRED for the same reason (the composition input is v1).
 if (baseRegistry.entries.length !== 1 || baseRegistry.entries[0].operations.length !== 1) {
-  fail('base publications are already the controls generation; restore the shipped v1 publications before re-landing')
+  fail(refresh
+    ? 'refresh mode requires the v1 base publications (restore them from the migration parent commit)'
+    : 'base publications are already the controls generation; restore the shipped v1 publications before re-landing')
 }
 
 // ---------------------------------------------------------------------------------------------
-// 2) Base round-trip self-check: the recorded re-observation must rebuild the shipped
-//    session-prompt semantic byte for byte; any drift aborts before anything is composed.
-const baseEntry = requirementLoad.snapshot.entries.find((entry) => entry.requirementId === 'requirement:sage-session-prompt')
-if (baseEntry === undefined) fail('base publication carries no session-prompt entry')
-const rebuiltBase = computeTargetSemanticFromRequirement(baseEntry, descriptor)
-const baseRule = JSON.parse(matrixLoad.bundle.artifacts[0].canonicalMatrix).rules.find((rule) => rule.ruleId === 'rule:sage-session-prompt-v1')
-const baseRuleSemantic = rebuiltBase.targetSemanticDigest
-if (baseRule === undefined || baseRule.targetSemanticDigest !== baseRuleSemantic) {
-  fail(`base round-trip drifted: rebuilt ${baseRuleSemantic} vs shipped ${baseRule?.targetSemanticDigest}`)
+// 2) Base round-trip self-check (migration mode only): the recorded re-observation must rebuild
+//    the shipped session-prompt semantic byte for byte; any drift aborts before anything is
+//    composed. A cross-generation refresh intentionally moves the descriptor pairing, so the
+//    caller proves fidelity by dry-composing with the previous fixture instead (ADR-0326).
+if (refresh) {
+  note('refresh mode: v1-round-trip checks skipped; prove fidelity via the previous-fixture dry compose')
+} else {
+  const baseEntry = requirementLoad.snapshot.entries.find((entry) => entry.requirementId === 'requirement:sage-session-prompt')
+  if (baseEntry === undefined) fail('base publication carries no session-prompt entry')
+  const rebuiltBase = computeTargetSemanticFromRequirement(baseEntry, descriptor)
+  const baseRule = JSON.parse(matrixLoad.bundle.artifacts[0].canonicalMatrix).rules.find((rule) => rule.ruleId === 'rule:sage-session-prompt-v1')
+  const baseRuleSemantic = rebuiltBase.targetSemanticDigest
+  if (baseRule === undefined || baseRule.targetSemanticDigest !== baseRuleSemantic) {
+    fail(`base round-trip drifted: rebuilt ${baseRuleSemantic} vs shipped ${baseRule?.targetSemanticDigest}`)
+  }
+  if (baseRule.runtimeDescriptorDigest !== descriptor.runtimeDescriptorDigest) fail('re-observation descriptor digest moved from the shipped pairing')
+  note('base round-trip OK (re-observation rebuilds the shipped session-prompt pair)')
 }
-if (baseRule.runtimeDescriptorDigest !== descriptor.runtimeDescriptorDigest) fail('re-observation descriptor digest moved from the shipped pairing')
-note('base round-trip OK (re-observation rebuilds the shipped session-prompt pair)')
 
 // ---------------------------------------------------------------------------------------------
 // 3) Compose the v2 set.
@@ -201,6 +219,7 @@ if (write) {
     runtimeDescriptorDigest: faceDigest,
   }
   reobs.evidence = { ...nextEvidenceBody, inventoryEvidenceDigest: computeInventoryEvidenceDigestV2(nextEvidenceBody) }
+  // Always refresh the REPO fixture, even when the input came via --fixture (ADR-0326).
   writeFileSync(reobsPath, JSON.stringify(reobs, null, 2) + '\n')
   note('re-observation fixture refreshed')
 }

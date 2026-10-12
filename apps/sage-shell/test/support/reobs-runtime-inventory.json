@@ -6,14 +6,14 @@
     "host": {
       "identity": "host:sage-shell-host",
       "version": "5.0.0",
-      "artifactDigest": "sha256:692994b96d08575eed05759a4eaaa43012130ec870eeefdb62a77686efe141c3",
+      "artifactDigest": "sha256:09c1ae99963f18094b1bf3e6e4b5f1bcd04466340cfdb52d901b1c9de7473136",
       "contractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
       "behaviorConfigurationDigest": "sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460"
     },
     "harness": {
       "identity": "harness:@deepseek-ai/dsh",
       "version": "0.2.0-rc.2",
-      "artifactDigest": "sha256:692994b96d08575eed05759a4eaaa43012130ec870eeefdb62a77686efe141c3",
+      "artifactDigest": "sha256:09c1ae99963f18094b1bf3e6e4b5f1bcd04466340cfdb52d901b1c9de7473136",
       "contractDigest": "sha256:bb9a215829ec1c2ffb4a6b7ade0d9a874d41310d24f048c4bae054f9f1e40d29",
       "behaviorConfigurationDigest": "sha256:642abe72fbb12606116cbc8035364cb3715055d15baa87e4fb0cf7d3a02b9f29"
     },
@@ -59,25 +59,25 @@
     "protocolContractDigest": "sha256:77012eafbdc5852ad542a63128da61423afd2ed70e798eab8d5945e3de0f5929",
     "launchPolicyDigest": "sha256:f6367b27c9b5cee27bd3e51da93e1bd500b661f50623e9eef1fa4794f8fe9460",
     "overlayPolicyDigest": "sha256:642abe72fbb12606116cbc8035364cb3715055d15baa87e4fb0cf7d3a02b9f29",
-    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:55044efce46850ea66b72738c93fb6124c6762162cd9413e421f763e13c86141"
+    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:db60b8180cf43495d5554119585fc7bddd6e4eb815ab313f70d243398f5c2eb8"
   },
   "evidence": {
     "schemaVersion": "sage.runtime-inventory-evidence.v2",
     "canonicalizationVersion": "sage.compatibility-canonical-json.v2",
-    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:55044efce46850ea66b72738c93fb6124c6762162cd9413e421f763e13c86141",
-    "activeGeneration": "0b6d6f26-1177-4ca5-90d5-82864282d61e",
-    "receiptDigest": "sha256:9a058122d92bab4ced688d02249668db5585446d538957b8386e1a75e43a898c",
-    "materializationInstanceDigest": "sha256:906a34a596efe320030c7bbb161bae19e7c693f906d3ba842bac7974a6fd1a60",
-    "artifactAttestationDigest": "sha256:790f9cffb413fb2dcd91e1677123044831c964094774dc9dce6b0bdf8c89dd29",
+    "runtimeDescriptorDigest": "urn:sage:runtime-descriptor:sha256:db60b8180cf43495d5554119585fc7bddd6e4eb815ab313f70d243398f5c2eb8",
+    "activeGeneration": "sage-0-1-0-build-1-arm64",
+    "receiptDigest": "sha256:3275929a1dbbbdc608463563bde69f02f981a467dac18ad0606f1aafb0555d97",
+    "materializationInstanceDigest": "sha256:e986b387da96b6cb76b990f638ef52bc6effa485c186cb89daa66c8737ac15eb",
+    "artifactAttestationDigest": "sha256:8c731bf213350ee0a9c95da64dd21a9985927cb3b315ba27a50eb7b9069f4f4d",
     "registrySnapshotDigest": "sha256:6d3434c50b899903130e8da9f3b293e61d16d3c5240f945dd2b3797125dd237d",
-    "bootId": "sage-host:a7800d93-69d7-415a-af2b-e0f8f7ef5abb",
+    "bootId": "sage-host:85261f4c-164c-49d7-a1e1-14ef01909871",
     "runtimeGeneration": 1,
-    "observedAt": "2026-10-10T14:59:39.366Z",
-    "expiresAt": "2026-10-10T15:00:09.366Z",
-    "healthObservationDigest": "sha256:ea69276f6eb1778fd1bb5a9ecf4034a414cc8b223e21b3b0d19f10b72b73a064",
-    "livenessObservationDigest": "sha256:98a2fe4406d4ba20da3302c7036f0306afff21571f38383476f57400c2de7b23",
-    "instanceAuthorityDigest": "sha256:dafca4143931629f413f9ce398a2611e30dda16f81362547927702df145397ab",
-    "mainObservationProvenanceDigest": "sha256:85f0349a684f9d7dca17612e4174a72ab2d9c0c0f49e5c1d1a5443ec42ab303a",
-    "inventoryEvidenceDigest": "urn:sage:inventory-evidence:sha256:ed13fb8b872a5ddf64fd11e634ed2c53755119ccee5779fa45b8c7c4376aca5c"
+    "observedAt": "2026-10-12T08:19:23.077Z",
+    "expiresAt": "2026-10-12T08:19:53.077Z",
+    "healthObservationDigest": "sha256:06c7373e37ab4e875b891639189d6adf640d2e5523be0abf27fc1da67caad7b1",
+    "livenessObservationDigest": "sha256:60084abc20eaba7ef953136928a460fcfcfc8d02d4d7deca3e1f2e5f4ebbf0fd",
+    "instanceAuthorityDigest": "sha256:bd57337d9c0376ab956f1677883bb6890c94449e83bba13bef642c484d12bda8",
+    "mainObservationProvenanceDigest": "sha256:aa1137732ca81116a800020c3282de02ae8a92cb46c7a032f8e2538ff4dd14d4",
+    "inventoryEvidenceDigest": "urn:sage:inventory-evidence:sha256:869bcab1c9da1b8da9325c4483354491d7f23e5d61ee5cca08a0393a50a44173"
   }
 }

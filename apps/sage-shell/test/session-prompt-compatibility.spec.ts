@@ -35,8 +35,8 @@ import {
 } from '../src/security/compatibility-matrix-provider.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:2f2ea90e35b30d1a001124e29f3bd8fa1ee692049fb4b07fa3ec0436fc5f582e'
-const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:f5d8c7ce080c88b7f186a8189474db037a3d5f54b6aaa530426f1b0184213e8e'
+const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:418397647867d76ceb262f9b40b855857b32f16cb09796ee6f947c974494699b'
+const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:1178d1ad93e13563d86204ea8de70471c1f25c40eb3920ff82c66d8340384899'
 const REVOCATION_SOURCE_ID = 'urn:sage:compatibility-matrix-revocation-source:sha256:9837c233d165e19c205a31c80962917102b16768475ecef3e03bd5806ae2d5a1'
 const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
 
@@ -70,7 +70,12 @@ function realEntry() {
 
 /** A test-local matrix publication sealing the REAL pair but with a window covering the observed
  *  evidence instant — the shipped publication window starts 2026-10-11 by owner decision. */
-function testPublication(outcome: 'equivalent' | 'requires-new-revision' = 'equivalent') {
+function testPublication(
+  outcome: 'equivalent' | 'requires-new-revision' = 'equivalent',
+  // ADR-0326: the default window mirrors the shipped one and always COVERS the recorded
+  // evidence instant; the pre-window behaviour is exercised explicitly with a late window.
+  window: { readonly validFrom: string, readonly expiresAt: string } = { validFrom: '2026-10-11T00:00:00.000Z', expiresAt: '2027-10-11T00:00:00.000Z' },
+) {
   const matrix: CompatibilityMatrixV2 = {
     schemaVersion: 'sage.compatibility-matrix.v2',
     canonicalizationVersion: 'sage.compatibility-canonical-json.v2',
@@ -78,8 +83,8 @@ function testPublication(outcome: 'equivalent' | 'requires-new-revision' = 'equi
     targetContractVersion: 'sage.compatibility-target-semantic.v2',
     runtimeContractVersion: 'sage.runtime-descriptor.v2',
     issuer: { identity: 'authority:sage-compatibility', version: '2.0.0', digest: `sha256:${'a'.repeat(64)}` },
-    validFrom: '2026-10-10T00:00:00.000Z',
-    expiresAt: '2026-10-11T00:00:00.000Z',
+    validFrom: window.validFrom,
+    expiresAt: window.expiresAt,
     rules: [{
       ruleId: 'rule:sage-session-prompt-v1',
       targetSemanticDigest: TARGET_SEMANTIC_DIGEST,
@@ -249,14 +254,18 @@ describe('the real compatibility port', () => {
       .toEqual({ state: 'unavailable' })
   })
 
-  it('keeps the shipped publication honest before its owner window: the observed instant is not active', async () => {
-    // The shipped matrix window starts 2026-10-11 (owner decision); the real observation is from
-    // 2026-10-10, so the kernel answers matrix-not-active and the port collapses to unavailable —
-    // exactly the designed pre-window behaviour, mirroring the requirement's own effectiveAt.
+  it('keeps the shipped publication honest about its owner window (ADR-0326 re-anchored)', async () => {
+    // The refreshed re-observation sits INSIDE the shipped window (validFrom 2026-10-11), so the
+    // shipped publication must answer with the real evaluation — and a matrix whose window opens
+    // after the observed instant must stay unavailable (the kernel's window check, not a pin).
     const shipped = loadSessionPromptCompatibilityPublication()
     if (!shipped.ok) throw new Error(shipped.reason)
-    const result = await port({ matrixPublication: shipped })(request('session.send'))
-    expect(result).toEqual({ state: 'unavailable' })
+    const inside = await port({ matrixPublication: shipped })(request('session.send'))
+    expect(inside.state).toBe('allowed')
+
+    const lateWindow = testPublication('equivalent', { validFrom: '2099-01-01T00:00:00.000Z', expiresAt: '2099-12-31T00:00:00.000Z' })
+    const before = await port({ matrixPublication: lateWindow })(request('session.send'))
+    expect(before).toEqual({ state: 'unavailable' })
   })
 })
 

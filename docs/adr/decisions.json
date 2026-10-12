@@ -11062,6 +11062,43 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0326",
+      "title": "ADR-0326 · 跨代重观测即重发：发布器 refresh 模式 + 证据等价性外部证明",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "发布器新增 --refresh 与 --fixture；refresh 下跳过两条 v1-round-trip 检查并改判基座。",
+          "constraints": [
+            "base must be v1",
+            "fixture write-back to repo path"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "重发前以上一版 fixture 干跑并与已装出版物逐字节比对。",
+          "constraints": [
+            "byte-identical or abort"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "程序：恢复 v1 基座 → 现行根重录制 → 等价证明 → --refresh --write。",
+          "constraints": [
+            "net change limited to matrix bundle + fixture"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "spec 常量按加载器现值重锚；窗口/生效期前提改为录制驱动。",
+          "constraints": [
+            "no stale date literals"
+          ]
+        }
+      ]
     }
   ]
 }

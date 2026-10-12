@@ -153,7 +153,11 @@ describe('the real registry port', () => {
     expect(await port(twoClaimants)(request('session.send'))).toEqual({ state: 'unavailable' })
     expect(await port({})(request('session.stop'))).toEqual({ state: 'unavailable' })
 
-    const late = variantProvider((entry) => ({ ...entry, effectiveAt: '2026-10-11T00:00:00Z' }))
+    // ADR-0326: an entry effective AFTER the recorded evidence instant, derived from the
+    // recording itself so the premise survives any re-recording (the old literal assumed a
+    // pre-10-11 recording and silently flipped meaning when the evidence moved past it).
+    const oneHourAfterObservation = new Date(Date.parse(reobs.evidence.observedAt) + 3_600_000).toISOString()
+    const late = variantProvider((entry) => ({ ...entry, effectiveAt: oneHourAfterObservation }))
     expect(await port({ provider: late.provider, observation: late.observation })(request('session.send')))
       .toEqual({ state: 'unavailable' })
   })
