@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "kind": "sage.packaged-acceptance.v1",
+  "passed": true,
+  "startedAt": "2026-10-12T14:32:17.047Z",
+  "artifact": {
+    "dmg": "../../../.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg",
+    "sha256": "379db30d8e95e5cc902119a50eedb54cc4b5266476a77816efed6afcae106562",
+    "manifest": "../../../.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg.manifest.json",
+    "mountedDevice": "/dev/disk7s1",
+    "mountpoint": "mount",
+    "rootEntries": [
+      "Applications",
+      "Sage.app"
+    ],
+    "installedApp": "installed/Sage.app",
+    "mountedTreeSha256": "691096504657d9c01262a41935933251aa0cd1d1b07f7d5f7b22a1e2db57c845",
+    "installedTreeSha256": "691096504657d9c01262a41935933251aa0cd1d1b07f7d5f7b22a1e2db57c845",
+    "volume": {
+      "name": "Sage 0.1.0 Internal",
+      "readOnly": true,
+      "entries": [
+        {
+          "path": "Applications",
+          "type": "symlink",
+          "mode": "755",
+          "target": "/Applications"
+        },
+        {
+          "path": "Sage.app",
+          "type": "directory",
+          "mode": "755",
+          "treeSha256": "691096504657d9c01262a41935933251aa0cd1d1b07f7d5f7b22a1e2db57c845"
+        }
+      ],
+      "treeSha256": "e7640d6d213d8a11f8c7e8ac27c634652b426b8f67dfa0bdc43ef71e4fc6956e"
+    },
+    "signing": {
+      "certificateSha256": "aedb59c0c2e66fc87f74b8f1990c9a6e79d95dae0b3ce9a4bdd393a4d635f09a",
+      "certificateSha1": "ada1d12df45bec114c715c0e1c2ada817c7aa28a",
+      "identityCommonName": "Sage Local Code Signing"
+    },
+    "codesignVerified": true,
+    "bundleVerified": true,
+    "relocatable": true,
+    "architecture": "arm64",
+    "dmgDetached": true
+  },
+  "root": {
+    "path": "runtime/sage-root",
+    "freshBeforeFirstLaunch": true,
+    "sameRootUsedForRestart": true
+  },
+  "firstLaunch": {
+    "cdpPort": 58823,
+    "ready": {
+      "profileMarker": "sage shell: bundled profile installed",
+      "hostReady": true,
+      "productUrl": "dsh-app://app/index.html"
+    },
+    "desktopLiveResult": "first-launch/desktop-live-result.json",
+    "cleanup": {
+      "pgid": 28835,
+      "groupVerified": true,
+      "termSent": true,
+      "before": [
+        {
+          "pid": 28835,
+          "pgid": 28835,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/MacOS/Sage --remote-debugging-port=58823"
+        },
+        {
+          "pid": 28847,
+          "pgid": 28835,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper.app/Contents/MacOS/Sage Helper --type=gpu-process --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAOAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAABgAAAAAAAAAGAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAACAAAAAAAAAA= --shared-files --field-trial-handle=1718379636,r,16276967062244562836,7038323287413998278,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,1320135911405656166,10875297244615033252,4 --trace-process-track-uuid=3190708988185955192 --seatbelt-client=30"
+        },
+        {
+          "pid": 28848,
+          "pgid": 28835,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper.app/Contents/MacOS/Sage Helper --type=utility --utility-sub-type=network.mojom.NetworkService --lang=zh-CN --service-sandbox-type=network --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --standard-schemes=dsh-app,sage-sanbao --secure-schemes=dsh-app,sage-sanbao --fetch-schemes=dsh-app,sage-sanbao --streaming-schemes=dsh-app,sage-sanbao --code-cache-schemes=dsh-app,sage-sanbao --shared-files --field-trial-handle=1718379636,r,16276967062244562836,7038323287413998278,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,1320135911405656166,10875297244615033252,4 --trace-process-track-uuid=3190708989122997041 --seatbelt-client=30"
+        },
+        {
+          "pid": 28908,
+          "pgid": 28835,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/MacOS/Sage /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/harness/profiles/.sage-generations/sage-0-1-0-build-1-arm64/sage-host/host/index.js /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/harness/profiles/.sage-generations/sage-0-1-0-build-1-arm64"
+        },
+        {
+          "pid": 28912,
+          "pgid": 28835,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper (Renderer).app/Contents/MacOS/Sage Helper (Renderer) --type=renderer --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --standard-schemes=dsh-app,sage-sanbao --secure-schemes=dsh-app,sage-sanbao --fetch-schemes=dsh-app,sage-sanbao --streaming-schemes=dsh-app,sage-sanbao --code-cache-schemes=dsh-app,sage-sanbao --app-path=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Resources/app --enable-sandbox --remote-debugging-port=58823 --lang=zh-CN --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=4 --time-ticks-at-unix-epoch=-1791540279905048 --launch-time-ticks=275323651853 --shared-files --field-trial-handle=1718379636,r,16276967062244562836,7038323287413998278,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,1320135911405656166,10875297244615033252,4 --trace-process-track-uuid=3190708990060038890 --seatbelt-client=59"
+        }
+      ],
+      "after": [],
+      "leaderClose": {
+        "code": 0,
+        "signal": null
+      },
+      "cdpPortClosed": true
+    },
+    "profile": {
+      "generation": "sage-0-1-0-build-1-arm64",
+      "manifestSha256": "0d19d2c447b6bc5d17fec3f6c611c2ef2add1077184f36f12ba8878a7a14d51f",
+      "activatedAt": "2026-10-12T14:33:11.753Z",
+      "pointerSha256": "11c3525f0d11fe8fca7df382f6f67882c8057088a69d88f0303f3bb0c6b2f3b9"
+    },
+    "preferencesFile": {
+      "path": "preferences/display.prefs",
+      "sha256": "e7f1744698d4b666f836c9282c514003829f77334a102f567cda90522e1c114c"
+    },
+    "authoritativeDevicePreferences": {
+      "requested": {
+        "theme": "dark",
+        "language": "en",
+        "density": "compact",
+        "fontStyle": "serif",
+        "contentWidth": "wide",
+        "terminalTheme": "manual",
+        "fileIcons": "material",
+        "iconAppearance": "dark"
+      },
+      "savedAt": "2026-10-12T14:33:23.840Z",
+      "effectiveTheme": "dark"
+    },
+    "screenshots": [
+      "first-launch/desktop-settings-first-save-1440-dark-compact.png",
+      "first-launch/desktop-settings-first-save-660-dark-compact.png",
+      "first-launch/desktop-settings-first-save-320-dark-compact.png"
+    ]
+  },
+  "restart": {
+    "cdpPort": 58853,
+    "ready": {
+      "profileMarker": "sage shell: bundled profile existing",
+      "hostReady": true,
+      "productUrl": "dsh-app://app/index.html"
+    },
+    "desktopLiveResult": "restart/desktop-live-result.json",
+    "cleanup": {
+      "pgid": 28925,
+      "groupVerified": true,
+      "termSent": true,
+      "before": [
+        {
+          "pid": 28925,
+          "pgid": 28925,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/MacOS/Sage --remote-debugging-port=58853"
+        },
+        {
+          "pid": 28936,
+          "pgid": 28925,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper.app/Contents/MacOS/Sage Helper --type=gpu-process --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAOAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAABgAAAAAAAAAGAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAACAAAAAAAAAA= --shared-files --field-trial-handle=1718379636,r,14926814728424546853,17881492380484761017,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,6101854378949015814,16770644598019734381,4 --trace-process-track-uuid=3190708988185955192 --seatbelt-client=29"
+        },
+        {
+          "pid": 28937,
+          "pgid": 28925,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper.app/Contents/MacOS/Sage Helper --type=utility --utility-sub-type=network.mojom.NetworkService --lang=zh-CN --service-sandbox-type=network --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --standard-schemes=dsh-app,sage-sanbao --secure-schemes=dsh-app,sage-sanbao --fetch-schemes=dsh-app,sage-sanbao --streaming-schemes=dsh-app,sage-sanbao --code-cache-schemes=dsh-app,sage-sanbao --shared-files --field-trial-handle=1718379636,r,14926814728424546853,17881492380484761017,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,6101854378949015814,16770644598019734381,4 --trace-process-track-uuid=3190708989122997041 --seatbelt-client=30"
+        },
+        {
+          "pid": 28938,
+          "pgid": 28925,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/MacOS/Sage /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/harness/profiles/.sage-generations/sage-0-1-0-build-1-arm64/sage-host/host/index.js /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root /Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/harness/profiles/.sage-generations/sage-0-1-0-build-1-arm64"
+        },
+        {
+          "pid": 28939,
+          "pgid": 28925,
+          "command": "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Frameworks/Sage Helper (Renderer).app/Contents/MacOS/Sage Helper (Renderer) --type=renderer --user-data-dir=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/runtime/sage-root/electron/user-data --standard-schemes=dsh-app,sage-sanbao --secure-schemes=dsh-app,sage-sanbao --fetch-schemes=dsh-app,sage-sanbao --streaming-schemes=dsh-app,sage-sanbao --code-cache-schemes=dsh-app,sage-sanbao --app-path=/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261012-v13/installed/Sage.app/Contents/Resources/app --enable-sandbox --remote-debugging-port=58853 --lang=zh-CN --num-raster-threads=4 --enable-zero-copy --enable-gpu-memory-buffer-compositor-resources --enable-main-frame-before-activation --renderer-client-id=4 --time-ticks-at-unix-epoch=-1791540279905074 --launch-time-ticks=275325631380 --shared-files --field-trial-handle=1718379636,r,14926814728424546853,17881492380484761017,262144 --enable-features=PdfUseShowSaveFilePicker,ScreenCaptureKitPickerScreen,ScreenCaptureKitStreamPickerSonoma --disable-features=DropInputEventsWhilePaintHolding,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TimeoutHangingVideoCaptureStarts,TraceSiteInstanceGetProcessCreation --variations-seed-version --pseudonymization-salt-handle=1935764596,r,6101854378949015814,16770644598019734381,4 --trace-process-track-uuid=3190708990060038890 --seatbelt-client=59"
+        }
+      ],
+      "after": [],
+      "leaderClose": {
+        "code": 0,
+        "signal": null
+      },
+      "cdpPortClosed": true
+    },
+    "profile": {
+      "generation": "sage-0-1-0-build-1-arm64",
+      "manifestSha256": "0d19d2c447b6bc5d17fec3f6c611c2ef2add1077184f36f12ba8878a7a14d51f",
+      "activatedAt": "2026-10-12T14:33:11.753Z",
+      "pointerSha256": "11c3525f0d11fe8fca7df382f6f67882c8057088a69d88f0303f3bb0c6b2f3b9"
+    },
+    "preferencesFile": {
+      "path": "preferences/display.prefs",
+      "sha256": "e7f1744698d4b666f836c9282c514003829f77334a102f567cda90522e1c114c"
+    },
+    "authoritativeDevicePreferences": {
+      "requested": {
+        "theme": "dark",
+        "language": "en",
+        "density": "compact",
+        "fontStyle": "serif",
+        "contentWidth": "wide",
+        "terminalTheme": "manual",
+        "fileIcons": "material",
+        "iconAppearance": "dark"
+      },
+      "savedAt": "2026-10-12T14:33:23.840Z",
+      "effectiveTheme": "dark"
+    },
+    "preferencePosts": 0,
+    "screenshots": [
+      "restart/desktop-settings-restart-1440-dark-compact.png",
+      "restart/desktop-settings-restart-660-dark-compact.png",
+      "restart/desktop-settings-restart-320-dark-compact.png"
+    ],
+    "preferencesEqual": true,
+    "savedAtEqual": true
+  },
+  "cleanup": {
+    "firstProcessGroupEmpty": true,
+    "restartProcessGroupEmpty": true,
+    "firstCdpPortClosed": true,
+    "restartCdpPortClosed": true,
+    "dmgDetached": true
+  },
+  "finishedAt": "2026-10-12T14:33:26.359Z"
+}
