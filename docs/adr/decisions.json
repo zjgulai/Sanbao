@@ -11405,7 +11405,57 @@
     },
     {
       "id": "ADR-0335",
-      "title": "ADR-0335 · VF-1 主题重定值：token 锚定 Qoder 0.4.4 实测，合同改复刻锚定 + 偏离清单",
+      "title": "ADR-0335 · profile 启动自愈：五类 kill 窗口收敛，electron 子树 admission",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "自愈模块先算后落；提交失败 fail closed，清理删除 best-effort；全态幂等。",
+          "constraints": [
+            "no cosmetic brick"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "致命窗口回滚：唯一 receipt 匹配的 displaced 回位；0/≥2 具名 fail closed。",
+          "constraints": [
+            "rollback not roll-forward"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "采纳=被杀前滚：唯一模板匹配代际过安装同套验证后写指针；不引入第二信任路径。",
+          "constraints": [
+            "same verification as install"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "GC keep-1：无效代际清除；有效非活动代际留 mtime 最新；平局不删；根级指针 tmp 散件清扫。",
+          "constraints": [
+            "new policy, one-line revertible"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "admission 对 electron/** 不下钻；其余保持严厉；次序 configure→reconcile→admission→install 由 spec 钉住。",
+          "constraints": [
+            "Sage state root-level only"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "readActiveProfilePointer/readGenerationProfile 拆分导出；自愈不用 readActiveProfile 做探针。",
+          "constraints": [
+            "no raw ENOENT probe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0336",
+      "title": "ADR-0336 · VF-1 主题重定值：token 锚定 Qoder 0.4.4 实测，合同改复刻锚定 + 偏离清单",
       "status": "accepted（2026-10-13）",
       "date": "2026-10-13",
       "decisions": [

@@ -1,94 +1,19 @@
 import { createHash } from 'node:crypto'
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { existsSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { HOST_CONFIG_FILE, HOST_LIB_FILES } from '../src/profile/layout.js'
-import { materializeProfile } from '../src/profile/materialize.js'
 import {
   BUNDLED_PROFILE_TEMPLATE_MANIFEST,
   BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR,
   assertBundledProfileAdmissibleSync,
   installBundledProfileTemplate,
 } from '../src/profile/bundled-profile.js'
-import { ensureSageDirectoriesSync, generationProfileDir, readActiveProfile, resolveSagePaths } from '../src/profile/paths.js'
-import { RUNTIME_ARTIFACT_ATTESTATION_FILE } from '../src/profile/runtime-artifact-attestation.js'
-
-const realShellRoot = join(import.meta.dirname, '..')
-const seedDir = join(realShellRoot, 'seed')
-const created: string[] = []
-
-function temporary(label: string): string {
-  const path = join(tmpdir(), `sage-bundled-profile-${label}-${String(created.length)}-${String(Date.now())}`)
-  created.push(path)
-  return path
-}
-
-function stubShellRoot(comment = ''): string {
-  const root = temporary('shellroot')
-  for (const name of HOST_LIB_FILES) {
-    const path = join(root, 'lib', name)
-    mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, `// built ${name}\n${comment}`)
-  }
-  mkdirSync(join(root, dirname(HOST_CONFIG_FILE)), { recursive: true })
-  cpSync(join(realShellRoot, HOST_CONFIG_FILE), join(root, HOST_CONFIG_FILE))
-  return root
-}
-
-function testPaths(label: string) {
-  return resolveSagePaths({ home: temporary(`${label}-home`), root: temporary(`${label}-root`) })
-}
-
-async function installProfileFixture(profileDir: string): Promise<void> {
-  const packageDir = join(profileDir, 'node_modules/.pnpm/fixture@1.0.0/node_modules/fixture')
-  mkdirSync(join(profileDir, 'node_modules/.bin'), { recursive: true })
-  mkdirSync(packageDir, { recursive: true })
-  writeFileSync(join(packageDir, 'index.js'), 'export const fixture = true\n')
-  const executable = join(packageDir, 'bin.js')
-  writeFileSync(executable, '#!/usr/bin/env node\n')
-  chmodSync(executable, 0o755)
-  symlinkSync('../.pnpm/fixture@1.0.0/node_modules/fixture/bin.js', join(profileDir, 'node_modules/.bin/fixture'))
-  writeFileSync(join(profileDir, 'node_modules/.modules.yaml'), 'storeDir: /fixture/pnpm/store\n')
-}
-
-async function createTemplate(label: string, options: { readonly generation?: string, readonly comment?: string } = {}) {
-  const sourcePaths = testPaths(`${label}-source`)
-  const generation = options.generation ?? `${label}-generation`
-  const materialized = await materializeProfile({
-    seedDir,
-    shellRoot: stubShellRoot(options.comment ?? ''),
-    repoRoot: realShellRoot,
-    paths: sourcePaths,
-    generation,
-    install: installProfileFixture,
-  })
-  const active = await readActiveProfile(sourcePaths)
-  if (active === null || active.runtimeArtifactAttestationSha256 === undefined) throw new Error('fixture profile lacks attestation')
-  const attestation = JSON.parse(readFileSync(join(materialized.profileDir, RUNTIME_ARTIFACT_ATTESTATION_FILE), 'utf8')) as {
-    ownedProfileDigest: string
-    artifactAttestationDigest: string
-  }
-  const templateRoot = temporary(`${label}-template`)
-  mkdirSync(templateRoot, { recursive: true })
-  cpSync(materialized.profileDir, join(templateRoot, BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR), {
-    recursive: true,
-    verbatimSymlinks: true,
-  })
-  writeFileSync(join(templateRoot, BUNDLED_PROFILE_TEMPLATE_MANIFEST), `${JSON.stringify({
-    schemaVersion: 'sage.bundled-profile-template.v1',
-    generation,
-    profileManifestSha256: materialized.manifestSha256,
-    runtimeArtifactAttestationSha256: active.runtimeArtifactAttestationSha256,
-    ownedProfileDigest: attestation.ownedProfileDigest,
-    artifactAttestationDigest: attestation.artifactAttestationDigest,
-  }, null, 2)}\n`)
-  return { generation, templateRoot }
-}
+import { ensureSageDirectoriesSync, generationProfileDir, readActiveProfile } from '../src/profile/paths.js'
+import { cleanupTemporaryRoots, createTemplate, testPaths } from './support/profile-fixtures.js'
 
 afterEach(() => {
   vi.restoreAllMocks()
-  while (created.length > 0) rmSync(created.pop() as string, { recursive: true, force: true })
+  cleanupTemporaryRoots()
 })
 
 describe('installBundledProfileTemplate', () => {
@@ -129,7 +54,7 @@ describe('installBundledProfileTemplate', () => {
     assertBundledProfileAdmissibleSync(paths)
     // Exactly the first packaged acceptance race (2026-10-10): the debugging launch writes
     // DevToolsActivePort into the configured session directory while the async install
-    // transaction is still awaiting. Admission is a pre-configure decision, not a re-check.
+    // transaction is still awaiting.
     writeFileSync(join(paths.sessionDataDir, 'DevToolsActivePort'), '12345\n')
 
     const result = await installBundledProfileTemplate({
@@ -138,6 +63,23 @@ describe('installBundledProfileTemplate', () => {
       now: () => '2026-10-05T12:00:00.000Z',
     })
     expect(result).toMatchObject({ state: 'installed', profile: { generation: template.generation } })
+  })
+
+  it('treats electron/** as opaque at admission while every Sage-owned path stays strict (ADR-0335)', () => {
+    const paths = testPaths('admission-electron')
+    ensureSageDirectoriesSync(paths)
+    // Chromium's runtime files under electron/** are tolerated: admission runs after
+    // configureElectronPaths now, so they exist by decision time on every first boot.
+    writeFileSync(join(paths.sessionDataDir, 'DevToolsActivePort'), '12345\n')
+    writeFileSync(join(paths.electronUserDataDir, 'Local State'), '{}\n')
+    symlinkSync(paths.draftsDir, join(paths.electronUserDataDir, 'SingletonLock'))
+    expect(() => assertBundledProfileAdmissibleSync(paths)).not.toThrow()
+    // Sage-owned state at the root level and inside the owned directories still fails closed.
+    writeFileSync(join(paths.draftsDir, 'draft.json'), '{}\n')
+    expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
+    rmSync(join(paths.draftsDir, 'draft.json'))
+    writeFileSync(join(paths.root, 'preferences.json'), '{}\n')
+    expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
   })
 
   it('rejects tampered template bytes before activating a generation', async () => {

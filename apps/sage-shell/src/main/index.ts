@@ -9,6 +9,7 @@ import { app, dialog, nativeTheme, protocol, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { ensureSageDirectoriesSync, readActiveProfile, resolveSagePaths, type SagePaths } from '../profile/paths.js'
 import { assertBundledProfileAdmissibleSync, installBundledProfileTemplate } from '../profile/bundled-profile.js'
+import { reconcileProfileState } from '../profile/profile-reconcile.js'
 import { surfaceStartupFailure } from './startup-failure.js'
 import type { SageViewState } from '../product/contracts.js'
 import type { DraftRecord } from './draft-store.js'
@@ -1339,21 +1340,32 @@ async function bootstrap(): Promise<void> {
   // `setPath('sessionData')` has to occur before Electron's ready event. This
   // safe synchronous setup is deliberately before the first await in bootstrap().
   ensureSageDirectoriesSync(paths)
-  // Pristine admission must be decided BEFORE configureElectronPaths: once Chromium knows the
-  // session directory it writes its own runtime files (DevToolsActivePort, Local State) while the
-  // async install transaction is still awaiting, which would fail the check nondeterministically
-  // (first packaged acceptance, 2026-10-10). A valid existing pointer skips admission entirely.
+  // Electron is pointed away from the default userData (which IS this root before the call) before
+  // any await: Chromium's own runtime files (DevToolsActivePort, Local State, singleton files)
+  // otherwise land in the root from background threads while bootstrap awaits — ADR-0335 reordered
+  // this ahead of admission because the reconciler below awaits for seconds.
+  configureElectronPaths(paths)
+  const profileTemplateRoot = join(process.resourcesPath, 'sage-profile-template')
+  // ADR-0335: repair and collect the five kill windows of the ADR-0332 profile transaction before
+  // anything reads the pointer or judges the root. Commit failures (a misplaced active generation,
+  // a failed adoption) fail closed through the normal startup surface; cosmetic removals never do.
+  if (app.isPackaged) {
+    const reconciled = await reconcileProfileState({ paths, templateRoot: profileTemplateRoot })
+    process.stdout.write(`sage shell: profile reconcile ${reconciled.state}\n`)
+  }
+  // Pristine admission still decides a pointerless root. Chromium may have written under
+  // electron/** by now, so that ONE subtree is opaque to the check (see the admission comment);
+  // every Sage-owned path stays strict. A valid existing pointer skips admission entirely.
   if (app.isPackaged && !existsSync(paths.activeProfileFile)) {
     assertBundledProfileAdmissibleSync(paths)
   }
-  configureElectronPaths(paths)
   // A packaged first launch cannot depend on pnpm or the network. The build-time materialized,
   // app-signature-covered template is admitted only into a completely pristine Sage root; an
   // existing valid profile wins and any partial/corrupt state fails closed without replacement.
   if (app.isPackaged) {
     const profile = await installBundledProfileTemplate({
       paths,
-      templateRoot: join(process.resourcesPath, 'sage-profile-template'),
+      templateRoot: profileTemplateRoot,
     })
     process.stdout.write(`sage shell: bundled profile ${profile.state}\n`)
   }

@@ -22,7 +22,7 @@ const GENERATION = /^[a-z0-9][a-z0-9-]{0,63}$/u
 const SHA256 = /^[a-f0-9]{64}$/u
 const SHA256_DIGEST = /^sha256:[a-f0-9]{64}$/u
 
-interface BundledProfileTemplateManifest {
+export interface BundledProfileTemplateManifest {
   readonly schemaVersion: typeof TEMPLATE_SCHEMA
   readonly generation: string
   readonly profileManifestSha256: string
@@ -52,7 +52,7 @@ async function assertDirectory(path: string, label: string): Promise<void> {
   }
 }
 
-async function readTemplateManifest(templateRoot: string): Promise<BundledProfileTemplateManifest> {
+export async function readTemplateManifest(templateRoot: string): Promise<BundledProfileTemplateManifest> {
   await assertDirectory(templateRoot, 'bundled profile template root')
   const path = join(templateRoot, BUNDLED_PROFILE_TEMPLATE_MANIFEST)
   const entry = await lstat(path)
@@ -107,18 +107,24 @@ function expectedEmptyDirectories(paths: SagePaths): Set<string> {
 }
 
 /**
- * A missing pointer is admissible only when the owned root contains no prior state or partial
- * transaction. This check is synchronous and MUST run before `configureElectronPaths`: Chromium
- * writes its own runtime files (DevToolsActivePort with remote debugging, Local State otherwise)
- * into the configured session directory while the async install transaction is still awaiting, so
- * any post-await re-check is a race (first packaged acceptance, 2026-10-10).
+ * A missing pointer is admissible only when the owned root contains no prior Sage state or
+ * partial transaction. This check is synchronous and, since ADR-0335, runs AFTER
+ * `configureElectronPaths` (the boot-time reconciler precedes both and needs Electron pointed
+ * away from the root before its first await). Chromium's own runtime files (Local State,
+ * DevToolsActivePort, singleton files) therefore MAY already exist and the `electron/**`
+ * subtree is treated as opaque — Chromium's private scratch, never a home for Sage facts.
+ * Everything else stays strict: every other unexpected entry, any file inside the owned
+ * directories, and any symlink still fails closed, because all Sage-owned state (drafts,
+ * preferences, sessions, policy) lives at the root level or under harness/**.
  */
 export function assertBundledProfileAdmissibleSync(paths: SagePaths): void {
   const expected = expectedEmptyDirectories(paths)
+  const opaque = relative(paths.root, paths.electronDir)
   const visit = (directory: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name)
       const portable = relative(paths.root, path)
+      if (portable === opaque) continue
       if (!isInside(paths.root, path) || entry.isSymbolicLink() || !entry.isDirectory() || !expected.has(portable)) {
         throw new Error('sage shell: refusing bundled profile install because the Sage data root is not pristine')
       }
@@ -147,8 +153,9 @@ async function writeVerificationPointer(path: string, manifest: BundledProfileTe
  * Install a signed profile template exactly once. Existing valid activations win; a malformed
  * pointer, invalid receipt, or attestation drift fails closed without replacement. Pristine
  * admission of the data root is asserted by the boot path via `assertBundledProfileAdmissibleSync`
- * before any Electron path is configured — this transaction must not re-check it asynchronously,
- * because Chromium's own session files land in the root while these awaits yield.
+ * (after `configureElectronPaths` and the boot reconciler, ADR-0335) — this transaction must not
+ * re-check it asynchronously, because Chromium's own session files land under `electron/` while
+ * these awaits yield.
  */
 export async function installBundledProfileTemplate(input: {
   readonly paths: SagePaths

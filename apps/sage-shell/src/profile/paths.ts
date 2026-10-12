@@ -168,6 +168,11 @@ export function resolveSagePaths(input: { home: string; root?: string; platform?
   }
 }
 
+/** Whether a directory name is a legal profile generation identifier. */
+export function isProfileGenerationName(name: string): boolean {
+  return GENERATION_NAME.test(name)
+}
+
 /** Absolute directory for one immutable profile generation. */
 export function generationProfileDir(paths: SagePaths, generation: string): string {
   assertGeneration(generation)
@@ -292,11 +297,15 @@ function parsePointer(content: string): ActiveProfilePointer {
   return pointer as ActiveProfilePointer
 }
 
-/**
- * Read and validate the active generation pointer. A missing pointer means no
- * materialized Sage profile has been activated yet; malformed pointers fail closed.
- */
-export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile | null> {
+/** The parsed, shape-validated active pointer without any generation-tree check. A missing
+ *  pointer means no materialized Sage profile has been activated yet; malformed pointers fail
+ *  closed. Boot-time reconciliation probes pointer state through this seam, never through
+ *  `readActiveProfile` (whose generation-dir ENOENT escapes as a raw error, ADR-0335). */
+export async function readActiveProfilePointer(paths: SagePaths): Promise<{
+  readonly generation: string
+  readonly manifestSha256: string
+  readonly activatedAt: string
+} | null> {
   let content: string
   try {
     await assertRegularFile(paths.activeProfileFile)
@@ -306,37 +315,51 @@ export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile
     throw cause
   }
   const pointer = parsePointer(content)
-  const profileDir = generationProfileDir(paths, pointer.generation)
+  return { generation: pointer.generation, manifestSha256: pointer.manifestSha256, activatedAt: pointer.activatedAt }
+}
+
+/**
+ * Validate one generation tree in place against an expected receipt checksum: the exact
+ * checks `readActiveProfile` runs after the pointer, minus the pointer. The boot-time
+ * adoption path reuses this so an interrupted install is completed with the same verification
+ * the install itself performed — never a second, weaker trust path (ADR-0335).
+ */
+export async function readGenerationProfile(
+  paths: SagePaths,
+  generation: string,
+  manifestSha256: string,
+): Promise<{ readonly profileDir: string, readonly runtimeArtifactAttestationSha256?: string }> {
+  const profileDir = generationProfileDir(paths, generation)
   await assertDirectory(profileDir)
   const manifestPath = join(profileDir, PROFILE_MANIFEST_FILE)
   await assertRegularFile(manifestPath)
   const manifest = await readFile(manifestPath)
-  if (sha256(manifest) !== pointer.manifestSha256) {
-    throw new Error(`sage shell: active profile manifest checksum does not match pointer for ${pointer.generation}`)
+  if (sha256(manifest) !== manifestSha256) {
+    throw new Error(`sage shell: active profile manifest checksum does not match pointer for ${generation}`)
   }
   let receipt: unknown
   try {
     receipt = JSON.parse(manifest.toString('utf8'))
   } catch (cause) {
-    throw new Error(`sage shell: active profile receipt is not valid JSON for ${pointer.generation}`, { cause })
+    throw new Error(`sage shell: active profile receipt is not valid JSON for ${generation}`, { cause })
   }
   if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
-    throw new Error(`sage shell: active profile receipt must be an object for ${pointer.generation}`)
+    throw new Error(`sage shell: active profile receipt must be an object for ${generation}`)
   }
   const record = receipt as { schemaVersion?: unknown; generation?: unknown; files?: unknown }
-  if (record.schemaVersion !== 1 || record.generation !== pointer.generation || !Array.isArray(record.files) || record.files.length === 0) {
-    throw new Error(`sage shell: active profile receipt has an unsupported shape for ${pointer.generation}`)
+  if (record.schemaVersion !== 1 || record.generation !== generation || !Array.isArray(record.files) || record.files.length === 0) {
+    throw new Error(`sage shell: active profile receipt has an unsupported shape for ${generation}`)
   }
   const seen = new Set<string>()
   let runtimeArtifactAttestationSha256: string | undefined
   for (const item of record.files) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      throw new Error(`sage shell: active profile receipt has an invalid file row for ${pointer.generation}`)
+      throw new Error(`sage shell: active profile receipt has an invalid file row for ${generation}`)
     }
     const file = item as { path?: unknown; sha256?: unknown }
     if (typeof file.path !== 'string' || typeof file.sha256 !== 'string' || !isLiteralReceiptPath(file.path)
       || !/^[a-f0-9]{64}$/u.test(file.sha256) || seen.has(file.path)) {
-      throw new Error(`sage shell: active profile receipt has an unsafe file row for ${pointer.generation}`)
+      throw new Error(`sage shell: active profile receipt has an unsafe file row for ${generation}`)
     }
     seen.add(file.path)
     const path = join(profileDir, file.path)
@@ -352,11 +375,26 @@ export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile
     }
   }
   return {
-    generation: pointer.generation,
     profileDir,
+    ...(runtimeArtifactAttestationSha256 === undefined ? {} : { runtimeArtifactAttestationSha256 }),
+  }
+}
+
+/**
+ * Read and validate the active generation pointer plus its generation tree. A missing pointer
+ * means no materialized Sage profile has been activated yet; malformed pointers and drifted
+ * generations fail closed.
+ */
+export async function readActiveProfile(paths: SagePaths): Promise<ActiveProfile | null> {
+  const pointer = await readActiveProfilePointer(paths)
+  if (pointer === null) return null
+  const validated = await readGenerationProfile(paths, pointer.generation, pointer.manifestSha256)
+  return {
+    generation: pointer.generation,
+    profileDir: validated.profileDir,
     manifestSha256: pointer.manifestSha256,
     activatedAt: pointer.activatedAt,
-    ...(runtimeArtifactAttestationSha256 === undefined ? {} : { runtimeArtifactAttestationSha256 }),
+    ...(validated.runtimeArtifactAttestationSha256 === undefined ? {} : { runtimeArtifactAttestationSha256: validated.runtimeArtifactAttestationSha256 }),
   }
 }
 

@@ -78,5 +78,13 @@ describe('default desktop document', () => {
     expect(bundledProfile).toBeGreaterThan(configure)
     expect(bundledProfile).toBeLessThan(ready)
     expect(guard).toBeLessThan(bootstrap.indexOf('await main(paths)'))
+    // ADR-0335 ordering: the reconciler runs after Electron is configured (its awaits must not
+    // reopen the pre-configure window where Chromium's default userData IS the Sage root) and
+    // before both the pristine admission and the install.
+    const reconcile = bootstrap.indexOf('await reconcileProfileState({')
+    const admission = bootstrap.indexOf('assertBundledProfileAdmissibleSync(paths)')
+    expect(reconcile).toBeGreaterThan(configure)
+    expect(admission).toBeGreaterThan(reconcile)
+    expect(reconcile).toBeLessThan(bundledProfile)
   })
 })
