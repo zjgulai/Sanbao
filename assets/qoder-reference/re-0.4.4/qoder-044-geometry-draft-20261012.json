@@ -1,0 +1,20 @@
+{
+ "radius": {
+  "xs": ".125rem",
+  "sm": ".25rem",
+  "md": ".375rem",
+  "lg": ".5rem",
+  "xl": ".75rem"
+ },
+ "fontSizes": {
+  "xs": ".75rem",
+  "sm": ".875rem",
+  "base": "1rem",
+  "lg": "1.125rem",
+  "xl": "1.25rem",
+  "2xl": "1.5rem"
+ },
+ "spacingUnit": ".25rem",
+ "surfaceShadowLight": "0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px 0 #0000000a",
+ "buttonShadowLight": "0 1px 3px var(--q8ed61e), inset 0 0 0 1px var(--qa784c8), inset 0 -1px 0 var(--qe6702f), inset 0 1px 0 var(--qc0709a)"
+}

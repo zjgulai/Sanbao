@@ -35,6 +35,7 @@
 !assets/
 !assets/sage/**
 !assets/sanbao-logo-kit/**
+!assets/qoder-reference/**
 
 # —— vendor 嵌套仓库：源码不入库，仅 pin 文件入库 ——
 !vendor/

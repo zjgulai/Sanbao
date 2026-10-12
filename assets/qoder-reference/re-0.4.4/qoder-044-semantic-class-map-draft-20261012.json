@@ -1,0 +1,125 @@
+{
+ "schema": "sage.qoder-re.semantic-class-map.v0-draft",
+ "source": {
+  "app": "Qoder.app",
+  "version": "0.4.4",
+  "file": "out/renderer/assets/index-CO9JoLwe.css + index-nRmb_3VI.js",
+  "extractedAt": "2026-10-12"
+ },
+ "themeModel": {
+  "default": "forest (light=forest-light, dark=forest-dark)",
+  "lightSource": ":root:not([data-theme]) 默认组",
+  "darkSource": "html[data-theme=forest-dark]",
+  "userThemes": [
+   "light",
+   "dark",
+   "auto",
+   "bee",
+   "parchment",
+   "mint",
+   "forest(默认)"
+  ]
+ },
+ "mapping": {
+  "bg-base": {
+   "var": "--q4122d0",
+   "light": "#fff",
+   "dark": "#0e0e0e"
+  },
+  "bg-container": {
+   "var": "--qc7eb6f",
+   "light": "#fff",
+   "dark": "#111110"
+  },
+  "bg-elevated": {
+   "var": "--qa50881",
+   "light": "#f9f9f9",
+   "dark": "#22221f"
+  },
+  "bg-highlight": {
+   "var": "--q769866",
+   "light": "#080807",
+   "dark": "#fff"
+  },
+  "bg-layout": {
+   "var": "--q6b0d27",
+   "light": "#fff",
+   "dark": "#111110"
+  },
+  "border": {
+   "var": "--q5df0d6",
+   "light": "#eee",
+   "dark": "#20201e"
+  },
+  "border-quaternary": {
+   "var": "--q5df0d6",
+   "light": "#eee",
+   "dark": "#20201e"
+  },
+  "border-secondary": {
+   "var": "--q2c58e1",
+   "light": "#ddd",
+   "dark": "#31312d"
+  },
+  "border-tertiary": {
+   "var": "--q041c05",
+   "light": "#e6e6e6",
+   "dark": "#292926"
+  },
+  "info": {
+   "var": "--q5cae12",
+   "light": "#3b81e9",
+   "dark": "#0b83f1"
+  },
+  "primary": {
+   "var": "--q7cd089",
+   "light": "#4b6f5a",
+   "dark": "#5cb870"
+  },
+  "primary-bg": {
+   "var": "--q19fcd9",
+   "light": "#f2f4f2",
+   "dark": "#14261c"
+  },
+  "primary-border": {
+   "var": "--q4be894",
+   "light": "#d5dbd8",
+   "dark": "#335942"
+  },
+  "success": {
+   "var": "--q345206",
+   "light": "#579b6e",
+   "dark": "#73cd94"
+  },
+  "text": {
+   "var": "--q96a4bf",
+   "light": "#141414",
+   "dark": "#eeeeeb"
+  },
+  "text-on-primary": {
+   "var": "--q78bde4",
+   "light": "#fdfdfd",
+   "dark": "#080807"
+  },
+  "text-quaternary": {
+   "var": "--q26c568",
+   "light": "#aaa9a8",
+   "dark": "#585853"
+  },
+  "text-secondary": {
+   "var": "--qb4b282",
+   "light": "#636261",
+   "dark": "#b4b4ac"
+  },
+  "text-tertiary": {
+   "var": "--q2a2da0",
+   "light": "#838280",
+   "dark": "#7b7b74"
+  },
+  "warning": {
+   "var": "--q48da17",
+   "light": "#efb041",
+   "dark": "#faad14"
+  }
+ }
+}
