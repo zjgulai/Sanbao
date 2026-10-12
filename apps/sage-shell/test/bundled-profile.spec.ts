@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -79,6 +79,24 @@ describe('installBundledProfileTemplate', () => {
     expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
     rmSync(join(paths.draftsDir, 'draft.json'))
     writeFileSync(join(paths.root, 'preferences.json'), '{}\n')
+    expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
+  })
+
+  it('tolerates Finder junk anywhere and pre-0335 root-level Chromium leftovers by name (ADR-0338)', () => {
+    const paths = testPaths('admission-legacy-junk')
+    ensureSageDirectoriesSync(paths)
+    // Finder junk is not Sage state at any depth.
+    writeFileSync(join(paths.root, '.DS_Store'), 'junk\n')
+    writeFileSync(join(paths.harnessHome, '.DS_Store'), 'junk\n')
+    // A pre-ADR-0335 boot could leave these AT THE ROOT before Electron was pointed away.
+    writeFileSync(join(paths.root, 'Local State'), '{}\n')
+    writeFileSync(join(paths.root, 'DevToolsActivePort'), '12345\n')
+    symlinkSync('/nonexistent-target', join(paths.root, 'SingletonLock'))
+    mkdirSync(join(paths.root, 'Crashpad'), { recursive: true })
+    expect(() => assertBundledProfileAdmissibleSync(paths)).not.toThrow()
+    // The same names are NOT a magic passport outside the root: a Chromium-named entry under
+    // harness/ still fails closed — the tolerance is a curated legacy list, not a blanket skip.
+    writeFileSync(join(paths.harnessHome, 'Local State'), '{}\n')
     expect(() => assertBundledProfileAdmissibleSync(paths)).toThrow(/not pristine/u)
   })
 

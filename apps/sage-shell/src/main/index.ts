@@ -114,6 +114,10 @@ protocol.registerSchemesAsPrivileged([{
 }, SANBAO_SCHEME_REGISTRATION])
 
 /** Configure Electron storage before its ready event can initialize Chromium defaults. */
+/** ADR-0338: the primary window the single-instance lock focuses when a second launch is
+ *  refused (module scope: bootstrap's `second-instance` handler runs before/without main()). */
+let sagePrimaryWindow: BrowserWindow | null = null
+
 function configureElectronPaths(paths: SagePaths): void {
   const electron = resolveSageElectronPaths(paths)
   app.setPath('userData', electron.userData)
@@ -1313,6 +1317,7 @@ async function main(paths: SagePaths): Promise<void> {
 
   const window = createSageWindow(framePolicy)
   sageWindow = window
+  sagePrimaryWindow = window
   await loadTrustedUrl(window, framePolicy, `${SCHEME}://app/index.html`)
   if (process.env.SAGE_DEVTOOLS === '1') window.webContents.openDevTools({ mode: 'detach' })
 
@@ -1345,6 +1350,21 @@ async function bootstrap(): Promise<void> {
   // otherwise land in the root from background threads while bootstrap awaits — ADR-0335 reordered
   // this ahead of admission because the reconciler below awaits for seconds.
   configureElectronPaths(paths)
+  // ADR-0338: one packaged instance per data root. The lock is keyed on the CONFIGURED userData
+  // (per-root, so dev roots and probe roots stay independent) and must be taken before the
+  // reconciler touches the shared profile tree — two live instances could otherwise clear each
+  // other's in-flight transactions. A refused second launch focuses the running window and exits.
+  if (app.isPackaged && !app.requestSingleInstanceLock()) {
+    process.stdout.write('sage shell: second instance refused\n')
+    app.exit(0)
+    return
+  }
+  app.on('second-instance', () => {
+    const primary = sagePrimaryWindow
+    if (primary === null || primary.isDestroyed()) return
+    if (primary.isMinimized()) primary.restore()
+    primary.focus()
+  })
   const profileTemplateRoot = join(process.resourcesPath, 'sage-profile-template')
   // ADR-0335: repair and collect the five kill windows of the ADR-0332 profile transaction before
   // anything reads the pointer or judges the root. Commit failures (a misplaced active generation,

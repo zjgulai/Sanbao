@@ -106,25 +106,46 @@ function expectedEmptyDirectories(paths: SagePaths): Set<string> {
   ].map(path => relative(paths.root, path)).filter(path => path !== ''))
 }
 
+/** Finder junk: never Sage state, never evidence of a prior Sage life (ADR-0338). Tolerated at
+ *  any depth — browsing the root in Finder is not a product action. */
+const TOLERATED_JUNK_NAMES = new Set(['.DS_Store'])
+
+/** Root-level files a PRE-ADR-0335 build could leave when the boot order still let Chromium's
+ *  default userData be the Sage root (Local State, singleton lock/socket/cookie,
+ *  DevToolsActivePort) or its crash reporter (Crashpad). Current builds cannot produce them
+ *  (ADR-0335 order), so these names are legacy compatibility: tolerated by NAME at the root
+ *  only — elsewhere they stay strict, and none of them is Sage-owned state. */
+const TOLERATED_ROOT_NAMES = new Set([
+  'Local State',
+  'DevToolsActivePort',
+  'SingletonLock',
+  'SingletonSocket',
+  'SingletonCookie',
+  'Crashpad',
+])
+
 /**
  * A missing pointer is admissible only when the owned root contains no prior Sage state or
  * partial transaction. This check is synchronous and, since ADR-0335, runs AFTER
  * `configureElectronPaths` (the boot-time reconciler precedes both and needs Electron pointed
- * away from the root before its first await). Chromium's own runtime files (Local State,
- * DevToolsActivePort, singleton files) therefore MAY already exist and the `electron/**`
- * subtree is treated as opaque — Chromium's private scratch, never a home for Sage facts.
- * Everything else stays strict: every other unexpected entry, any file inside the owned
- * directories, and any symlink still fails closed, because all Sage-owned state (drafts,
- * preferences, sessions, policy) lives at the root level or under harness/**.
+ * away from the root before its first await). Chromium's own runtime files therefore MAY already
+ * exist: the `electron/**` subtree is treated as opaque, and the ADR-0338 name lists above
+ * tolerate Finder junk anywhere and the pre-0335 root-level Chromium leftovers. Everything else
+ * stays strict: every other unexpected entry, any file inside the owned directories, and any
+ * symlink still fails closed, because all Sage-owned state (drafts, preferences, sessions,
+ * policy) lives at the root level or under harness/**.
  */
 export function assertBundledProfileAdmissibleSync(paths: SagePaths): void {
   const expected = expectedEmptyDirectories(paths)
   const opaque = relative(paths.root, paths.electronDir)
   const visit = (directory: string): void => {
+    const atRoot = relative(paths.root, directory) === ''
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name)
       const portable = relative(paths.root, path)
       if (portable === opaque) continue
+      if (TOLERATED_JUNK_NAMES.has(entry.name)) continue
+      if (atRoot && TOLERATED_ROOT_NAMES.has(entry.name)) continue
       if (!isInside(paths.root, path) || entry.isSymbolicLink() || !entry.isDirectory() || !expected.has(portable)) {
         throw new Error('sage shell: refusing bundled profile install because the Sage data root is not pristine')
       }
