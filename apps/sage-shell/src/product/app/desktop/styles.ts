@@ -249,10 +249,14 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 /* ADR-0300: while the side-preview WebContentsView occupies the right edge, the page keeps its
    content left of it (one shared width constant, SAGE_PREVIEW_PANEL_WIDTH). */
 .sage-desktop .session-layout.preview-open { padding-right: ${SAGE_PREVIEW_PANEL_WIDTH}px; }
-/* ADR-0301: the turn process strip — live file activity and the settled footer. */
+/* ADR-0301: the turn process strip — live file activity and the settled footer.
+ * VF-2 FV-6: the label carries the observed step-badge form (numbered round chip) and the
+ * strip sits on the shared white-card system (Qoder session-toolcall screenshot). */
 .sage-desktop .process-live { margin: 0 0 12px; font-size: 12px; color: var(--sage-muted); }
-.sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; font-size: 12px; color: var(--sage-muted); }
-.sage-desktop .turn-process-label { color: var(--sage-muted); }
+.sage-desktop .turn-process { display: flex; flex-direction: column; gap: 8px; margin: 0 0 20px; padding: 12px 14px; border: 0; border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .turn-process-label { display: flex; align-items: center; gap: 8px; color: var(--sage-muted); }
+.sage-desktop .turn-process-label::before { content: counter(turn-step, decimal); counter-increment: turn-step; width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--sage-overlay); color: var(--sage-ink); font-size: 11px; }
+.sage-desktop .message-scroll { counter-reset: turn-step; }
 /* ADR-0306: the extension-management page and the add-custom-MCP form. */
 /* ADR-0313: the session-control surfaces (S03/S05/S07) and the plans roster (S06). */
 .sage-desktop .approvals-section { display: flex; flex-direction: column; gap: 8px; margin: 0 30px 14px; padding: 12px 14px; border: 1px solid var(--sage-warning); border-radius: 10px; }
@@ -398,7 +402,7 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .artifact-rail { width: 224px; flex: 0 0 224px; display: flex; flex-direction: column; gap: 10px; padding: 18px 14px; border-left: 1px solid var(--sage-divider); overflow-y: auto; }
 .sage-desktop .artifact-rail-header { font-size: 11px; color: var(--sage-muted); }
 .sage-desktop .artifact-empty { margin: 0; font-size: 12px; color: var(--sage-faint); }
-.sage-desktop .artifact-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--sage-raised); border: 1px solid var(--sage-border); border-radius: 10px; }
+.sage-desktop .artifact-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--sage-surface); border: 0; border-radius: var(--sage-radius); box-shadow: var(--sage-shadow); }
 .sage-desktop .artifact-card-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
 .sage-desktop .artifact-name { font-size: 12px; color: var(--sage-ink); overflow-wrap: anywhere; }
 .sage-desktop .artifact-kind { font-size: 10px; color: var(--sage-muted); border: 1px solid var(--sage-border); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
