@@ -11308,6 +11308,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0333",
+      "title": "ADR-0333 · R17-B 模型设置壳批：编辑器结构复刻，凭证面零接触",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "纯壳批：结构逐字复刻 QB20-01..07；API Key 恒空只读、校验禁用具名。",
+          "constraints": [
+            "zero credential contact"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "真实本地交互：弹窗开/关、供应商 3 组 17 项、三面板 Escape 回、放弃确认双出口。",
+          "constraints": [
+            "observation as contract"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "凭证字段按观测边界：endpoint/Model ID 只读占位；外链不渲染；DeepSeek 无购买 Token Plan。",
+          "constraints": [
+            "QB20-04 verbatim"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "凭证写入路径独立成批（票级）；retention 红线约束后续 store。",
+          "constraints": [
+            "no persistence this batch"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "11 行 pending→implementing，evidenceRefs 挂 tracked-test；route 权威零改动。",
+          "constraints": [
+            "route matrix unchanged"
+          ]
+        }
+      ]
     }
   ]
 }

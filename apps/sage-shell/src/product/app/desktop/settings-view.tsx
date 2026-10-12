@@ -19,6 +19,15 @@ import {
   VOICE_GROUPS,
   type SettingsObservedGroup,
 } from './settings-observed.js'
+import {
+  DEEPSEEK_MODEL_OPTIONS,
+  DEEPSEEK_TYPE_OPTIONS,
+  OPENAI_COMPATIBLE_API_TYPES,
+  PROVIDER_GROUPS,
+  PROVIDER_NAMES,
+  providerForVariant,
+  type ModelProviderId,
+} from './settings-models.js'
 
 export interface DesktopSettingsViewProps {
   /** Supplying the controller keeps tests and the eventual page glue on the same narrow seam. */
@@ -359,7 +368,184 @@ function VoicePane(): ReactNode {
   </section>
 }
 
-type SettingsPane = 'appearance' | 'profile' | 'general' | 'mode' | 'task-monitor' | 'shortcuts' | 'voice'
+/** R17-B (QB20): the model editor shell. The add-dialog opens/cancels for real (QB20-02), the
+ *  provider menu opens with the observed 3-group/17-entry list and DeepSeek is selectable
+ *  (QB20-03/04); the type/models/api-type panels open and Escape back (QB20-05/06); the discard
+ *  confirm offers the observed two outcomes (QB20-07). The API Key stays an always-empty
+ *  read-only placeholder and 校验并添加模型 stays disabled with the named note — Sage has no
+ *  credential write path yet; nothing here enters, validates, stores or sends a credential. */
+type ModelsPanel = 'provider' | 'type' | 'models' | 'api-type'
+
+function ModelSelectMenu({ panel, label, value, open, onOpen, onClose, children, describedBy }: {
+  readonly panel: ModelsPanel
+  readonly label: string
+  readonly value: string
+  readonly open: boolean
+  readonly onOpen: () => void
+  readonly onClose: () => void
+  readonly children: ReactNode
+  readonly describedBy?: string
+}): ReactNode {
+  const menuId = `models-${panel}-options`
+  return <div className="settings-models-select" data-models-select={panel}>
+    <button type="button" role="combobox" aria-label={label} aria-expanded={open}
+      aria-describedby={describedBy} aria-haspopup={panel === 'models' ? 'menu' : 'listbox'}
+      aria-controls={open ? menuId : undefined}
+      onClick={() => (open ? onClose() : onOpen())}
+      onKeyDown={event => { if (open && event.key === 'Escape') { event.stopPropagation(); onClose() } }}>
+      <span className="settings-models-select-value">{value}</span>
+    </button>
+    {open
+      ? <div id={menuId} className={`settings-models-options settings-models-options-${panel}`}
+        role={panel === 'models' ? 'menu' : 'listbox'} aria-label={label}
+        onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onClose() } }}>
+        {children}
+      </div>
+      : null}
+  </div>
+}
+
+function ModelsPane(): ReactNode {
+  const [provider, setProvider] = useState<ModelProviderId>('aliyun')
+  const [panel, setPanel] = useState<ModelsPanel | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const compatible = provider === 'openai-compatible' || provider === 'anthropic-compatible'
+  const providerName = PROVIDER_NAMES[provider]
+  const dirty = provider !== 'aliyun' || panel !== null
+  const closeForm = (): void => {
+    if (dirty) setConfirming(true)
+    else setFormOpen(false)
+  }
+  const leaveForm = (): void => {
+    setConfirming(false)
+    setFormOpen(false)
+    setPanel(null)
+    setProvider('aliyun')
+  }
+  return <section className="settings-observed settings-models" aria-label="模型">
+    <header>
+      <h2>模型</h2>
+      <p>使用自有 API Key 管理自定义模型。本机未接线：不录入、不校验、不保存任何凭据。</p>
+    </header>
+    <p className="settings-models-empty">暂无自定义模型，点击添加模型开始使用</p>
+    <button type="button" className="text-button" aria-label="添加模型"
+      onClick={() => { setProvider('aliyun'); setPanel(null); setFormOpen(true) }}>添加模型</button>
+    {formOpen && !confirming
+      ? <div className="settings-modal-backdrop" role="presentation"
+        onKeyDown={event => { if (event.key === 'Escape') closeForm() }}>
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-label="添加模型">
+          <h3>添加模型</h3>
+          <form onSubmit={event => event.preventDefault()}>
+            <div className="settings-models-field">
+              <label>供应商</label>
+              <ModelSelectMenu panel="provider" label="供应商" value={providerName}
+                open={panel === 'provider'} onOpen={() => setPanel('provider')}
+                onClose={() => setPanel(null)}>
+                {PROVIDER_GROUPS.map(group => <div role="group" aria-label={group.group} key={group.group}>
+                  <h3>{group.group}</h3>
+                  {group.names.map(name => {
+                    const id = (Object.keys(PROVIDER_NAMES) as ModelProviderId[])
+                      .find(key => key !== 'aliyun' && PROVIDER_NAMES[key] === name)
+                    const selected = name === providerName
+                    return <button type="button" role="option" aria-selected={selected}
+                      tabIndex={selected ? 0 : -1} key={name}
+                      onClick={() => {
+                        if (id === undefined) return
+                        setProvider(id)
+                        setPanel(null)
+                      }}>
+                      <span>{name}</span>{selected ? <span aria-hidden="true">✓</span> : null}
+                    </button>
+                  })}
+                </div>)}
+              </ModelSelectMenu>
+            </div>
+            {compatible
+              ? <>
+                {provider === 'openai-compatible'
+                  ? <div className="settings-models-field">
+                    <label>API 类型</label>
+                    <ModelSelectMenu panel="api-type" label="API 类型" value="Chat Completions API"
+                      open={panel === 'api-type'} onOpen={() => setPanel('api-type')}
+                      onClose={() => setPanel(null)}>
+                      {OPENAI_COMPATIBLE_API_TYPES.map(option => {
+                        const selected = option === 'Chat Completions API'
+                        return <button type="button" role="option" aria-selected={selected}
+                          tabIndex={selected ? 0 : -1} key={option}
+                          onClick={() => setPanel(null)}>
+                          <span>{option}</span>{selected ? <span aria-hidden="true">✓</span> : null}
+                        </button>
+                      })}
+                    </ModelSelectMenu>
+                  </div>
+                  : null}
+                <div className="settings-models-field">
+                  <label htmlFor="models-endpoint-readonly">接口地址（Base URL）</label>
+                  <input id="models-endpoint-readonly" className="settings-models-text" type="text"
+                    aria-label="接口地址（Base URL）" placeholder="https://api.example.com/v1"
+                    value="" readOnly autoComplete="off" />
+                </div>
+              </>
+              : <>
+                <div className="settings-models-field">
+                  <label>类型</label>
+                  <ModelSelectMenu panel="type" label="类型"
+                    value={provider === 'deepseek' ? '按量付费' : 'Token plan'}
+                    open={panel === 'type'} onOpen={() => setPanel('type')}
+                    onClose={() => setPanel(null)}>
+                    {(provider === 'deepseek' ? DEEPSEEK_TYPE_OPTIONS : ['Token plan']).map(option =>
+                      <button type="button" role="option" aria-selected="true" tabIndex={0} key={option}
+                        onClick={() => setPanel(null)}>
+                        <span>{option}</span><span aria-hidden="true">✓</span>
+                      </button>)}
+                  </ModelSelectMenu>
+                </div>
+                <div className="settings-models-field">
+                  <label>模型</label>
+                  <ModelSelectMenu panel="models" label="选择模型" value="选择模型" describedBy="models-models-count"
+                    open={panel === 'models'} onOpen={() => setPanel('models')}
+                    onClose={() => setPanel(null)}>
+                    <span id="models-models-count" hidden>已选择 0 个模型</span>
+                    {DEEPSEEK_MODEL_OPTIONS.map(name =>
+                      <button type="button" role="menuitemcheckbox" aria-checked="false" tabIndex={-1} key={name}
+                        onClick={() => undefined}>
+                        <span>{name}</span>
+                      </button>)}
+                  </ModelSelectMenu>
+                </div>
+              </>}
+            <div className="settings-models-field">
+              <label htmlFor="models-api-key-readonly">API Key</label>
+              <input id="models-api-key-readonly" type="password" aria-label="API Key"
+                placeholder="请输入 API Key" value="" readOnly autoComplete="off" spellCheck={false} />
+              <p className="settings-observed-note">API Key 未接线：本机不录入、不校验、不保存任何凭据；凭证写入路径独立成批。</p>
+            </div>
+            <div className="settings-modal-actions">
+              <button type="button" className="text-button" aria-label="取消" onClick={closeForm}>取消</button>
+              <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      : null}
+    {confirming
+      ? <div className="settings-modal-backdrop" role="presentation"
+        onKeyDown={event => { if (event.key === 'Escape') setConfirming(false) }}>
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-label="放弃未保存的模型配置？">
+          <h3>放弃未保存的模型配置？</h3>
+          <p>关闭后，本次输入的 Endpoint、模型能力和 API Key 都会被清空。</p>
+          <div className="settings-modal-actions">
+            <button type="button" className="text-button" aria-label="继续编辑" onClick={() => setConfirming(false)}>继续编辑</button>
+            <button type="button" className="text-button" aria-label="放弃更改" onClick={leaveForm}>放弃更改</button>
+          </div>
+        </div>
+      </div>
+      : null}
+  </section>
+}
+
+type SettingsPane = 'appearance' | 'profile' | 'general' | 'mode' | 'task-monitor' | 'shortcuts' | 'voice' | 'models'
 
 const PANES: readonly { readonly pane: SettingsPane, readonly label: string }[] = [
   { pane: 'profile', label: '个人资料' },
@@ -368,6 +554,7 @@ const PANES: readonly { readonly pane: SettingsPane, readonly label: string }[] 
   { pane: 'task-monitor', label: '任务监控' },
   { pane: 'shortcuts', label: '快捷键' },
   { pane: 'voice', label: '语音' },
+  { pane: 'models', label: '模型' },
   { pane: 'appearance', label: '外观与显示' },
 ]
 
@@ -416,7 +603,9 @@ export function DesktopSettingsView({ controller, leaves, account, onBack }: Des
                   note="本页复刻观测结构（QB16-01，五组十四行）；写路径在独立批，控件不保存任何设置，读数不伪造。" />
                 : pane === 'shortcuts'
                   ? <ShortcutsPane />
-                  : <VoicePane />}
+                  : pane === 'models'
+                    ? <ModelsPane />
+                    : <VoicePane />}
     </div>
   </div>
 }

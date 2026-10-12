@@ -109,8 +109,8 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 132,
-        "pending": 66,
+        "implementing": 143,
+        "pending": 55,
         "verified": 8
       },
       "applicationService": {
@@ -2726,8 +2726,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -2748,7 +2754,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the settings entry renders in the R17-B settings shell navigation and lands on its reproduced pane; the credential write path is not assembled (the host has no Sage-face credential write path — the API Key stays an always-empty read-only placeholder, nothing enters, validates, stores or sends a credential, T13 sub-batch); the credential-store class owns any eventual store."
         ]
       }
     },
@@ -14901,8 +14907,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -14923,7 +14935,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-01 default page state."
         ]
       }
     },
@@ -14968,8 +14980,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -14990,7 +15008,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-02 add-dialog default state (aliyun + Token plan, AX/图一致 cancel)."
         ]
       }
     },
@@ -15035,8 +15053,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15057,7 +15081,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-03 provider-menu state (3 groups / 17 entries, verbatim order)."
         ]
       }
     },
@@ -15102,8 +15126,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15124,7 +15154,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-04 DeepSeek form state (按量付费, model checklist, 购买 Token Plan link gone)."
         ]
       }
     },
@@ -15169,8 +15199,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15191,7 +15227,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-05 DeepSeek model-menu state (three unchecked items)."
         ]
       }
     },
@@ -15236,8 +15272,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15258,7 +15300,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-06 DeepSeek type-menu state (按量付费 only)."
         ]
       }
     },
@@ -15303,8 +15345,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15325,7 +15373,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-07 discard-confirm state (继续编辑 / 放弃更改, 初焦继续编辑)."
         ]
       }
     },
@@ -15370,8 +15418,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15392,7 +15446,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the openai-compatible form state (API 类型 panel, read-only endpoint draft)."
         ]
       }
     },
@@ -15437,8 +15491,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15459,7 +15519,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the openai-compatible api-type menu state (Chat Completions / Responses)."
         ]
       }
     },
@@ -15504,8 +15564,14 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "implementing",
+          "evidenceRefs": [
+            {
+              "kind": "tracked-test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
+              "countsAsVerification": false
+            }
+          ]
         },
         "applicationService": {
           "status": "blocked",
@@ -15526,7 +15592,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "requires ticket implementation and scoped real service verification"
+          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the anthropic-compatible form state (no api-type panel, read-only endpoint draft)."
         ]
       }
     }
