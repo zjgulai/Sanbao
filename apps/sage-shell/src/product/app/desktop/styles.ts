@@ -103,7 +103,7 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop [data-desktop-read="blocked"] #desktop-read-status strong { color: var(--sage-warning); }
 .sage-desktop #desktop-read-retry { margin-left: auto; flex-shrink: 0; border: 1px solid var(--sage-border); }
 .sage-desktop .outstanding-feature { padding: 32px 0; }
-.sage-desktop .outstanding-feature h1 { font-size: 28px; font-weight: 500; }
+.sage-desktop .outstanding-feature h1 { font-size: 24px; font-weight: 500; }
 .sage-desktop .outstanding-feature p { margin: 12px 0; color: var(--sage-muted); }
 .sage-desktop .workspace-page { padding: var(--sage-density-main-padding); }
 .sage-desktop .workspace-list { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: var(--sage-density-row-gap); }
@@ -344,7 +344,7 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 /* Loop-Q R9: the knowledge-centre and sites page shells — geometry only, palette from
    product/theme-tokens.ts; the data area shows the named not-wired reason, never rows. */
 .sage-desktop .knowledge-page, .sage-desktop .sites-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
-.sage-desktop .knowledge-page h1, .sage-desktop .sites-page h1 { margin: 0; font-size: 16px; }
+.sage-desktop .knowledge-page h1, .sage-desktop .sites-page h1 { margin: 0; font-size: 24px; font-weight: 500; }
 /* VF-2 FV-1: the market tabs are plain text with a bold active state (Qoder live market page);
  * the category chips keep the pill shape with the quaternary-gray active fill (overlay token). */
 .sage-desktop .page-tabs { display: flex; gap: 18px; }
