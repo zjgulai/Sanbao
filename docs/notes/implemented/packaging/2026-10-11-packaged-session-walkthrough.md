@@ -10,8 +10,9 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 **v6** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `71de42a21cc218c6ae291358ee1131f1075aee980a0e0445a19a117301282b6f`，388,522,606 bytes，含 R2–R16 + B 批 + R17-A/C + L1-A/B/C + 启动失败面 + **CTX-01C 设备聚合读（ADR-0324，解生产冷启动死锁）**；DMG-06 全链验收 `passed=true` 于 2026-10-12，读数入仓 `evidence/2026-10-12-dmg06-v6-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v5（`e9493ac7…`）已改名备份为 `Sage-0.1.0-internal-arm64-v5.dmg`；v4（`171d06b7…`）/v3（`052c3970…`）同旧。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
-   > ⚠️ 修正记录（2026-10-12）：v5 生产冷启动死锁（state 读要求事项已激活，而激活入口在被拦载荷里——闭环，见 ADR-0324）；v6 起登录后 state 载荷可读（activeContext inactive + 代际），名册可选。步骤 5 的前置（接入工作区 + 关联卡设默认）已在下方补登。
+1. 安装 **v7** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `4d04808f86959080dae946c45c0cb186056a213801f61e6f2a2b60cbe2cc27e7`，398,113,987 bytes，含 v6 全部 + **ADR-0325 桥终局契约修复 + ADR-0324 组装面 scopedOr**；DMG-06 全链验收 `passed=true` 于 2026-10-12，读数入仓 `evidence/2026-10-12-dmg06-v7-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v6（`71de42a2…`）未单独留档（v7 以同路径事务替换）；v5（`e9493ac7…`）/v4/v3 已改名备份保留。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
+   > ⚠️ 修正记录（2026-10-12，v7）：v6 装机实测暴露桥终局契约缺陷（`bridge-result` 剥离 `message.result`，20 个消费者全判 `bridge-answer-unrecognised`——折叠/接入/会话通道等从未在生产路径工作过）与组装面 scope 防线缺陷；v7 修复两者。生产冷启动链已在 v7 实测走通：登录 → state 放行 → 名册 → 折叠（`workspace:sage-walkthrough`）→ 关联 + 设默认 → `context/select` → ensure authored 第二条 `revision-entered`（`revision:sage.<uuid>`，sqlite 实测）。
+   > ⚠️ 修正记录（2026-10-12，v6）：v5 生产冷启动死锁（state 读要求事项已激活，而激活入口在被拦载荷里——闭环，见 ADR-0324）；v6 起登录后 state 载荷可读（activeContext inactive + 代际），名册可选。步骤 5 的前置（接入工作区 + 关联卡设默认）已在下方补登。
    > ⚠️ 修正记录（2026-10-12 首版）：同日首版 v5（sha `728013c2…`）误装仓内旧 input 残留（assemble 收了仓库相对路径而非 `$PACKAGING_STAGING_ROOT` 覆盖根；另有 Finder `.DS_Store` 污染过 profile-template），已重产为 `e9493ac7…`。
 2. Logto Native 应用 `cmg2ty121m1tlsd0fgiuv` 的 redirect allowlist 仍含 `http://127.0.0.1:3000/callback`（ADR-0183 时已配，请复核）。
 3. 测试账号设置 Name（否则界面显示名为空）。
