@@ -11135,6 +11135,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0328",
+      "title": "ADR-0328 · failed-retry 再授权：选择时 ensure 为失败修订再落工作修订",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "decideRunRevision：failed-retry 时返回 needed，选择时 ensure 落新工作修订。",
+          "constraints": [
+            "domain transition stays"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "再授权的 changeReason 显式区别于首修订。",
+          "constraints": [
+            "no first-revision wording"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "零新路由/UI；reconfirmRevision 留待将来票。",
+          "constraints": [
+            "no denominator change"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "spec 覆盖 failed-retry 再授权闭环。",
+          "constraints": [
+            "deterministic timestamps"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -18,7 +18,7 @@ import { createSessionPromptPrepareEnsure } from '../src/main/session-prompt-pre
 import { createSessionCoreIdentityPort } from '../src/main/session-core-identity.js'
 import { loadSessionPromptRequirementBundle } from '../src/main/publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../src/security/capability-registry-provider.js'
-import { createBusinessMatter, enterEvidence, projectBusinessMatter } from '../src/domain/business-matter.js'
+import { createBusinessMatter, enterEvidence, failAttempt, projectBusinessMatter, startAttempt } from '../src/domain/business-matter.js'
 import { encodeBusinessMatterEvents } from '../src/domain/business-matter-codec.js'
 import { openBusinessMatterEventStore } from '../src/persistence/business-matter-event-store.js'
 import {
@@ -327,5 +327,154 @@ describe('selection-time ensure completes the fresh-matter flow (ADR-0291)', () 
       expect(projection.attempts).toHaveLength(1)
       expect(projection.currentRevisionId).toBe(selected.projection.revisionId)
     }
+  })
+
+  it('re-arms a failed-retry matter with a fresh working revision (ADR-0328)', async () => {
+    const container = await mkdtemp(join(await realpath(tmpdir()), 'sage-ensure-rearm-'))
+    cleanups.push(() => rm(container, { recursive: true, force: true }))
+    const root = join(container, 'Sage')
+    const home = join(container, 'home')
+    await mkdir(home, { mode: 0o700 })
+    await mkdir(join(root, 'data', 'business-matter'), { mode: 0o700, recursive: true })
+    const paths = resolveSagePaths({ home, root, platform: process.platform })
+    await writeFile(paths.organizationPolicyFile, JSON.stringify({
+      schemaVersion: 'sage.organization-policy.v1',
+      organizationId: 'organization:sage',
+      policy: { identity: 'policy:local', version: '1' },
+      validFrom: '2026-10-01T00:00:00Z',
+      expiresAt: '2027-10-01T00:00:00Z',
+      membership: { mode: 'instance-operator', roleRefs: ['role:owner'] },
+      grants: [
+        { roleRef: 'role:owner', operation: 'session.prepare', actionScope: 'session.prepare', effectClass: 'local-write', requiresDecision: false },
+        { roleRef: 'role:owner', operation: 'session.send', actionScope: 'session.prompt', effectClass: 'external-write', requiresDecision: false },
+      ],
+    }), 'utf8')
+
+    const seedStore = openStore(paths)
+    const seeded = enterEvidence(createBusinessMatter({
+      matterId: MATTER_ID,
+      eventId: `${MATTER_ID}:created`,
+      occurredAt: '2026-10-10T10:00:00Z',
+      goal: 'Re-arm after a failed turn.',
+      responsibleParty: { kind: 'human', roleRef: 'role:owner' },
+    }), {
+      eventId: `${MATTER_ID}:revision-1`,
+      occurredAt: '2026-10-10T10:01:00Z',
+      revisionId: 'revision:1',
+      changeReason: '创建', scope: '创建', permissionBoundary: '创建', dataDestination: '创建',
+      evidence: [{
+        evidenceId: 'evidence:draft-confirmation',
+        source: 'draft:d1',
+        observedAt: '2026-10-10T10:00:30Z',
+        status: 'insufficient',
+      }],
+      unknowns: [], options: [], dependencies: [], experienceRefs: [],
+      actionPolicies: [],
+    })
+    const appendNew = (appendId: string, matter: Parameters<typeof encodeBusinessMatterEvents>[0], priorEventCount: number) => {
+      const read = attempts.readMatter(MATTER_ID) as { version: number }
+      return seedStore.append({
+        matterId: MATTER_ID,
+        expectedVersion: { kind: 'exact', value: read.version },
+        appendId,
+        events: encodeBusinessMatterEvents(matter).slice(priorEventCount).map((event) => ({
+          matterId: event.matterId,
+          eventId: event.eventId,
+          eventType: event.eventType,
+          eventSchemaVersion: event.eventSchemaVersion,
+          occurredAt: event.occurredAt,
+          payloadBytes: event.payloadBytes.slice(),
+        })),
+      })
+    }
+    expect(seedStore.append({
+      matterId: MATTER_ID,
+      expectedVersion: { kind: 'not-exists' },
+      appendId: 'seed:rearm-1',
+      events: encodeBusinessMatterEvents(seeded).map((event) => ({
+        matterId: event.matterId,
+        eventId: event.eventId,
+        eventType: event.eventType,
+        eventSchemaVersion: event.eventSchemaVersion,
+        occurredAt: event.occurredAt,
+        payloadBytes: event.payloadBytes.slice(),
+      })),
+    }).kind).toBe('appended')
+
+    const attempts = createSessionPromptAttemptStore({ sagePaths: paths })
+    cleanups.push(() => attempts.close())
+    const requirementBundle = loadSessionPromptRequirementBundle()
+    if (!requirementBundle.ok) throw new Error(requirementBundle.reason)
+    const prepareEnsure = createSessionPromptPrepareEnsure({
+      identityPolicy: createSessionCoreIdentityPort({
+        vault: {
+          identitySession: () => ({
+            sessionRef: 'session:active',
+            identityHandle: 'actor:local',
+            issuer: 'https://issuer.invalid',
+            authenticatedAt: '2026-10-01T00:00:00.000Z',
+            expiresAt: '2027-01-01T00:00:00.000Z',
+          }),
+          status: () => 'signed-out' as const,
+          snapshot: () => ({ status: 'signed-out' as const, displayName: null }),
+          signOut: () => undefined,
+        } as never,
+        authority: {
+          policyPath: paths.organizationPolicyFile,
+          readFileBytes: (path: string) => readFileSync(path),
+          now: () => '2026-10-12T00:00:00.000Z',
+        },
+      }),
+      attempts,
+      requirementBundle,
+      correlation: 'caller:session-core',
+      now: () => '2026-10-12T00:00:00.000Z',
+    })
+
+    // First ensure: the fresh custody matter gains its working revision.
+    expect(await prepareEnsure({ matterId: MATTER_ID })).toEqual({ state: 'ready' })
+    const afterFirst = projectBusinessMatter(attempts.readMatter(MATTER_ID) && (attempts.readMatter(MATTER_ID) as { matter: Parameters<typeof projectBusinessMatter>[0] }).matter)
+    expect(afterFirst.stage).toBe('evidence')
+    const firstRevisionId = afterFirst.currentRevisionId!
+
+    // Start and fail one attempt over that revision — the matter lands in failed-retry.
+    const matterBeforeAttempt = (attempts.readMatter(MATTER_ID) as { matter: Parameters<typeof startAttempt>[0] }).matter
+    const started = startAttempt(matterBeforeAttempt, {
+      eventId: `attempt-started:${MATTER_ID}`,
+      occurredAt: '2026-10-12T00:00:00.000Z',
+      attemptId: 'attempt:sage.rearm-1',
+      revisionId: firstRevisionId,
+      actionScopes: ['session.prompt'],
+      decisionIds: [],
+      executionSnapshot: {
+        provider: { identity: 'provider:deepseek-official', version: '1', digest: 'sha256:' + 'a'.repeat(64) },
+        model: { identity: 'model:deepseek-flash', version: '1', digest: 'sha256:' + 'b'.repeat(64) },
+        agent: { identity: 'agent:sage-default', version: '1', digest: 'sha256:' + 'c'.repeat(64) },
+        preset: { identity: 'preset:sage-default', version: '1', digest: 'sha256:' + 'd'.repeat(64) },
+        capabilities: [],
+      },
+      compatibility: { outcome: 'equivalent', matrixId: 'urn:sage:compatibility-matrix:sha256:' + 'e'.repeat(64), reason: 'fixture' },
+      observedTurnEndEdge: null,
+    })
+    const failed = failAttempt(started, {
+      eventId: `attempt-failed:${MATTER_ID}`,
+      occurredAt: '2026-10-12T00:00:00.000Z',
+      attemptId: 'attempt:sage.rearm-1',
+      source: 'runtime',
+      reason: 'fixture failure',
+      impact: 'fixture',
+    })
+    expect(appendNew('seed:rearm-fail', failed, matterBeforeAttempt.events.length).kind).toBe('appended')
+    const failedStage = projectBusinessMatter((attempts.readMatter(MATTER_ID) as { matter: Parameters<typeof projectBusinessMatter>[0] }).matter)
+    expect(failedStage.stage).toBe('failed-retry')
+
+    // Second ensure: the failed-retry exit — a FRESH working revision with the rearm reason.
+    expect(await prepareEnsure({ matterId: MATTER_ID })).toEqual({ state: 'ready' })
+    const rearmed = projectBusinessMatter((attempts.readMatter(MATTER_ID) as { matter: Parameters<typeof projectBusinessMatter>[0] }).matter)
+    expect(rearmed.stage).toBe('evidence')
+    expect(rearmed.currentRevisionId).not.toBe(firstRevisionId)
+    const currentRevision = rearmed.revisions.find((revision) => revision.revisionId === rearmed.currentRevisionId)
+    expect(currentRevision?.changeReason).toContain('再次确认')
+    expect(currentRevision?.actionPolicies.some((policy) => policy.actionScope === 'session.prompt')).toBe(true)
   })
 })

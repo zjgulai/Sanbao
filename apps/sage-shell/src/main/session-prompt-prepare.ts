@@ -100,14 +100,21 @@ function decideRunRevision(
   }
   const sendTable = ACTION_AUTHORITY_TABLE['session.send']
   let currentRevision: { readonly actionPolicies: readonly { readonly actionScope: string }[] } | undefined
+  let failedRetry = false
   try {
     const projection = projectBusinessMatter(readMatter.matter)
     const currentRevisionId: string | undefined = projection.currentRevisionId
     currentRevision = projection.revisions.find((revision) => revision.revisionId === currentRevisionId)
+    // ADR-0328: a failed revision is not runnable — the domain refuses every attempt from
+    // `failed-retry` and its exit is a fresh confirmation. The ensure therefore answers
+    // 'needed' for that stage: the same user-selection/user-input witness authors the next
+    // working revision, so re-selecting the matter (or re-sending) re-arms it. Without this
+    // the policy-present short-circuit below left failed matters permanently unsendable.
+    failedRetry = projection.stage === 'failed-retry'
   } catch {
     return { state: 'refused', code: FAILURE_CODES.unavailable }
   }
-  if (currentRevision !== undefined && currentRevision.actionPolicies
+  if (!failedRetry && currentRevision !== undefined && currentRevision.actionPolicies
     .some((policy) => policy.actionScope === sendTable?.actionScope)) {
     return { state: 'not-needed' }
   }
@@ -131,13 +138,22 @@ async function writeRunRevision(
   const { readMatter, requirement } = decision
   const occurredAt = options.now()
   const revisionId = `revision:sage.${randomUUID()}`
+  // ADR-0328: a failed-retry re-arm is the same write with its own honest reason.
+  let rearm = false
+  try {
+    rearm = projectBusinessMatter(readMatter.matter).stage === 'failed-retry'
+  } catch {
+    rearm = false
+  }
   let next
   try {
     next = enterEvidence(readMatter.matter, {
       eventId: `revision-entered:${revisionId}`,
       occurredAt,
       revisionId,
-      changeReason: '首个工作修订：用户显式输入即见证。',
+      changeReason: rearm
+        ? '失败修订后的再次确认：用户显式选择/输入即见证。'
+        : '首个工作修订：用户显式输入即见证。',
       scope: '一次会话发送的受治理范围。',
       permissionBoundary: '仅会话通道，不产生其他外部变更。',
       dataDestination: 'Sage 会话通道。',
@@ -157,8 +173,9 @@ async function writeRunRevision(
         requiresDecision: action.requiresDecision,
       })),
     })
-  } catch {
+  } catch (error) {
     // The domain kernel refused (a running attempt, a pending receipt, a malformed history).
+    if (process.env.SAGE_PREPARE_DEBUG === '1') console.error('[prepare-declined]', error)
     return { state: 'refused', code: 'session-prepare-declined' }
   }
 
