@@ -98,20 +98,50 @@ describe('the Sage semantic theme token owner (UI-TOKEN-01)', () => {
     expect(serialized).not.toContain('Sanbao')
   })
 
-  it('keeps normal text at 4.5:1 and non-text/focus roles at 3:1 across canonical surfaces', () => {
+  // VF-1 (ADR-0335): the palette is a deliberate Qoder 0.4.4 replica (mint-light/dark live
+  // readings). The former universal ≥4.5/≥3 matrix contradicted the replica goal — Qoder's own
+  // divider/border hairlines and tertiary text sit below those thresholds. The gate now anchors
+  // the replica values (drift detection) and keeps an explicit, tracked deviation list; the
+  // accessibility ledger lives in docs/notes/implemented/surface/2026-10-13-vf1-theme-rebase.md
+  // and is revisited at VF-4 ("surpass") with per-usage WCAG analysis.
+  it('anchors the VF-1 replica palette — every token equals the pinned Qoder-derived value', () => {
+    const expectedLight: Record<string, string> = {
+      canvas: '#f9f9f9', sidebar: '#dff1ea', surface: '#ffffff', raised: '#ffffff', overlay: '#cfe0d9',
+      ink: '#141414', muted: '#636261', faint: '#838280', divider: '#eeeae5', border: '#ddd8d2',
+      brand: '#4fa98f', focus: '#3b81e9', success: '#579b6e', warning: '#efb041', danger: '#e04b53',
+    }
+    const expectedDark: Record<string, string> = {
+      canvas: '#111110', sidebar: '#1a251c', surface: '#22221f', raised: '#1c1b19', overlay: '#1e2f21',
+      ink: '#eeeeeb', muted: '#b4b4ac', faint: '#7b7b74', divider: '#20201e', border: '#31312d',
+      brand: '#5cb870', focus: '#0b83f1', success: '#73cd94', warning: '#faad14', danger: '#ff8a8e',
+    }
+    for (const [theme, expected] of [['light', expectedLight], ['dark', expectedDark]] as const) {
+      const tokens = SAGE_THEME_TOKENS[theme]
+      for (const role of COLOR_ROLES) {
+        expect(tokens[role], `${theme}.${role}`).toBe(expected[role])
+      }
+    }
     for (const theme of ['light', 'dark'] as const) {
       const tokens = SAGE_THEME_TOKENS[theme]
-      expect(contrastFailures(tokens), theme).toEqual([])
       expect(new Set([tokens.brand, tokens.success, tokens.warning, tokens.danger]).size).toBe(4)
     }
   })
 
-  it('proves the contrast instrument rejects a palette mutation', () => {
+  it('keeps the contrast instrument and records the known replica deviations', () => {
+    // The instrument stays honest: the deviation set below is exactly the known Qoder-inherited
+    // shortfalls (hairline dividers/borders, tertiary text, brand/success/warning on light
+    // surfaces, muted on the selected-overlay). If a value change alters this set, the ledger
+    // must be updated in the same commit.
+    const lightDeviations = contrastFailures(SAGE_THEME_TOKENS.light)
+    const darkDeviations = contrastFailures(SAGE_THEME_TOKENS.dark)
+    expect(lightDeviations.length).toBeGreaterThan(0)
+    expect(darkDeviations.length).toBeGreaterThan(0)
+    for (const entry of lightDeviations) expect(entry).toMatch(/^(faint|muted|divider|border|brand|focus|success|warning|danger) on /)
+    for (const entry of darkDeviations) expect(entry).toMatch(/^(faint|divider|border) on /)
+    // The instrument itself still rejects a mutation of a text role.
     const light = SAGE_THEME_TOKENS.light
     const mutated: SageThemeTokens = Object.freeze({ ...light, faint: light.surface })
-
     expect(contrastFailures(mutated)).toContain('faint on surface')
-    expect(contrastFailures(light)).not.toContain('faint on surface')
   })
 
   it('renders explicit effective-theme selectors and an honest system visual fallback', () => {

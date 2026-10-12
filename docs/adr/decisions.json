@@ -11402,6 +11402,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0335",
+      "title": "ADR-0335 · VF-1 主题重定值：token 锚定 Qoder 0.4.4 实测，合同改复刻锚定 + 偏离清单",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "19 token 重定值为 Qoder 0.4.4 mint 实测（light 真机读数 + dark 实测/结构推导）；名单与唯一家不动。",
+          "constraints": [
+            "ADR-0257 intact"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "合同改复刻锚定：15×2 逐项值断言 + 偏离集合断言（仪器保留）。",
+          "constraints": [
+            "drift = red"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "WCAG 偏离全部记账透明，VF-4 逐用法裁决修正。",
+          "constraints": [
+            "ledger in Note"
+          ]
+        }
+      ]
     }
   ]
 }
