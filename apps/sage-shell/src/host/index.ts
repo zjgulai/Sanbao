@@ -145,15 +145,17 @@ export async function runShellHost(input: {
     current = hostCtx
     hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
     provideCmdline(hostCtx, { args: [], exit: () => {} })
+    // The root fiber is the whole composed runtime; a SCOPED child fiber disposing at a turn
+    // or session end is routine life, not invalidation (ADR-0329).
+    const rootFiber = (hostCtx as unknown as { readonly fiber?: unknown }).fiber
     hostCtx.on('internal/status', (fiber: { readonly state: number }) => {
       if (!loaderSettled || runtimeInvalidationSent) return
+      if (rootFiber !== undefined && fiber !== rootFiber) return
       // cordis emits `internal/status` for EVERY fiber transition — including a lazily-activated
       // plugin's routine PENDING→LOADING→ACTIVE on first use (a session start loads the prompt
-      // stack). Only a materially degraded fiber invalidates the attested runtime: FAILED=3,
-      // DISPOSED=4, or falling back to INACTIVE=0 from a live state (the root teardown path).
-      // Treating routine activation as invalidation killed the whole bridge on every first send.
-      // Observed transitions: boot/lazy activation runs PENDING→LOADING(1)→ACTIVE(2); a
-      // teardown runs ACTIVE→UNLOADING(5). Silence 1/2, catch the degradation states.
+      // stack). Even for the root, only a material degradation counts: FAILED=3, DISPOSED=4,
+      // or UNLOADING=5 (the observed root teardown transition; boot/lazy activation runs
+      // PENDING→LOADING(1)→ACTIVE(2) and must stay silent).
       if (fiber.state !== 3 && fiber.state !== 4 && fiber.state !== 5) return
       if (!runtimeInvalidationArmed) {
         runtimeInvalidationPending = true

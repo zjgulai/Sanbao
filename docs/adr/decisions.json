@@ -11171,6 +11171,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0329",
+      "title": "ADR-0329 · 运行时失效只听**根 fiber**：会话级子 fiber 的正常拆除不再是失效",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "internal/status 仅根 fiber 可触发失效（注册时捕获根身份）。",
+          "constraints": [
+            "child fibers ignored"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "根上仍只认 3/4/5。",
+          "constraints": [
+            "1/2 silent"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "生命期 spec 判据不变。",
+          "constraints": [
+            "root dispose fires once"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "v11 装机实测连读面保持可用。",
+          "constraints": [
+            "both success and failure turns"
+          ]
+        }
+      ]
     }
   ]
 }
