@@ -12,6 +12,12 @@ import {
   type DevicePreferencesControllerSnapshot,
 } from './device-preferences.js'
 import {
+  INSTANCE_CREDENTIAL_NAME,
+  type InstanceCredentialController,
+  type InstanceCredentialRead,
+  type InstanceCredentialSaveOutcome,
+} from './instance-credential.js'
+import {
   GENERAL_GROUPS,
   MODE_GROUPS,
   SHORTCUT_GROUPS,
@@ -34,6 +40,10 @@ export interface DesktopSettingsViewProps {
   readonly controller?: DevicePreferencesController
   /** ADR-0312: the eleven settings leaves (Ticket 046 machine). Absent = no leaf region. */
   readonly leaves?: readonly DesktopSettingsLeaf[]
+  /** ADR-0334: the instance credential card (describe/set for DEEPSEEK_API_KEY). Supplying
+   *  the controller makes the models pane's credential card real; absent keeps the pane shell
+   *  only — the same narrow-seam rule as `controller`. */
+  readonly credential?: InstanceCredentialController
   /** R17-A (wave 1): the real account facts and the one real account action (login/logout).
    *  Absent keeps the profile pane read-only — display-only consumers never get a dead control. */
   readonly account?: {
@@ -405,7 +415,82 @@ function ModelSelectMenu({ panel, label, value, open, onOpen, onClose, children,
   </div>
 }
 
-function ModelsPane(): ReactNode {
+function credentialReadLabel(read: InstanceCredentialRead): string {
+  if (read.kind === 'loading') return '正在读取凭据状态…'
+  if (read.kind === 'unavailable') {
+    return read.code === 'credential-identity-unavailable'
+      ? '未登录：登录后可查看与保存。'
+      : `凭据状态读取失败（${read.code}）。`
+  }
+  if (!read.configured) return '未配置：真实模型回合需要实例 API Key。'
+  if (read.source === 'env') return '已配置（来源：启动环境变量；只读，界面保存不改变生效值）。'
+  if (read.source === 'file') return '已配置（来源：本机凭据文件）。'
+  return `已配置（来源：${read.source ?? '未知层'}）。`
+}
+
+function credentialSaveLabel(outcome: InstanceCredentialSaveOutcome): string {
+  if (outcome.kind === 'saved') return '已保存；值不回显。新值对下一次模型请求生效。'
+  if (outcome.kind === 'unreachable') return '请求未能送达服务，值未保存。'
+  switch (outcome.code) {
+    case 'credential-identity-unavailable': return '需要先登录；登录后可保存实例 API Key。'
+    case 'credentials-unavailable': return '本机凭据服务未接线，暂不能保存。'
+    case 'bridge-credential-readonly-source': return '当前值由启动环境变量提供（只读）；从环境移除后重试。'
+    case 'bridge-credential-value-refused': return '值不合法：需为 8–512 字符，且不含首尾空白或控制字符。'
+    case 'bridge-provider-unavailable': return '宿主凭据服务不可用，值未保存。'
+    default: return `保存未完成（${outcome.code}）。`
+  }
+}
+
+/** ADR-0334: the instance API Key card — the one place the product writes DEEPSEEK_API_KEY.
+ *  The input never echoes a stored value (the read half cannot carry one); after a save the
+ *  draft clears and the status line re-reads. */
+function InstanceCredentialCard({ controller }: { readonly controller: InstanceCredentialController }): ReactNode {
+  const [read, setRead] = useState<InstanceCredentialRead>({ kind: 'loading' })
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const refresh = async (): Promise<void> => {
+    setRead(await controller.read())
+  }
+  useEffect(() => {
+    let active = true
+    void controller.read().then((next) => { if (active) setRead(next) })
+    return () => { active = false }
+  }, [controller])
+  const save = async (): Promise<void> => {
+    if (busy || draft === '') return
+    setBusy(true)
+    setNotice(null)
+    const outcome = await controller.save(draft)
+    setBusy(false)
+    setNotice(credentialSaveLabel(outcome))
+    if (outcome.kind === 'saved') {
+      setDraft('')
+      await refresh()
+    }
+  }
+  const saveDisabled = busy || draft === ''
+  return <section className="settings-models-credential" aria-label="实例 API Key">
+    <h3>实例 API Key</h3>
+    <p>内置模型（DeepSeek）使用它发起真实模型回合。保存后立即生效；值不会回显。</p>
+    <p role="status" className="settings-observed-note">{credentialReadLabel(read)}</p>
+    <div className="settings-models-field">
+      <label htmlFor="models-instance-key">API Key（{INSTANCE_CREDENTIAL_NAME}）</label>
+      <input id="models-instance-key" type="password" aria-label="实例 API Key 输入"
+        placeholder="粘贴 API Key" value={draft} autoComplete="off" spellCheck={false}
+        onChange={event => setDraft(event.currentTarget.value)} />
+    </div>
+    <div className="settings-modal-actions">
+      <button type="button" className="text-button" aria-label="保存实例 API Key"
+        disabled={saveDisabled} onClick={() => { void save() }}>
+        {busy ? '正在保存…' : '保存'}
+      </button>
+    </div>
+    {notice !== null ? <p role="status" className="settings-observed-note">{notice}</p> : null}
+  </section>
+}
+
+function ModelsPane({ credential }: { readonly credential?: InstanceCredentialController }): ReactNode {
   const [provider, setProvider] = useState<ModelProviderId>('aliyun')
   const [panel, setPanel] = useState<ModelsPanel | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -426,8 +511,9 @@ function ModelsPane(): ReactNode {
   return <section className="settings-observed settings-models" aria-label="模型">
     <header>
       <h2>模型</h2>
-      <p>使用自有 API Key 管理自定义模型。本机未接线：不录入、不校验、不保存任何凭据。</p>
+      <p>使用自有 API Key 管理自定义模型。自定义模型编辑器未接线（不录入、不校验、不保存）。</p>
     </header>
+    {credential !== undefined ? <InstanceCredentialCard controller={credential} /> : null}
     <p className="settings-models-empty">暂无自定义模型，点击添加模型开始使用</p>
     <button type="button" className="text-button" aria-label="添加模型"
       onClick={() => { setProvider('aliyun'); setPanel(null); setFormOpen(true) }}>添加模型</button>
@@ -562,7 +648,7 @@ const PANES: readonly { readonly pane: SettingsPane, readonly label: string }[] 
  *  导航项) over the reproduced pages. The default pane stays 外观与显示 so every existing
  *  appearance acceptance (walkthrough / DMG-06 / specs) keeps its landing state; only entries
  *  whose pages exist render — later waves add their entries together with their pages. */
-export function DesktopSettingsView({ controller, leaves, account, onBack }: DesktopSettingsViewProps): ReactNode {
+export function DesktopSettingsView({ controller, credential, leaves, account, onBack }: DesktopSettingsViewProps): ReactNode {
   const [pane, setPane] = useState<SettingsPane>('appearance')
   const [query, setQuery] = useState('')
   const visible = PANES.filter((entry) => entry.label.includes(query.trim()))
@@ -604,7 +690,7 @@ export function DesktopSettingsView({ controller, leaves, account, onBack }: Des
                 : pane === 'shortcuts'
                   ? <ShortcutsPane />
                   : pane === 'models'
-                    ? <ModelsPane />
+                    ? <ModelsPane {...(credential === undefined ? {} : { credential })} />
                     : <VoicePane />}
     </div>
   </div>

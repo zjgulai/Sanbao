@@ -72,6 +72,8 @@ const SAGE_SESSION_TERMINAL_READ_PATH = '/.sage/session/terminal-read'
 const SAGE_FEEDBACK_PATH = '/.sage/feedback'
 /** Ticket 020/047: the one write port for the eight display preferences. */
 const SAGE_PREFERENCES_PATH = '/.sage/preferences'
+/** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
+const SAGE_CREDENTIALS_PATH = '/.sage/credentials'
 /** Ticket 014: the attachment chain — pick (candidate only), upload the sealed version, cancel. */
 const SAGE_ATTACHMENT_PICK_PATH = '/.sage/attachments/pick'
 const SAGE_ATTACHMENT_UPLOAD_PATH = '/.sage/attachments/upload'
@@ -272,6 +274,19 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
 
 
   
+
+  if (url.pathname === SAGE_CREDENTIALS_PATH) {
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
+    const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    if (contentType !== 'application/json') return transportDenial(415)
+    const body = await readActionBodyWithinLimit(request)
+    if (body === undefined) return transportDenial(413)
+    const parsed = parseCredentialRequest(body)
+    if (parsed === undefined) {
+      return serviceJson({ code: 'invalid-credential-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
+    }
+    return deps.providers.credentials(parsed)
+  }
 
   if (url.pathname === SAGE_PREFERENCES_PATH) {
     if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
@@ -912,6 +927,27 @@ function parsePreferencesPatch(body: string): Partial<DisplayPreferenceValues> |
     ...(record.fileIcons === undefined ? {} : { fileIcons: record.fileIcons as DisplayPreferenceValues['fileIcons'] }),
     ...(record.iconAppearance === undefined ? {} : { iconAppearance: record.iconAppearance as DisplayPreferenceValues['iconAppearance'] }),
   }
+}
+
+/** `{action:'describe'|'set', name, value?}` — the credential names stay host-allowlisted; this
+ *  boundary only checks the grammar so a malformed body never reaches the bridge. */
+function parseCredentialRequest(body: string): { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string } | undefined {
+  let value: unknown
+  try { value = JSON.parse(body) } catch { return undefined }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const action = record.action
+  if (action !== 'describe' && action !== 'set') return undefined
+  const keys = Object.keys(record)
+  const allowed = action === 'set' ? ['action', 'name', 'value'] : ['action', 'name']
+  if (keys.length !== allowed.length || !keys.every((key) => allowed.includes(key))) return undefined
+  const name = record.name
+  if (typeof name !== 'string' || name === '' || name.length > 128 || !/^[A-Z][A-Z0-9_]*$/u.test(name)) return undefined
+  if (action === 'describe') return { action, name }
+  const secret = record.value
+  if (typeof secret !== 'string' || secret.trim() !== secret || secret.length < 8 || secret.length > 512
+    || /[\u0000-\u001f\u007f]/u.test(secret)) return undefined
+  return { action, name, value: secret }
 }
 
 function parseSessionControlRequest(body: string, pathname: string): unknown {

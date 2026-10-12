@@ -6,6 +6,7 @@ import { adoptDesktopWorkspace } from './adopt.js'
 import { Icon, TreeStamp, type DesktopIconName } from './icons.js'
 import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, type DesktopSearchSessions } from './search.js'
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
+import { createInstanceCredentialController } from './instance-credential.js'
 import { archiveDesktopMatter, renameDesktopMatter, restoreDesktopMatter, type MatterAdminActionResult } from './matter-admin-actions.js'
 import { createDesktopMatterGroup, removeDesktopMatterGroup, renameDesktopMatterGroup, type MatterGroupsActionResult } from './matter-groups-actions.js'
 import { describeControlRefusal } from './session-controls.js'
@@ -1118,6 +1119,8 @@ export function DesktopPage({
 }): ReactNode {
   const [page, setPage] = useState<Page>('新任务')
   const [preferencesController] = useState(() => suppliedPreferencesController ?? createDevicePreferencesController())
+  // ADR-0334: the settings models pane consumes the credential card's narrow port.
+  const [credentialController] = useState(() => createInstanceCredentialController())
   const { state, session, draft, changeDraft, notice, setNotice, busy, uncertain, streamingText, refreshNow, retry, withdraw, actOnSession } = useDesktopSession(readState)
   // ADR-0300: one action path for the artifact rail — the route answers, then the projection
   // is re-read; a refusal leaves the surface as-is (the card state still tells the truth).
@@ -1230,7 +1233,7 @@ export function DesktopPage({
             : page === '搜索'
               ? <SearchPage navigate={navigate} />
               : page === '账号与设置'
-                ? <DesktopSettingsView controller={preferencesController}
+                ? <DesktopSettingsView controller={preferencesController} credential={credentialController}
                   {...(state.kind === 'read' && state.settingsLeaves !== undefined ? { leaves: state.settingsLeaves } : {})}
                   onBack={() => navigate('新任务')}
                   {...(accountRead.kind === 'read'

@@ -714,6 +714,20 @@ export interface DisplayPreferenceValues {
   readonly iconAppearance: 'system' | 'light' | 'dark'
 }
 
+/** ADR-0334: one allowlisted credential's non-secret view — presence, source and writability;
+ *  the value itself never crosses this contract. */
+export interface CredentialEntryView {
+  readonly name: string
+  readonly configured: boolean
+  readonly source: 'env' | 'file' | null
+  readonly writable: boolean
+}
+
+export type CredentialOutcome =
+  | { readonly state: 'read', readonly entries: readonly CredentialEntryView[] }
+  | { readonly state: 'saved', readonly name: string }
+  | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
+
 /** The one defaults literal: the store and the unavailable-first fallback both read it. */
 export const DEFAULT_DISPLAY_PREFERENCE_VALUES: DisplayPreferenceValues = {
   theme: 'system',
@@ -1782,6 +1796,8 @@ export interface ServiceProviders {
   readonly resumeSession: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => Promise<Response>
   /** Ticket 020/047: save one patch of the eight display preferences. */
   readonly savePreferences: (request: Partial<DisplayPreferenceValues>) => Promise<Response>
+  /** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
+  readonly credentials: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<Response>
   /** Ticket 006: edit or remove one still-pending item (a consumed one is frozen). */
   readonly updatePendingInput: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
   /** Ticket 014: pick (candidate only), upload the sealed version, or cancel/remove one item. */

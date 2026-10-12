@@ -170,6 +170,8 @@ describe('host-side read-only bridge', () => {
     // The whole surface, kinds included: adding an endpoint (or changing a kind) is a deliberate
     // edit here, never something that rides along with an unrelated change.
     expect(Object.entries(BRIDGE_ENDPOINTS)).toEqual([
+      ['credentials/describe', 'read'],
+      ['credentials/set', 'write'],
       ['settings/describe', 'read'],
       ['directory/pick', 'interactive'],
       ['workspace/create', 'write'],
@@ -221,10 +223,96 @@ describe('host-side read-only bridge', () => {
 
   it('refuses a non-allowlisted endpoint without touching any provider', async () => {
     const ctx = { get: vi.fn() }
-    await expect(resolveBridgeCall(ctx, 'credentials/describe')).resolves.toMatchObject({
+    await expect(resolveBridgeCall(ctx, 'credentials/unset')).resolves.toMatchObject({
       ok: false,
       code: 'bridge-endpoint-unsupported',
     })
+    expect(ctx.get).not.toHaveBeenCalled()
+  })
+
+  it('ADR-0334: describes an allowlisted credential without ever carrying its value', async () => {
+    const describe = vi.fn(async () => ({ configured: true, source: 'file', writable: true }))
+    const ctx = { get: vi.fn((name: string) => (name === 'credentials' ? { describe, set: vi.fn() } : undefined)) }
+    const outcome = await resolveBridgeCall(ctx, 'credentials/describe', [{ name: 'DEEPSEEK_API_KEY' }])
+    expect(outcome).toEqual({ ok: true, result: { configured: true, source: 'file', writable: true } })
+    expect(ctx.get).toHaveBeenCalledWith('credentials')
+    expect(describe).toHaveBeenCalledTimes(1)
+  })
+
+  it('ADR-0334: the provider methods are invoked with their receiver — a class-like store keeps its this', async () => {
+    // Regression (live-run): the first cut extracted `describe`/`set` into locals and called
+    // them unbound; credentials-local dies on `this.inherited` and every describe answered
+    // bridge-provider-failed. A stateless stub can never catch that — this one uses `this`.
+    const provider = {
+      hits: 0,
+      async describe() { this.hits += 1; return { configured: false, writable: true, hits: this.hits } },
+      async set() { this.hits += 1 },
+    }
+    const ctx = { get: vi.fn((name: string) => (name === 'credentials' ? provider : undefined)) }
+    await expect(resolveBridgeCall(ctx, 'credentials/describe', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toEqual({ ok: true, result: { configured: false, writable: true, hits: 1 } })
+    await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value: 'sk-receiver-bound-1234' }]))
+      .resolves.toEqual({ ok: true, result: { saved: true } })
+    // describe + the set-path's readonly guard describe + the write itself
+    expect(provider.hits).toBe(3)
+  })
+
+  it('ADR-0334: refuses a non-allowlisted credential name before touching the provider', async () => {
+    const ctx = { get: vi.fn() }
+    for (const name of ['ANTHROPIC_API_KEY', 'HOME', 'deepseek_api_key', '']) {
+      await expect(resolveBridgeCall(ctx, 'credentials/describe', [{ name }])).resolves.toMatchObject({
+        ok: false,
+        code: 'bridge-credential-name-refused',
+      })
+    }
+    await expect(resolveBridgeCall(ctx, 'credentials/describe', [])).resolves.toMatchObject({
+      ok: false,
+      code: 'bridge-credential-name-refused',
+    })
+    expect(ctx.get).not.toHaveBeenCalled()
+  })
+
+  it('ADR-0334: writes the value once through the seam — the outcome never echoes it', async () => {
+    const set = vi.fn(async () => undefined)
+    const describe = vi.fn(async () => ({ configured: false, writable: true }))
+    const ctx = { get: vi.fn((name: string) => (name === 'credentials' ? { describe, set } : undefined)) }
+    const secret = 'sk-credential-batch-0123456789'
+    const outcome = await resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value: secret }])
+    expect(outcome).toEqual({ ok: true, result: { saved: true } })
+    expect(set).toHaveBeenCalledTimes(1)
+    expect(JSON.stringify(outcome)).not.toContain(secret)
+  })
+
+  it('ADR-0334: the value grammar is enforced before the seam — malformed values never reach it', async () => {
+    const set = vi.fn(async () => undefined)
+    const describe = vi.fn(async () => ({ configured: false, writable: true }))
+    const ctx = { get: vi.fn((name: string) => (name === 'credentials' ? { describe, set } : undefined)) }
+    for (const value of ['short', ` ${'x'.repeat(10)}`, `${'x'.repeat(10)} `, `has\u0000control`, 'y'.repeat(513)]) {
+      await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value }])).resolves.toMatchObject({
+        ok: false,
+        code: 'bridge-credential-value-refused',
+      })
+    }
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  it('ADR-0334: an environment-sourced (read-only) credential refuses the write by name instead of faking a save', async () => {
+    const set = vi.fn(async () => undefined)
+    const describe = vi.fn(async () => ({ configured: true, source: 'env', writable: false }))
+    const ctx = { get: vi.fn((name: string) => (name === 'credentials' ? { describe, set } : undefined)) }
+    await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value: 'sk-readonly-source-1234' }])).resolves.toMatchObject({
+      ok: false,
+      code: 'bridge-credential-readonly-source',
+    })
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  it('ADR-0334: a missing credential provider is named, and extra members are refused not ignored', async () => {
+    await expect(resolveBridgeCall({ get: () => undefined }, 'credentials/describe', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toMatchObject({ ok: false, code: 'bridge-provider-unavailable' })
+    const ctx = { get: vi.fn() }
+    await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value: 'sk-extra-key-123456', extra: 1 }]))
+      .resolves.toMatchObject({ ok: false, code: 'bridge-credential-name-refused' })
     expect(ctx.get).not.toHaveBeenCalled()
   })
 

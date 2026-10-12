@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "sourceCommit": "eeff8967190815c7b5018f7d11b748818d487d37",
   "denominator": {
-    "expected": 62,
+    "expected": 63,
     "sourcePath": "apps/sage-shell/src/appservice/route-skeleton.ts",
     "constantPattern": "^const SAGE_.*_PATH"
   },
@@ -1135,6 +1135,33 @@
       "currentAuthority": {
         "status": "partial",
         "mode": "local-main-with-partial-caller-binding"
+      }
+    },
+    {
+      "sourceConstant": "SAGE_CREDENTIALS_PATH",
+      "path": "/.sage/credentials",
+      "method": "POST",
+      "classification": "protected-effect",
+      "policyProfile": "business-command",
+      "operations": [
+        "describe",
+        "set"
+      ],
+      "callerBinding": "CB1",
+      "activeContext": "device-local instance credential (DEEPSEEK_API_KEY); no matter scope",
+      "persistence": "host credential store via the credentials bridge seam; the value is write-only and never read back",
+      "runtimeLevel": "L4 local device state; the main-owned credential port gates caller binding, identity session, name allowlist and value grammar, but the route is not a member of any registered protected-effect admission family",
+      "providers": [
+        "credentials"
+      ],
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
+      "unsupportedOperations": [],
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
       }
     },
     {

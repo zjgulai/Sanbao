@@ -10,7 +10,7 @@ import { createSageFixtureViewState, parseSageFixtureStage } from '../product/vi
 import { createUnavailableFirstService, PRODUCTION_FAIL_CLOSED_PORTS } from '../appservice/composition.js'
 import { serviceJson } from '../appservice/errors.js'
 import type { ModelConfigStatus, ServiceProviders, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, ReadoutProvider, ReadoutState, DraftConversionRequest, DraftStatus, MatterLinkState, PreferencesStatus, SessionChannelStatus, SessionControlOutcome, SessionSendOutcome, SessionAttemptStatus, QueueItemOutcome, SessionHistoryStatus, ClarificationStatus, ClarificationAnswerOutcome, SessionAnchorsStatus, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionEditsStatus, SessionEditSaveOutcome, SessionEditResendOutcome, SessionEditVerifyOutcome, InputSelectionsStatus, InputSelectionOutcome, SessionPlanModeStatus, PlanModeSwitchReceipt, SiteTemplatesStatus, ApprovalStatus, ApprovalAnswerOutcome, ApprovalWithdrawOutcome, ModelQueueStatus, TerminalStatus, TerminalReadOutcome, FeedbackStatus, FeedbackReceiptView, SessionRunDetailOutcome, SessionRunListOutcome, SettingsLeaf, EditDraftStatus, EditDraftCreateOutcome, EditDraftUpdateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftWritebackOutcome, ActionItemsStatus, ActionItemOutcome, CorrectionOutcome, ProjectsStatus, ProjectOutcome, MatterAdminStatus, MatterAdminOutcome, MatterBatchResult, MatterRenameResult, MatterGroupsStatus, MatterGroupsOutcome, RunMonitorView, RunLogOutcome, PlansStatus, PlanOutcome, PlanStepOutcome, PlanStepExecuteOutcome, AttachmentStatus, AttachmentPickOutcome, AttachmentUploadOutcome, AttachmentControlOutcome, ArtifactStatus, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactWindowOutcome, ExternalLinkOutcome, SearchOutcome, MatterListState, SideChatsStatus, SideChatCreateOutcome, SideChatSendOutcome, SideChatReadOutcome, SideChatReturnOutcome, ToolResultsStatus, ProjectionReadCandidate, ProjectionReadRouteRunner, LocalSystemBootstrapState } from '../appservice/contracts.js'
-import type { DevicePreferencesState } from '../appservice/contracts.js'
+import type { CredentialOutcome, DevicePreferencesState } from '../appservice/contracts.js'
 import { admitDeviceAggregateRead, admitProjectionRead } from '../appservice/projection-read-admission.js'
 import type { ProjectionReadOperation, ProjectionReadScope } from '../appservice/projection-read-admission.js'
 import { admitLocalSystemRead } from '../appservice/local-system-admission.js'
@@ -177,6 +177,8 @@ export interface SageAppServiceOptions {
   /** Ticket 020: the device preferences read + save halves. */
   readonly preferences?: () => PreferencesStatus
   readonly preferencesSave?: (request: Partial<PreferencesStatus['requested']>) => PreferencesStatus | undefined
+  /** ADR-0334: the instance credential port (`describe` / `set`); values are write-only. */
+  readonly credentials?: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<CredentialOutcome>
   /** Ticket 006: stop/resume and the pending-item edits. */
   readonly sessionStop?: (request: { readonly matterRef: string }) => Promise<SessionControlOutcome>
   readonly sessionResume?: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => Promise<SessionControlOutcome>
@@ -1208,6 +1210,7 @@ export function createSageAppServiceProviders(options: SageAppServiceOptions): S
     ...(options.settingsLeaves === undefined ? {} : { settingsLeaves: options.settingsLeaves }),
     ...(options.preferences === undefined ? {} : { preferences: options.preferences }),
     ...(options.preferencesSave === undefined ? {} : { preferencesSave: options.preferencesSave }),
+    ...(options.credentials === undefined ? {} : { credentials: options.credentials }),
     ...(options.sessionStop === undefined ? {} : { sessionStop: options.sessionStop }),
     ...(options.sessionResume === undefined ? {} : { sessionResume: options.sessionResume }),
     ...(options.pendingUpdate === undefined ? {} : { pendingUpdate: options.pendingUpdate }),

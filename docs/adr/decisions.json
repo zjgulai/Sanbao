@@ -11351,6 +11351,57 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0334",
+      "title": "ADR-0334 · 实例凭据写入路径：`/.sage/credentials` 三段语法，值写穿不回显",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "/.sage/credentials 三段语法：键集精确、name 大写 env 名、value 8–512 trim 无控制字符；越界 400。",
+          "constraints": [
+            "grammar before service"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "值写穿不回显：describe 无值槽位；set 应答只有 saved+name；任何拒绝/日志不含值。",
+          "constraints": [
+            "write-only",
+            "never logged"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "身份门在 main port：未登录、越界名 → 具名拒绝且零 bridge 调用。",
+          "constraints": [
+            "fail closed"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "host seam 名单白名单＋值语法复检；env 来源 set 具名拒绝 bridge-credential-readonly-source。",
+          "constraints": [
+            "no silent no-op save"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "模型页实例 API Key 卡：describe 状态＋写入＋通知；成功清空输入并重读，失败保留输入具名原因。",
+          "constraints": [
+            "no value echo"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "route 矩阵 protected-effect/direct-provider-bypass 显式登记；门禁 pin 语法、身份门、单一调用点。",
+          "constraints": [
+            "audit visible"
+          ]
+        }
+      ]
     }
   ]
 }

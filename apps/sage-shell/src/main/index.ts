@@ -86,6 +86,7 @@ import { createProductionAdapter } from './oidc-runtime.js'
 import { createTokenVault } from './token-vault.js'
 import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
+import { createCredentials } from './instance-credential.js'
 import { createHostLiveInventoryProjectionProvider } from './runtime-inventory.js'
 import { createRuntimeInventoryProvider, type RuntimeInventoryResult } from './runtime-inventory-provider.js'
 import { createActiveMatterContext } from './active-matter-context.js'
@@ -1212,6 +1213,12 @@ async function main(paths: SagePaths): Promise<void> {
         },
         // Ticket 020: the display preferences (both entries read this one slot).
         ...preferenceWiring,
+        // ADR-0334: the instance credential surface. Signed-out sessions are refused by the port
+        // itself; the value crosses route → port → host without ever being read back.
+        credentials: createCredentials(
+          (endpoint, payload) => host.bridgeCall(endpoint, payload),
+          () => vault.identitySession(),
+        ),
         // Ticket 005: the session channel (read projection + one send verb).
         ...sessionWiring,
         // Ticket 014: this run's attachment items and the pick/upload/cancel acts.

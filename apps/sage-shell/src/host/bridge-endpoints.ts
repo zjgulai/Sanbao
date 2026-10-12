@@ -20,6 +20,7 @@
  *
  * Nothing here decides whether an action is allowed: that is the Application Service's job.
  */
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { types as utilTypes } from 'node:util'
 
 import { BRIDGE_ENDPOINTS, BRIDGE_STREAM_QUIET_MS, MAX_ATTACHMENT_CHUNK_BYTES, MAX_BRIDGE_STREAM_FRAMES } from '../protocol.js'
@@ -287,6 +288,17 @@ function classifyProviderFailure(error: unknown): string {
 }
 
 /** One `{ workspaceId }` request object, read structurally: extra members are refused, not ignored. */
+/** ADR-0334: the instance credential names this bridge may address. The deepseek-official
+ *  provider route reads its key through the dsh credential store; the surface is name-allowlisted
+ *  so no arbitrary environment name can be written or probed through Sage. */
+const APP_CREDENTIAL_NAMES: readonly string[] = ['DEEPSEEK_API_KEY']
+
+/** The dsh credential seam, narrowed to what this bridge needs. Values are write-only here. */
+interface CredentialSeam {
+  readonly describe: (ref: ReturnType<typeof credentialRef>) => unknown
+  readonly set: (ref: ReturnType<typeof credentialRef>, value: string) => Promise<void>
+}
+
 function readWorkspaceRequest(payload: readonly unknown[], keys: readonly string[]): Record<string, unknown> | undefined {
   if (payload.length !== 1) return undefined
   const input = payload[0]
@@ -969,6 +981,60 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
       return { ok: false, code: classifyProviderFailure(error) }
     } finally {
       cancellation.abort()
+    }
+  }
+
+  // ADR-0334: the instance credential surface. Only the app-owned provider keys may be
+  // addressed, a value is write-only (never returned, never logged), and the credential
+  // service hot-applies a rotated key to the next request.
+  if (endpoint === 'credentials/describe' || endpoint === 'credentials/set') {
+    const keys = endpoint === 'credentials/set' ? ['name', 'value'] : ['name']
+    const record = readWorkspaceRequest(payload, keys)
+    if (record === undefined || typeof record.name !== 'string' || !APP_CREDENTIAL_NAMES.includes(record.name)) {
+      return { ok: false, code: 'bridge-credential-name-refused' }
+    }
+    const credentials = ctx.get('credentials') as Partial<CredentialSeam> | undefined
+    // Methods are invoked on the receiver, never as extracted locals: the provider's own
+    // methods read `this` (the store, the watcher), and a bare extracted call dies with
+    // "Cannot read properties of undefined" instead of answering (observed in the ADR-0334
+    // live run — the stub-based specs never caught it).
+    if (typeof credentials?.describe !== 'function' || (endpoint === 'credentials/set' && typeof credentials.set !== 'function')) {
+      return { ok: false, code: 'bridge-provider-unavailable' }
+    }
+    try {
+      if (endpoint === 'credentials/describe') {
+        const info = await credentials.describe(credentialRef(record.name))
+        return crossable(info)
+      }
+      const value = record.value
+      // The value grammar is checked here so nothing malformed reaches the store; the value
+      // itself must never leave this branch (no logging, no echo in any refusal).
+      if (typeof value !== 'string' || value.trim() !== value
+        || value.length < 8 || value.length > 512
+        || /[\u0000-\u001f\u007f]/u.test(value)) {
+        return { ok: false, code: 'bridge-credential-value-refused' }
+      }
+      // P-56 honesty guard: when the active source is read-only (the process environment
+      // shadows the file), a write would silently not take effect after restart — refuse
+      // with the named cause instead of reporting a save that changes nothing.
+      const info = await credentials.describe(credentialRef(record.name)) as { readonly configured?: unknown, readonly writable?: unknown }
+      if (info !== null && typeof info === 'object' && info.configured === true && info.writable === false) {
+        return { ok: false, code: 'bridge-credential-readonly-source' }
+      }
+      await credentials.set!(credentialRef(record.name), value)
+      return { ok: true, result: { saved: true } }
+    } catch (error) {
+      // Gated seam probe (same class as SAGE_DISPATCH_PROBE): the classification alone hid the
+      // real cause during the ADR-0334 live run. The error carries no value — describe never
+      // sees one, and the store's own write errors quote the reference name only.
+      // Gate name deliberately NOT SAGE_-prefixed: resolveHostRuntime scrubs every SAGE_* var
+      // from the host child env, so a SAGE_-gated probe is unreachable inside the host.
+      if (process.env.SAGE_CREDENTIAL_PROBE === '1' || process.env.CREDENTIAL_SEAM_PROBE === '1') {
+        // stdout: the host child's stderr is buffered for fatal messages only, so a probe there
+        // never surfaces while the host is alive.
+        console.log('CREDENTIAL-PROBE', (error as { code?: unknown } | null)?.code ?? '', error instanceof Error ? error.message : String(error))
+      }
+      return { ok: false, code: classifyProviderFailure(error) }
     }
   }
 

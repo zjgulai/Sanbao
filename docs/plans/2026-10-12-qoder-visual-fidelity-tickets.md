@@ -2,7 +2,7 @@
 
 - 日期：2026-10-12
 - 状态：草案（待用户批准范围与顺序）
-- 前置阅读：[Sanbao → Sage UI 一致性合同](../specs/2026-09-27-sanbao-to-sage-ui-consistency-contract.md)、[tracked 矩阵](../specs/2026-09-27-sanbao-to-sage-ui-state-map.json)、[集成票据](2026-10-05-sanbao-in-sage-integration-tickets.md)、[Qoder RE 证据政策](../../../.claude/projects/-Users-pray-project-Sage-hub-Sage/memory/qoder-re-evidence-policy.md)（本机 memory）
+- 前置阅读：[Sanbao → Sage UI 一致性合同](../specs/2026-09-27-sanbao-to-sage-ui-consistency-contract.md)、[tracked 矩阵](../specs/2026-09-27-sanbao-to-sage-ui-state-map.json)、[集成票据](2026-10-05-sanbao-in-sage-integration-tickets.md)、Qoder RE 证据政策（本机 memory，仓外：`~/.claude/projects/-Users-pray-project-Sage-hub-Sage/memory/qoder-re-evidence-policy.md`）
 - 目标：用户裁决（2026-10-12）——**先复刻 Qoder 的视觉，再超越它**。本计划把 `visualAcceptance` 从「206 行全 pending」变成有证据、有工具、有 owner 的可执行批次。
 
 ## 问题陈述

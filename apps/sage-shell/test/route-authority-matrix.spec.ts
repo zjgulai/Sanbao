@@ -37,21 +37,21 @@ interface RouteAuthorityMatrix {
 const matrix = JSON.parse(readFileSync(new URL('../src/appservice/route-authority-matrix.json', import.meta.url), 'utf8')) as RouteAuthorityMatrix
 
 describe('route authority truth matrix', () => {
-  it('pins the full 62-route denominator and five policy classes', () => {
+  it('pins the full 63-route denominator and five policy classes', () => {
     expect(matrix.schemaVersion).toBe(1)
     expect(matrix.sourceCommit).toBe('eeff8967190815c7b5018f7d11b748818d487d37')
     expect(matrix.denominator).toEqual({
-      expected: 62,
+      expected: 63,
       sourcePath: 'apps/sage-shell/src/appservice/route-skeleton.ts',
       constantPattern: '^const SAGE_.*_PATH',
     })
-    expect(matrix.routes).toHaveLength(62)
-    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(62)
-    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(62)
+    expect(matrix.routes).toHaveLength(63)
+    expect(new Set(matrix.routes.map((route) => route.path)).size).toBe(63)
+    expect(new Set(matrix.routes.map((route) => route.sourceConstant)).size).toBe(63)
     expect(Object.fromEntries(['read-only', 'local-preference', 'local-system', 'protected-effect', 'unsupported'].map((classification) => [
       classification,
       matrix.routes.filter((route) => route.classification === classification).length,
-    ]))).toEqual({ 'read-only': 15, 'local-preference': 5, 'local-system': 2, 'protected-effect': 38, unsupported: 2 })
+    ]))).toEqual({ 'read-only': 15, 'local-preference': 5, 'local-system': 2, 'protected-effect': 39, unsupported: 2 })
   })
 
   it('records every authority dimension instead of treating route presence as authority', () => {
@@ -88,7 +88,7 @@ describe('route authority truth matrix', () => {
     ])
   })
 
-  it('records two runCommand routes, nineteen admitted protected routes, one source-read-admitted route, one context selection route, and 16 remaining bypasses', () => {
+  it('records two runCommand routes, nineteen admitted protected routes, one source-read-admitted route, one context selection route, and 17 remaining bypasses', () => {
     const protectedRoutes = matrix.routes.filter((route) => route.classification === 'protected-effect')
     const throughRunCommand = protectedRoutes.filter((route) => route.runCommand.actual)
     const throughProtectedAdmission = protectedRoutes.filter((route) => route.protectedAdmission?.actual === true)
@@ -128,9 +128,9 @@ describe('route authority truth matrix', () => {
       !route.runCommand.required
       && route.contextSelection?.required === true
       && route.currentAuthority.mode === 'active-context-selection-unavailable-first')).toBe(true)
-    expect(bypasses).toHaveLength(16)
+    expect(bypasses).toHaveLength(17)
     expect(bypasses.every((route) => route.runCommand.required && route.currentAuthority.status === 'violation')).toBe(true)
-    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(10)
+    expect(bypasses.filter((route) => route.currentAuthority.mode === 'direct-provider-bypass')).toHaveLength(11)
     expect(matrix.routes.find((route) => route.path === '/.sage/edit-drafts/create')).toMatchObject({
       sourceReadAdmission: { required: true, actual: true },
       currentAuthority: { status: 'violation', mode: 'protected-effect-source-read-admitted' },

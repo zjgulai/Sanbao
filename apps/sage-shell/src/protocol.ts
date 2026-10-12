@@ -231,6 +231,10 @@ export type HostEvent = {
  * is the base's own `workspaceController.insertBefore` and nothing else.
  */
 export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 'write' | 'stream'>> = Object.freeze({
+  // ADR-0334: the instance credential surface — describe never returns the value; set is
+  // write-only and name-allowlisted at the host handler.
+  'credentials/describe': 'read',
+  'credentials/set': 'write',
   'settings/describe': 'read',
   'directory/pick': 'interactive',
   'workspace/create': 'write',

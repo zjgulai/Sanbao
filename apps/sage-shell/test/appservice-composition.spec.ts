@@ -156,6 +156,7 @@ describe('matter projection slot (WT-02D.1)', () => {
       'createPlan',
       'createProject',
       'createSideChat',
+    'credentials',
       'devicePreferencesRead',
       'diffEditDraft',
       'dispatch',
