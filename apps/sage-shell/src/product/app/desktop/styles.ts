@@ -318,7 +318,7 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 /* Loop-Q R11 line A: installed tabs + market shell. Geometry only; the data area shows the named
    not-wired reason inside a dashed placeholder, never rows or empty-list wording. */
 .sage-desktop .extensions-count { margin-left: 6px; font-size: 11px; color: var(--sage-muted); }
-.sage-desktop .extensions-empty { padding: 24px 18px; border: 1px dashed var(--sage-divider); border-radius: 10px; font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .extensions-empty { padding: 48px 24px; border: 1px dashed var(--sage-divider-hairline); border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); font-size: 12px; color: var(--sage-muted); }
 .sage-desktop .extensions-add-menu { position: static; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
 .sage-desktop .extensions-add-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .sage-desktop .extensions-add-menu strong { font-size: 12px; font-weight: 500; color: var(--sage-ink); }
@@ -345,11 +345,14 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
    product/theme-tokens.ts; the data area shows the named not-wired reason, never rows. */
 .sage-desktop .knowledge-page, .sage-desktop .sites-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
 .sage-desktop .knowledge-page h1, .sage-desktop .sites-page h1 { margin: 0; font-size: 16px; }
-.sage-desktop .page-tabs { display: flex; gap: 6px; }
-.sage-desktop .page-tabs [role="tab"] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; background: transparent; color: var(--sage-muted); font-size: 12px; }
-.sage-desktop .page-tabs [role="tab"].active { color: var(--sage-ink); border-color: var(--sage-brand); }
+/* VF-2 FV-1: the market tabs are plain text with a bold active state (Qoder live market page);
+ * the category chips keep the pill shape with the quaternary-gray active fill (overlay token). */
+.sage-desktop .page-tabs { display: flex; gap: 18px; }
+.sage-desktop .page-tabs [role="tab"] { padding: 2px 0; border: 0; background: none; color: var(--sage-muted); font-size: 13px; }
+.sage-desktop .page-tabs [role="tab"].active { color: var(--sage-ink); font-weight: 600; }
 .sage-desktop .page-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.sage-desktop .page-tools [aria-pressed] { padding: 4px 10px; border: 1px solid var(--sage-border); border-radius: 999px; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .page-tools [aria-pressed] { padding: 4px 12px; border: 0; border-radius: 7px; color: var(--sage-muted); font-size: 12px; }
+.sage-desktop .page-tools [aria-pressed].active { background: var(--sage-overlay); color: var(--sage-ink); }
 .sage-desktop .page-tools [aria-pressed].active { color: var(--sage-ink); border-color: var(--sage-brand); }
 .sage-desktop .page-tools input { flex: 1; min-width: 140px; max-width: 240px; padding: 5px 9px; border: 1px solid var(--sage-border); border-radius: 5px; background: var(--sage-raised); color: var(--sage-ink); font-size: 12px; }
 .sage-desktop .page-tools input::placeholder { color: var(--sage-faint); }
