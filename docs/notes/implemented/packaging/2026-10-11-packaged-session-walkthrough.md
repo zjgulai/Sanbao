@@ -10,8 +10,8 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 **v13** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `379db30d8e95e5cc902119a50eedb54cc4b5266476a77816efed6afcae106562`，含 v12 全部 + **ADR-0331 根列举翻译 + ADR-0332 既有根 profile 事务升级**；DMG-06 全链验收 `passed=true`；**升级路径实测：旧世代 scratch 根一次启动完成 upgraded——零手工**）。v12（`e2a35bfa…`）已改名备份。
-   > ⚠️ 走查关键前置（v9 实测所得）：**真实模型回合需要 `DEEPSEEK_API_KEY`**（否则错误码 `MISSING_CREDENTIAL`，回合 `turn/end: error`）。宿主的凭据服务未由 Sage 面写入，需在启动环境导出。回合失败后事项落 `failed-retry`——v10 起经选择时 ensure 再授权（ADR-0328，**该再授权路径装机实测待补**）；v9 为死锁（`reconfirmRevision` 域出口产品零接线，已由 ADR-0328 以 ensure 路径取代）。
+1. 安装 **v14** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `90f7aa017a2f6b9679fbbfa2629f1124bab500e323ddb74219f88272223520db`，392,792,148 bytes，含 v13 全部 + **ADR-0334 实例凭据写入路径（界面保存 API Key，写穿不回显）**；DMG-06 全链验收 `passed=true`；**凭据路径实测：无 env 启动 → 登录 → 界面保存 → 真实模型回合 completed**）。v13（`379db30d…`）已改名备份。
+   > ⚠️ 走查关键前置（v9 实测所得，v14 起改经界面）：**真实模型回合需要 `DEEPSEEK_API_KEY`**（否则错误码 `MISSING_CREDENTIAL`，回合 `turn/end: error`）。**v14 起（ADR-0334）**：登录后在设置 → 模型 → 「实例 API Key」卡保存（写入本机凭据文件层、热应用、值不回显；退出重启仍持久）；启动环境导出仅作后备，不再是必需。回合失败后事项落 `failed-retry`——v10 起经选择时 ensure 再授权（ADR-0328，**v14 起同时覆盖 failed-retry 重新发送**）。
    > ⚠️ 修正记录（2026-10-12，v9）：v8 装机实测暴露（1）矩阵 pair 锁死旧 profile 世代（生产发送 compatibility 结构性失败）→ ADR-0326 重录制+重发布（等价性以旧 fixture 逐字节复现已装出版物证明）；（2）Host 把 cordis 懒激活当运行时失效，会话首发打死整个桥、dispatch 回执丢失 → ADR-0327 过滤为 FAILED/DISPOSED/UNLOADING。**生产全链已在 v9 实测走通**：登录 → state 放行 → 名册 → 折叠 → 关联+设默认 → `context/select` → ensure 第二条 `revision-entered` → 发送 `accepted` → 真实模型回合 `turn/end: completed`（回复「已收到这条走查消息。」）→ `attempt-succeeded` 收口（store 实测：created / 2×entered / started / succeeded）。
    > ⚠️ 修正记录（2026-10-12，v7）：v6 装机实测暴露桥终局契约缺陷（`bridge-result` 剥离 `message.result`，20 个消费者全判 `bridge-answer-unrecognised`——折叠/接入/会话通道等从未在生产路径工作过）与组装面 scope 防线缺陷；v7 修复两者。
    > ⚠️ 修正记录（2026-10-12，v6）：v5 生产冷启动死锁（state 读要求事项已激活，而激活入口在被拦载荷里——闭环，见 ADR-0324）；v6 起登录后 state 载荷可读（activeContext inactive + 代际），名册可选。步骤 5 的前置（接入工作区 + 关联卡设默认）已在下方补登。
@@ -20,7 +20,7 @@
 3. 测试账号设置 Name（否则界面显示名为空）。
 4. 登录窗口期 3000 端口空闲。
 5. 确认单成员语义（instance-operator：任何通过该 IdP 的登录视为本实例操作者）。
-6. **启动环境导出 `DEEPSEEK_API_KEY`**（真实模型回合必需；宿主凭据服务当前无 Sage 面写入路径，缺失会得到 `MISSING_CREDENTIAL` 错误回合——回合失败后事项落 `failed-retry`，**v10 起（ADR-0328）经「重新选择事项」或直接再发即自动再授权新工作修订（装机实测待补）**；v9 及以前需换种子事项重来）。
+6. **真实模型回合的 key**（v14 起经界面）：登录 → 设置 → 模型 → 「实例 API Key」粘贴保存（v14 实测闭环）；或启动环境导出 `DEEPSEEK_API_KEY`（后备）。未配置会得到 `MISSING_CREDENTIAL` 错误回合 → 事项落 `failed-retry`，修复后直接再发即自动再授权新工作修订（ADR-0328）。
 
 ## 步骤
 
