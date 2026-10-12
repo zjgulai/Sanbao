@@ -20,6 +20,7 @@ const COLOR_ROLES = [
   'surface',
   'raised',
   'overlay',
+  'bubble',
   'ink',
   'muted',
   'faint',
@@ -107,12 +108,12 @@ describe('the Sage semantic theme token owner (UI-TOKEN-01)', () => {
   // and is revisited at VF-4 ("surpass") with per-usage WCAG analysis.
   it('anchors the VF-1 replica palette — every token equals the pinned Qoder-derived value', () => {
     const expectedLight: Record<string, string> = {
-      canvas: '#f9f9f9', sidebar: '#dff1ea', surface: '#ffffff', raised: '#ffffff', overlay: '#cfe0d9',
+      canvas: '#f9f9f9', sidebar: '#dff1ea', surface: '#ffffff', raised: '#ffffff', overlay: '#cfe0d9', bubble: '#e6f5f0',
       ink: '#141414', muted: '#636261', faint: '#838280', divider: '#eeeae5', 'divider-hairline': '#f0f7f4', border: '#ddd8d2',
       brand: '#4fa98f', focus: '#3b81e9', success: '#579b6e', warning: '#efb041', danger: '#e04b53',
     }
     const expectedDark: Record<string, string> = {
-      canvas: '#111110', sidebar: '#1a251c', surface: '#22221f', raised: '#1c1b19', overlay: '#1e2f21',
+      canvas: '#111110', sidebar: '#1a251c', surface: '#22221f', raised: '#1c1b19', overlay: '#1e2f21', bubble: '#1c281d',
       ink: '#eeeeeb', muted: '#b4b4ac', faint: '#7b7b74', divider: '#20201e', 'divider-hairline': '#262624', border: '#31312d',
       brand: '#5cb870', focus: '#0b83f1', success: '#73cd94', warning: '#faad14', danger: '#ff8a8e',
     }

@@ -11529,6 +11529,27 @@
           "constraints": [
             "not in this batch"
           ]
+        },
+        {
+          "id": "D7",
+          "text": "侧栏宽 240→227px（真机实测），断点同比例。",
+          "constraints": [
+            "pixel-measured"
+          ]
+        },
+        {
+          "id": "D8",
+          "text": "composer 并入白卡体系；textarea 58→64px。",
+          "constraints": [
+            "P06 card system"
+          ]
+        },
+        {
+          "id": "D9",
+          "text": "新 token bubble（#e6f5f0/#1c281d）用户气泡无边框；锚定表同步。",
+          "constraints": [
+            "21st color slot"
+          ]
         }
       ]
     }

@@ -371,13 +371,13 @@ describe('T01 desktop entry and token-only geometry', () => {
     cleanups.push(() => style.remove())
     const { container } = mount(async () => blocked)
     await settle()
-    expect(getComputedStyle(node(container, '.product-sidebar')).width).toBe('240px')
-    expect(getComputedStyle(node(container, '.composer textarea')).height).toBe('58px')
+    expect(getComputedStyle(node(container, '.product-sidebar')).width).toBe('227px')
+    expect(getComputedStyle(node(container, '.composer textarea')).height).toBe('64px')
     expect(getComputedStyle(node(container, '.composer-toolbar')).minHeight).toBe('37px')
     expect(getComputedStyle(node(container, '.composer-context')).display).toBe('flex')
     expect(getComputedStyle(node(container, '.activity-unavailable')).minHeight).toBe('84px')
     expect(SAGE_DESKTOP_CSS).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|--[\w-]+\s*:|var\([^)]*,/i)
-    const names = ['canvas', 'sidebar', 'surface', 'raised', 'overlay', 'ink', 'muted', 'faint', 'divider', 'divider-hairline', 'border', 'brand', 'focus', 'success', 'warning', 'danger', 'radius', 'shadow', 'spacing', 'motion', 'density-nav-item-padding', 'density-main-padding', 'density-card-padding', 'density-row-gap', 'density-control-min-height']
+    const names = ['canvas', 'sidebar', 'surface', 'raised', 'overlay', 'bubble', 'ink', 'muted', 'faint', 'divider', 'divider-hairline', 'border', 'brand', 'focus', 'success', 'warning', 'danger', 'radius', 'shadow', 'spacing', 'motion', 'density-nav-item-padding', 'density-main-padding', 'density-card-padding', 'density-row-gap', 'density-control-min-height']
     const tokens = Array.from(SAGE_DESKTOP_CSS.matchAll(/var\(--([\w-]+)\)/g), match => match[1])
     expect(tokens.length).toBeGreaterThan(0)
     for (const token of tokens) expect(names.map(name => `sage-${name}`)).toContain(token)
