@@ -10,9 +10,9 @@ owner: self
 source: ai
 ---
 
-# VF-1 主题重定值：Qoder 0.4.4 mint 实测值落地（ADR-0335）
+# VF-1 主题重定值：Qoder 0.4.4 mint 实测值落地（ADR-0336）
 
-对应决策：[ADR-0335](../../../adr/ADR-0335.md)。对应票据：[视觉保真票](../../../plans/2026-10-12-qoder-visual-fidelity-tickets.md)（VF-1）
+对应决策：[ADR-0336](../../../adr/ADR-0336.md)。对应票据：[视觉保真票](../../../plans/2026-10-12-qoder-visual-fidelity-tickets.md)（VF-1）
 用户裁决（2026-10-13）：**B——保复刻改合同**。token 落 Qoder 原值，合同改复刻锚定断言，偏离透明化留 VF-4。
 
 ## Problem
