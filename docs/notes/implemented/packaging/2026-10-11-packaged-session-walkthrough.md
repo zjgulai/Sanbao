@@ -10,14 +10,17 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 **v7** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `4d04808f86959080dae946c45c0cb186056a213801f61e6f2a2b60cbe2cc27e7`，398,113,987 bytes，含 v6 全部 + **ADR-0325 桥终局契约修复 + ADR-0324 组装面 scopedOr**；DMG-06 全链验收 `passed=true` 于 2026-10-12，读数入仓 `evidence/2026-10-12-dmg06-v7-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v6（`71de42a2…`）未单独留档（v7 以同路径事务替换）；v5（`e9493ac7…`）/v4/v3 已改名备份保留。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
-   > ⚠️ 修正记录（2026-10-12，v7）：v6 装机实测暴露桥终局契约缺陷（`bridge-result` 剥离 `message.result`，20 个消费者全判 `bridge-answer-unrecognised`——折叠/接入/会话通道等从未在生产路径工作过）与组装面 scope 防线缺陷；v7 修复两者。生产冷启动链已在 v7 实测走通：登录 → state 放行 → 名册 → 折叠（`workspace:sage-walkthrough`）→ 关联 + 设默认 → `context/select` → ensure authored 第二条 `revision-entered`（`revision:sage.<uuid>`，sqlite 实测）。
+1. 安装 **v9** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `a205d824abbd380e47ee8ce0adaec6eeb7a4127972dd42087ee9217873a41414`，395,097,840 bytes，含 v7 全部 + **ADR-0326 跨代重发布（矩阵 pair 跟随 live 世代）+ ADR-0327 Host 失效过滤（会话首发不再打死桥）**；DMG-06 全链验收 `passed=true` 于 2026-10-12，读数入仓 `evidence/2026-10-12-dmg06-v9-acceptance-result.json`）。挂载 → 拖入 `/Applications`。v7（`4d04808f…`）已改名备份。**步骤 8–18 在 v3 上不可执行；步骤 19 与第 11/16/18 步的新行为在 v3/v4 上不可执行**。
+   > ⚠️ 走查关键前置（v9 实测所得）：**真实模型回合需要 `DEEPSEEK_API_KEY`**（否则错误码 `MISSING_CREDENTIAL`，回合 `turn/end: error`）。宿主的凭据服务未由 Sage 面写入，需在启动环境导出。回合失败后事项落 `failed-retry`，而 `reconfirmRevision` 域出口**产品零接线**（再发永拒）——本轮实测撞到两次，已登记待办；走查应在 key 就位后再发首条消息。
+   > ⚠️ 修正记录（2026-10-12，v9）：v8 装机实测暴露（1）矩阵 pair 锁死旧 profile 世代（生产发送 compatibility 结构性失败）→ ADR-0326 重录制+重发布（等价性以旧 fixture 逐字节复现已装出版物证明）；（2）Host 把 cordis 懒激活当运行时失效，会话首发打死整个桥、dispatch 回执丢失 → ADR-0327 过滤为 FAILED/DISPOSED/UNLOADING。**生产全链已在 v9 实测走通**：登录 → state 放行 → 名册 → 折叠 → 关联+设默认 → `context/select` → ensure 第二条 `revision-entered` → 发送 `accepted` → 真实模型回合 `turn/end: completed`（回复「已收到这条走查消息。」）→ `attempt-succeeded` 收口（store 实测：created / 2×entered / started / succeeded）。
+   > ⚠️ 修正记录（2026-10-12，v7）：v6 装机实测暴露桥终局契约缺陷（`bridge-result` 剥离 `message.result`，20 个消费者全判 `bridge-answer-unrecognised`——折叠/接入/会话通道等从未在生产路径工作过）与组装面 scope 防线缺陷；v7 修复两者。
    > ⚠️ 修正记录（2026-10-12，v6）：v5 生产冷启动死锁（state 读要求事项已激活，而激活入口在被拦载荷里——闭环，见 ADR-0324）；v6 起登录后 state 载荷可读（activeContext inactive + 代际），名册可选。步骤 5 的前置（接入工作区 + 关联卡设默认）已在下方补登。
    > ⚠️ 修正记录（2026-10-12 首版）：同日首版 v5（sha `728013c2…`）误装仓内旧 input 残留（assemble 收了仓库相对路径而非 `$PACKAGING_STAGING_ROOT` 覆盖根；另有 Finder `.DS_Store` 污染过 profile-template），已重产为 `e9493ac7…`。
 2. Logto Native 应用 `cmg2ty121m1tlsd0fgiuv` 的 redirect allowlist 仍含 `http://127.0.0.1:3000/callback`（ADR-0183 时已配，请复核）。
 3. 测试账号设置 Name（否则界面显示名为空）。
 4. 登录窗口期 3000 端口空闲。
 5. 确认单成员语义（instance-operator：任何通过该 IdP 的登录视为本实例操作者）。
+6. **启动环境导出 `DEEPSEEK_API_KEY`**（真实模型回合必需；宿主凭据服务当前无 Sage 面写入路径，缺失会得到 `MISSING_CREDENTIAL` 错误回合——回合失败后事项落 `failed-retry` 且当前无产品出口，只能换种子事项重来）。
 
 ## 步骤
 
