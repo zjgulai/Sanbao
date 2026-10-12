@@ -1405,7 +1405,7 @@ function failAll(discovered, violations) {
 }
 
 /**
- * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, projectionReadAdmissionText: string|null, hostProcessText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null, activeMatterSelectionText: string|null, sessionTurnCloseText: string|null, sessionChannelText: string|null, sessionSendReconcileText: string|null, runtimeInventoryCurrencyText: string|null, sageReadoutText: string|null}} input
+ * @param {{matrixText: string|null, routeSkeletonText: string|null, compositionText: string|null, callerBindingText: string|null, mainAppServiceText: string|null, projectionReadAdmissionText: string|null, hostProcessText: string|null, hostEntryText: string|null, mainIndexText: string|null, matterCustodyText: string|null, sessionCoreIdentityText: string|null, actionAuthorityTableText: string|null, capabilityRegistryProviderText: string|null, sessionPromptPublicationText: string|null, sessionPromptTargetText: string|null, publicationBundleText: string|null, sessionPromptCompatibilityText: string|null, sessionPromptRegistryText: string|null, capabilityEntryDerivationText: string|null, runtimeInventoryProviderText: string|null, sessionPromptPreflightText: string|null, sessionPromptPersistenceText: string|null, sessionPromptAttemptStoreText: string|null, sessionPromptEvaluationEvidenceText: string|null, sessionPromptReverifyText: string|null, sessionPromptDispatchText: string|null, protectedEffectAdmissionText: string|null, sessionPromptPrepareText: string|null, activeMatterSelectionText: string|null, sessionTurnCloseText: string|null, sessionChannelText: string|null, sessionSendReconcileText: string|null, runtimeInventoryCurrencyText: string|null, sageReadoutText: string|null}} input
  */
 export function checkSageRouteAuthority(input) {
   const sourceRoutes = discoverRouteConstants(input?.routeSkeletonText)
@@ -1427,6 +1427,9 @@ export function checkSageRouteAuthority(input) {
   }
   if (typeof input?.hostProcessText !== 'string') {
     return failAll(discovered, ['host-process source unavailable; the bridge-result terminal contract cannot be checked'])
+  }
+  if (typeof input?.hostEntryText !== 'string') {
+    return failAll(discovered, ['host entry source unavailable; the runtime-invalidation filter cannot be checked'])
   }
   if (typeof input?.mainIndexText !== 'string') {
     return failAll(discovered, ['main index unavailable; projection-read owner cannot be checked'])
@@ -1810,6 +1813,15 @@ export function checkSageRouteAuthority(input) {
     && !input.hostProcessText.includes('pending.resolve(message.result)')
   if (!bridgeResultContractMatches) {
     failGlobal('the bridge-result terminal must resolve the declared answer shape (ADR-0325)')
+  }
+
+  // ADR-0327: only a MATERIALLY degraded fiber (FAILED=3 / DISPOSED=4) invalidates the attested
+  // runtime — cordis emits internal/status for every transition, and the unfiltered listener
+  // killed the bridge on the first session's routine lazy activation.
+  const hostInvalidationFilterMatches = input.hostEntryText.includes('if (fiber.state !== 3 && fiber.state !== 4 && fiber.state !== 5) return')
+    && !input.hostEntryText.includes("hostCtx.on('internal/status', () => {")
+  if (!hostInvalidationFilterMatches) {
+    failGlobal('the host runtime-invalidation listener must filter to degraded fiber states (ADR-0327)')
   }
 
   const projectionReadOwnerMatches = input.mainIndexText.includes("import { projectionReadScope } from './projection-read-scope.js'")

@@ -11099,6 +11099,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0327",
+      "title": "ADR-0327 · Host 运行时失效只听实质劣化 fiber：会话首发不再打死桥",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "internal/status 仅对 FAILED(3)/DISPOSED(4)/UNLOADING(5) 失效；懒激活 1/2 忽略。",
+          "constraints": [
+            "disposal still invalidates exactly once"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "单点修改 host/index.ts 监听器。",
+          "constraints": [
+            "no shell-side suppression"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "门禁 hostEntryText 输入 + pin + 突变。",
+          "constraints": [
+            "deliberate edit"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "v9 装机发送实测为 e2e 验证。",
+          "constraints": [
+            "record not a substitute"
+          ]
+        }
+      ]
     }
   ]
 }

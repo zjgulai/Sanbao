@@ -15,6 +15,7 @@ const baseline = Object.freeze({
   mainAppServiceText: read('apps/sage-shell/src/main/app-service.ts'),
   projectionReadAdmissionText: read('apps/sage-shell/src/appservice/projection-read-admission.ts'),
   hostProcessText: read('apps/sage-shell/src/main/host-process.ts'),
+  hostEntryText: read('apps/sage-shell/src/host/index.ts'),
   mainIndexText: read('apps/sage-shell/src/main/index.ts'),
   matterCustodyText: read('apps/sage-shell/src/main/matter-custody.ts'),
   sessionCoreIdentityText: read('apps/sage-shell/src/main/session-core-identity.ts'),
@@ -546,6 +547,15 @@ test('the device aggregation read cannot widen, duplicate or lose its admission 
   )
   assert.notEqual(droppedEcho, baseline.projectionReadAdmissionText)
   expectNamedFailure(check({ projectionReadAdmissionText: droppedEcho }), 'the device aggregation read (ADR-0324)')
+})
+
+test('the runtime-invalidation listener cannot regress to the unfiltered form (ADR-0327)', () => {
+  const reverted = baseline.hostEntryText.replace(
+    'if (fiber.state !== 3 && fiber.state !== 4 && fiber.state !== 5) return',
+    'if (false) return',
+  )
+  assert.notEqual(reverted, baseline.hostEntryText)
+  expectNamedFailure(check({ hostEntryText: reverted }), 'the host runtime-invalidation listener must filter to degraded fiber states (ADR-0327)')
 })
 
 test('the bridge terminal cannot regress to the bare result payload (ADR-0325)', () => {
