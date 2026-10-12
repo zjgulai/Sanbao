@@ -175,7 +175,10 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
 .sage-desktop .settings-observed-group h3 { margin: 0; font-size: 12px; font-weight: 400; color: var(--sage-faint); }
 .sage-desktop .settings-observed-group ul { display: grid; margin: 0; padding: var(--sage-density-card-padding); border: 0; border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); list-style: none; }
 .sage-desktop .settings-observed-group li + li { border-top: 1px solid var(--sage-divider-hairline); }
-.sage-desktop .settings-observed-row { min-width: 0; display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto auto; align-items: center; gap: var(--sage-density-row-gap); padding: 10px 0; }
+.sage-desktop .settings-observed-row { min-width: 0; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sage-density-row-gap); padding: 10px 0; }
+.sage-desktop .settings-row-tile { width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: 8px; background: var(--sage-bubble); color: var(--sage-brand); }
+.sage-desktop .settings-row-text { min-width: 0; display: grid; gap: 2px; }
+.sage-desktop .settings-row-text strong { font-weight: 500; }
 .sage-desktop .settings-observed-row small { color: var(--sage-muted); overflow-wrap: anywhere; }
 .sage-desktop .settings-observed-state { justify-self: end; font-size: 12px; color: var(--sage-muted); white-space: nowrap; }
 .sage-desktop .settings-profile-identity { display: flex; align-items: center; gap: 10px; }

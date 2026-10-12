@@ -12,15 +12,21 @@ export interface SettingsObservedRow {
   readonly note: string
 }
 
+/** VF-2 (ADR-0337 D6): the per-group icon tile. The Qoder live settings give every row a
+ *  26×26 tinted tile with a line icon; per-row semantic icons are a content decision still
+ *  pending capture, so each group carries one representative icon for its whole block. */
+export type SettingsGroupIcon = 'bolt' | 'chat' | 'panel' | 'monitor' | 'grid' | 'settings' | 'file' | 'clock'
+
 export interface SettingsObservedGroup {
   readonly group: string
+  readonly icon: SettingsGroupIcon
   readonly rows: readonly SettingsObservedRow[]
 }
 
 /** QB15-01 · 常规默认页. */
 export const GENERAL_GROUPS: readonly SettingsObservedGroup[] = [
   {
-    group: '任务与工具',
+    group: '任务与工具', icon: 'bolt',
     rows: [
       { label: '运行中发送方式', note: '设置主输入框和桌面宠物在 Agent 执行期间发送的新输入默认排队或立即插话。' },
       { label: '问答面板静默跳过', note: '开启后，当前任务前台无人操作 150 秒、后台 90 秒后，以空答案自动跳过未回答的问答；面板内交互会取消自动跳过。' },
@@ -38,7 +44,7 @@ export const GENERAL_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '通知',
+    group: '通知', icon: 'chat',
     rows: [
       { label: '轮次完成通知', note: '设置 Agent 完成一轮后何时通过系统通知提醒你。' },
       { label: '权限请求通知', note: 'Agent 需要授权才能继续时显示系统通知。' },
@@ -47,13 +53,13 @@ export const GENERAL_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '隐私',
+    group: '隐私', icon: 'panel',
     rows: [
       { label: '数据共享模式', note: '你的提示词、上下文及使用数据将用于产品改进，以便提供更好的服务。' },
     ],
   },
   {
-    group: '托盘与菜单栏',
+    group: '托盘与菜单栏', icon: 'monitor',
     rows: [
       { label: '显示菜单栏图标', note: '在 macOS 菜单栏显示应用图标，可快速打开任务或退出应用。' },
     ],
@@ -71,21 +77,21 @@ const MODE_ROWS: readonly SettingsObservedRow[] = [
 ]
 
 export const MODE_GROUPS: readonly SettingsObservedGroup[] = [
-  { group: '编程', rows: MODE_ROWS },
-  { group: '通用', rows: MODE_ROWS },
+  { group: '编程', icon: 'grid', rows: MODE_ROWS },
+  { group: '通用', icon: 'grid', rows: MODE_ROWS },
 ]
 
 /** QB16-01 · 任务监控默认页（五组十四行；任务回顾另有设置按钮）。 */
 export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
   {
-    group: '展示方式',
+    group: '展示方式', icon: 'panel',
     rows: [
       { label: '任务监控形式', note: '选择任务监控以浮层打开，或固定在任务右侧。' },
       { label: '固定模式默认展示', note: '选择进入任务时是否自动展示固定任务监控；隐藏时需要手动点击打开。' },
     ],
   },
   {
-    group: '进度与上下文',
+    group: '进度与上下文', icon: 'clock',
     rows: [
       { label: '任务回顾', note: '在任务监控中生成简短回顾。设置入口见右侧按钮。' },
       { label: '任务目标', note: '显示当前任务正在追踪的目标。' },
@@ -93,7 +99,7 @@ export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '执行活动',
+    group: '执行活动', icon: 'bolt',
     rows: [
       { label: '子智能体', note: '显示后台子智能体的运行状态和入口。' },
       { label: '后台进程', note: '显示后台命令和长时间运行进程。' },
@@ -102,7 +108,7 @@ export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '结果与来源',
+    group: '结果与来源', icon: 'file',
     rows: [
       { label: '产出', note: '显示任务产生的文件和其他结果。' },
       { label: '网页查阅', note: '显示任务过程中打开的网页。' },
@@ -110,7 +116,7 @@ export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '辅助入口',
+    group: '辅助入口', icon: 'settings',
     rows: [
       { label: '记忆更新', note: '记忆发生更新时，显示前往记忆设置的入口。' },
       { label: '演示画面', note: '在固定模式中显示演示画面的显隐控制。' },
@@ -121,13 +127,13 @@ export const TASK_MONITOR_GROUPS: readonly SettingsObservedGroup[] = [
 /** QB17-01 + QB18 快捷键页：五组十六行；搜索为真实本地交互（观测覆盖 search.voice/empty）。 */
 export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
   {
-    group: '输入',
+    group: '输入', icon: 'bolt',
     rows: [
       { label: '发送消息', note: '聊天输入框使用 ⌘ Enter 换行，也可用 Shift Enter。运行中支持插话时，⌘ Enter 仍用于插话。' },
     ],
   },
   {
-    group: '导航',
+    group: '导航', icon: 'grid',
     rows: [
       { label: '设置', note: '打开设置。' },
       { label: '返回', note: '在工作台导航历史中返回上一页。' },
@@ -138,7 +144,7 @@ export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '任务',
+    group: '任务', icon: 'file',
     rows: [
       { label: '新任务', note: '从当前工作台打开新的 Chat 输入页。' },
       { label: '搜索当前任务', note: '在当前可见的 ChatSession 中打开任务搜索。' },
@@ -146,7 +152,7 @@ export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '语音',
+    group: '语音', icon: 'chat',
     rows: [
       { label: '开始或停止语音输入', note: '在当前聚焦的消息输入框中切换语音输入。' },
       { label: '实时语音快捷键', note: '在当前聚焦的 Chat 输入框中开始实时语音，或结束正在进行的实时语音。' },
@@ -155,7 +161,7 @@ export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '系统',
+    group: '系统', icon: 'monitor',
     rows: [
       { label: '新建窗口', note: '在桌面端打开一个新的窗口。' },
       { label: '问题反馈', note: '打开问题反馈窗口并自动附带当前截图。' },
@@ -166,13 +172,13 @@ export const SHORTCUT_GROUPS: readonly SettingsObservedGroup[] = [
 /** QB18-05 语音页：四组十三行（实时语音快捷键行另挂修改弹窗；常用词纠正行挂本地草稿输入）。 */
 export const VOICE_GROUPS: readonly SettingsObservedGroup[] = [
   {
-    group: '通用',
+    group: '通用', icon: 'grid',
     rows: [
       { label: '输入设备', note: '选择用于语音输入的麦克风；自动会跟随系统当前设备。' },
     ],
   },
   {
-    group: '语音输入',
+    group: '语音输入', icon: 'chat',
     rows: [
       { label: '语音输入', note: '开启后可在当前 Chat 输入框中使用麦克风、快捷键和 DJI Mic 进行语音输入。' },
       { label: '语音识别润色', note: '自动修正口语停顿、重复和标点，让转写结果更适合直接发送。' },
@@ -183,7 +189,7 @@ export const VOICE_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '实时语音',
+    group: '实时语音', icon: 'chat',
     rows: [
       { label: '实时语音快捷键', note: '在当前聚焦的 Chat 输入框中开始实时语音，或结束正在进行的实时语音。' },
       { label: '播报音色', note: '新实时语音连接使用所选音色。' },
@@ -193,7 +199,7 @@ export const VOICE_GROUPS: readonly SettingsObservedGroup[] = [
     ],
   },
   {
-    group: '录音纪要',
+    group: '录音纪要', icon: 'file',
     rows: [
       { label: '录音纪要最长时长', note: '到达上限后自动停止并保存录音和转写。' },
     ],

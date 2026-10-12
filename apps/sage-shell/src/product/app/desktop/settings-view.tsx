@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 
+import { Icon } from './icons.js'
 import type { DesktopSettingsLeaf } from './client.js'
 import {
   DEVICE_PREFERENCE_KEYS,
@@ -221,8 +222,11 @@ function ObservedGroupsPane({ heading, note, groups, extraRows }: {
       <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
-          <strong>{row.label}</strong>
-          <small>{row.note}</small>
+          <span className="settings-row-tile" aria-hidden="true"><Icon name={group.icon} size={14} /></span>
+          <span className="settings-row-text">
+            <strong>{row.label}</strong>
+            <small>{row.note}</small>
+          </span>
           {extras.some((extra) => extra.group === group.group && extra.label === row.label)
             ? <button type="button" className="text-button" disabled aria-label={`设置${row.label}`}>设置</button>
             : null}
@@ -304,7 +308,7 @@ function ShortcutsPane(): ReactNode {
   const q = query.trim()
   const total = SHORTCUT_GROUPS.reduce((count, group) => count + group.rows.length, 0)
   const groups = SHORTCUT_GROUPS
-    .map((group) => ({ group: group.group, rows: group.rows.filter((row) => row.label.includes(q) || row.note.includes(q)) }))
+    .map((group) => ({ group: group.group, icon: group.icon, rows: group.rows.filter((row) => row.label.includes(q) || row.note.includes(q)) }))
     .filter((group) => group.rows.length > 0)
   return <section className="settings-observed" aria-label="快捷键">
     <header>
@@ -328,8 +332,11 @@ function ShortcutsPane(): ReactNode {
       <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
-          <strong>{row.label}</strong>
-          <small>{row.note}</small>
+          <span className="settings-row-tile" aria-hidden="true"><Icon name={group.icon} size={14} /></span>
+          <span className="settings-row-text">
+            <strong>{row.label}</strong>
+            <small>{row.note}</small>
+          </span>
           {row.label !== '发送消息'
             ? <button type="button" className="text-button" aria-label={`修改 ${row.label} 快捷键`}
               onClick={() => setEditing(row.label)}>修改快捷键</button>
@@ -357,8 +364,11 @@ function VoicePane(): ReactNode {
       <h3 className="settings-group-label">{group.group}</h3>
       <ul>
         {group.rows.map((row) => <li className="settings-observed-row" key={row.label}>
-          <strong>{row.label}</strong>
-          <small>{row.note}</small>
+          <span className="settings-row-tile" aria-hidden="true"><Icon name={group.icon} size={14} /></span>
+          <span className="settings-row-text">
+            <strong>{row.label}</strong>
+            <small>{row.note}</small>
+          </span>
           {row.label === '实时语音快捷键'
             ? <button type="button" className="text-button" aria-label="修改 实时语音快捷键 快捷键"
               onClick={() => setEditing(true)}>修改快捷键</button>
