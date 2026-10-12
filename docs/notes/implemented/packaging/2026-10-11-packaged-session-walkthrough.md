@@ -10,7 +10,7 @@
 
 ## 前置清单（用户侧）
 
-1. 安装 **v14** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `90f7aa017a2f6b9679fbbfa2629f1124bab500e323ddb74219f88272223520db`，392,792,148 bytes，含 v13 全部 + **ADR-0334 实例凭据写入路径（界面保存 API Key，写穿不回显）**；DMG-06 全链验收 `passed=true`；**凭据路径实测：无 env 启动 → 登录 → 界面保存 → 真实模型回合 completed**）。v13（`379db30d…`）已改名备份。
+1. 安装 **v15** DMG：现行 DMG 在 `~/.sage-packaging/release/Sage-0.1.0-internal-arm64.dmg`（sha256 `5791e56b88ef0965fd3afc7a0ff60345d427a090a85bfcee207eda20d1930b3f`，396,794,280 bytes，含 v14 全部 + **ADR-0335 profile 启动自愈（五类 kill 窗口收敛：致命窗口回滚、采纳、GC keep-1、electron 子树 admission）**；DMG-06 全链验收 `passed=true`；**自愈路径实测：六态（fresh/W1/W2/W3/W5/健康根）全部按预期收敛至 host ready**）。v14（`90f7aa01…`）已改名备份。
    > ⚠️ 走查关键前置（v9 实测所得，v14 起改经界面）：**真实模型回合需要 `DEEPSEEK_API_KEY`**（否则错误码 `MISSING_CREDENTIAL`，回合 `turn/end: error`）。**v14 起（ADR-0334）**：登录后在设置 → 模型 → 「实例 API Key」卡保存（写入本机凭据文件层、热应用、值不回显；退出重启仍持久）；启动环境导出仅作后备，不再是必需。回合失败后事项落 `failed-retry`——v10 起经选择时 ensure 再授权（ADR-0328，**v14 起同时覆盖 failed-retry 重新发送**）。
    > ⚠️ 修正记录（2026-10-12，v9）：v8 装机实测暴露（1）矩阵 pair 锁死旧 profile 世代（生产发送 compatibility 结构性失败）→ ADR-0326 重录制+重发布（等价性以旧 fixture 逐字节复现已装出版物证明）；（2）Host 把 cordis 懒激活当运行时失效，会话首发打死整个桥、dispatch 回执丢失 → ADR-0327 过滤为 FAILED/DISPOSED/UNLOADING。**生产全链已在 v9 实测走通**：登录 → state 放行 → 名册 → 折叠 → 关联+设默认 → `context/select` → ensure 第二条 `revision-entered` → 发送 `accepted` → 真实模型回合 `turn/end: completed`（回复「已收到这条走查消息。」）→ `attempt-succeeded` 收口（store 实测：created / 2×entered / started / succeeded）。
    > ⚠️ 修正记录（2026-10-12，v7）：v6 装机实测暴露桥终局契约缺陷（`bridge-result` 剥离 `message.result`，20 个消费者全判 `bridge-answer-unrecognised`——折叠/接入/会话通道等从未在生产路径工作过）与组装面 scope 防线缺陷；v7 修复两者。
