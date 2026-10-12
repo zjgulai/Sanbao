@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -24,12 +24,12 @@ function temporary(label: string): string {
   return path
 }
 
-function stubShellRoot(): string {
+function stubShellRoot(comment = ''): string {
   const root = temporary('shellroot')
   for (const name of HOST_LIB_FILES) {
     const path = join(root, 'lib', name)
     mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, `// built ${name}\n`)
+    writeFileSync(path, `// built ${name}\n${comment}`)
   }
   mkdirSync(join(root, dirname(HOST_CONFIG_FILE)), { recursive: true })
   cpSync(join(realShellRoot, HOST_CONFIG_FILE), join(root, HOST_CONFIG_FILE))
@@ -52,12 +52,12 @@ async function installProfileFixture(profileDir: string): Promise<void> {
   writeFileSync(join(profileDir, 'node_modules/.modules.yaml'), 'storeDir: /fixture/pnpm/store\n')
 }
 
-async function createTemplate(label: string) {
+async function createTemplate(label: string, options: { readonly generation?: string, readonly comment?: string } = {}) {
   const sourcePaths = testPaths(`${label}-source`)
-  const generation = `${label}-generation`
+  const generation = options.generation ?? `${label}-generation`
   const materialized = await materializeProfile({
     seedDir,
-    shellRoot: stubShellRoot(),
+    shellRoot: stubShellRoot(options.comment ?? ''),
     repoRoot: realShellRoot,
     paths: sourcePaths,
     generation,
@@ -101,9 +101,11 @@ describe('installBundledProfileTemplate', () => {
       templateRoot: template.templateRoot,
       now: () => '2026-10-05T12:00:00.000Z',
     })
+    // ADR-0332: the signed template manifest is read on every boot now — the same release is
+    // the idempotent 'existing' answer, and a differing manifest would ride the upgrade swap.
     const second = await installBundledProfileTemplate({
       paths,
-      templateRoot: join(template.templateRoot, 'does-not-need-to-exist'),
+      templateRoot: template.templateRoot,
     })
 
     expect(first).toMatchObject({ state: 'installed', profile: { generation: template.generation } })
@@ -160,5 +162,40 @@ describe('installBundledProfileTemplate', () => {
     await expect(installBundledProfileTemplate({ paths, templateRoot: template.templateRoot }))
       .rejects.toThrow(/does not match its signed template manifest/u)
     expect(existsSync(paths.activeProfileFile)).toBe(false)
+  })
+
+  it('upgrades an existing activation in place when the signed template manifest differs (ADR-0332)', async () => {
+    const paths = testPaths('upgrade-same-id')
+    const first = await createTemplate('upgrade1', { generation: 'upgrade-generation' })
+    const second = await createTemplate('upgrade2', { generation: 'upgrade-generation', comment: '// release two\n' })
+
+    expect(await installBundledProfileTemplate({ paths, templateRoot: first.templateRoot }))
+      .toMatchObject({ state: 'installed' })
+    const upgraded = await installBundledProfileTemplate({ paths, templateRoot: second.templateRoot })
+    expect(upgraded).toMatchObject({ state: 'upgraded', profile: { generation: 'upgrade-generation' } })
+
+    const secondManifest = JSON.parse(readFileSync(join(second.templateRoot, BUNDLED_PROFILE_TEMPLATE_MANIFEST), 'utf8')) as { profileManifestSha256: string }
+    const active = await readActiveProfile(paths)
+    expect(active?.manifestSha256).toBe(secondManifest.profileManifestSha256)
+
+    // Idempotent against the same release; no displaced leftovers.
+    expect(await installBundledProfileTemplate({ paths, templateRoot: second.templateRoot }))
+      .toMatchObject({ state: 'existing' })
+    const leftovers = readdirSync(paths.stagingDir).filter((name) => name.startsWith('displaced-') || name.startsWith('bundled-'))
+    expect(leftovers).toEqual([])
+  })
+
+  it('upgrades to a differently named generation without touching the old one (ADR-0332)', async () => {
+    const paths = testPaths('upgrade-new-id')
+    const first = await createTemplate('upgraden1', { generation: 'upgrade-old-generation' })
+    const second = await createTemplate('upgraden2', { generation: 'upgrade-new-generation', comment: '// renamed release\n' })
+
+    expect(await installBundledProfileTemplate({ paths, templateRoot: first.templateRoot }))
+      .toMatchObject({ state: 'installed' })
+    expect(await installBundledProfileTemplate({ paths, templateRoot: second.templateRoot }))
+      .toMatchObject({ state: 'upgraded', profile: { generation: 'upgrade-new-generation' } })
+    expect((await readActiveProfile(paths))?.generation).toBe('upgrade-new-generation')
+    // The previous generation's tree stays addressable for rollback.
+    expect(existsSync(generationProfileDir(paths, 'upgrade-old-generation'))).toBe(true)
   })
 })

@@ -11265,6 +11265,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0332",
+      "title": "ADR-0332 · 既有根 profile 事务升级：模板清单不同即换位，指针写入为提交点",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "每次启动读模板 manifest；一致 existing、不同升级。",
+          "constraints": [
+            "template read failure fails closed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "staging 验证块共享；同 id 换位、换 id 并存。",
+          "constraints": [
+            "same verification as fresh install"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "指针原子写为提交点；失败回滚 displaced。",
+          "constraints": [
+            "documented kill window"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "新态 upgraded 入日志；空根验收不变。",
+          "constraints": [
+            "no acceptance change"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "pristine/残留拒绝语义不动。",
+          "constraints": [
+            "no relaxation"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -34,6 +34,7 @@ interface BundledProfileTemplateManifest {
 export type BundledProfileInstallResult =
   | { readonly state: 'existing'; readonly profile: ActiveProfile }
   | { readonly state: 'installed'; readonly profile: ActiveProfile }
+  | { readonly state: 'upgraded'; readonly profile: ActiveProfile }
 
 function sha256(content: Uint8Array): string {
   return createHash('sha256').update(content).digest('hex')
@@ -155,10 +156,19 @@ export async function installBundledProfileTemplate(input: {
   readonly now?: () => string
 }): Promise<BundledProfileInstallResult> {
   await ensureSageDirectories(input.paths)
-  const existing = await readActiveProfile(input.paths)
-  if (existing !== null) return { state: 'existing', profile: existing }
-
   const manifest = await readTemplateManifest(input.templateRoot)
+  const existing = await readActiveProfile(input.paths)
+  // The activation is idempotent ONLY against the identical signed template; a differing
+  // manifest is a new release of the profile and rides the upgrade path (ADR-0332).
+  if (existing !== null
+    && existing.generation === manifest.generation
+    && existing.manifestSha256 === manifest.profileManifestSha256) {
+    return { state: 'existing', profile: existing }
+  }
+  if (existing !== null) {
+    return upgradeBundledProfile(input, manifest, existing)
+  }
+
   const source = join(input.templateRoot, BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR)
   await assertDirectory(source, 'bundled profile template profile')
   const destination = generationProfileDir(input.paths, manifest.generation)
@@ -171,36 +181,7 @@ export async function installBundledProfileTemplate(input: {
   const verificationPointer = join(transaction, 'verify-profile-current.json')
   let moved = false
   try {
-    await mkdir(transaction, { recursive: false, mode: 0o700 })
-    await cp(source, stage, { recursive: true, errorOnExist: true, verbatimSymlinks: true })
-    const profileManifest = await readFile(join(stage, 'profile-manifest.json'))
-    if (sha256(profileManifest) !== manifest.profileManifestSha256) {
-      throw new Error('sage shell: bundled profile receipt does not match its signed template manifest')
-    }
-
-    const activatedAt = (input.now ?? (() => new Date().toISOString()))()
-    if (Number.isNaN(Date.parse(activatedAt))) {
-      throw new Error('sage shell: bundled profile activation clock returned an invalid timestamp')
-    }
-    await writeVerificationPointer(verificationPointer, manifest, activatedAt)
-    const verificationPaths: SagePaths = {
-      ...input.paths,
-      generationsDir: transaction,
-      activeProfileFile: verificationPointer,
-    }
-    const verifiedProfile = await readActiveProfile(verificationPaths)
-    if (verifiedProfile === null
-      || verifiedProfile.runtimeArtifactAttestationSha256 !== manifest.runtimeArtifactAttestationSha256) {
-      throw new Error('sage shell: bundled profile receipt does not seal the expected runtime attestation')
-    }
-    await verifyRuntimeArtifactAttestation({
-      profileDir: stage,
-      generation: manifest.generation,
-      ownedProfileDigest: manifest.ownedProfileDigest,
-      expectedArtifactAttestationDigest: manifest.artifactAttestationDigest,
-    })
-
-    await rm(verificationPointer, { force: true })
+    const activatedAt = await stageTemplateGeneration(input, manifest, transaction, stage, verificationPointer)
     await rename(stage, destination)
     moved = true
     await writeActivePointer(input.paths, {
@@ -216,5 +197,99 @@ export async function installBundledProfileTemplate(input: {
     // activation failures retain it for diagnosis exactly like materializeProfile does.
     await rm(transaction, { recursive: true, force: true })
     if (!moved) await rm(destination, { recursive: true, force: true })
+  }
+}
+
+/** Stage one template generation, verify it with the real activation validators, and return the
+ *  activation instant. Shared by the fresh install and the upgrade swap (ADR-0332). */
+async function stageTemplateGeneration(
+  input: { readonly paths: SagePaths, readonly templateRoot: string, readonly now?: () => string },
+  manifest: BundledProfileTemplateManifest,
+  transaction: string,
+  stage: string,
+  verificationPointer: string,
+): Promise<string> {
+  const source = join(input.templateRoot, BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR)
+  await mkdir(transaction, { recursive: false, mode: 0o700 })
+  await cp(source, stage, { recursive: true, errorOnExist: true, verbatimSymlinks: true })
+  const profileManifest = await readFile(join(stage, 'profile-manifest.json'))
+  if (sha256(profileManifest) !== manifest.profileManifestSha256) {
+    throw new Error('sage shell: bundled profile receipt does not match its signed template manifest')
+  }
+  const activatedAt = (input.now ?? (() => new Date().toISOString()))()
+  if (Number.isNaN(Date.parse(activatedAt))) {
+    throw new Error('sage shell: bundled profile activation clock returned an invalid timestamp')
+  }
+  await writeVerificationPointer(verificationPointer, manifest, activatedAt)
+  const verificationPaths: SagePaths = {
+    ...input.paths,
+    generationsDir: transaction,
+    activeProfileFile: verificationPointer,
+  }
+  const verifiedProfile = await readActiveProfile(verificationPaths)
+  if (verifiedProfile === null
+    || verifiedProfile.runtimeArtifactAttestationSha256 !== manifest.runtimeArtifactAttestationSha256) {
+    throw new Error('sage shell: bundled profile receipt does not seal the expected runtime attestation')
+  }
+  await verifyRuntimeArtifactAttestation({
+    profileDir: stage,
+    generation: manifest.generation,
+    ownedProfileDigest: manifest.ownedProfileDigest,
+    expectedArtifactAttestationDigest: manifest.artifactAttestationDigest,
+  })
+  await rm(verificationPointer, { force: true })
+  return activatedAt
+}
+
+/** ADR-0332: replace the active generation with a freshly verified template generation. The
+ *  pointer write is the commit point; before it the old tree is restored on any failure, and a
+ *  hard kill between the two renames leaves the old generation under its displaced name — the
+ *  boot fails closed (old pointer, missing tree) and the retained copy is the recovery source
+ *  the activation note documents. */
+async function upgradeBundledProfile(
+  input: { readonly paths: SagePaths, readonly templateRoot: string, readonly now?: () => string },
+  manifest: BundledProfileTemplateManifest,
+  existing: ActiveProfile,
+): Promise<BundledProfileInstallResult> {
+  const source = join(input.templateRoot, BUNDLED_PROFILE_TEMPLATE_PROFILE_DIR)
+  await assertDirectory(source, 'bundled profile template profile')
+  const destination = generationProfileDir(input.paths, manifest.generation)
+  const sameId = existing.generation === manifest.generation
+  if (!sameId && existsSync(destination)) {
+    throw new Error('sage shell: refusing bundled profile upgrade because its generation already exists')
+  }
+
+  const transaction = join(input.paths.stagingDir, `bundled-${randomUUID()}`)
+  const stage = join(transaction, manifest.generation)
+  const verificationPointer = join(transaction, 'verify-profile-current.json')
+  const displaced = join(input.paths.stagingDir, `displaced-${randomUUID()}`)
+  let swapped = false
+  try {
+    const activatedAt = await stageTemplateGeneration(input, manifest, transaction, stage, verificationPointer)
+    if (sameId) await rename(destination, displaced)
+    await rename(stage, destination)
+    swapped = true
+    await writeActivePointer(input.paths, {
+      generation: manifest.generation,
+      manifestSha256: manifest.profileManifestSha256,
+      activatedAt,
+    })
+    const activated = await readActiveProfile(input.paths)
+    if (activated === null) throw new Error('sage shell: bundled profile upgrade did not produce an active profile')
+    await rm(displaced, { recursive: true, force: true })
+    return { state: 'upgraded', profile: activated }
+  } catch (error) {
+    // The pointer still names the previous activation; put its tree back exactly.
+    if (swapped) {
+      try {
+        await rm(destination, { recursive: true, force: true })
+        if (sameId) await rename(displaced, destination)
+      } catch {
+        // The retained displaced copy stays for the documented recovery path.
+      }
+    }
+    throw error
+  } finally {
+    await rm(transaction, { recursive: true, force: true })
   }
 }
