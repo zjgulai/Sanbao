@@ -11207,6 +11207,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0330",
+      "title": "ADR-0330 · 端点表与端点正则必须同集：`workspaceFiles/*` 被自家门拒杀整桥",
+      "status": "accepted（2026-10-12）",
+      "date": "2026-10-12",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "BRIDGE_ENDPOINT 段内允许 camelCase；与表同集。",
+          "constraints": [
+            "lowercase leading char stays"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "spec 断言表内每端点过 isHostCommand。",
+          "constraints": [
+            "mechanical guard, no list"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "不改表、不重命名端点。",
+          "constraints": [
+            "zero compat surface"
+          ]
+        }
+      ]
     }
   ]
 }

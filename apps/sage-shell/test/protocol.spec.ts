@@ -1,23 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  FRAME_HEADER_BYTES,
-  FRAME_MAGIC,
-  HostRequestDecoder,
-  HostResponseDecoder,
-  MAX_CONTROL_PAYLOAD_BYTES,
-  SHELL_HOST_PROTOCOL_VERSION,
-  SHELL_PIPE_CHUNK_BYTES,
-  encodeRequestCancel,
-  encodeRequestData,
-  encodeRequestEnd,
-  encodeRequestStart,
-  encodeResponseData,
-  encodeResponseEnd,
-  encodeResponseError,
-  encodeResponseStart,
-  isHostCommand,
-  isHostEvent,
-} from '../src/protocol.js'
+import { BRIDGE_ENDPOINTS, FRAME_HEADER_BYTES, FRAME_MAGIC, HostRequestDecoder, HostResponseDecoder, MAX_CONTROL_PAYLOAD_BYTES, SHELL_HOST_PROTOCOL_VERSION, SHELL_PIPE_CHUNK_BYTES, encodeRequestCancel, encodeRequestData, encodeRequestEnd, encodeRequestStart, encodeResponseData, encodeResponseEnd, encodeResponseError, encodeResponseStart, isHostCommand, isHostEvent } from '../src/protocol.js'
 
 const start = {
   url: 'dsh-app://app/index.html',
@@ -144,6 +126,15 @@ describe('ipc guards', () => {
   it('accepts only the shutdown command', () => {
     expect(isHostCommand({ type: 'shutdown' })).toBe(true)
     expect(isHostCommand({ type: 'restart' })).toBe(false)
+  })
+
+  it('accepts every registered endpoint name through the host command gate (ADR-0330)', () => {
+    for (const endpoint of Object.keys(BRIDGE_ENDPOINTS)) {
+      expect(
+        isHostCommand({ type: 'bridge-call', callId: 'call-1', endpoint, payload: [] }),
+        endpoint,
+      ).toBe(true)
+    }
     expect(isHostCommand(null)).toBe(false)
   })
 

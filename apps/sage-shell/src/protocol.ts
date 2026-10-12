@@ -321,7 +321,11 @@ export const MAX_ATTACHMENT_CHUNK_BYTES = 128 * 1024
 export const BRIDGE_STREAM_QUIET_MS = 150
 
 const BRIDGE_CALL_ID = /^[A-Za-z0-9_-]{1,64}$/u
-const BRIDGE_ENDPOINT = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*$/u
+// ADR-0330: the table below carries camelCase families (`workspaceFiles/*`); a lowercase-only
+// segment rule rejected them at the host's isHostCommand gate — every such call (the turn-end
+// artifact observation rides `workspaceFiles/changes`) drew a `fatal` and killed the whole
+// bridge. The pattern and the table must accept the same names; the spec pins the agreement.
+const BRIDGE_ENDPOINT = /^[a-z][a-zA-Z0-9-]*\/[a-z][a-zA-Z0-9-]*$/u
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
