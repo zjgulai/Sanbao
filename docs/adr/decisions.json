@@ -11725,6 +11725,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0342",
+      "title": "ADR-0342 · 018 收口 A1：凭据 unset、模型行编辑与语义名单归位",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "语义名单归宿主（固定 ∪ 已声明）；主端口只过文法，describe 按请求名。",
+          "constraints": [
+            "host owns configuration knowledge"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "credentials/unset：只读源具名拒；路由/契约/端口透传 removed 态。",
+          "constraints": [
+            "no silent lie on env layer"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "行操作=… 菜单（编辑/测试连接/清除凭据/删除）；清除凭据仅已配置时出现。",
+          "constraints": [
+            "0.4.4 observed row shape"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "编辑态：供应商锁定、端点/模型预填、expectedRevision 冲突具名、key 留空保留。",
+          "constraints": [
+            "untouched fields never overwrite"
+          ]
+        }
+      ]
     }
   ]
 }
