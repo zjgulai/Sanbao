@@ -7,6 +7,8 @@ export const SAGE_DEVICE_PREFERENCES_PATH = '/.sage/device-preferences' as const
 export const SAGE_PREFERENCES_PATH = '/.sage/preferences' as const
 /** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
 export const SAGE_CREDENTIALS_PATH = '/.sage/credentials' as const
+/** ADR-0339: the saved-model-routes surface. */
+export const SAGE_MODEL_CONFIG_PATH = '/.sage/model-config' as const
 export const SAGE_LOGIN_PATH = '/.sage/login' as const
 export const SAGE_LOGOUT_PATH = '/.sage/logout' as const
 

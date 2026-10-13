@@ -19,6 +19,13 @@ import {
   type InstanceCredentialSaveOutcome,
 } from './instance-credential.js'
 import {
+  deriveRouteFromEndpoint,
+  type ModelRouteDraftProfile,
+  type ModelRoutesController,
+  type ModelRoutesListRead,
+  type ModelRouteRead,
+} from './model-routes.js'
+import {
   GENERAL_GROUPS,
   MODE_GROUPS,
   SHORTCUT_GROUPS,
@@ -45,6 +52,9 @@ export interface DesktopSettingsViewProps {
    *  the controller makes the models pane's credential card real; absent keeps the pane shell
    *  only — the same narrow-seam rule as `controller`. */
   readonly credential?: InstanceCredentialController
+  /** ADR-0339: the saved-model-routes controller. Supplying it makes the compatible-provider
+   *  flow real (record/save/test/list); absent keeps the pane shell only. */
+  readonly modelRoutes?: ModelRoutesController
   /** R17-A (wave 1): the real account facts and the one real account action (login/logout).
    *  Absent keeps the profile pane read-only — display-only consumers never get a dead control. */
   readonly account?: {
@@ -500,14 +510,92 @@ function InstanceCredentialCard({ controller }: { readonly controller: InstanceC
   </section>
 }
 
-function ModelsPane({ credential }: { readonly credential?: InstanceCredentialController }): ReactNode {
+function routeApiFor(provider: ModelProviderId, apiType: string): ModelRouteDraftProfile['api'] {
+  if (provider === 'anthropic-compatible') return 'anthropic-messages'
+  return apiType === 'Responses API' ? 'openai-responses' : 'openai-completions'
+}
+
+function routeKindLabel(api: string): string {
+  if (api === 'anthropic-messages') return 'Anthropic Compatible'
+  if (api === 'openai-responses') return 'OpenAI Compatible · Responses API'
+  return 'OpenAI Compatible · Chat Completions API'
+}
+
+function routeSaveNotice(what: string, outcome: { readonly kind: string, readonly code?: string }): string {
+  if (outcome.kind === 'saved') return `${what}已保存。`
+  if (outcome.kind === 'unreachable') return `${what}未能送达服务，未保存。`
+  switch (outcome.code) {
+    case 'bridge-settings-conflict': return `${what}版本冲突：其他人或窗口刚改过配置，请重试。`
+    case 'bridge-model-profile-invalid': return `${what}不符合本机文法（协议/地址/模型名），未保存。`
+    case 'bridge-model-route-invalid': return '路由名不合法，未保存。'
+    case 'bridge-credential-value-refused': return '凭据值不合法：需为 8–512 字符，且不含首尾空白或控制字符。'
+    case 'bridge-credential-name-refused': return '凭据名未被已保存配置声明，宿主拒绝写入。'
+    case 'credential-identity-unavailable':
+    case 'model-config-identity-unavailable': return '需要先登录；登录后可保存模型配置与凭据。'
+    case 'model-config-unavailable': return '本机模型配置服务未接线，未保存。'
+    case 'credentials-unavailable': return '本机凭据服务未接线，凭据未保存。'
+    default: return `${what}保存未完成（${outcome.code ?? 'unrecognised'}）。`
+  }
+}
+
+/** 测试结果行：成功只说本次所测能力；绑定不再成立的成功降为「仅历史」。 */
+function routeTestLabel(test: ModelRouteRead['test'], configured: boolean): { readonly label: string, readonly tone: string } {
+  if (!configured) return { label: '凭据未设置', tone: 'warn' }
+  if (test === null) return { label: '已保存、未测试', tone: 'warn' }
+  switch (test.state) {
+    case 'ok':
+      return test.current
+        ? { label: `测试通过 · ${String(test.latencyMs ?? '?')}ms · ${test.host ?? ''}`, tone: 'ok' }
+        : { label: '仅历史（配置或凭据已变）', tone: 'warn' }
+    case 'failed': return { label: '测试失败：供应商未接受请求', tone: 'bad' }
+    case 'unknown': return { label: '测试未确认（超时待核对）', tone: 'warn' }
+    case 'credential-missing': return { label: '测试失败：缺凭据', tone: 'bad' }
+    case 'unsupported': return { label: '该协议不支持列目录测试', tone: 'warn' }
+    default: return { label: '已保存、未测试', tone: 'warn' }
+  }
+}
+
+function ModelsPane({ credential, modelRoutes }: {
+  readonly credential?: InstanceCredentialController
+  readonly modelRoutes?: ModelRoutesController
+}): ReactNode {
   const [provider, setProvider] = useState<ModelProviderId>('aliyun')
   const [panel, setPanel] = useState<ModelsPanel | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
+  const [apiType, setApiType] = useState('Chat Completions API')
+  const [endpoint, setEndpoint] = useState('')
+  const [modelDraft, setModelDraft] = useState('')
+  const [modelIds, setModelIds] = useState<readonly string[]>([])
+  const [keyDraft, setKeyDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [listRead, setListRead] = useState<ModelRoutesListRead | null>(null)
+  const [testingRoute, setTestingRoute] = useState<string | null>(null)
   const compatible = provider === 'openai-compatible' || provider === 'anthropic-compatible'
   const providerName = PROVIDER_NAMES[provider]
-  const dirty = provider !== 'aliyun' || panel !== null
+  const wired = modelRoutes !== undefined && compatible
+  const refresh = async (): Promise<void> => {
+    if (modelRoutes === undefined) return
+    setListRead(await modelRoutes.list())
+  }
+  useEffect(() => {
+    let active = true
+    if (modelRoutes === undefined) return () => { active = false }
+    void modelRoutes.list().then((next) => { if (active) setListRead(next) })
+    return () => { active = false }
+  }, [modelRoutes])
+  const draftDirty = endpoint !== '' || modelDraft !== '' || modelIds.length > 0 || keyDraft !== ''
+  const dirty = provider !== 'aliyun' || panel !== null || (wired && draftDirty)
+  const derived = wired ? deriveRouteFromEndpoint(routeApiFor(provider, apiType), endpoint.trim()) : undefined
+  const canSubmit = wired && !busy && derived !== undefined && modelIds.length > 0 && keyDraft.trim() !== '' && keyDraft === keyDraft.trim()
+  const resetForm = (): void => {
+    setApiType('Chat Completions API')
+    setEndpoint('')
+    setModelDraft('')
+    setModelIds([])
+    setKeyDraft('')
+  }
   const closeForm = (): void => {
     if (dirty) setConfirming(true)
     else setFormOpen(false)
@@ -517,22 +605,103 @@ function ModelsPane({ credential }: { readonly credential?: InstanceCredentialCo
     setFormOpen(false)
     setPanel(null)
     setProvider('aliyun')
+    resetForm()
   }
+  const addModelId = (): void => {
+    const id = modelDraft.trim()
+    if (id === '' || modelIds.includes(id) || modelIds.length >= 64) return
+    setModelIds([...modelIds, id])
+    setModelDraft('')
+  }
+  const submitAdd = async (): Promise<void> => {
+    if (!canSubmit || modelRoutes === undefined || derived === undefined) return
+    setBusy(true)
+    setNotice(null)
+    const saved = await modelRoutes.saveRoute({
+      route: derived.route,
+      profile: {
+        api: routeApiFor(provider, apiType),
+        baseURL: endpoint.trim(),
+        apiKeyEnv: derived.apiKeyEnv,
+        models: modelIds.map(id => ({ id })),
+      },
+    })
+    if (saved.kind !== 'saved') {
+      setBusy(false)
+      setNotice(routeSaveNotice('配置', saved))
+      return
+    }
+    const stored = await modelRoutes.saveCredential({ name: derived.apiKeyEnv, value: keyDraft })
+    setBusy(false)
+    if (stored.kind !== 'saved') {
+      // 部分失败不显示整项完成：配置已入档，凭据未保存按名回报，对话框保留。
+      setNotice(`配置已保存；${routeSaveNotice('凭据', stored)}`)
+      await refresh()
+      return
+    }
+    leaveForm()
+    await refresh()
+    setNotice('已保存、未测试：保存不触发供应商请求；真实调用只在显式「测试连接」后发生。')
+  }
+  const testRoute = async (route: string): Promise<void> => {
+    if (modelRoutes === undefined) return
+    setTestingRoute(route)
+    setNotice(null)
+    const outcome = await modelRoutes.testConnection(route)
+    setTestingRoute(null)
+    if (outcome.kind === 'tested') await refresh()
+    else setNotice(`测试未能发起（${outcome.kind === 'refused' ? outcome.code : 'unreachable'}）。`)
+  }
+  const removeRoute = async (route: string): Promise<void> => {
+    if (modelRoutes === undefined) return
+    const outcome = await modelRoutes.removeRoute({ route })
+    setNotice(outcome.kind === 'saved' ? null : routeSaveNotice('删除', outcome))
+    await refresh()
+  }
+  const routes = listRead !== null && listRead.kind === 'read' ? listRead.routes : null
   return <section className="settings-observed settings-models" aria-label="模型">
     <header>
       <h2>模型</h2>
-      <p>使用自有 API Key 管理自定义模型。自定义模型编辑器未接线（不录入、不校验、不保存）。</p>
+      {modelRoutes !== undefined
+        ? <p>使用自有 API Key 管理自定义模型。兼容供应商可录入并保存（保存不触发供应商请求）；「测试连接」为显式动作，结果绑定当次的配置与凭据。</p>
+        : <p>使用自有 API Key 管理自定义模型。自定义模型编辑器未接线（不录入、不校验、不保存）。</p>}
     </header>
     {credential !== undefined ? <InstanceCredentialCard controller={credential} /> : null}
-    <p className="settings-models-empty">暂无自定义模型，点击添加模型开始使用</p>
+    {routes !== null && routes.length > 0
+      ? <ul className="settings-models-list" aria-label="已配置模型">
+        {routes.map(row => {
+          const status = routeTestLabel(row.test, row.credential?.configured ?? true)
+          return <li className="settings-models-row" key={row.route} data-model-route={row.route}>
+            <div className="settings-models-row-main">
+              <strong>{row.displayName ?? row.route}</strong>
+              <span className="settings-models-row-sub">{routeKindLabel(row.api)} · {row.baseURL}</span>
+              <span className="settings-models-row-meta">模型 {row.modelCount} 个{row.apiKeyEnv === undefined ? '' : ` · 凭据 ${row.credential?.configured === true ? '已设置' : '未设置'}（${row.apiKeyEnv}）`}</span>
+            </div>
+            <span className={`settings-models-status settings-models-status-${status.tone}`} role="status">{status.label}</span>
+            <div className="settings-models-row-actions">
+              <button type="button" className="text-button" aria-label={`测试连接 ${row.route}`}
+                disabled={testingRoute !== null}
+                onClick={() => { void testRoute(row.route) }}>
+                {testingRoute === row.route ? '测试中…' : '测试连接'}
+              </button>
+              <button type="button" className="text-button" aria-label={`删除 ${row.route}`}
+                onClick={() => { void removeRoute(row.route) }}>删除</button>
+            </div>
+          </li>
+        })}
+      </ul>
+      : routes === null && listRead !== null && listRead.kind === 'unavailable'
+        ? <p className="settings-observed-note" role="status">模型列表读取失败（{listRead.code}）。</p>
+        : <p className="settings-models-empty">暂无自定义模型，点击添加模型开始使用</p>}
     <button type="button" className="text-button" aria-label="添加模型"
-      onClick={() => { setProvider('aliyun'); setPanel(null); setFormOpen(true) }}>添加模型</button>
+      onClick={() => { setProvider('aliyun'); setPanel(null); setNotice(null); setFormOpen(true) }}>添加模型</button>
+    {notice !== null && !formOpen ? <p className="settings-observed-note" role="status">{notice}</p> : null}
     {formOpen && !confirming
       ? <div className="settings-modal-backdrop" role="presentation"
         onKeyDown={event => { if (event.key === 'Escape') closeForm() }}>
         <div className="settings-modal" role="dialog" aria-modal="true" aria-label="添加模型">
           <h3>添加模型</h3>
-          <form onSubmit={event => event.preventDefault()}>
+          <form onSubmit={event => { event.preventDefault(); if (wired) void submitAdd() }}>
             <div className="settings-models-field">
               <label>供应商</label>
               <ModelSelectMenu panel="provider" label="供应商" value={providerName}
@@ -562,14 +731,14 @@ function ModelsPane({ credential }: { readonly credential?: InstanceCredentialCo
                 {provider === 'openai-compatible'
                   ? <div className="settings-models-field">
                     <label>API 类型</label>
-                    <ModelSelectMenu panel="api-type" label="API 类型" value="Chat Completions API"
+                    <ModelSelectMenu panel="api-type" label="API 类型" value={apiType}
                       open={panel === 'api-type'} onOpen={() => setPanel('api-type')}
                       onClose={() => setPanel(null)}>
                       {OPENAI_COMPATIBLE_API_TYPES.map(option => {
-                        const selected = option === 'Chat Completions API'
+                        const selected = option === apiType
                         return <button type="button" role="option" aria-selected={selected}
                           tabIndex={selected ? 0 : -1} key={option}
-                          onClick={() => setPanel(null)}>
+                          onClick={() => { setApiType(option); setPanel(null) }}>
                           <span>{option}</span>{selected ? <span aria-hidden="true">✓</span> : null}
                         </button>
                       })}
@@ -577,11 +746,40 @@ function ModelsPane({ credential }: { readonly credential?: InstanceCredentialCo
                   </div>
                   : null}
                 <div className="settings-models-field">
-                  <label htmlFor="models-endpoint-readonly">接口地址（Base URL）</label>
-                  <input id="models-endpoint-readonly" className="settings-models-text" type="text"
-                    aria-label="接口地址（Base URL）" placeholder="https://api.example.com/v1"
-                    value="" readOnly autoComplete="off" />
+                  <label htmlFor={wired ? 'models-endpoint' : 'models-endpoint-readonly'}>接口地址（Base URL）</label>
+                  {wired
+                    ? <input id="models-endpoint" className="settings-models-text" type="text"
+                      aria-label="接口地址（Base URL）" placeholder="https://api.example.com/v1"
+                      value={endpoint} autoComplete="off" spellCheck={false}
+                      onChange={event => setEndpoint(event.currentTarget.value)} />
+                    : <input id="models-endpoint-readonly" className="settings-models-text" type="text"
+                      aria-label="接口地址（Base URL）" placeholder="https://api.example.com/v1"
+                      value="" readOnly autoComplete="off" />}
                 </div>
+                {wired
+                  ? <div className="settings-models-field">
+                    <label htmlFor="models-model-id">Model ID</label>
+                    <div className="settings-models-modelid">
+                      <input id="models-model-id" className="settings-models-text" type="text"
+                        aria-label="Model ID" placeholder="例如 qwen3.8-max"
+                        value={modelDraft} autoComplete="off" spellCheck={false}
+                        onChange={event => setModelDraft(event.currentTarget.value)}
+                        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addModelId() } }} />
+                      <button type="button" className="text-button" aria-label="添加 Model ID"
+                        disabled={modelDraft.trim() === '' || modelIds.length >= 64}
+                        onClick={addModelId}>添加 Model ID</button>
+                    </div>
+                    {modelIds.length > 0
+                      ? <ul className="settings-models-modelids" aria-label="已录入 Model ID">
+                        {modelIds.map(id => <li key={id}>
+                          <span>{id}</span>
+                          <button type="button" className="text-button" aria-label={`移除 Model ID ${id}`}
+                            onClick={() => setModelIds(modelIds.filter(candidate => candidate !== id))}>移除</button>
+                        </li>)}
+                      </ul>
+                      : null}
+                  </div>
+                  : null}
               </>
               : <>
                 <div className="settings-models-field">
@@ -612,14 +810,29 @@ function ModelsPane({ credential }: { readonly credential?: InstanceCredentialCo
                 </div>
               </>}
             <div className="settings-models-field">
-              <label htmlFor="models-api-key-readonly">API Key</label>
-              <input id="models-api-key-readonly" type="password" aria-label="API Key"
-                placeholder="请输入 API Key" value="" readOnly autoComplete="off" spellCheck={false} />
-              <p className="settings-observed-note">API Key 未接线：本机不录入、不校验、不保存任何凭据；凭证写入路径独立成批。</p>
+              <label htmlFor={wired ? 'models-api-key' : 'models-api-key-readonly'}>API Key</label>
+              {wired
+                ? <>
+                  <input id="models-api-key" type="password" aria-label="API Key"
+                    placeholder="请输入 API Key" value={keyDraft} autoComplete="off" spellCheck={false}
+                    onChange={event => setKeyDraft(event.currentTarget.value)} />
+                  <p className="settings-observed-note">此值保存到本机凭据文件层，不回显；保存本身不触发任何供应商请求。</p>
+                </>
+                : <>
+                  <input id="models-api-key-readonly" type="password" aria-label="API Key"
+                    placeholder="请输入 API Key" value="" readOnly autoComplete="off" spellCheck={false} />
+                  <p className="settings-observed-note">API Key 未接线：本机不录入、不校验、不保存任何凭据；凭证写入路径独立成批。</p>
+                </>}
             </div>
+            {notice !== null ? <p className="settings-observed-note" role="status">{notice}</p> : null}
             <div className="settings-modal-actions">
               <button type="button" className="text-button" aria-label="取消" onClick={closeForm}>取消</button>
-              <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>
+              {wired
+                ? <button type="button" className="text-button" disabled={!canSubmit}
+                  aria-label="校验并添加模型" onClick={() => { void submitAdd() }}>
+                  {busy ? '正在保存…' : '校验并添加模型'}
+                </button>
+                : <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>}
             </div>
           </form>
         </div>
@@ -658,7 +871,7 @@ const PANES: readonly { readonly pane: SettingsPane, readonly label: string }[] 
  *  导航项) over the reproduced pages. The default pane stays 外观与显示 so every existing
  *  appearance acceptance (walkthrough / DMG-06 / specs) keeps its landing state; only entries
  *  whose pages exist render — later waves add their entries together with their pages. */
-export function DesktopSettingsView({ controller, credential, leaves, account, onBack }: DesktopSettingsViewProps): ReactNode {
+export function DesktopSettingsView({ controller, credential, modelRoutes, leaves, account, onBack }: DesktopSettingsViewProps): ReactNode {
   const [pane, setPane] = useState<SettingsPane>('appearance')
   const [query, setQuery] = useState('')
   const visible = PANES.filter((entry) => entry.label.includes(query.trim()))
@@ -700,7 +913,9 @@ export function DesktopSettingsView({ controller, credential, leaves, account, o
                 : pane === 'shortcuts'
                   ? <ShortcutsPane />
                   : pane === 'models'
-                    ? <ModelsPane {...(credential === undefined ? {} : { credential })} />
+                    ? <ModelsPane
+                        {...(credential === undefined ? {} : { credential })}
+                        {...(modelRoutes === undefined ? {} : { modelRoutes })} />
                     : <VoicePane />}
     </div>
   </div>

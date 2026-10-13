@@ -1,0 +1,286 @@
+/** @vitest-environment jsdom */
+/** ADR-0339: the wired models pane — compatible-provider recording, saving (config then
+ *  credential, partial failure named), the configured list with bound test results, and the
+ *  explicit connectivity test. Shell-mode behaviour (controller absent) stays pinned by the
+ *  R17-B spec. */
+import { act, createElement } from 'react'
+import { createRoot } from 'react-dom/client'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+
+import { DesktopSettingsView } from '../../src/product/app/desktop/settings-view.js'
+import {
+  deriveRouteFromEndpoint,
+  type ModelRoutesController,
+  type ModelRoutesListRead,
+  type ModelRouteSaveOutcome,
+  type ModelRouteTestOutcome,
+} from '../../src/product/app/desktop/model-routes.js'
+import type { DevicePreferencesController } from '../../src/product/app/desktop/device-preferences.js'
+
+const originalActEnvironment = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT
+const cleanups: Array<() => void> = []
+
+beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true })
+
+afterEach(() => {
+  let cleanup = cleanups.pop()
+  while (cleanup !== undefined) {
+    cleanup()
+    cleanup = cleanups.pop()
+  }
+  ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = originalActEnvironment
+})
+
+const unavailablePreferences = { kind: 'unavailable' as const, code: null }
+const inertController: DevicePreferencesController = {
+  snapshot: () => ({ read: unavailablePreferences, saving: false, lastSave: 'idle' }),
+  subscribe: () => () => undefined,
+  refresh: async () => unavailablePreferences,
+  save: async () => ({ outcome: 'refused', read: unavailablePreferences }),
+}
+
+const emptyRead: ModelRoutesListRead = { kind: 'read', routes: [], namespaceRevision: 1 }
+
+function stubController(options: {
+  readonly list?: ModelRoutesListRead | (() => Promise<ModelRoutesListRead>)
+  readonly saveRoute?: () => Promise<ModelRouteSaveOutcome>
+  readonly saveCredential?: () => Promise<ModelRouteSaveOutcome>
+  readonly removeRoute?: () => Promise<ModelRouteSaveOutcome>
+  readonly testConnection?: () => Promise<ModelRouteTestOutcome>
+} = {}) {
+  const listMock = vi.fn(async () => typeof options.list === 'function' ? await options.list() : options.list ?? emptyRead)
+  const saveRouteMock = vi.fn(options.saveRoute ?? (async () => ({ kind: 'saved' as const })))
+  const saveCredentialMock = vi.fn(options.saveCredential ?? (async () => ({ kind: 'saved' as const })))
+  const removeRouteMock = vi.fn(options.removeRoute ?? (async () => ({ kind: 'saved' as const })))
+  const testConnectionMock = vi.fn(options.testConnection ?? (async () => ({ kind: 'refused' as const, code: 'unreachable' })))
+  const controller: ModelRoutesController = {
+    list: listMock,
+    saveRoute: saveRouteMock,
+    saveCredential: saveCredentialMock,
+    removeRoute: removeRouteMock,
+    testConnection: testConnectionMock,
+  }
+  return { controller, listMock, saveRouteMock, saveCredentialMock, removeRouteMock, testConnectionMock }
+}
+
+async function mount(modelRoutes: ModelRoutesController) {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  act(() => {
+    root.render(createElement(DesktopSettingsView, { controller: inertController, modelRoutes }))
+  })
+  cleanups.push(() => { act(() => { root.unmount() }); container.remove() })
+  act(() => {
+    const nav = Array.from(container.querySelectorAll('button')).find(item => item.textContent?.trim() === '模型')
+    nav!.click()
+  })
+  await act(async () => {})
+  return { container }
+}
+
+function button(scope: HTMLElement, label: string): HTMLButtonElement {
+  const found = Array.from(scope.querySelectorAll('button')).find(item =>
+    (item.getAttribute('aria-label') ?? item.textContent?.trim()) === label)
+  expect(found, `button: ${label}`).toBeDefined()
+  return found!
+}
+
+function type(scope: HTMLElement, label: string, value: string): void {
+  const input = scope.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+  act(() => {
+    setter.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function click(element: HTMLElement): void {
+  act(() => { element.click() })
+}
+
+async function openCompatibleForm(container: HTMLElement): Promise<HTMLElement> {
+  click(button(container, '添加模型'))
+  const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+  click(button(dialog, '供应商'))
+  const menu = dialog.querySelector('[role="listbox"], [role="menu"]') as HTMLElement
+  const option = Array.from(menu.querySelectorAll('[role="option"]')).find(item => item.textContent?.includes('OpenAI Compatible'))!
+  click(option as HTMLElement)
+  return dialog
+}
+
+async function fillValidForm(dialog: HTMLElement): Promise<void> {
+  type(dialog, '接口地址（Base URL）', 'https://api.example.com/v1')
+  type(dialog, 'Model ID', 'qwen3.8-max')
+  click(button(dialog, '添加 Model ID'))
+  type(dialog, 'API Key', 'sk-model-routes-spec-0123456789')
+}
+
+describe('ADR-0339: the wired models pane', () => {
+  it('lists saved routes with bound test states and credential presence', async () => {
+    const { controller } = stubController({
+      list: {
+        kind: 'read',
+        namespaceRevision: 7,
+        routes: [
+          {
+            route: 'openai-api-example-com',
+            api: 'openai-completions',
+            baseURL: 'https://api.example.com/v1',
+            apiKeyEnv: 'OPENAI_API_EXAMPLE_COM_API_KEY',
+            modelCount: 2,
+            credential: { name: 'OPENAI_API_EXAMPLE_COM_API_KEY', configured: true },
+            test: { state: 'ok', latencyMs: 123, host: 'api.example.com', testedAt: '2026-10-13T10:00:00.000Z', current: true },
+          },
+          {
+            route: 'anthropic-api-other-example',
+            api: 'anthropic-messages',
+            baseURL: 'https://api.other.example',
+            modelCount: 1,
+            credential: null,
+            test: null,
+          },
+        ],
+      },
+    })
+    const { container } = await mount(controller)
+    const list = container.querySelector('[aria-label="已配置模型"]')!
+    const rows = list.querySelectorAll('li')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.textContent).toContain('OpenAI Compatible · Chat Completions API')
+    expect(rows[0]!.textContent).toContain('测试通过 · 123ms · api.example.com')
+    expect(rows[1]!.textContent).toContain('Anthropic Compatible')
+    expect(rows[1]!.textContent).toContain('已保存、未测试')
+  })
+
+  it('saves route then credential with the derived names, closes, and says 已保存、未测试', async () => {
+    let listed: ModelRoutesListRead = emptyRead
+    const stub = stubController({ list: () => Promise.resolve(listed) })
+    const { container } = await mount(stub.controller)
+    const dialog = await openCompatibleForm(container)
+    const submit = button(dialog, '校验并添加模型')
+    expect(submit.disabled).toBe(true)
+    await fillValidForm(dialog)
+    expect(button(dialog, '校验并添加模型').disabled).toBe(false)
+    await act(async () => { button(dialog, '校验并添加模型').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({
+      route: 'openai-api-example-com',
+      profile: {
+        api: 'openai-completions',
+        baseURL: 'https://api.example.com/v1',
+        apiKeyEnv: 'OPENAI_API_EXAMPLE_COM_API_KEY',
+        models: [{ id: 'qwen3.8-max' }],
+      },
+    })
+    expect(stub.saveCredentialMock).toHaveBeenCalledWith({ name: 'OPENAI_API_EXAMPLE_COM_API_KEY', value: 'sk-model-routes-spec-0123456789' })
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.textContent).toContain('已保存、未测试：保存不触发供应商请求')
+    expect(container.textContent).not.toContain('sk-model-routes-spec')
+  })
+
+  it('keeps the dialog and names the cause when the credential half fails — 部分失败不显示整项完成', async () => {
+    const stub = stubController({ saveCredential: async () => ({ kind: 'refused', code: 'bridge-credential-value-refused' }) })
+    const { container } = await mount(stub.controller)
+    const dialog = await openCompatibleForm(container)
+    await fillValidForm(dialog)
+    await act(async () => { button(dialog, '校验并添加模型').click() })
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(dialog.textContent).toContain('配置已保存；')
+    expect(dialog.textContent).toContain('凭据值不合法')
+  })
+
+  it('names a config conflict and never writes the credential on a failed save', async () => {
+    const stub = stubController({ saveRoute: async () => ({ kind: 'refused', code: 'bridge-settings-conflict' }) })
+    const { container } = await mount(stub.controller)
+    const dialog = await openCompatibleForm(container)
+    await fillValidForm(dialog)
+    await act(async () => { button(dialog, '校验并添加模型').click() })
+    expect(dialog.textContent).toContain('版本冲突')
+    expect(stub.saveCredentialMock).not.toHaveBeenCalled()
+  })
+
+  it('tests one route explicitly and re-reads the bound result', async () => {
+    let current: ModelRoutesListRead = {
+      kind: 'read',
+      namespaceRevision: 3,
+      routes: [{
+        route: 'r-one',
+        api: 'openai-completions',
+        baseURL: 'https://api.example.com/v1',
+        modelCount: 1,
+        credential: { name: 'R_ONE_API_KEY', configured: true },
+        test: null,
+      }],
+    }
+    const stub = stubController({
+      list: () => Promise.resolve(current),
+      testConnection: async () => ({ kind: 'tested', test: { state: 'ok', latencyMs: 88, host: 'api.example.com', testedAt: '2026-10-13T10:00:00.000Z', current: true } }),
+    })
+    const { container } = await mount(stub.controller)
+    expect(container.textContent).toContain('已保存、未测试')
+    current = {
+      kind: 'read',
+      namespaceRevision: 3,
+      routes: [{
+        route: 'r-one',
+        api: 'openai-completions',
+        baseURL: 'https://api.example.com/v1',
+        modelCount: 1,
+        credential: { name: 'R_ONE_API_KEY', configured: true },
+        test: { state: 'ok', latencyMs: 88, host: 'api.example.com', testedAt: '2026-10-13T10:00:00.000Z', current: true },
+      }],
+    }
+    await act(async () => { button(container, '测试连接 r-one').click() })
+    expect(stub.testConnectionMock).toHaveBeenCalledWith('r-one')
+    expect(container.textContent).toContain('测试通过 · 88ms · api.example.com')
+  })
+
+  it('removes a route through the list action', async () => {
+    let current: ModelRoutesListRead = {
+      kind: 'read',
+      namespaceRevision: 3,
+      routes: [{
+        route: 'r-gone',
+        api: 'openai-completions',
+        baseURL: 'https://api.example.com/v1',
+        modelCount: 1,
+        credential: null,
+        test: null,
+      }],
+    }
+    const stub = stubController({ list: () => Promise.resolve(current) })
+    const { container } = await mount(stub.controller)
+    current = { kind: 'read', routes: [], namespaceRevision: 4 }
+    await act(async () => { button(container, '删除 r-gone').click() })
+    expect(stub.removeRouteMock).toHaveBeenCalledWith({ route: 'r-gone' })
+    expect(container.textContent).toContain('暂无自定义模型')
+  })
+
+  it('counts typed drafts as dirty: cancel asks for confirmation and 放弃更改 clears them', async () => {
+    const stub = stubController()
+    const { container } = await mount(stub.controller)
+    const dialog = await openCompatibleForm(container)
+    type(dialog, 'Model ID', 'm1')
+    click(button(dialog, '取消'))
+    const confirm = container.querySelector('[role="dialog"][aria-label="放弃未保存的模型配置？"]') as HTMLElement
+    expect(confirm).not.toBeNull()
+    click(button(confirm, '继续编辑'))
+    const reopened = container.querySelector('[role="dialog"][aria-label="添加模型"]') as HTMLElement
+    expect(reopened.querySelector<HTMLInputElement>('input[aria-label="Model ID"]')!.value).toBe('m1')
+    click(button(reopened, '取消'))
+    click(button(container.querySelector('[role="dialog"]') as HTMLElement, '放弃更改'))
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+  })
+})
+
+describe('ADR-0339: route derivation', () => {
+  it('derives a deterministic route and credential ref from the endpoint host', () => {
+    expect(deriveRouteFromEndpoint('openai-completions', 'https://api.deepseek.com/v1'))
+      .toEqual({ route: 'openai-api-deepseek-com', apiKeyEnv: 'OPENAI_API_DEEPSEEK_COM_API_KEY' })
+    expect(deriveRouteFromEndpoint('anthropic-messages', 'https://api.deepseek.com/anthropic'))
+      .toEqual({ route: 'anthropic-api-deepseek-com', apiKeyEnv: 'ANTHROPIC_API_DEEPSEEK_COM_API_KEY' })
+    expect(deriveRouteFromEndpoint('openai-responses', 'https://Api.Example.COM:8443/v1'))
+      .toEqual({ route: 'openai-api-example-com-8443', apiKeyEnv: 'OPENAI_API_EXAMPLE_COM_8443_API_KEY' })
+    expect(deriveRouteFromEndpoint('openai-completions', 'not a url')).toBeUndefined()
+  })
+})
