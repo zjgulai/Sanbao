@@ -11631,6 +11631,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0340",
+      "title": "ADR-0340 · 模型可用面：实时目录、默认模型切换与 composer 选择器",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "modelConfig/catalog 直读 sessionController.modelCatalog；目录自动含自定义路由。",
+          "constraints": [
+            "defensive mapping"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "modelConfig/default 先对活目录校验再 saveSelection；盲写不经端口。",
+          "constraints": [
+            "consumer owns diagnostics"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "路由动作扩六枚，键集精确；矩阵 operations 同步。",
+          "constraints": [
+            "same route authority"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "composer 选择器懒加载；切换语义文案与 logged-header 行为一致；static-only 观测边界注明。",
+          "constraints": [
+            "no mount-time fetch"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "组件集变更必须重发布 sealed 三件（ADR-0326 程序）；本批已执行第二次。",
+          "constraints": [
+            "republish procedure reusable"
+          ]
+        }
+      ]
     }
   ]
 }
