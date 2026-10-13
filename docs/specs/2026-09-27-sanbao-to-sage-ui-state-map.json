@@ -109,27 +109,27 @@
         "unreviewed": 203
       },
       "ui": {
-        "implementing": 143,
         "pending": 55,
-        "verified": 8
+        "implementing": 135,
+        "verified": 16
       },
       "applicationService": {
-        "blocked": 198,
-        "verified": 8
+        "blocked": 190,
+        "verified": 16
       },
       "hostIntegration": {
         "pending": 206
       },
       "electronAcceptance": {
-        "pending": 198,
-        "verified": 8
+        "pending": 190,
+        "verified": 16
       },
       "visualAcceptance": {
         "pending": 206
       },
       "integration": {
-        "not-applicable": 3,
-        "pending": 203
+        "pending": 203,
+        "not-applicable": 3
       }
     }
   },
@@ -2726,27 +2726,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -2754,7 +2783,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the settings entry renders in the R17-B settings shell navigation and lands on its reproduced pane; the credential write path is not assembled (the host has no Sage-face credential write path — the API Key stays an always-empty read-only placeholder, nothing enters, validates, stores or sends a credential, T13 sub-batch); the credential-store class owns any eventual store."
+          "导航入口与页内数据面已闭环（ADR-0339/0340）：列表/录入/两步保存/显式测试连接/默认切换均经 main-owned 端口；DeepSeek 默认供应商表单仍为只读壳（本批只做兼容供应商）；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -14907,27 +14936,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -14935,7 +14993,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-01 default page state."
+          "空列表与添加入口已闭环：列表读 POST /.sage/model-config（action list）；兼容供应商行显示绑定测试结果与凭据状态（ADR-0340）；DeepSeek 默认供应商表单仍只读；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -14980,27 +15038,62 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-credentials.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15008,7 +15101,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-02 add-dialog default state (aliyun + Token plan, AX/图一致 cancel)."
+          "默认表单（兼容分支）可录入并两步保存（配置 POST /.sage/model-config + 凭据 POST /.sage/credentials，部分失败具名）；「已保存、未测试」与调用状态分离；DeepSeek 分支仍只读；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -15053,27 +15146,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15081,7 +15203,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-03 provider-menu state (3 groups / 17 entries, verbatim order)."
+          "供应商菜单为真实本地菜单（spec+实测）；选中兼容供应商进入可编辑分支；行级数据面=列表读；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -15154,7 +15276,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-04 DeepSeek form state (按量付费, model checklist, 购买 Token Plan link gone)."
+          "DeepSeek 表单写入面未接线（本批只做兼容供应商；DeepSeek 凭据走「实例 API Key」卡，ADR-0334）；applicationService 保持 blocked；类型/模型勾选仍为只读壳。"
         ]
       }
     },
@@ -15227,7 +15349,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-05 DeepSeek model-menu state (three unchecked items)."
+          "DeepSeek 模型多选菜单仍为只读壳（勾选组合不等同自定义路由声明）；applicationService 保持 blocked。"
         ]
       }
     },
@@ -15300,7 +15422,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-06 DeepSeek type-menu state (按量付费 only)."
+          "DeepSeek 类型菜单仍为只读壳（唯一项「按量付费」）；applicationService 保持 blocked。"
         ]
       }
     },
@@ -15345,27 +15467,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15373,7 +15524,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the QB20-07 discard-confirm state (继续编辑 / 放弃更改, 初焦继续编辑)."
+          "放弃确认双出口为真实行为（R17-B spec 保持）；草稿脏判定含已录入字段；行级数据面=列表读；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -15418,27 +15569,62 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-credentials.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15446,7 +15632,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the openai-compatible form state (API 类型 panel, read-only endpoint draft)."
+          "OpenAI Compatible 表单已闭环：Base URL/Model ID/API Key 可录入，校验并添加=结构校验→保存配置→保存凭据（ADR-0339/0340）；连接测试为行内显式动作；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -15491,27 +15677,56 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15519,7 +15734,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the openai-compatible api-type menu state (Chat Completions / Responses)."
+          "API 类型菜单为真实选择（Chat Completions/Responses，随行保存进 profile.api）；行级数据面=列表读；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     },
@@ -15564,27 +15779,62 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-credentials.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v18-acceptance-result.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15592,7 +15842,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "the 模型 page is reproduced in the R17-B settings shell — the observed editor shell (QB20-01..07): the add-dialog opens/cancels, the provider menu carries the observed 3-group/17-entry list with DeepSeek selectable, the type/models/api-type panels open and Escape back, and the discard confirm offers both outcomes; every credential field stays an always-empty read-only placeholder and 校验并添加模型 stays disabled with the named note (no Sage-face credential write path — nothing enters, validates, stores or sends a credential); real-window visual/electron acceptance stays pending. This row is the anthropic-compatible form state (no api-type panel, read-only endpoint draft)."
+          "Anthropic Compatible 表单已闭环（无 API 类型项，api=anthropic-messages；其余同上）；hostIntegration/visualAcceptance 仍 pending。"
         ]
       }
     }
