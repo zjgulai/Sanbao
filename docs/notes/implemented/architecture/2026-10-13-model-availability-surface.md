@@ -29,8 +29,8 @@ ADR-0339 后可保存自定义路由，但无途经在会话中使用：默认�
 ## Consequences
 
 - 目录/切换/选择器闭环；默认值持久（`agent-default-model` 行，实测）；选择器懒加载不打挂载请求。
-- **实测挖出的两条承重事实**：（1）settings 栈激活=组件集变更 ⇒ sealed 三件失配 ⇒ 全部发送被 compatibility 拒——ADR-0326 程序第二次执行修复，发送恢复 `accepted`+真实回合 completed；（2）自定义模型面不在 sealed prompt 语义内——选为默认后发送仍拒（`stage: compatibility`）——「自定义模型可发」需要受治理的运行时声明路径（新票候选）。
-- 后续：019 事项级改选；018 未闭项；自定义模型治理票。
+- **实测承重事实**：settings 栈激活=组件集变更 ⇒ sealed 三件失配 ⇒ 全部发送被 compatibility 拒——ADR-0326 程序第二次执行修复。**修正（同批后续实测）**：此前「自定义模型面不在 sealed 语义内」为失配期误判——重发布 v3 后，**全新会话首发送头部逐字 `provider: "openai-api-deepseek-com"`、回合 completed**：sealed 语义钉组件/管道面，不钉用户选择的模型值；自定义模型全链可发，无须治理票。
+- 后续：019 事项级改选；018 未闭项。（自定义模型治理票：前提被推翻，取消。）
 
 ## Verification
 
@@ -38,5 +38,6 @@ ADR-0339 后可保存自定义路由，但无途经在会话中使用：默认�
 
 - 全套件 2185 通过（1 skip）；`gate` 32/32。
 - spec：host +2（catalog 直读/解包、default 活目录校验四拒+override 具名）、port/route +2、选择器 6 例（懒加载标签/分组/切换回读/拒绝/不可用/关闭）。
-- 真机：目录含自定义路由与 deepseek 双模型（含推理档位）；set-default 持久化（文件实证）；**重发布后发送 `accepted` → 回合 completed（回复 `ok`）**；compatibility 边界以探针 `stage=compatibility` 实证并登记。
-- v18 DMG 验收记录另见 packaging note（若随批出包）。
+- 真机：目录含自定义路由与 deepseek 双模型（含推理档位）；set-default 持久化（文件实证）；重发布后发送 `accepted` → 回合 completed。
+- 自定义模型全链证据（v3 重发布后）：新事项 seed → link+default → select → 首发送 accepted → 头部 `provider: "openai-api-deepseek-com"`、model `deepseek-chat` → 回复 `ok`、`turn/end: completed`。
+- v18 DMG 验收记录另见 packaging note。
