@@ -1848,7 +1848,8 @@ export function checkSageRouteAuthority(input) {
   const modelRoutesSurfaceMatches = input.routeSkeletonText.includes("const SAGE_MODEL_CONFIG_PATH = '/.sage/model-config'")
     && input.routeSkeletonText.includes("fields.api !== 'openai-completions' && fields.api !== 'openai-responses' && fields.api !== 'anthropic-messages'")
     && input.routeSkeletonText.includes('fields.models.length === 0 || fields.models.length > 64')
-    && input.mainIndexText.includes('modelRoutes: createModelConfig(')
+    && input.mainIndexText.includes('const modelRoutesPort = createModelConfig(')
+    && input.mainIndexText.includes('modelRoutes: modelRoutesPort,')
     && (input.mainIndexText.match(/createModelConfig\(/gu) ?? []).length === 1
     && input.compositionText.includes("code: 'model-config-unavailable'")
     && input.compositionText.includes("code: 'model-config-failed'")

@@ -292,7 +292,7 @@ describe('host-side read-only bridge', () => {
       describe: () => ({
         writable: true,
         hasDocument: true,
-        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { 'my-route': { api: 'openai-completions', baseURL: 'https://api.deepseek.com/v1' } } } }],
+        namespaces: [{ ns: 'llm-pi-ai', value: { providers: { 'my-route': { api: 'openai-completions', baseURL: 'https://api.deepseek.com/v1' } } } }],
       }),
       mutate: async () => undefined,
     }
@@ -308,7 +308,7 @@ describe('host-side read-only bridge', () => {
   it('ADR-0339: the test names its failure causes — missing credential, timeout/unknown, unsupported', async () => {
     const controller = {
       describe: () => ({
-        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { r: { api: 'anthropic-messages', baseURL: 'https://api.example.com' } } } }],
+        namespaces: [{ ns: 'llm-pi-ai', value: { providers: { r: { api: 'anthropic-messages', baseURL: 'https://api.example.com' } } } }],
       }),
       mutate: async () => undefined,
     }
@@ -330,7 +330,7 @@ describe('host-side read-only bridge', () => {
   it('ADR-0339: addressable credential names extend to refs the saved routes declare', async () => {
     const controller = {
       describe: () => ({
-        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { r: { api: 'openai-completions', baseURL: 'https://api.example.com/v1', apiKeyEnv: 'MY_GATEWAY_API_KEY' } } } }],
+        namespaces: [{ ns: 'llm-pi-ai', value: { providers: { r: { api: 'openai-completions', baseURL: 'https://api.example.com/v1', apiKeyEnv: 'MY_GATEWAY_API_KEY' } } } }],
       }),
       mutate: async () => undefined,
     }

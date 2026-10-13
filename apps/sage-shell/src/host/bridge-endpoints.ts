@@ -336,7 +336,10 @@ function savedRouteProfile(controller: Partial<SettingsWriteSeam>, route: string
   const namespace = namespaces.find((candidate): candidate is Record<string, unknown> =>
     candidate !== null && typeof candidate === 'object' && (candidate as { readonly ns?: unknown }).ns === MODEL_CONFIG_NAMESPACE)
   if (namespace === undefined) return undefined
-  const section = namespace.user ?? namespace.value
+  // Effective config first: the settings stack's `user` layer reads the receipt-sealed
+  // in-generation cordis.patch.yml (always empty for Sage — ADR-0339 moved the writable
+  // document out of the generation), so `value` is the layer that actually carries routes.
+  const section = namespace.value ?? namespace.user
   if (section === null || typeof section !== 'object') return undefined
   const providers = (section as { readonly providers?: unknown }).providers
   if (providers === null || typeof providers !== 'object') return undefined
@@ -381,7 +384,7 @@ function declaredCredentialRefs(controller: Partial<SettingsWriteSeam>): Set<str
   const namespace = namespaces.find((candidate): candidate is Record<string, unknown> =>
     candidate !== null && typeof candidate === 'object' && (candidate as { readonly ns?: unknown }).ns === MODEL_CONFIG_NAMESPACE)
   if (namespace === undefined) return names
-  const section = namespace.user ?? namespace.value
+  const section = namespace.value ?? namespace.user
   const providers = section !== null && typeof section === 'object' ? (section as { readonly providers?: unknown }).providers : undefined
   if (providers === null || typeof providers !== 'object') return names
   for (const profile of Object.values(providers as Record<string, unknown>)) {
@@ -533,6 +536,27 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
       value = await provider.describe()
     } catch {
       return { ok: false, code: 'bridge-provider-failed' }
+    }
+    if (process.env.CREDENTIAL_SEAM_PROBE === '1') {
+      try {
+        const record = value as { readonly namespaces?: readonly Record<string, unknown>[] }
+        const namespaces = Array.isArray(record.namespaces) ? record.namespaces : []
+        const ns = namespaces.find(candidate => candidate.ns === 'llm-pi-ai')
+        const providersOf = (section: unknown) => {
+          const record2 = section !== null && typeof section === 'object' ? section as Record<string, unknown> : undefined
+          const providers = record2 !== null && record2 !== undefined && typeof record2.providers === 'object' && record2.providers !== null ? record2.providers as Record<string, unknown> : undefined
+          return providers === undefined ? null : Object.keys(providers)
+        }
+        console.log('DESCRIBE-PROBE', JSON.stringify({
+          n: namespaces.length,
+          ns: ns?.ns,
+          revision: ns?.revision,
+          hasUser: ns !== undefined && 'user' in ns,
+          hasValue: ns !== undefined && 'value' in ns,
+          userProviders: providersOf(ns?.user),
+          valueProviders: providersOf(ns?.value),
+        }))
+      } catch { /* probe only */ }
     }
     return crossable(value)
   }

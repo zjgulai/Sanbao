@@ -27,7 +27,7 @@ const describeAnswer = {
         ns: 'llm-pi-ai',
         revision: 5,
         applies: 'live',
-        user: {
+        value: {
           providers: {
             'zeta-route': { api: 'anthropic-messages', baseURL: 'https://api.z.example', models: [{ id: 'z1' }] },
             'alpha-route': { api: 'openai-completions', baseURL: 'https://api.a.example/v1', apiKeyEnv: 'ALPHA_API_KEY', displayName: 'Alpha', models: [{ id: 'a1' }, { id: 'a2' }] },

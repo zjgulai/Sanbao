@@ -71,7 +71,9 @@ function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute
     isPlainRecord(candidate) && candidate.ns === 'llm-pi-ai')
   if (namespace === undefined) return { routes: [], revision: undefined }
   const revision = typeof namespace.revision === 'number' && Number.isSafeInteger(namespace.revision) ? namespace.revision : undefined
-  const section = isPlainRecord(namespace.user) ? namespace.user : isPlainRecord(namespace.value) ? namespace.value : {}
+  // Effective config (redacted) is the truth: the user layer reads the receipt-sealed
+  // in-generation patch file and stays empty in Sage's layout (ADR-0339).
+  const section = isPlainRecord(namespace.value) ? namespace.value : isPlainRecord(namespace.user) ? namespace.user : {}
   const providers = isPlainRecord(section.providers) ? section.providers : {}
   const routes: SavedRoute[] = []
   for (const [route, raw] of Object.entries(providers)) {

@@ -147,6 +147,14 @@ async function main(paths: SagePaths): Promise<void> {
     env: process.env,
   })
   const host = new ShellHostProcess(runtime)
+
+  // ADR-0339: the model-routes port is created ONCE per main lifetime — it owns the
+  // per-route in-flight test slot and the latest test record; a per-request port would
+  // forget every record the moment the response was written.
+  const modelRoutesPort = createModelConfig(
+    (endpoint, payload) => host.bridgeCall(endpoint, payload),
+    () => vault.identitySession(),
+  )
   const ready = await host.start()
   process.stdout.write(`sage shell: host ready, dsh ${ready.dshVersion}\n`)
 
@@ -1225,11 +1233,9 @@ async function main(paths: SagePaths): Promise<void> {
           (endpoint, payload) => host.bridgeCall(endpoint, payload),
           () => vault.identitySession(),
         ),
-        // ADR-0339: the saved-model-routes surface (same identity gate as the credential port).
-        modelRoutes: createModelConfig(
-          (endpoint, payload) => host.bridgeCall(endpoint, payload),
-          () => vault.identitySession(),
-        ),
+        // ADR-0339: the saved-model-routes surface (same identity gate as the credential port;
+        // the port itself is the main-lifetime singleton above).
+        modelRoutes: modelRoutesPort,
         // Ticket 005: the session channel (read projection + one send verb).
         ...sessionWiring,
         // Ticket 014: this run's attachment items and the pick/upload/cancel acts.
