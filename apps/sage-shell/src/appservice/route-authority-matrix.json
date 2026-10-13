@@ -1174,11 +1174,13 @@
         "list",
         "save-route",
         "remove-route",
-        "test-connection"
+        "test-connection",
+        "catalog",
+        "set-default"
       ],
       "callerBinding": "CB1",
-      "activeContext": "device-local saved model routes (llm-pi-ai custom provider profiles); no matter scope",
-      "persistence": "the config-editor settings document at the Sage root (cordis.settings.patch.yml); path-addressed writes; credential values never ride this route",
+      "activeContext": "device-local saved model routes (llm-pi-ai custom provider profiles) plus the session model catalog and its default selection; no matter scope",
+      "persistence": "custom routes ride the config-editor settings document at the Sage root (cordis.settings.patch.yml); the default selection rides the same document via agentDefaultModel.saveSelection; credential values never ride this route",
       "runtimeLevel": "L4 local device state; the main-owned port gates the identity session, then path-addressed settings writes and a saved-route-only connectivity test ride the bridge",
       "providers": [
         "modelRoutes"

@@ -394,6 +394,40 @@ function declaredCredentialRefs(controller: Partial<SettingsWriteSeam>): Set<str
   return names
 }
 
+/** The catalog half of the session controller this seam needs (session-controller/src/index.ts:309). */
+interface ModelCatalogSeam {
+  readonly modelCatalog: () => Promise<unknown>
+}
+
+/** The default-model write half (agent-default-model/src/index.ts:82) plus its reader. */
+interface DefaultModelSeam {
+  readonly currentSelection: () => unknown
+  readonly saveSelection: (next: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string }) => Promise<unknown>
+}
+
+/** Availability diagnostics for one selection against the live catalog. `saveSelection` writes
+ *  blindly (the base says its consumer owns this), so this check is what keeps an unusable
+ *  default out of the settings document. */
+function selectionRefusal(catalog: unknown, provider: string, model: string, effort: string | undefined): string | undefined {
+  if (catalog === null || typeof catalog !== 'object') return 'bridge-model-catalog-unreadable'
+  const groups = (catalog as { readonly groups?: unknown }).groups
+  if (!Array.isArray(groups)) return 'bridge-model-catalog-unreadable'
+  const group = groups.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly id?: unknown }).id === provider)
+  if (group === undefined) return 'bridge-model-selection-unknown'
+  const models = Array.isArray(group.models) ? group.models : []
+  const found = models.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly id?: unknown }).id === model)
+  if (found === undefined) return 'bridge-model-selection-unknown'
+  if (effort !== undefined) {
+    const reasoning = found.reasoning !== null && typeof found.reasoning === 'object' ? found.reasoning as Record<string, unknown> : undefined
+    const efforts = reasoning !== undefined && Array.isArray(reasoning.efforts) ? reasoning.efforts : []
+    const known = efforts.some(candidate => candidate !== null && typeof candidate === 'object' && (candidate as { readonly id?: unknown }).id === effort)
+    if (!known) return 'bridge-model-effort-unknown'
+  }
+  return undefined
+}
+
 /** One route profile exactly as the surface may declare it: unknown members are refused, not
  *  ignored (a surface cannot smuggle `headers` or any deployment-owned field through save). */
 function readRouteProfile(raw: unknown): { readonly profile: Record<string, unknown>, readonly apiKeyEnv?: string } | undefined {
@@ -1293,6 +1327,55 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
       if (remote?.code === 'MISSING_CREDENTIAL') return { ok: true, result: { state: 'credential-missing', latencyMs, ...binding } }
       if (remote?.code === 'DISCOVERY_UNSUPPORTED') return { ok: true, result: { state: 'unsupported', latencyMs, ...binding } }
       return { ok: true, result: { state: 'failed', latencyMs, ...binding } }
+    }
+  }
+
+  if (endpoint === 'modelConfig/catalog') {
+    if (payload.length !== 0) return { ok: false, code: 'bridge-payload-invalid' }
+    const controller = ctx.get('sessionController') as Partial<ModelCatalogSeam> | undefined
+    if (typeof controller?.modelCatalog !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    let value: unknown
+    try {
+      value = await controller.modelCatalog()
+    } catch {
+      return { ok: false, code: 'bridge-model-catalog-failed' }
+    }
+    return crossable(value)
+  }
+
+  if (endpoint === 'modelConfig/default') {
+    const record = readRequestWithOptional(payload, ['provider', 'model'], ['reasoningEffort'])
+    const provider = record?.provider
+    const model = record?.model
+    const effort = record?.reasoningEffort
+    if (record === undefined
+      || typeof provider !== 'string' || provider === '' || provider.length > 128
+      || typeof model !== 'string' || model === '' || model.length > 128
+      || (effort !== undefined && (typeof effort !== 'string' || effort === '' || effort.length > 64))) {
+      return { ok: false, code: 'bridge-model-selection-invalid' }
+    }
+    const controller = ctx.get('sessionController') as Partial<ModelCatalogSeam> | undefined
+    const defaultModel = ctx.get('agentDefaultModel') as Partial<DefaultModelSeam> | undefined
+    if (typeof controller?.modelCatalog !== 'function' || typeof defaultModel?.saveSelection !== 'function') {
+      return { ok: false, code: 'bridge-provider-unavailable' }
+    }
+    try {
+      const catalog = await controller.modelCatalog()
+      const refusal = selectionRefusal(catalog, provider, model, effort as string | undefined)
+      if (refusal !== undefined) return { ok: false, code: refusal }
+      await defaultModel.saveSelection({
+        provider,
+        model,
+        ...(effort === undefined ? {} : { reasoningEffort: effort as string }),
+      })
+      const current = typeof defaultModel.currentSelection === 'function' ? defaultModel.currentSelection() : undefined
+      return current === undefined ? crossable({ saved: true }) : crossable({ saved: true, current })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('overridden by a home patch or command-line overlay')) {
+        return { ok: false, code: 'bridge-model-default-overridden' }
+      }
+      return { ok: false, code: 'bridge-model-default-failed' }
     }
   }
 

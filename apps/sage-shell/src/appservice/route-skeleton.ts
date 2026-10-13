@@ -969,26 +969,43 @@ function parseCredentialRequest(body: string): { readonly action: 'describe' | '
  *  an http(s) URL with no credentials/query/fragment, and 1..64 hand-entered model ids. The host
  *  re-checks the whole profile before it reaches the settings document. */
 function parseModelConfigRequest(body: string): {
-  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
   readonly route?: string
   readonly profile?: unknown
   readonly expectedRevision?: number
+  readonly provider?: string
+  readonly model?: string
+  readonly reasoningEffort?: string
 } | undefined {
   let value: unknown
   try { value = JSON.parse(body) } catch { return undefined }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
   const action = record.action
-  if (action !== 'list' && action !== 'save-route' && action !== 'remove-route' && action !== 'test-connection') return undefined
+  if (action !== 'list' && action !== 'save-route' && action !== 'remove-route' && action !== 'test-connection'
+    && action !== 'catalog' && action !== 'set-default') return undefined
   const keys = Object.keys(record)
-  const allowed = action === 'list'
+  const allowed = action === 'list' || action === 'catalog'
     ? ['action']
     : action === 'save-route'
       ? ['action', 'route', 'profile', 'expectedRevision']
       : action === 'remove-route'
         ? ['action', 'route', 'expectedRevision']
-        : ['action', 'route']
+        : action === 'test-connection'
+          ? ['action', 'route']
+          : ['action', 'provider', 'model', 'reasoningEffort']
   if (!keys.every((key) => allowed.includes(key))) return undefined
+  if (action === 'catalog') return { action }
+  if (action === 'set-default') {
+    const provider = record.provider
+    const model = record.model
+    const effort = record.reasoningEffort
+    const bounded = (value: unknown, cap: number): value is string =>
+      typeof value === 'string' && value === value.trim() && value !== '' && value.length <= cap
+    if (!bounded(provider, 128) || !bounded(model, 128)) return undefined
+    if (effort !== undefined && !bounded(effort, 64)) return undefined
+    return { action, provider, model, ...(effort === undefined ? {} : { reasoningEffort: effort }) }
+  }
   const revision = record.expectedRevision
   if (revision !== undefined && (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0)) return undefined
   if (action === 'list') return { action }

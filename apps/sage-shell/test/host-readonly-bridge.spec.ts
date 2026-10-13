@@ -173,6 +173,8 @@ describe('host-side read-only bridge', () => {
       ['modelConfig/save', 'write'],
       ['modelConfig/remove', 'write'],
       ['modelConfig/test', 'write'],
+      ['modelConfig/catalog', 'read'],
+      ['modelConfig/default', 'write'],
       ['credentials/describe', 'read'],
       ['credentials/set', 'write'],
       ['settings/describe', 'read'],
@@ -240,6 +242,53 @@ describe('host-side read-only bridge', () => {
     expect(outcome).toEqual({ ok: true, result: { configured: true, source: 'file', writable: true } })
     expect(ctx.get).toHaveBeenCalledWith('credentials')
     expect(describe).toHaveBeenCalledTimes(1)
+  })
+
+  it('ADR-0340: reads the live model catalog through the session controller, unwrapped', async () => {
+    const catalog = { default: { provider: 'deepseek-official', model: 'deepseek-flash' }, groups: [{ id: 'g', name: 'G', models: [], kind: 'group' }], failures: [] }
+    const controller = { modelCatalog: vi.fn(async () => catalog) }
+    const ctx = { get: (name: string) => (name === 'sessionController' ? controller : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/catalog')).resolves.toEqual({ ok: true, result: catalog })
+    await expect(resolveBridgeCall({ get: () => undefined }, 'modelConfig/catalog')).resolves.toEqual({ ok: false, code: 'bridge-provider-unavailable' })
+    await expect(resolveBridgeCall({ get: () => ({ modelCatalog: async () => { throw new Error('down') } }) }, 'modelConfig/catalog'))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-catalog-failed' })
+  })
+
+  it('ADR-0340: set-default validates the selection against the LIVE catalog before saveSelection', async () => {
+    const catalog = {
+      default: { provider: 'deepseek-official', model: 'deepseek-flash' },
+      groups: [{ id: 'custom-a', name: 'Custom A', models: [{ id: 'm1', reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] } }] }],
+      failures: [],
+    }
+    const saved: unknown[] = []
+    const selection = { provider: 'custom-a', model: 'm1' }
+    const ctx = {
+      get: (name: string) => name === 'sessionController'
+        ? { modelCatalog: async () => catalog }
+        : name === 'agentDefaultModel'
+          ? { saveSelection: async (next: unknown) => { saved.push(next) }, currentSelection: () => next0 }
+          : undefined,
+    }
+    const next0 = { provider: 'custom-a', model: 'm1' }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/default', [{ provider: 'custom-a', model: 'm1' }]))
+      .resolves.toEqual({ ok: true, result: { saved: true, current: { provider: 'custom-a', model: 'm1' } } })
+    expect(saved).toEqual([{ provider: 'custom-a', model: 'm1' }])
+    // Unknown provider / model / effort are named refusals — the write never happens.
+    for (const [body, code] of [
+      [{ provider: 'nope', model: 'm1' }, 'bridge-model-selection-unknown'],
+      [{ provider: 'custom-a', model: 'nope' }, 'bridge-model-selection-unknown'],
+      [{ provider: 'custom-a', model: 'm1', reasoningEffort: 'max' }, 'bridge-model-effort-unknown'],
+    ] as const) {
+      await expect(resolveBridgeCall(ctx, 'modelConfig/default', [body])).resolves.toEqual({ ok: false, code })
+    }
+    expect(saved).toHaveLength(1)
+    // The config-editor's home-patch override refusal keeps its identity.
+    const overridden = {
+      get: (name: string) => name === 'sessionController' ? { modelCatalog: async () => catalog }
+        : { saveSelection: async () => { throw new Error('Configuration for "agent-default-model" is overridden by a home patch or command-line overlay') } },
+    }
+    await expect(resolveBridgeCall(overridden, 'modelConfig/default', [{ provider: 'custom-a', model: 'm1' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-default-overridden' })
   })
 
   it('ADR-0339: saves a route as one path-addressed set into the llm-pi-ai user layer', async () => {

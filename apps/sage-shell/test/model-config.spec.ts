@@ -142,6 +142,47 @@ describe('ADR-0339: the model-config port', () => {
     expect(listed.routes[0]!.test).toMatchObject({ state: 'ok', current: false })
   })
 
+  it('reads the live catalog defensively and switches the default with the exact selection', async () => {
+    const calls: Array<{ readonly endpoint: string, readonly payload: unknown }> = []
+    const callBridge = vi.fn(async (endpoint: string, payload: unknown) => {
+      calls.push({ endpoint, payload })
+      if (endpoint === 'modelConfig/catalog') {
+        return {
+          ok: true,
+          result: {
+            default: { provider: 'deepseek-official', model: 'deepseek-flash' },
+            groups: [
+              { id: 'deepseek-official', name: 'DeepSeek', models: [{ id: 'deepseek-flash', name: 'Flash' }, { id: 42 }] },
+              { id: 'custom-a', name: 'Custom A', models: [{ id: 'm1', reasoning: { efforts: [{ id: 'low' }, { id: 7 }] } }] },
+              'junk',
+            ],
+            failures: [{ id: 'broken', name: 'Broken', message: 'boom' }, 13],
+          },
+        }
+      }
+      if (endpoint === 'modelConfig/default') return { ok: true, result: { saved: true, current: { provider: 'custom-a', model: 'm1' } } }
+      throw new Error(`unexpected ${endpoint}`)
+    })
+    const port = createModelConfig(callBridge, signedIn())
+    const catalog = await port({ action: 'catalog' })
+    expect(catalog).toEqual({
+      state: 'catalog',
+      catalog: {
+        default: { provider: 'deepseek-official', model: 'deepseek-flash' },
+        groups: [
+          { id: 'deepseek-official', name: 'DeepSeek', models: [{ id: 'deepseek-flash', name: 'Flash' }] },
+          { id: 'custom-a', name: 'Custom A', models: [{ id: 'm1', reasoningEfforts: [{ id: 'low' }] }] },
+        ],
+        failures: [{ id: 'broken', name: 'Broken', message: 'boom' }],
+      },
+    })
+    await expect(port({ action: 'set-default', provider: 'custom-a', model: 'm1', reasoningEffort: 'low' }))
+      .resolves.toEqual({ state: 'default-set', selection: { provider: 'custom-a', model: 'm1' } })
+    expect(calls[1]).toEqual({ endpoint: 'modelConfig/default', payload: [{ provider: 'custom-a', model: 'm1', reasoningEffort: 'low' }] })
+    await expect(port({ action: 'set-default', provider: '', model: 'm1' }))
+      .resolves.toEqual({ state: 'refused', code: 'model-config-selection-invalid', retryable: false })
+  })
+
   it('refuses an unrecognised bridge answer instead of guessing, and a missing route name locally', async () => {
     const port = createModelConfig(async () => 'junk', signedIn())
     await expect(port({ action: 'list' })).resolves.toEqual({ state: 'refused', code: 'bridge-answer-unrecognised', retryable: true })
@@ -156,9 +197,13 @@ describe('ADR-0339: the /.sage/model-config route', () => {
     modelRoutes: async (request) => {
       const outcome: ModelConfigOutcome = request.action === 'list'
         ? { state: 'read', routes: [], namespaceRevision: 1 }
-        : request.action === 'test-connection'
-          ? { state: 'tested', route: request.route ?? '', test: { state: 'ok', testedAt: '2026-10-13T10:00:00.000Z', current: true } }
-          : { state: request.action === 'save-route' ? 'saved' : 'removed', route: request.route ?? '' }
+        : request.action === 'catalog'
+          ? { state: 'catalog', catalog: { default: null, groups: [], failures: [] } }
+          : request.action === 'set-default'
+            ? { state: 'default-set', selection: { provider: request.provider ?? '', model: request.model ?? '' } }
+            : request.action === 'test-connection'
+              ? { state: 'tested', route: request.route ?? '', test: { state: 'ok', testedAt: '2026-10-13T10:00:00.000Z', current: true } }
+              : { state: request.action === 'save-route' ? 'saved' : 'removed', route: request.route ?? '' }
       outcomes.push(outcome)
       return outcome
     },
@@ -214,6 +259,27 @@ describe('ADR-0339: the /.sage/model-config route', () => {
     }))
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ state: 'saved', route: 'alpha-route' })
+  })
+
+  it('answers catalog and set-default through the port; their grammars stop bad bodies at 400', async () => {
+    outcomes.length = 0
+    const catalogLike = await post(JSON.stringify({ action: 'catalog' }))
+    expect(catalogLike.status).toBe(200)
+    for (const body of [
+      JSON.stringify({ action: 'catalog', route: 'r' }),
+      JSON.stringify({ action: 'set-default' }),
+      JSON.stringify({ action: 'set-default', provider: 'p' }),
+      JSON.stringify({ action: 'set-default', provider: 'p', model: '' }),
+      JSON.stringify({ action: 'set-default', provider: ' p', model: 'm' }),
+      JSON.stringify({ action: 'set-default', provider: 'p', model: 'm', reasoningEffort: '' }),
+      JSON.stringify({ action: 'set-default', provider: 'p', model: 'm', extra: 1 }),
+    ]) {
+      const response = await post(body)
+      expect(response.status, body).toBe(400)
+    }
+    const set = await post(JSON.stringify({ action: 'set-default', provider: 'custom-a', model: 'm1' }))
+    expect(set.status).toBe(200)
+    expect(await set.json()).toEqual({ state: 'default-set', selection: { provider: 'custom-a', model: 'm1' } })
   })
 
   it('refuses wrong methods and content types at the transport layer', async () => {

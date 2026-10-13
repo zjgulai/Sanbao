@@ -8,6 +8,8 @@ import { SAGE_CREDENTIALS_PATH, SAGE_MODEL_CONFIG_PATH, SAGE_REQUEST_TIMEOUT_MS 
 
 /** A connectivity test may block on a 20s host clock; give the renderer headroom past it. */
 export const SAGE_MODEL_TEST_TIMEOUT_MS = 30_000
+/** The catalog read and the default switch touch the host settings stack; same 30s headroom. */
+export const SAGE_MODEL_CONFIG_TIMEOUT_MS = 30_000
 
 export interface ModelRouteCredentialRead {
   readonly name: string
@@ -48,12 +50,36 @@ export type ModelRouteTestOutcome =
   | { readonly kind: 'refused', readonly code: string }
   | { readonly kind: 'unreachable' }
 
+/** ADR-0340: the live catalog the composer selector renders (defensively mapped). */
+export interface ModelCatalogModelRead {
+  readonly id: string
+  readonly name?: string
+  readonly reasoningEfforts?: readonly { readonly id: string, readonly name?: string }[]
+}
+
+export interface ModelCatalogRead {
+  readonly default: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string } | null
+  readonly groups: readonly { readonly id: string, readonly name: string, readonly models: readonly ModelCatalogModelRead[] }[]
+  readonly failures: readonly { readonly id: string, readonly name: string, readonly message: string }[]
+}
+
+export type ModelCatalogOutcome =
+  | { readonly kind: 'read', readonly catalog: ModelCatalogRead }
+  | { readonly kind: 'unavailable', readonly code: string }
+
+export type ModelDefaultOutcome =
+  | { readonly kind: 'set', readonly selection: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string } }
+  | { readonly kind: 'refused', readonly code: string }
+  | { readonly kind: 'unreachable' }
+
 export interface ModelRoutesController {
   list(): Promise<ModelRoutesListRead>
   saveRoute(request: { readonly route: string, readonly profile: ModelRouteDraftProfile, readonly expectedRevision?: number }): Promise<ModelRouteSaveOutcome>
   removeRoute(request: { readonly route: string }): Promise<ModelRouteSaveOutcome>
   saveCredential(request: { readonly name: string, readonly value: string }): Promise<ModelRouteSaveOutcome>
   testConnection(route: string): Promise<ModelRouteTestOutcome>
+  catalog(): Promise<ModelCatalogOutcome>
+  setDefault(request: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string }): Promise<ModelDefaultOutcome>
 }
 
 /** The draft half of one route the editor may declare — same shape the route grammar accepts. */
@@ -137,6 +163,45 @@ function classifyWrite(receipt: unknown): ModelRouteSaveOutcome {
   return { kind: 'refused', code: 'unrecognised' }
 }
 
+function readCatalogReceipt(receipt: unknown): ModelCatalogOutcome {
+  if (!isRecord(receipt)) return { kind: 'unavailable', code: 'unreachable' }
+  if (receipt.state === 'refused' && typeof receipt.code === 'string') return { kind: 'unavailable', code: receipt.code }
+  if (receipt.state !== 'catalog' || !isRecord(receipt.catalog)) return { kind: 'unavailable', code: 'unrecognised' }
+  const raw = receipt.catalog
+  const groups = Array.isArray(raw.groups)
+    ? raw.groups.flatMap((group) => {
+      if (!isRecord(group) || typeof group.id !== 'string' || !Array.isArray(group.models)) return []
+      const models = group.models.flatMap((model) => {
+        if (!isRecord(model) || typeof model.id !== 'string') return []
+        const efforts = Array.isArray(model.reasoningEfforts)
+          ? model.reasoningEfforts.flatMap((effort) => isRecord(effort) && typeof effort.id === 'string'
+            ? [{ id: effort.id, ...(typeof effort.name === 'string' ? { name: effort.name } : {}) }]
+            : [])
+          : undefined
+        return [{
+          id: model.id,
+          ...(typeof model.name === 'string' ? { name: model.name } : {}),
+          ...(efforts === undefined || efforts.length === 0 ? {} : { reasoningEfforts: efforts }),
+        }]
+      })
+      return [{ id: group.id, name: typeof group.name === 'string' ? group.name : group.id, models }]
+    })
+    : []
+  const failures = Array.isArray(raw.failures)
+    ? raw.failures.flatMap((failure) => isRecord(failure) && typeof failure.id === 'string'
+      ? [{ id: failure.id, name: typeof failure.name === 'string' ? failure.name : failure.id, message: typeof failure.message === 'string' ? failure.message : '不可用' }]
+      : [])
+    : []
+  const selection = isRecord(raw.default) && typeof raw.default.provider === 'string' && typeof raw.default.model === 'string'
+    ? {
+        provider: raw.default.provider,
+        model: raw.default.model,
+        ...(typeof raw.default.reasoningEffort === 'string' ? { reasoningEffort: raw.default.reasoningEffort } : {}),
+      }
+    : null
+  return { kind: 'read', catalog: { default: selection, groups, failures } }
+}
+
 export function createModelRoutesController(fetcher: ModelRoutesFetch = fetch): ModelRoutesController {
   return {
     async list(): Promise<ModelRoutesListRead> {
@@ -155,6 +220,31 @@ export function createModelRoutesController(fetcher: ModelRoutesFetch = fetch): 
     },
     async saveCredential(request): Promise<ModelRouteSaveOutcome> {
       return classifyWrite(await postJson(SAGE_CREDENTIALS_PATH, { action: 'set', name: request.name, value: request.value }, fetcher, SAGE_REQUEST_TIMEOUT_MS))
+    },
+    async catalog(): Promise<ModelCatalogOutcome> {
+      return readCatalogReceipt(await postJson(SAGE_MODEL_CONFIG_PATH, { action: 'catalog' }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS))
+    },
+    async setDefault(request): Promise<ModelDefaultOutcome> {
+      const receipt = await postJson(SAGE_MODEL_CONFIG_PATH, {
+        action: 'set-default',
+        provider: request.provider,
+        model: request.model,
+        ...(request.reasoningEffort === undefined ? {} : { reasoningEffort: request.reasoningEffort }),
+      }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS)
+      if (!isRecord(receipt)) return { kind: 'unreachable' }
+      if (receipt.state === 'default-set' && isRecord(receipt.selection)
+        && typeof receipt.selection.provider === 'string' && typeof receipt.selection.model === 'string') {
+        return {
+          kind: 'set',
+          selection: {
+            provider: receipt.selection.provider,
+            model: receipt.selection.model,
+            ...(typeof receipt.selection.reasoningEffort === 'string' ? { reasoningEffort: receipt.selection.reasoningEffort } : {}),
+          },
+        }
+      }
+      if (receipt.state === 'refused' && typeof receipt.code === 'string') return { kind: 'refused', code: receipt.code }
+      return { kind: 'refused', code: 'unrecognised' }
     },
     async testConnection(route): Promise<ModelRouteTestOutcome> {
       const receipt = await postJson(SAGE_MODEL_CONFIG_PATH, { action: 'test-connection', route }, fetcher, SAGE_MODEL_TEST_TIMEOUT_MS)

@@ -238,6 +238,10 @@ export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 
   'modelConfig/save': 'write',
   'modelConfig/remove': 'write',
   'modelConfig/test': 'write',
+  // ADR-0340: the session model catalog (read) and the default-model switch (write, validated
+  // against the live catalog before it reaches agentDefaultModel.saveSelection).
+  'modelConfig/catalog': 'read',
+  'modelConfig/default': 'write',
   // ADR-0334: the instance credential surface — describe never returns the value; set is
   // write-only and name-allowlisted at the host handler.
   'credentials/describe': 'read',

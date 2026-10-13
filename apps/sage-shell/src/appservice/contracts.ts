@@ -759,7 +759,29 @@ export type ModelConfigOutcome =
   | { readonly state: 'saved', readonly route: string }
   | { readonly state: 'removed', readonly route: string }
   | { readonly state: 'tested', readonly route: string, readonly test: ModelTestView }
+  | { readonly state: 'catalog', readonly catalog: ModelCatalogRead }
+  | { readonly state: 'default-set', readonly selection: ModelSelectionRead }
   | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
+
+/** ADR-0340: the live model catalog (session-controller `modelCatalog`, redacted to what the
+ *  selector renders) plus the current default selection. */
+export interface ModelSelectionRead {
+  readonly provider: string
+  readonly model: string
+  readonly reasoningEffort?: string
+}
+
+export interface ModelCatalogModelRead {
+  readonly id: string
+  readonly name?: string
+  readonly reasoningEfforts?: readonly { readonly id: string, readonly name?: string }[]
+}
+
+export interface ModelCatalogRead {
+  readonly default: ModelSelectionRead | null
+  readonly groups: readonly { readonly id: string, readonly name: string, readonly models: readonly ModelCatalogModelRead[] }[]
+  readonly failures: readonly { readonly id: string, readonly name: string, readonly message: string }[]
+}
 
 /** The one defaults literal: the store and the unavailable-first fallback both read it. */
 export const DEFAULT_DISPLAY_PREFERENCE_VALUES: DisplayPreferenceValues = {
@@ -1833,10 +1855,13 @@ export interface ServiceProviders {
   readonly credentials: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<Response>
   /** ADR-0339: the saved-model-routes surface (`list` / `save-route` / `remove-route` / `test-connection`). */
   readonly modelRoutes: (request: {
-    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
     readonly route?: string
     readonly profile?: unknown
     readonly expectedRevision?: number
+    readonly provider?: string
+    readonly model?: string
+    readonly reasoningEffort?: string
   }) => Promise<Response>
   /** Ticket 006: edit or remove one still-pending item (a consumed one is frozen). */
   readonly updatePendingInput: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>

@@ -254,10 +254,13 @@ export interface ServiceOptions {
   /** ADR-0339: the saved-model-routes port (list / save-route / remove-route / test-connection);
    *  distinct from the read-only `modelConfig` leaf (Ticket 017) above. */
   readonly modelRoutes?: (request: {
-    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
     readonly route?: string
     readonly profile?: unknown
     readonly expectedRevision?: number
+    readonly provider?: string
+    readonly model?: string
+    readonly reasoningEffort?: string
   }) => ModelConfigOutcome | Promise<ModelConfigOutcome>
   /** Ticket 006: stop/resume and the pending-item edits. */
   readonly sessionStop?: (request: { readonly matterRef: string }) => Promise<SessionControlOutcome>

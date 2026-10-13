@@ -20,7 +20,8 @@
     "sageApprovalRelay",
     "terminals",
     "credentials",
-    "llm"
+    "llm",
+    "agentDefaultModel"
    ]
   }
  ]

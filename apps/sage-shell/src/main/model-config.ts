@@ -6,7 +6,7 @@
  * record's binding facts and the facts read now (a success only ever says "corresponds to the
  * configuration and credential it ran against"; stale records read 仅历史).
  */
-import type { ModelConfigOutcome, ModelConfigRouteRead, ModelTestView } from '../appservice/contracts.js'
+import type { ModelCatalogRead, ModelConfigOutcome, ModelConfigRouteRead, ModelTestView } from '../appservice/contracts.js'
 
 export type BridgeCaller = (endpoint: string, payload?: readonly unknown[]) => Promise<unknown>
 
@@ -49,10 +49,13 @@ interface TestRecord {
 }
 
 export interface ModelConfigRequest {
-  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
   readonly route?: string
   readonly profile?: unknown
   readonly expectedRevision?: number
+  readonly provider?: string
+  readonly model?: string
+  readonly reasoningEffort?: string
 }
 
 /** One saved route read from the llm-pi-ai namespace's layers (user wins over base). */
@@ -91,6 +94,51 @@ function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute
   }
   routes.sort((left, right) => left.route.localeCompare(right.route))
   return { routes, revision }
+}
+
+function readSelection(value: unknown): { readonly provider: string, readonly model: string, readonly reasoningEffort?: string } | undefined {
+  if (!isPlainRecord(value) || typeof value.provider !== 'string' || typeof value.model !== 'string') return undefined
+  return {
+    provider: value.provider,
+    model: value.model,
+    ...(typeof value.reasoningEffort === 'string' ? { reasoningEffort: value.reasoningEffort } : {}),
+  }
+}
+
+/** Defensive mapping of the base catalog: unknown shapes are dropped, never guessed. */
+function readCatalog(value: unknown): ModelCatalogRead | undefined {
+  if (!isPlainRecord(value) || !Array.isArray(value.groups)) return undefined
+  const groups = value.groups.flatMap((candidate) => {
+    if (!isPlainRecord(candidate) || typeof candidate.id !== 'string' || !Array.isArray(candidate.models)) return []
+    const models = candidate.models.flatMap((model) => {
+      if (!isPlainRecord(model) || typeof model.id !== 'string') return []
+      const reasoning = isPlainRecord(model.reasoning) && Array.isArray(model.reasoning.efforts)
+        ? model.reasoning.efforts.flatMap((effort) => isPlainRecord(effort) && typeof effort.id === 'string'
+          ? [{ id: effort.id, ...(typeof effort.name === 'string' ? { name: effort.name } : {}) }]
+          : [])
+        : undefined
+      return [{
+        id: model.id,
+        ...(typeof model.name === 'string' ? { name: model.name } : {}),
+        ...(reasoning === undefined || reasoning.length === 0 ? {} : { reasoningEfforts: reasoning }),
+      }]
+    })
+    return [{
+      id: candidate.id,
+      name: typeof candidate.name === 'string' ? candidate.name : candidate.id,
+      models,
+    }]
+  })
+  const failures = Array.isArray(value.failures)
+    ? value.failures.flatMap((failure) => isPlainRecord(failure) && typeof failure.id === 'string'
+      ? [{
+          id: failure.id,
+          name: typeof failure.name === 'string' ? failure.name : failure.id,
+          message: typeof failure.message === 'string' ? failure.message.slice(0, 300) : '不可用',
+        }]
+      : [])
+    : []
+  return { default: readSelection(value.default) ?? null, groups, failures }
 }
 
 function readTestVerdict(result: unknown): Omit<TestRecord, 'testedAt'> | undefined {
@@ -170,6 +218,28 @@ export function createModelConfig(
       const removed = request.route ?? ''
       results.delete(removed)
       return { state: 'removed', route: removed }
+    }
+
+    if (request.action === 'catalog') {
+      const answer = await callBridgeAnswer(callBridge, 'modelConfig/catalog', [])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: true }
+      const catalog = readCatalog(answer.result)
+      if (catalog === undefined) return { state: 'refused', code: 'bridge-answer-unrecognised', retryable: true }
+      return { state: 'catalog', catalog }
+    }
+
+    if (request.action === 'set-default') {
+      const provider = request.provider ?? ''
+      const model = request.model ?? ''
+      if (provider === '' || model === '') return { state: 'refused', code: 'model-config-selection-invalid', retryable: false }
+      const answer = await callBridgeAnswer(callBridge, 'modelConfig/default', [{
+        provider,
+        model,
+        ...(request.reasoningEffort === undefined ? {} : { reasoningEffort: request.reasoningEffort }),
+      }])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: answer.code === 'bridge-model-default-failed' }
+      const selection = readSelection(isPlainRecord(answer.result) ? answer.result.current : undefined) ?? { provider, model }
+      return { state: 'default-set', selection }
     }
 
     const route = request.route ?? ''

@@ -8,6 +8,8 @@ import { searchDesktop, SEARCH_MATCHED_FIELD_LABELS, type DesktopSearchOutcome, 
 import { createDevicePreferencesController, type DevicePreferencesController } from './device-preferences.js'
 import { createInstanceCredentialController } from './instance-credential.js'
 import { createModelRoutesController } from './model-routes.js'
+import { ModelSelector } from './model-selector.js'
+import type { ModelRoutesController } from './model-routes.js'
 import { archiveDesktopMatter, renameDesktopMatter, restoreDesktopMatter, type MatterAdminActionResult } from './matter-admin-actions.js'
 import { createDesktopMatterGroup, removeDesktopMatterGroup, renameDesktopMatterGroup, type MatterGroupsActionResult } from './matter-groups-actions.js'
 import { describeControlRefusal } from './session-controls.js'
@@ -36,11 +38,10 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点' | '运行模式'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点' | '运行模式' | '模型'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
-  模型: '模型选择尚未接通；配置与可用状态未知。',
 }
 // T03 follow-up (M-3): the send route caps the whole request body at 4096 bytes — far below the
 // 16384-character text limit once UTF-8 multi-byte text plus matter/workspace fields are counted.
@@ -1058,7 +1059,7 @@ function ContextMenu({ notice, workspaceRoot }: {
   </div>
 }
 
-function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, contextUsage, workspaceRoot, onAction }: {
+function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncertain, hasSession, executing, paused, contextUsage, workspaceRoot, onAction, modelRoutesController }: {
   readonly draft: string; readonly changeDraft: (text: string) => void
   readonly notice: string; readonly setNotice: (text: string) => void; readonly navigate: (page: Page) => void
   readonly busy: boolean; readonly uncertain: boolean; readonly hasSession: boolean
@@ -1066,6 +1067,8 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
   readonly contextUsage: { readonly pressureTokens: number | null, readonly contextWindow: number | null } | null
   readonly workspaceRoot: string | undefined
   readonly onAction: (kind: 'send' | 'stop' | 'resume') => Promise<void>
+  /** ADR-0340: the composer model selector's catalog/default port. */
+  readonly modelRoutesController: ModelRoutesController
 }): ReactNode {
   const composing = useRef(false)
   const draftBytes = new TextEncoder().encode(draft).length
@@ -1085,7 +1088,7 @@ function Composer({ draft, changeDraft, notice, setNotice, navigate, busy, uncer
         }} />
       <div className="composer-toolbar"><div className="composer-tools">
         <ContextMenu notice={setNotice} {...(workspaceRoot === undefined ? {} : { workspaceRoot })} />
-        <button className="text-button" aria-label="模型状态未知" onClick={() => navigate('模型')}>模型未知 <Icon name="down" size={12} /></button>
+        <ModelSelector controller={modelRoutesController} />
       </div>
         {executing && <button className="text-button" aria-label="停止生成" disabled={busy || uncertain} onClick={() => { void onAction('stop') }}>停止生成</button>}
         {paused && <button className="text-button" aria-label="继续会话" disabled={busy || uncertain} onClick={() => { void onAction('resume') }}>继续会话</button>}
@@ -1242,11 +1245,12 @@ export function DesktopPage({
                   {...(accountRead.kind === 'read'
                     ? { account: { auth: accountRead.state.auth, busy: accountBusy, onAction: actOnAccount } }
                     : {})} />
-                : <section className="welcome-content outstanding-feature"><h1>{page}</h1><p>{outstanding[page]}</p>
+                : <section className="welcome-content outstanding-feature"><h1>{page}</h1><p>{page in outstanding ? outstanding[page as keyof typeof outstanding] : '本页尚未接通。'}</p>
                   <button className="text-button" onClick={() => navigate('新任务')}>返回任务输入</button></section>}
         <Composer draft={draft} changeDraft={changeDraft} notice={notice} setNotice={setNotice} navigate={navigate}
           busy={busy} uncertain={uncertain} hasSession={session !== undefined}
-          executing={session?.execution === 'executing'} paused={session?.paused === true} contextUsage={session?.contextUsage ?? null} workspaceRoot={session?.context.workspaceRoot} onAction={actOnSession} />
+          executing={session?.execution === 'executing'} paused={session?.paused === true} contextUsage={session?.contextUsage ?? null} workspaceRoot={session?.context.workspaceRoot} onAction={actOnSession}
+          modelRoutesController={modelRoutesController} />
       </div>
     </main>
   </div>
