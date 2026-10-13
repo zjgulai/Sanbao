@@ -36,4 +36,4 @@ L2 侦察结论（`drafts/analysis/analysis-qoder-provider-key-mapping-draft-202
 - `tsc --noEmit` 干净。
 - 渲染 spec +2（OpenRouter 观测条目→仅 Key 表单→保存路由 openrouter 与 OPENROUTER_API_KEY；Google 映射与 Kimi 惰性对照——点击不改变表单）。
 - 全套件 `pnpm test`：**2225 passed（1 skip）**，246/246 文件全绿（sage-16 的在途 probe 本批间转绿）。
-- 实机（staging）：**未运行**——随 sage-16 窗口后的合并批（A1/A2/A3/A4 复验 + v19）。
+- **实机（2026-10-13，v19 installed 副本）**：未登录面——观测 OpenRouter 条目 → 仅 Key 表单（banner、无端点字段、未输 key 提交禁用）；登录态——观测 OpenRouter 保存全链：行「openrouter · 内置目录 · 模型 64 个（读表截断上限）· 凭据 已设置（OPENROUTER_API_KEY）」+ notice「已保存、未测试」；Kimi 惰性对照在渲染 spec 钉住。证据：同 v19 live-verify JSON（含 `a4ObservedEntrySave`）。

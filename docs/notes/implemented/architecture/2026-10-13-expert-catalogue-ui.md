@@ -40,4 +40,4 @@ EP-0 投影（3 MGT + 50 AGT）已在仓，缺「专家」页与头像资源面�
   - `desktop-experts-window.spec.ts`（独立默认桌面 Electron probe，无 Host/登录/模型）：头像全解码、真实输入导航、320px reflow、未创建专家/会话。
   - `desktop-entry.spec.ts` +43：53 头像逐一伺服断言（字节相等、HEAD、405、CSP 不变、遍历/编码变异 404、`/.sage/*` 不截获）。
 - 总门（`pnpm run gate`，quick，2026-10-13）：**32/32 通过（exit 0）**——quality leg typecheck→build→test 全过（lib 生成含本批头像封存构建）；route-authority 64/64；matrix 206/206；台账 346 篇。
-- 实机（staging）：随合并窗口批补录（A1–A4 同步）。
+- **实机（2026-10-13，v19 installed 副本，CDP）**：导航「专家」→ 卡片 53 + 新建卡；**头像解码 53/53**（`naturalWidth>0`）；搜索「数据」→ 6 张；320×660 reflow 横向溢出 0px。证据：v19 live-verify JSON（`expert_cards`/`expert_avatars_decoded`/`experts_reflow_overflow_px`）。

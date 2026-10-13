@@ -38,4 +38,5 @@ source: ai
 - 新增 spec：host +1（unset 三态：正常/只读源/缺 provider）、route +1（unset 合法体）、
   端口 +1（unset 透传）、渲染 +3（编辑预填与留空保凭据、新 key 覆盖一次+冲突留窗、清除凭据与「凭据未设置」）；主端口原先的「名单拒绝」spec 重写为转发语义。
 - 实机（打包 staging）：编辑弹窗逐字核对（「编辑模型 · openai-api-deepseek-com」、Model ID 预填 `deepseek-chat`、key 注记「留空则保留现有凭据」）；保存后 settings 文档行出现第二个模型、行显「模型 2 个」——编辑全链持久化实证。
-- 实机反例（修复动机）：THROWAWAY 声明名在旧端口被 `credential-name-unavailable` 挡下——归位后由宿主按声明放行（单元三态覆盖）；unset 的实机闭环随下轮 staging 重烤补录。
+- 实机反例（修复动机）：THROWAWAY 声明名在旧端口被 `credential-name-unavailable` 挡下——归位后由宿主按声明放行（单元三态覆盖）。
+- **实机闭环（2026-10-13，v19 installed 副本，登录态 CDP）**：目录行「清除凭据」→ 具名回执「已清除凭据（DEEPSEEK_API_KEY）」+ 行转「凭据 未设置」；「编辑」→ 仅 Key 弹窗（无端点字段）→ 输值保存 →「配置与凭据已保存」+ 行转「凭据 已设置」——留空保留与覆盖两态、unset 全链均实测。证据：`docs/notes/implemented/packaging/evidence/2026-10-13-sage-v19-model-live-verify.json`。

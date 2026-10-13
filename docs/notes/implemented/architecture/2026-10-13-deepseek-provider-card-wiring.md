@@ -39,4 +39,4 @@ source: ai
 - 新增/扩写 spec：host +1（条目重建逐字段断言：ns/path 取自目录、可选字段透传、未知 id/未知 provider/缺 context/空列表四拒）；端口/路由 +2（转发与 receipt 映射、400 边界与去重 200）；渲染 +3（活清单预填与半选保存全链、已配置凭据留空保存、目录不可读/零勾选禁用）；r17b 壳模式断言不动（mount 无 modelRoutes，DeepSeek 只读壳保持）。
 - `sage-sanbao-state-matrix.test.mjs` 13/13（三行迁移 + 摘要重算）。
 - 全套件 `pnpm test`：**2222 passed（1 skip）**——其中 1 个 fail 为 sage-16 会话在途的 `desktop-experts-window.spec.ts`（其 EP-1 Electron probe，与本批无涉，未触碰）。
-- 实机验证（staging）：**未运行**——sage-16 窗口占用；打包机复验（DeepSeek 卡保存→ns models 行出现、凭据写入、发送可用）随窗口后补录。
+- **实机验证（2026-10-13，v19 installed 副本，登录态 CDP）**：DeepSeek 卡活清单三项（全选 + DeepSeek-V41-Flash + DeepSeek-V4-Pro，预填全勾）→ 输凭据 → 「校验并添加模型」→ notice「模型范围已保存（2 个模型）；保存不触发供应商请求。」→ **落盘实证**：`<root>/cordis.settings.patch.yml` 出现 `llm-deepseek → config.models` 两条完整条目（`contextWindow: 1000000`、`inputModalities`、`maxTokens`、`systemPromptUpdate`/`toolUpdate` 均由 `resolveModelInfo` 真实解析重建）。未登录态对照（前次读数）：菜单如实「模型目录读取失败」——诚实降级非假清单。证据：同 v19 live-verify JSON。

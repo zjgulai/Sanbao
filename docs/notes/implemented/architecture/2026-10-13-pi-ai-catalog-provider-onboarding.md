@@ -38,4 +38,4 @@ source: ai
 
 - `tsc --noEmit` 干净；`pnpm test` 全套件 **2206 passed（1 skip）**，244/244 文件（基线 2194 → 净增 12 例）。
 - 新增/扩写 spec：host +4（目录形态保存四态：目录命中/未知名拒/手写声明名拒/空 profile 拒 + 全量声明不看目录 + 目录seam缺失拒；builtin 裁决（探测计数=0 断言）；providers 目录映射去杂；models 读三态）、端口/路由 +4（目录行活读模型与降级、providers 动作透传与不可达、builtin 记录透传与入列、路由 400 边界 + 目录形态 save 与 providers 读 200）、渲染 +4（目录组渲染与仅 Key 保存全链、目录行身份与 builtin 标签、目录行编辑留空保凭据、目录读不可用退观测菜单）。
-- 实机验证（staging）：**未运行**——sage-16 专家批占用 staging 验收窗口；本批源码+vitest 完成，`pnpm run build`/staging 复烤/打包链在其验收完成后执行，届时补录（目录组出现、deepseek 仅 Key 保存、builtin 标签、发送可用四项）。
+- **实机验证（2026-10-13，v19 installed 副本，登录态 CDP）**：目录组出现（实测 43 项，含 deepseek/openai/google/openrouter）；选目录 deepseek → 仅 Key 表单（无端点字段）→ 探针凭据保存 → 行「内置目录 · 端点与模型来自已安装目录 · 模型 2 个 · 凭据 已设置」；行菜单「测试连接」→ 裁决标签「内置目录（2 个模型） · 未做网络探测」（零网络探测，不是假绿）。**发送**（真 key 回合）未跑：本会话无 `DEEPSEEK_API_KEY` 注入，如实标「待 key」。证据：同 v19 live-verify JSON。

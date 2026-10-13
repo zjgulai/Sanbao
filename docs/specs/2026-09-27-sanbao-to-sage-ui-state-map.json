@@ -121,8 +121,8 @@
         "pending": 206
       },
       "electronAcceptance": {
-        "pending": 190,
-        "verified": 16
+        "pending": 187,
+        "verified": 19
       },
       "visualAcceptance": {
         "pending": 206
@@ -15291,8 +15291,19 @@
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v19-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-sage-v19-model-live-verify.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15300,7 +15311,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService/electronAcceptance 按 v19 装机实测证据升级；hostIntegration/visualAcceptance 仍 pending——视觉验收随 VF 管线。"
         ]
       }
     },
@@ -15388,8 +15399,19 @@
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v19-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-sage-v19-model-live-verify.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15397,7 +15419,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService/electronAcceptance 按 v19 装机实测证据升级；hostIntegration/visualAcceptance 仍 pending——视觉验收随 VF 管线。"
         ]
       }
     },
@@ -15485,8 +15507,19 @@
           "evidenceRefs": []
         },
         "electronAcceptance": {
-          "status": "pending",
-          "evidenceRefs": []
+          "status": "verified",
+          "evidenceRefs": [
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-dmg06-v19-acceptance-result.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/packaging/evidence/2026-10-13-sage-v19-model-live-verify.json",
+              "countsAsVerification": true
+            }
+          ]
         },
         "visualAcceptance": {
           "status": "pending",
@@ -15494,7 +15527,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService/electronAcceptance 按 v19 装机实测证据升级；hostIntegration/visualAcceptance 仍 pending——视觉验收随 VF 管线。"
         ]
       }
     },

@@ -1,0 +1,92 @@
+{
+ "unauthPass": {
+  "results": {
+   "brand": "Sage",
+   "settings_nav_entries": [
+    "返回应用",
+    "设置项 个人资料",
+    "设置项 常规",
+    "设置项 模式配置",
+    "设置项 任务监控",
+    "设置项 快捷键",
+    "设置项 语音",
+    "设置项 模型",
+    "设置项 外观与显示"
+   ],
+   "pane": true,
+   "observed_groups": [
+    "推荐",
+    "更多",
+    "自定义"
+   ],
+   "observed_options": 17,
+   "catalog_group_visible": false,
+   "catalog_group_note": "expected false without a login session (directory read is identity-gated)",
+   "a4_form_banner": true,
+   "a4_no_endpoint_field": true,
+   "a4_submit_disabled_without_key": true,
+   "a3_type_row": true,
+   "a3_unauthenticated_models_menu": "模型目录读取失败",
+   "expert_cards": 53,
+   "expert_new_card": true,
+   "expert_avatars_decoded": 53,
+   "expert_avatars_total": 53,
+   "expert_search_filtered": 6,
+   "experts_reflow_overflow_px": 0,
+   "ok": true
+  },
+  "screenshots": [
+   "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261013-v19/live-verify/v19-live-provider-menu.png",
+   "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261013-v19/live-verify/v19-live-a4-openrouter-keyonly.png",
+   "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261013-v19/live-verify/v19-live-a3-deepseek-degraded.png",
+   "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261013-v19/live-verify/v19-live-experts-1440.png",
+   "/Users/pray/.sage-packaging/staging/dmg-06-acceptance-20261013-v19/live-verify/v19-live-experts-320.png"
+  ]
+ },
+ "authWriteChain": {
+  "results": {
+   "signed_in": true,
+   "a2_group_entries": 43,
+   "a2_group_has": {
+    "deepseek": true,
+    "openai": true,
+    "google": true,
+    "openrouter": true
+   },
+   "a2_form_no_endpoint": true,
+   "a2_saved_notice": true,
+   "a2_row_text": "deepseek内置目录 · 端点与模型来自已安装目录模型 2 个 · 凭据 已设置（DEEPSEEK_API_KEY）\n已保存、未测试\n…",
+   "a2_builtin_label": "deepseek内置目录 · 端点与模型来自已安装目录模型 2 个 · 凭据 已设置（DEEPSEEK_API_KEY）\n内置目录（2 个模型） · 未做网络探测\n…",
+   "a1_unset_notice": true,
+   "a1_row_unset": true,
+   "a1_edit_no_endpoint": true,
+   "a1_edit_notice": true,
+   "a1_row_reset": true,
+   "a3_checklist_labels": [
+    "全选",
+    "DeepSeek-V41-Flash",
+    "DeepSeek-V4-Pro"
+   ],
+   "a3_checklist_checked": [
+    "true",
+    "true",
+    "true"
+   ],
+   "a3_saved_notice": true,
+   "ok": true
+  },
+  "screenshots": [
+   "v19-auth-a2-directory-group.png",
+   "v19-auth-a2-row.png",
+   "v19-auth-a2-builtin.png",
+   "v19-auth-a3-live-checklist.png",
+   "v19-auth-a3-saved.png"
+  ]
+ },
+ "note": "v19 installed copy; probe credential sk-live-probe-*; no provider requests from saves; openExternal interception (main inspector) used only to unblock the OIDC handoff after system-browser open silently failed; observed OpenRouter entry save verified in-session (probe credential)",
+ "a4ObservedEntrySave": {
+  "row": "openrouter 内置目录 · 端点与模型来自已安装目录 · 模型 64 个（读表截断上限）· 凭据 已设置（OPENROUTER_API_KEY）",
+  "notice": "已保存、未测试",
+  "probeCredential": "sk-openrouter-probe-*"
+ }
+}
