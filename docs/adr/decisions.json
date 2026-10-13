@@ -11674,6 +11674,57 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0341",
+      "title": "ADR-0341 · 专家（Expert）体系：Accio 逆向映射到 Sage 底座，3+50 岗位为内容源",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "命名「专家」；UI 交互复刻 Accio，文案走 Sage 治理调性。",
+          "constraints": [
+            "no verbatim copy"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "ExpertProfile 独立概念组合 Preset：身份+prompt+model+工具白名单+默认工作区。",
+          "constraints": [
+            "Preset stays pure"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "3 MGT + 50 AGT 为首批内置专家目录（静态投影先行，design 状态保持）。",
+          "constraints": [
+            "production_authorized=false"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "工具白名单只读 Registry approved 项；创建不产生新授权。",
+          "constraints": [
+            "fail-closed",
+            "ADR-0171"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "第一期=列表+创建/编辑+对话直通；专家团/知识库/场景 tab 后置。",
+          "constraints": [
+            "scoped MVP"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "无存储面前专家列表为设计资产只读投影，创建/对话具名禁用。",
+          "constraints": [
+            "zero-fabrication"
+          ]
+        }
+      ]
     }
   ]
 }
