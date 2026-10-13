@@ -11,13 +11,18 @@ export const SAGE_MODEL_TEST_TIMEOUT_MS = 30_000
 /** The catalog read and the default switch touch the host settings stack; same 30s headroom. */
 export const SAGE_MODEL_CONFIG_TIMEOUT_MS = 30_000
 
+/** ADR-0344: the base's one official DeepSeek route (llm-deepseek-api-key/src/index.ts:15). The
+ *  host still validates the provider against the live directory before any write — a rename
+ *  reads back as a named refusal, never a silent wrong write. */
+export const DEEPSEEK_OFFICIAL_PROVIDER = 'deepseek-official'
+
 export interface ModelRouteCredentialRead {
   readonly name: string
   readonly configured: boolean
 }
 
 export interface ModelRouteTestRead {
-  readonly state: 'ok' | 'failed' | 'unknown' | 'credential-missing' | 'unsupported'
+  readonly state: 'ok' | 'failed' | 'unknown' | 'credential-missing' | 'unsupported' | 'builtin'
   readonly latencyMs?: number
   readonly host?: string
   readonly modelIds?: readonly string[]
@@ -28,14 +33,29 @@ export interface ModelRouteTestRead {
 export interface ModelRouteRead {
   readonly route: string
   readonly displayName?: string
-  readonly api: string
-  readonly baseURL: string
+  readonly api: string | null
+  readonly baseURL: string | null
+  /** ADR-0343: a key-only route whose endpoint and models are the installed catalog's. */
+  readonly catalog?: boolean
   readonly apiKeyEnv?: string
   readonly modelCount: number
   readonly modelIds: readonly string[]
   readonly credential: ModelRouteCredentialRead | null
   readonly test: ModelRouteTestRead | null
 }
+
+/** ADR-0343: one entry of the installed configurable-provider directory. `declared` false
+ *  means the installed catalog ships this provider — a key-only profile is complete for it. */
+export interface ModelProviderRead {
+  readonly provider: string
+  readonly displayName: string
+  readonly declared: boolean
+  readonly error?: string
+}
+
+export type ModelProvidersOutcome =
+  | { readonly kind: 'read', readonly providers: readonly ModelProviderRead[] }
+  | { readonly kind: 'unavailable', readonly code: string }
 
 export type ModelRoutesListRead =
   | { readonly kind: 'read', readonly routes: readonly ModelRouteRead[], readonly namespaceRevision: number | null }
@@ -75,12 +95,14 @@ export type ModelDefaultOutcome =
 
 export interface ModelRoutesController {
   list(): Promise<ModelRoutesListRead>
-  saveRoute(request: { readonly route: string, readonly profile: ModelRouteDraftProfile, readonly expectedRevision?: number }): Promise<ModelRouteSaveOutcome>
+  saveRoute(request: { readonly route: string, readonly profile: ModelRouteDraftProfile | ModelRouteCatalogDraftProfile, readonly expectedRevision?: number }): Promise<ModelRouteSaveOutcome>
   removeRoute(request: { readonly route: string }): Promise<ModelRouteSaveOutcome>
   saveCredential(request: { readonly name: string, readonly value: string }): Promise<ModelRouteSaveOutcome>
   unsetCredential(request: { readonly name: string }): Promise<ModelRouteSaveOutcome>
   testConnection(route: string): Promise<ModelRouteTestOutcome>
   catalog(): Promise<ModelCatalogOutcome>
+  providers(): Promise<ModelProvidersOutcome>
+  saveProviderModels(request: { readonly provider: string, readonly modelIds: readonly string[] }): Promise<ModelRouteSaveOutcome>
   setDefault(request: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string }): Promise<ModelDefaultOutcome>
 }
 
@@ -91,6 +113,12 @@ export interface ModelRouteDraftProfile {
   readonly baseURL: string
   readonly apiKeyEnv?: string
   readonly models: readonly { readonly id: string }[]
+}
+
+/** ADR-0343: the key-only draft for a catalog-shipped provider. */
+export interface ModelRouteCatalogDraftProfile {
+  readonly displayName?: string
+  readonly apiKeyEnv: string
 }
 
 type ModelRoutesFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -118,7 +146,7 @@ function postJson(path: string, body: unknown, fetcher: ModelRoutesFetch, timeou
 function readTest(value: unknown): ModelRouteTestRead | null {
   if (!isRecord(value)) return null
   const state = value.state
-  if (state !== 'ok' && state !== 'failed' && state !== 'unknown' && state !== 'credential-missing' && state !== 'unsupported') return null
+  if (state !== 'ok' && state !== 'failed' && state !== 'unknown' && state !== 'credential-missing' && state !== 'unsupported' && state !== 'builtin') return null
   if (typeof value.testedAt !== 'string') return null
   return {
     state,
@@ -136,15 +164,20 @@ export function classifyModelRoutesList(receipt: unknown): ModelRoutesListRead {
   if (receipt.state !== 'read' || !Array.isArray(receipt.routes)) return { kind: 'unavailable', code: 'unrecognised' }
   const routes: ModelRouteRead[] = []
   for (const candidate of receipt.routes) {
-    if (!isRecord(candidate) || typeof candidate.route !== 'string' || typeof candidate.api !== 'string' || typeof candidate.baseURL !== 'string') continue
+    if (!isRecord(candidate) || typeof candidate.route !== 'string') continue
+    const catalog = candidate.catalog === true
+    const api = typeof candidate.api === 'string' ? candidate.api : null
+    const baseURL = typeof candidate.baseURL === 'string' ? candidate.baseURL : null
+    if (!catalog && (api === null || baseURL === null)) continue
     const credential = isRecord(candidate.credential) && typeof candidate.credential.name === 'string'
       ? { name: candidate.credential.name, configured: candidate.credential.configured === true }
       : null
     routes.push({
       route: candidate.route,
       ...(typeof candidate.displayName === 'string' ? { displayName: candidate.displayName } : {}),
-      api: candidate.api,
-      baseURL: candidate.baseURL,
+      api,
+      baseURL,
+      ...(catalog ? { catalog: true as const } : {}),
       ...(typeof candidate.apiKeyEnv === 'string' ? { apiKeyEnv: candidate.apiKeyEnv } : {}),
       modelCount: typeof candidate.modelCount === 'number' ? candidate.modelCount : 0,
       modelIds: Array.isArray(candidate.modelIds) ? candidate.modelIds.filter((id): id is string => typeof id === 'string') : [],
@@ -161,7 +194,7 @@ export function classifyModelRoutesList(receipt: unknown): ModelRoutesListRead {
 
 function classifyWrite(receipt: unknown): ModelRouteSaveOutcome {
   if (!isRecord(receipt)) return { kind: 'unreachable' }
-  if (receipt.state === 'saved' || receipt.state === 'removed') return { kind: 'saved' }
+  if (receipt.state === 'saved' || receipt.state === 'removed' || receipt.state === 'provider-models-saved') return { kind: 'saved' }
   if (receipt.state === 'refused' && typeof receipt.code === 'string') return { kind: 'refused', code: receipt.code }
   return { kind: 'refused', code: 'unrecognised' }
 }
@@ -230,6 +263,29 @@ export function createModelRoutesController(fetcher: ModelRoutesFetch = fetch): 
     async catalog(): Promise<ModelCatalogOutcome> {
       return readCatalogReceipt(await postJson(SAGE_MODEL_CONFIG_PATH, { action: 'catalog' }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS))
     },
+    async saveProviderModels(request): Promise<ModelRouteSaveOutcome> {
+      return classifyWrite(await postJson(SAGE_MODEL_CONFIG_PATH, {
+        action: 'save-provider-models',
+        provider: request.provider,
+        modelIds: request.modelIds,
+      }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS))
+    },
+    async providers(): Promise<ModelProvidersOutcome> {
+      const receipt = await postJson(SAGE_MODEL_CONFIG_PATH, { action: 'providers' }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS)
+      if (!isRecord(receipt)) return { kind: 'unavailable', code: 'unreachable' }
+      if (receipt.state === 'refused' && typeof receipt.code === 'string') return { kind: 'unavailable', code: receipt.code }
+      if (receipt.state !== 'providers' || !Array.isArray(receipt.providers)) return { kind: 'unavailable', code: 'unrecognised' }
+      const providers = receipt.providers.flatMap((candidate) => {
+        if (!isRecord(candidate) || typeof candidate.provider !== 'string' || candidate.provider === '') return []
+        return [{
+          provider: candidate.provider,
+          displayName: typeof candidate.displayName === 'string' && candidate.displayName !== '' ? candidate.displayName : candidate.provider,
+          declared: candidate.declared === true,
+          ...(typeof candidate.error === 'string' ? { error: candidate.error } : {}),
+        }]
+      })
+      return { kind: 'read', providers }
+    },
     async setDefault(request): Promise<ModelDefaultOutcome> {
       const receipt = await postJson(SAGE_MODEL_CONFIG_PATH, {
         action: 'set-default',
@@ -265,6 +321,12 @@ export function createModelRoutesController(fetcher: ModelRoutesFetch = fetch): 
 
 /** Derive the route name and its credential ref from the one field the observed form offers:
  *  the endpoint host. Deterministic, collision-free per endpoint, and readable in the list. */
+/** ADR-0343: the credential ref a key-only catalog route declares — the route id in upper
+ *  snake case, the same convention the endpoint-derived routes use. */
+export function catalogApiKeyEnv(provider: string): string {
+  return `${provider.toUpperCase().replaceAll('-', '_')}_API_KEY`
+}
+
 export function deriveRouteFromEndpoint(api: ModelRouteDraftProfile['api'], baseURL: string): { readonly route: string, readonly apiKeyEnv: string } | undefined {
   let host: string
   try {

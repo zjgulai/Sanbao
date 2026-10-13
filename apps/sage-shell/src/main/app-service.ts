@@ -181,13 +181,14 @@ export interface SageAppServiceOptions {
   readonly credentials?: (request: { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string }) => Promise<CredentialOutcome>
   /** ADR-0339: the saved-model-routes port (list / save-route / remove-route / test-connection). */
   readonly modelRoutes?: (request: {
-    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default' | 'providers' | 'save-provider-models'
     readonly route?: string
     readonly profile?: unknown
     readonly expectedRevision?: number
     readonly provider?: string
     readonly model?: string
     readonly reasoningEffort?: string
+    readonly modelIds?: readonly string[]
   }) => Promise<ModelConfigOutcome>
   /** Ticket 006: stop/resume and the pending-item edits. */
   readonly sessionStop?: (request: { readonly matterRef: string }) => Promise<SessionControlOutcome>

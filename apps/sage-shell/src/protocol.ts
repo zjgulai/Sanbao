@@ -242,6 +242,13 @@ export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 
   // against the live catalog before it reaches agentDefaultModel.saveSelection).
   'modelConfig/catalog': 'read',
   'modelConfig/default': 'write',
+  // ADR-0343: the installed configurable-provider directory (which providers the catalog ships)
+  // and the models one registered route currently resolves to. Both pure reads, no network.
+  'modelConfig/providers': 'read',
+  'modelConfig/models': 'read',
+  // ADR-0344: the provider-config models override — full entries rebuilt from the llm service's
+  // exact metadata, written path-addressed into the provider's own settings namespace.
+  'modelConfig/provider-models': 'write',
   // ADR-0334: the instance credential surface — describe never returns the value; set is
   // write-only and name-allowlisted at the host handler.
   'credentials/describe': 'read',

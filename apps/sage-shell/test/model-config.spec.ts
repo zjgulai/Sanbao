@@ -17,6 +17,26 @@ function signedIn(): () => unknown {
   return () => ({ sessionRef: 'session:test' })
 }
 
+const catalogDescribeAnswer = {
+  ok: true,
+  result: {
+    writable: true,
+    hasDocument: true,
+    namespaces: [
+      {
+        ns: 'llm-pi-ai',
+        revision: 5,
+        applies: 'live',
+        value: {
+          providers: {
+            deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' },
+          },
+        },
+      },
+    ],
+  },
+} as const
+
 const describeAnswer = {
   ok: true,
   result: {
@@ -72,6 +92,104 @@ describe('ADR-0339: the model-config port', () => {
     expect(outcome.routes[0]!.test).toBeNull()
     expect(outcome.routes[1]!.credential).toBeNull()
     expect(callBridge).toHaveBeenCalledWith('credentials/describe', [{ name: 'ALPHA_API_KEY' }])
+  })
+
+  it('ADR-0343: a key-only catalog row lists as catalog with live models and its credential', async () => {
+    const callBridge = vi.fn(async (endpoint: string) => {
+      if (endpoint === 'settings/describe') return catalogDescribeAnswer
+      if (endpoint === 'credentials/describe') return { ok: true, result: { configured: true, source: 'file', writable: true } }
+      if (endpoint === 'modelConfig/models') return { ok: true, result: { modelIds: ['deepseek-flash', 'deepseek-pro'] } }
+      throw new Error(`unexpected ${endpoint}`)
+    })
+    const port = createModelConfig(callBridge, signedIn())
+    const outcome = await port({ action: 'list' })
+    if (outcome.state !== 'read') throw new Error('unreachable')
+    expect(outcome.routes).toHaveLength(1)
+    expect(outcome.routes[0]).toMatchObject({
+      route: 'deepseek',
+      catalog: true,
+      api: null,
+      baseURL: null,
+      apiKeyEnv: 'DEEPSEEK_API_KEY',
+      modelCount: 2,
+      modelIds: ['deepseek-flash', 'deepseek-pro'],
+      credential: { name: 'DEEPSEEK_API_KEY', configured: true },
+    })
+    expect(callBridge).toHaveBeenCalledWith('modelConfig/models', [{ route: 'deepseek' }])
+    // A models read that fails leaves the row honest: catalog, zero known models.
+    const degraded = createModelConfig(async (endpoint: string) => {
+      if (endpoint === 'settings/describe') return catalogDescribeAnswer
+      if (endpoint === 'credentials/describe') return { ok: true, result: { configured: false } }
+      if (endpoint === 'modelConfig/models') return { ok: false, code: 'bridge-model-route-unknown' }
+      throw new Error(`unexpected ${endpoint}`)
+    }, signedIn())
+    const listed = await degraded({ action: 'list' })
+    if (listed.state !== 'read') throw new Error('unreachable')
+    expect(listed.routes[0]).toMatchObject({ catalog: true, modelCount: 0, modelIds: [] })
+  })
+
+  it('ADR-0343: the providers action maps the directory receipt defensively', async () => {
+    const callBridge = vi.fn(async (endpoint: string) => {
+      if (endpoint === 'modelConfig/providers') return {
+        ok: true,
+        result: {
+          providers: [
+            { provider: 'deepseek', displayName: 'deepseek', declared: false },
+            { provider: 'zai' },
+            { provider: '', declared: false },
+            7,
+          ],
+        },
+      }
+      throw new Error(`unexpected ${endpoint}`)
+    })
+    const port = createModelConfig(callBridge, signedIn())
+    await expect(port({ action: 'providers' })).resolves.toEqual({
+      state: 'providers',
+      providers: [
+        { provider: 'deepseek', displayName: 'deepseek', declared: false },
+        { provider: 'zai', displayName: 'zai', declared: false },
+      ],
+    })
+    const failing = createModelConfig(async () => { throw { code: 'bridge-unreachable' } }, signedIn())
+    await expect(failing({ action: 'providers' })).resolves.toEqual({ state: 'refused', code: 'bridge-unreachable', retryable: true })
+  })
+
+  it('ADR-0343: a builtin verdict passes through the test record and joins the next list', async () => {
+    const callBridge = vi.fn(async (endpoint: string) => {
+      if (endpoint === 'modelConfig/test') return { ok: true, result: { state: 'builtin', modelIds: ['deepseek-flash'], revision: 5, credentialConfigured: true } }
+      if (endpoint === 'settings/describe') return catalogDescribeAnswer
+      if (endpoint === 'credentials/describe') return { ok: true, result: { configured: true, source: 'file', writable: true } }
+      if (endpoint === 'modelConfig/models') return { ok: true, result: { modelIds: ['deepseek-flash'] } }
+      throw new Error(`unexpected ${endpoint}`)
+    })
+    const port = createModelConfig(callBridge, signedIn(), () => '2026-10-13T10:00:00.000Z')
+    await expect(port({ action: 'test-connection', route: 'deepseek' })).resolves.toEqual({
+      state: 'tested',
+      route: 'deepseek',
+      test: { state: 'builtin', modelIds: ['deepseek-flash'], testedAt: '2026-10-13T10:00:00.000Z', current: true },
+    })
+    const listed = await port({ action: 'list' })
+    if (listed.state !== 'read') throw new Error('unreachable')
+    expect(listed.routes[0]!.test).toMatchObject({ state: 'builtin', current: true })
+  })
+
+  it('ADR-0344: save-provider-models forwards and maps the provider-models-saved receipt', async () => {
+    const calls: Array<{ readonly endpoint: string, readonly payload: unknown }> = []
+    const callBridge = vi.fn(async (endpoint: string, payload: unknown) => {
+      calls.push({ endpoint, payload })
+      if (endpoint === 'modelConfig/provider-models') return { ok: true, result: { saved: true, provider: 'deepseek-official', modelIds: ['deepseek-flash'] } }
+      throw new Error(`unexpected ${endpoint}`)
+    })
+    const port = createModelConfig(callBridge, signedIn())
+    await expect(port({ action: 'save-provider-models', provider: 'deepseek-official', modelIds: ['deepseek-flash'] }))
+      .resolves.toEqual({ state: 'provider-models-saved', provider: 'deepseek-official', modelIds: ['deepseek-flash'] })
+    expect(calls[0]).toEqual({ endpoint: 'modelConfig/provider-models', payload: [{ provider: 'deepseek-official', modelIds: ['deepseek-flash'] }] })
+    await expect(port({ action: 'save-provider-models', provider: '', modelIds: [] }))
+      .resolves.toEqual({ state: 'refused', code: 'model-config-selection-invalid', retryable: false })
+    const conflicting = createModelConfig(async () => { throw { code: 'bridge-settings-conflict' } }, signedIn())
+    await expect(conflicting({ action: 'save-provider-models', provider: 'deepseek-official', modelIds: ['m'] }))
+      .resolves.toEqual({ state: 'refused', code: 'bridge-settings-conflict', retryable: true })
   })
 
   it('saves and removes with path-scoped bridge payloads and keeps conflict identity', async () => {
@@ -199,6 +317,10 @@ describe('ADR-0339: the /.sage/model-config route', () => {
         ? { state: 'read', routes: [], namespaceRevision: 1 }
         : request.action === 'catalog'
           ? { state: 'catalog', catalog: { default: null, groups: [], failures: [] } }
+          : request.action === 'providers'
+            ? { state: 'providers', providers: [] }
+            : request.action === 'save-provider-models'
+              ? { state: 'provider-models-saved', provider: request.provider ?? '', modelIds: request.modelIds ?? [] }
           : request.action === 'set-default'
             ? { state: 'default-set', selection: { provider: request.provider ?? '', model: request.model ?? '' } }
             : request.action === 'test-connection'
@@ -238,6 +360,9 @@ describe('ADR-0339: the /.sage/model-config route', () => {
       JSON.stringify({ action: 'save-route', route: 'ok-route', profile: { ...good, models: [{ id: 'm', name: 'x' }] } }),
       JSON.stringify({ action: 'save-route', route: 'ok-route', profile: { ...good, headers: {} } }),
       JSON.stringify({ action: 'save-route', route: 'ok-route', profile: good, expectedRevision: -1 }),
+      JSON.stringify({ action: 'providers', route: 'r' }),
+      JSON.stringify({ action: 'save-route', route: 'deepseek', profile: {} }),
+      JSON.stringify({ action: 'save-route', route: 'deepseek', profile: { apiKeyEnv: 'bad name!' } }),
       JSON.stringify({ action: 'remove-route' }),
       JSON.stringify({ action: 'test-connection' }),
       JSON.stringify({ action: 'test-connection', route: 'r', baseURL: 'https://evil.example' }),
@@ -259,6 +384,33 @@ describe('ADR-0339: the /.sage/model-config route', () => {
     }))
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ state: 'saved', route: 'alpha-route' })
+  })
+
+  it('ADR-0343: accepts the key-only catalog save shape and the providers read at the route grammar', async () => {
+    outcomes.length = 0
+    const save = await post(JSON.stringify({ action: 'save-route', route: 'deepseek', profile: { apiKeyEnv: 'DEEPSEEK_API_KEY' } }))
+    expect(save.status).toBe(200)
+    expect(await save.json()).toEqual({ state: 'saved', route: 'deepseek' })
+    const directory = await post(JSON.stringify({ action: 'providers' }))
+    expect(directory.status).toBe(200)
+    expect(await directory.json()).toEqual({ state: 'providers', providers: [] })
+  })
+
+  it('ADR-0344: the save-provider-models grammar bounds the provider name and model ids', async () => {
+    outcomes.length = 0
+    for (const body of [
+      JSON.stringify({ action: 'save-provider-models' }),
+      JSON.stringify({ action: 'save-provider-models', provider: 'Bad', modelIds: ['m'] }),
+      JSON.stringify({ action: 'save-provider-models', provider: 'ok', modelIds: [] }),
+      JSON.stringify({ action: 'save-provider-models', provider: 'ok', modelIds: ['m', ' m'] }),
+      JSON.stringify({ action: 'save-provider-models', provider: 'ok', modelIds: ['m'], extra: 1 }),
+    ]) {
+      const response = await post(body)
+      expect(response.status, body).toBe(400)
+    }
+    const ok = await post(JSON.stringify({ action: 'save-provider-models', provider: 'deepseek-official', modelIds: ['deepseek-flash', 'deepseek-flash'] }))
+    expect(ok.status).toBe(200)
+    expect(await ok.json()).toEqual({ state: 'provider-models-saved', provider: 'deepseek-official', modelIds: ['deepseek-flash'] })
   })
 
   it('answers catalog and set-default through the port; their grammars stop bad bodies at 400', async () => {

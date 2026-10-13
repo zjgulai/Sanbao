@@ -19,7 +19,10 @@ import {
   type InstanceCredentialSaveOutcome,
 } from './instance-credential.js'
 import {
+  DEEPSEEK_OFFICIAL_PROVIDER,
+  catalogApiKeyEnv,
   deriveRouteFromEndpoint,
+  type ModelProvidersOutcome,
   type ModelRouteDraftProfile,
   type ModelRoutesController,
   type ModelRoutesListRead,
@@ -36,6 +39,7 @@ import {
 import {
   DEEPSEEK_MODEL_OPTIONS,
   DEEPSEEK_TYPE_OPTIONS,
+  OBSERVED_CATALOG_PROVIDERS,
   OPENAI_COMPATIBLE_API_TYPES,
   PROVIDER_GROUPS,
   PROVIDER_NAMES,
@@ -406,6 +410,12 @@ function VoicePane(): ReactNode {
  *  credential write path yet; nothing here enters, validates, stores or sends a credential. */
 type ModelsPanel = 'provider' | 'type' | 'models' | 'api-type'
 
+/** ADR-0344: the live model checklist of the official DeepSeek provider, read lazily. */
+type DeepseekModelsRead =
+  | null
+  | { readonly kind: 'read', readonly models: readonly { readonly id: string, readonly name: string }[] }
+  | { readonly kind: 'unavailable' }
+
 function ModelSelectMenu({ panel, label, value, open, onOpen, onClose, children, describedBy }: {
   readonly panel: ModelsPanel
   readonly label: string
@@ -530,6 +540,9 @@ function routeSaveNotice(what: string, outcome: { readonly kind: string, readonl
     case 'bridge-model-route-invalid': return '路由名不合法，未保存。'
     case 'bridge-credential-value-refused': return '凭据值不合法：需为 8–512 字符，且不含首尾空白或控制字符。'
     case 'bridge-credential-name-refused': return '凭据名未被已保存配置声明，宿主拒绝写入。'
+    case 'bridge-model-catalog-unknown': return `${what}未保存：该名称不在本机内置目录。`
+    case 'bridge-model-provider-unknown': return `${what}未保存：该供应商不在本机注册表。`
+    case 'bridge-model-entry-unresolved': return `${what}未保存：所选模型在目录中无法解析。`
     case 'credential-identity-unavailable':
     case 'model-config-identity-unavailable': return '需要先登录；登录后可保存模型配置与凭据。'
     case 'model-config-unavailable': return '本机模型配置服务未接线，未保存。'
@@ -551,6 +564,10 @@ function routeTestLabel(test: ModelRouteRead['test'], configured: boolean): { re
     case 'unknown': return { label: '测试未确认（超时待核对）', tone: 'warn' }
     case 'credential-missing': return { label: '测试失败：缺凭据', tone: 'bad' }
     case 'unsupported': return { label: '该协议不支持列目录测试', tone: 'warn' }
+    case 'builtin': {
+      const core = `内置目录${test.modelIds === undefined ? '' : `（${test.modelIds.length} 个模型）`} · 未做网络探测`
+      return test.current ? { label: core, tone: 'warn' } : { label: '仅历史（配置或凭据已变）', tone: 'warn' }
+    }
     default: return { label: '已保存、未测试', tone: 'warn' }
   }
 }
@@ -574,9 +591,22 @@ function ModelsPane({ credential, modelRoutes }: {
   const [testingRoute, setTestingRoute] = useState<string | null>(null)
   const [rowMenu, setRowMenu] = useState<string | null>(null)
   const [editRoute, setEditRoute] = useState<ModelRouteRead | null>(null)
+  const [catalogRoute, setCatalogRoute] = useState<string | null>(null)
+  const [providersRead, setProvidersRead] = useState<ModelProvidersOutcome | null>(null)
+  const [deepseekRead, setDeepseekRead] = useState<DeepseekModelsRead>(null)
+  const [checkedModels, setCheckedModels] = useState<readonly string[] | null>(null)
+  const [credentialConfigured, setCredentialConfigured] = useState<boolean | null>(null)
   const compatible = provider === 'openai-compatible' || provider === 'anthropic-compatible'
   const providerName = PROVIDER_NAMES[provider]
   const wired = modelRoutes !== undefined && compatible
+  const catalogMode = catalogRoute !== null
+  // ADR-0344: the observed DeepSeek provider card becomes the writable face of the official
+  // route — a models override in its own settings namespace plus the DEEPSEEK_API_KEY write.
+  const deepseekWired = modelRoutes !== undefined && provider === 'deepseek'
+  const deepseekCanSubmit = deepseekWired && !busy
+    && deepseekRead !== null && deepseekRead.kind === 'read' && deepseekRead.models.length > 0
+    && (checkedModels?.length ?? 0) > 0
+    && (keyDraft === '' ? credentialConfigured === true : keyDraft === keyDraft.trim())
   const refresh = async (): Promise<void> => {
     if (modelRoutes === undefined) return
     setListRead(await modelRoutes.list())
@@ -587,16 +617,26 @@ function ModelsPane({ credential, modelRoutes }: {
     void modelRoutes.list().then((next) => { if (active) setListRead(next) })
     return () => { active = false }
   }, [modelRoutes])
+  useEffect(() => {
+    if (!formOpen || provider !== 'deepseek' || credential === undefined) return () => { return }
+    let active = true
+    void credential.read().then((read) => { if (active) setCredentialConfigured(read.kind === 'read' ? read.configured : null) })
+    return () => { active = false }
+  }, [formOpen, provider, credential])
   const draftDirty = endpoint !== '' || modelDraft !== '' || modelIds.length > 0 || keyDraft !== ''
-  const dirty = provider !== 'aliyun' || panel !== null || (wired && draftDirty)
+  const dirty = provider !== 'aliyun' || panel !== null || (wired && draftDirty) || catalogMode
   const derived = wired ? deriveRouteFromEndpoint(routeApiFor(provider, apiType), endpoint.trim()) : undefined
-  const canSubmit = wired && !busy && derived !== undefined && modelIds.length > 0 && keyDraft.trim() !== '' && keyDraft === keyDraft.trim()
+  const canSubmit = catalogMode
+    ? !busy && keyDraft.trim() !== '' && keyDraft === keyDraft.trim()
+    : wired && !busy && derived !== undefined && modelIds.length > 0 && keyDraft.trim() !== '' && keyDraft === keyDraft.trim()
   const resetForm = (): void => {
     setApiType('Chat Completions API')
     setEndpoint('')
     setModelDraft('')
     setModelIds([])
     setKeyDraft('')
+    setCheckedModels(null)
+    setDeepseekRead(null)
   }
   const closeForm = (): void => {
     if (dirty) setConfirming(true)
@@ -607,6 +647,7 @@ function ModelsPane({ credential, modelRoutes }: {
     setFormOpen(false)
     setPanel(null)
     setProvider('aliyun')
+    setCatalogRoute(null)
     setEditRoute(null)
     resetForm()
   }
@@ -614,6 +655,16 @@ function ModelsPane({ credential, modelRoutes }: {
     setRowMenu(null)
     setNotice(null)
     setEditRoute(row)
+    // ADR-0343: a catalog row edits as the key-only shape — endpoint and models belong to the
+    // directory, so only the credential ref is shown and only the key can change.
+    if (row.catalog === true || row.baseURL === null) {
+      setCatalogRoute(row.route)
+      setPanel(null)
+      resetForm()
+      setFormOpen(true)
+      return
+    }
+    setCatalogRoute(null)
     setProvider(row.api === 'anthropic-messages' ? 'anthropic-compatible' : 'openai-compatible')
     setApiType(row.api === 'openai-responses' ? 'Responses API' : 'Chat Completions API')
     setEndpoint(row.baseURL)
@@ -626,7 +677,38 @@ function ModelsPane({ credential, modelRoutes }: {
   const editRevision = (): number | undefined =>
     listRead !== null && listRead.kind === 'read' && listRead.namespaceRevision !== null ? listRead.namespaceRevision : undefined
   const submitEdit = async (): Promise<void> => {
-    if (busy || editRoute === null || modelRoutes === undefined || derived === undefined || modelIds.length === 0) return
+    if (busy || editRoute === null || modelRoutes === undefined) return
+    if (editRoute.catalog === true || editRoute.baseURL === null) {
+      const apiKeyEnv = editRoute.apiKeyEnv ?? catalogApiKeyEnv(editRoute.route)
+      setBusy(true)
+      setNotice(null)
+      const saved = await modelRoutes.saveRoute({
+        route: editRoute.route,
+        profile: { apiKeyEnv },
+        ...(editRevision() === undefined ? {} : { expectedRevision: editRevision() as number }),
+      })
+      if (saved.kind !== 'saved') {
+        setBusy(false)
+        setNotice(routeSaveNotice('配置', saved))
+        return
+      }
+      if (keyDraft !== '') {
+        const stored = await modelRoutes.saveCredential({ name: apiKeyEnv, value: keyDraft })
+        if (stored.kind !== 'saved') {
+          setBusy(false)
+          setNotice(`配置已保存；${routeSaveNotice('凭据', stored)}`)
+          await refresh()
+          return
+        }
+      }
+      setBusy(false)
+      leaveForm()
+      setEditRoute(null)
+      await refresh()
+      setNotice(keyDraft === '' ? '配置已保存；凭据未改动。' : '配置与凭据已保存。')
+      return
+    }
+    if (derived === undefined || modelIds.length === 0) return
     setBusy(true)
     setNotice(null)
     const saved = await modelRoutes.saveRoute({
@@ -676,7 +758,32 @@ function ModelsPane({ credential, modelRoutes }: {
     setModelDraft('')
   }
   const submitAdd = async (): Promise<void> => {
-    if (!canSubmit || modelRoutes === undefined || derived === undefined) return
+    if (busy || modelRoutes === undefined) return
+    if (catalogMode) {
+      const route = catalogRoute as string
+      const apiKeyEnv = catalogApiKeyEnv(route)
+      if (!canSubmit) return
+      setBusy(true)
+      setNotice(null)
+      const saved = await modelRoutes.saveRoute({ route, profile: { apiKeyEnv } })
+      if (saved.kind !== 'saved') {
+        setBusy(false)
+        setNotice(routeSaveNotice('配置', saved))
+        return
+      }
+      const stored = await modelRoutes.saveCredential({ name: apiKeyEnv, value: keyDraft })
+      setBusy(false)
+      if (stored.kind !== 'saved') {
+        setNotice(`配置已保存；${routeSaveNotice('凭据', stored)}`)
+        await refresh()
+        return
+      }
+      leaveForm()
+      await refresh()
+      setNotice('已保存、未测试：保存不触发供应商请求；真实调用只在显式「测试连接」后发生。')
+      return
+    }
+    if (!canSubmit || derived === undefined) return
     setBusy(true)
     setNotice(null)
     const saved = await modelRoutes.saveRoute({
@@ -704,6 +811,42 @@ function ModelsPane({ credential, modelRoutes }: {
     leaveForm()
     await refresh()
     setNotice('已保存、未测试：保存不触发供应商请求；真实调用只在显式「测试连接」后发生。')
+  }
+  const loadDeepseekModels = (): void => {
+    setPanel('models')
+    if (modelRoutes === undefined) return
+    setDeepseekRead(null)
+    void modelRoutes.catalog().then((outcome) => {
+      if (outcome.kind !== 'read') { setDeepseekRead({ kind: 'unavailable' }); return }
+      const group = outcome.catalog.groups.find(candidate => candidate.id === DEEPSEEK_OFFICIAL_PROVIDER)
+      if (group === undefined) { setDeepseekRead({ kind: 'unavailable' }); return }
+      const models = group.models.flatMap(model => model.id === '' ? [] : [{ id: model.id, name: model.name ?? model.id }])
+      setDeepseekRead({ kind: 'read', models })
+      // 预填 = 当前生效模型；用户改选后重开菜单不重置（只在本轮对话首次加载时预填）。
+      setCheckedModels(previous => previous ?? models.map(model => model.id))
+    })
+  }
+  const submitDeepseek = async (): Promise<void> => {
+    if (busy || modelRoutes === undefined || provider !== 'deepseek' || !deepseekCanSubmit) return
+    setBusy(true)
+    setNotice(null)
+    const models = await modelRoutes.saveProviderModels({ provider: DEEPSEEK_OFFICIAL_PROVIDER, modelIds: checkedModels ?? [] })
+    if (models.kind !== 'saved') {
+      setBusy(false)
+      setNotice(routeSaveNotice('模型范围', models))
+      return
+    }
+    if (keyDraft !== '') {
+      const stored = await modelRoutes.saveCredential({ name: INSTANCE_CREDENTIAL_NAME, value: keyDraft })
+      if (stored.kind !== 'saved') {
+        setBusy(false)
+        setNotice(`模型范围已保存；${routeSaveNotice('凭据', stored)}`)
+        return
+      }
+    }
+    setBusy(false)
+    leaveForm()
+    setNotice(`模型范围已保存（${checkedModels?.length ?? 0} 个模型）；保存不触发供应商请求。`)
   }
   const testRoute = async (route: string): Promise<void> => {
     if (modelRoutes === undefined) return
@@ -736,7 +879,9 @@ function ModelsPane({ credential, modelRoutes }: {
           return <li className="settings-models-row" key={row.route} data-model-route={row.route}>
             <div className="settings-models-row-main">
               <strong>{row.displayName ?? row.route}</strong>
-              <span className="settings-models-row-sub">{routeKindLabel(row.api)} · {row.baseURL}</span>
+              <span className="settings-models-row-sub">{row.catalog === true || row.baseURL === null
+                ? '内置目录 · 端点与模型来自已安装目录'
+                : `${routeKindLabel(row.api ?? '')} · ${row.baseURL}`}</span>
               <span className="settings-models-row-meta">模型 {row.modelCount} 个{row.apiKeyEnv === undefined ? '' : ` · 凭据 ${row.credential?.configured === true ? '已设置' : '未设置'}（${row.apiKeyEnv}）`}</span>
             </div>
             <span className={`settings-models-status settings-models-status-${status.tone}`} role="status">{status.label}</span>
@@ -783,29 +928,67 @@ function ModelsPane({ credential, modelRoutes }: {
           <form onSubmit={event => { event.preventDefault(); if (editRoute !== null) { void submitEdit() } else if (wired) { void submitAdd() } }}>
             <div className="settings-models-field">
               <label>供应商</label>
-              <ModelSelectMenu panel="provider" label="供应商" value={providerName}
-                open={panel === 'provider' && editRoute === null} onOpen={() => { if (editRoute === null) setPanel('provider') }}
+              <ModelSelectMenu panel="provider" label="供应商"
+                value={catalogRoute === null ? providerName : (Object.keys(OBSERVED_CATALOG_PROVIDERS).find(name => OBSERVED_CATALOG_PROVIDERS[name] === catalogRoute) ?? catalogRoute)}
+                open={panel === 'provider' && editRoute === null}
+                onOpen={() => {
+                  if (editRoute !== null) return
+                  setPanel('provider')
+                  // ADR-0343: the directory read is lazy — only the menu needs it, and a mounted
+                  // pane must not fetch (the composer selector lesson).
+                  if (modelRoutes !== undefined && providersRead === null) {
+                    void modelRoutes.providers().then((outcome) => { setProvidersRead(outcome) })
+                  }
+                }}
                 onClose={() => setPanel(null)}>
                 {PROVIDER_GROUPS.map(group => <div role="group" aria-label={group.group} key={group.group}>
                   <h3>{group.group}</h3>
                   {group.names.map(name => {
                     const id = (Object.keys(PROVIDER_NAMES) as ModelProviderId[])
                       .find(key => key !== 'aliyun' && PROVIDER_NAMES[key] === name)
-                    const selected = name === providerName
+                    // ADR-0345: the three same-name observed entries enter the key-only catalog
+                    // form; every other unmapped name stays inert (no guessed mapping).
+                    const catalogId = OBSERVED_CATALOG_PROVIDERS[name]
+                    const selected = catalogId !== undefined
+                      ? catalogRoute === catalogId
+                      : catalogRoute === null && name === providerName
                     return <button type="button" role="option" aria-selected={selected}
                       tabIndex={selected ? 0 : -1} key={name}
                       onClick={() => {
+                        if (catalogId !== undefined) {
+                          setCatalogRoute(catalogId)
+                          setPanel(null)
+                          return
+                        }
                         if (id === undefined) return
                         setProvider(id)
+                        setCatalogRoute(null)
                         setPanel(null)
                       }}>
                       <span>{name}</span>{selected ? <span aria-hidden="true">✓</span> : null}
                     </button>
                   })}
                 </div>)}
+                {providersRead !== null && providersRead.kind === 'read' && providersRead.providers.some(entry => !entry.declared)
+                  ? <div role="group" aria-label="本机内置目录">
+                    <h3>本机内置目录</h3>
+                    {providersRead.providers.filter(entry => !entry.declared).map(entry => {
+                      const selected = catalogRoute === entry.provider
+                      return <button type="button" role="option" aria-selected={selected}
+                        tabIndex={selected ? 0 : -1} key={entry.provider}
+                        onClick={() => { setCatalogRoute(entry.provider); setPanel(null) }}>
+                        <span>{entry.displayName}</span>{selected ? <span aria-hidden="true">✓</span> : null}
+                      </button>
+                    })}
+                  </div>
+                  : null}
               </ModelSelectMenu>
             </div>
-            {compatible
+            {catalogMode
+              ? <div className="settings-models-field">
+                <p className="settings-observed-note">内置目录供应商：端点、协议与模型来自身边安装的目录默认值，此处只需 API Key；保存后该供应商的模型目录即可用。</p>
+              </div>
+              : compatible
               ? <>
                 {provider === 'openai-compatible'
                   ? <div className="settings-models-field">
@@ -877,25 +1060,54 @@ function ModelsPane({ credential, modelRoutes }: {
                 <div className="settings-models-field">
                   <label>模型</label>
                   <ModelSelectMenu panel="models" label="选择模型" value="选择模型" describedBy="models-models-count"
-                    open={panel === 'models'} onOpen={() => setPanel('models')}
+                    open={panel === 'models'} onOpen={loadDeepseekModels}
                     onClose={() => setPanel(null)}>
-                    <span id="models-models-count" hidden>已选择 0 个模型</span>
-                    {DEEPSEEK_MODEL_OPTIONS.map(name =>
-                      <button type="button" role="menuitemcheckbox" aria-checked="false" tabIndex={-1} key={name}
-                        onClick={() => undefined}>
-                        <span>{name}</span>
-                      </button>)}
+                    <span id="models-models-count" hidden>已选择 {checkedModels?.length ?? 0} 个模型</span>
+                    {provider === 'deepseek' && modelRoutes !== undefined
+                      ? deepseekRead === null
+                        ? <button type="button" role="menuitemcheckbox" aria-checked="false" tabIndex={-1} disabled>
+                          <span>模型目录读取中…</span>
+                        </button>
+                        : deepseekRead.kind === 'unavailable'
+                          ? <button type="button" role="menuitemcheckbox" aria-checked="false" tabIndex={-1} disabled>
+                            <span>模型目录读取失败</span>
+                          </button>
+                          : <>
+                            <button type="button" role="menuitemcheckbox"
+                              aria-checked={deepseekRead.models.length > 0 && (checkedModels?.length ?? 0) === deepseekRead.models.length}
+                              tabIndex={-1}
+                              onClick={() => setCheckedModels((checkedModels?.length ?? 0) === deepseekRead.models.length
+                                ? []
+                                : deepseekRead.models.map(model => model.id))}>
+                              <span>全选</span>
+                            </button>
+                            {deepseekRead.models.map(model => {
+                              const checked = checkedModels?.includes(model.id) === true
+                              return <button type="button" role="menuitemcheckbox" aria-checked={checked} tabIndex={-1} key={model.id}
+                                onClick={() => setCheckedModels((previous) => {
+                                  const current = previous ?? []
+                                  return current.includes(model.id) ? current.filter(id => id !== model.id) : [...current, model.id]
+                                })}>
+                                <span>{model.name}</span>
+                              </button>
+                            })}
+                          </>
+                      : DEEPSEEK_MODEL_OPTIONS.map(name =>
+                        <button type="button" role="menuitemcheckbox" aria-checked="false" tabIndex={-1} key={name}
+                          onClick={() => undefined}>
+                          <span>{name}</span>
+                        </button>)}
                   </ModelSelectMenu>
                 </div>
               </>}
             <div className="settings-models-field">
-              <label htmlFor={wired ? 'models-api-key' : 'models-api-key-readonly'}>API Key</label>
-              {wired
+              <label htmlFor={wired || catalogMode || deepseekWired ? 'models-api-key' : 'models-api-key-readonly'}>API Key</label>
+              {wired || catalogMode || deepseekWired
                 ? <>
                   <input id="models-api-key" type="password" aria-label="API Key"
                     placeholder="请输入 API Key" value={keyDraft} autoComplete="off" spellCheck={false}
                     onChange={event => setKeyDraft(event.currentTarget.value)} />
-                  <p className="settings-observed-note">{editRoute === null
+                  <p className="settings-observed-note">{editRoute === null && !(deepseekWired && credentialConfigured === true)
                     ? '此值保存到本机凭据文件层，不回显；保存本身不触发任何供应商请求。'
                     : '留空则保留现有凭据；填入新值则覆盖。此值不回显。'}</p>
                 </>
@@ -908,18 +1120,28 @@ function ModelsPane({ credential, modelRoutes }: {
             {notice !== null ? <p className="settings-observed-note" role="status">{notice}</p> : null}
             <div className="settings-modal-actions">
               <button type="button" className="text-button" aria-label="取消" onClick={closeForm}>取消</button>
-              {wired && editRoute !== null
+              {(wired || catalogMode) && editRoute !== null
                 ? <button type="button" className="text-button"
-                  disabled={busy || derived === undefined || modelIds.length === 0}
+                  disabled={busy || (!catalogMode && (derived === undefined || modelIds.length === 0))}
                   aria-label="保存修改" onClick={() => { void submitEdit() }}>
                   {busy ? '正在保存…' : '保存修改'}
                 </button>
-                : wired
+                : catalogMode
                   ? <button type="button" className="text-button" disabled={!canSubmit}
-                    aria-label="校验并添加模型" onClick={() => { void submitAdd() }}>
-                    {busy ? '正在保存…' : '校验并添加模型'}
+                    aria-label="保存" onClick={() => { void submitAdd() }}>
+                    {busy ? '正在保存…' : '保存'}
                   </button>
-                  : <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>}
+                  : wired
+                    ? <button type="button" className="text-button" disabled={!canSubmit}
+                      aria-label="校验并添加模型" onClick={() => { void submitAdd() }}>
+                      {busy ? '正在保存…' : '校验并添加模型'}
+                    </button>
+                    : deepseekWired
+                      ? <button type="button" className="text-button" disabled={!deepseekCanSubmit}
+                        aria-label="校验并添加模型" onClick={() => { void submitDeepseek() }}>
+                        {busy ? '正在保存…' : '校验并添加模型'}
+                      </button>
+                      : <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>}
             </div>
           </form>
         </div>

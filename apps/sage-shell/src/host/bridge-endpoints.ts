@@ -328,6 +328,79 @@ interface LlmDiscoverySeam {
   ) => Promise<readonly unknown[]>
 }
 
+/** The configurable-provider directory and per-route model halves of the llm service
+ *  (llm/src/index.ts:550/702/740). All three read the installed catalog and the live route
+ *  set — no network. The directory reports every catalog-shipped provider (`declared: false`)
+ *  plus the hand-declared routes; `resolveModelInfo` carries the exact model metadata a
+ *  provider-config `models` override must be reconstructed from (ADR-0344). */
+interface LlmDirectorySeam {
+  readonly listConfigurableProviders: () => readonly unknown[]
+  readonly listModels: (provider: string) => Promise<readonly unknown[]>
+  readonly resolveModelInfo: (provider: string, model: string, signal?: AbortSignal) => Promise<unknown>
+}
+
+/** The directory verdict for one route name: 'catalog' when the installed catalog ships it,
+ *  'declared' when the directory knows it as a hand-written declaration, 'absent' when it is
+ *  unknown there, 'unavailable' when the llm seam is missing. */
+function directoryVerdict(ctx: { get: (name: string) => unknown }, route: string): 'catalog' | 'declared' | 'absent' | 'unavailable' {
+  const llm = ctx.get('llm') as Partial<LlmDirectorySeam> | undefined
+  if (typeof llm?.listConfigurableProviders !== 'function') return 'unavailable'
+  let entries: readonly unknown[]
+  try {
+    entries = llm.listConfigurableProviders()
+  } catch {
+    return 'unavailable'
+  }
+  const entry = entries.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly provider?: unknown }).provider === route)
+  if (entry === undefined) return 'absent'
+  return entry.declared === true ? 'declared' : 'catalog'
+}
+
+/** Model ids of one registered route, read from the in-memory route materialization. */
+async function routeModelIds(llm: LlmDirectorySeam, route: string): Promise<readonly string[] | undefined> {
+  try {
+    const models = await llm.listModels(route)
+    return models
+      .map(model => model !== null && typeof model === 'object' ? (model as { readonly id?: unknown }).id : undefined)
+      .filter((id): id is string => typeof id === 'string')
+      .slice(0, 64)
+  } catch {
+    return undefined
+  }
+}
+
+/** ADR-0344: one provider-config `models` entry rebuilt from the exact metadata the llm
+ *  service resolves (llm/src/index.ts:740). Returns undefined when the metadata cannot fill
+ *  the config schema's required fields (name, contextWindow) — the caller refuses rather than
+ *  guessing. Optional fields pass through as the service reported them; the plugin's own
+ *  settings validation stays the second gate. */
+function providerCatalogEntry(id: string, info: unknown): Record<string, unknown> | undefined {
+  if (info === null || typeof info !== 'object') return undefined
+  const record = info as Record<string, unknown>
+  const name = record.name
+  if (typeof name !== 'string' || name.length === 0) return undefined
+  const context = record.context !== null && typeof record.context === 'object'
+    ? (record.context as { readonly contextWindow?: unknown }).contextWindow
+    : undefined
+  if (typeof context !== 'number' || !Number.isSafeInteger(context) || context <= 0) return undefined
+  const modalities = Array.isArray(record.inputModalities)
+    ? record.inputModalities.filter((modality): modality is string => typeof modality === 'string')
+    : undefined
+  return {
+    id,
+    name,
+    ...(typeof record.description === 'string' ? { description: record.description } : {}),
+    contextWindow: context,
+    ...(modalities === undefined || modalities.length === 0 ? {} : { inputModalities: modalities }),
+    ...(typeof record.defaultMaxTokens === 'number' && Number.isSafeInteger(record.defaultMaxTokens) && record.defaultMaxTokens > 0
+      ? { maxTokens: record.defaultMaxTokens }
+      : {}),
+    ...(typeof record.systemPromptUpdate === 'string' ? { systemPromptUpdate: record.systemPromptUpdate } : {}),
+    ...(typeof record.toolUpdate === 'string' ? { toolUpdate: record.toolUpdate } : {}),
+  }
+}
+
 /** The saved route facts the test action may use — never renderer-supplied ones. */
 function savedRouteProfile(controller: Partial<SettingsWriteSeam>, route: string): { readonly api?: unknown, readonly baseURL?: unknown, readonly apiKeyEnv?: unknown } | undefined {
   const described = controller.describe?.()
@@ -430,12 +503,34 @@ function selectionRefusal(catalog: unknown, provider: string, model: string, eff
 }
 
 /** One route profile exactly as the surface may declare it: unknown members are refused, not
- *  ignored (a surface cannot smuggle `headers` or any deployment-owned field through save). */
-function readRouteProfile(raw: unknown): { readonly profile: Record<string, unknown>, readonly apiKeyEnv?: string } | undefined {
+ *  ignored (a surface cannot smuggle `headers` or any deployment-owned field through save).
+ *  Two shapes exist (ADR-0343): the full declaration (api + baseURL + models) and the key-only
+ *  catalog shape (apiKeyEnv alone) for a provider the installed catalog ships — the catalog
+ *  supplies endpoint, protocol, display name and models, and the profile overrides them field
+ *  by field (llm-pi-ai config.ts). Membership is the caller's question; the grammar alone
+ *  cannot know the directory. */
+function readRouteProfile(raw: unknown): { readonly profile: Record<string, unknown>, readonly apiKeyEnv?: string, readonly shape: 'declared' | 'catalog' } | undefined {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const record = raw as Record<string, unknown>
   const allowed = new Set(['displayName', 'api', 'baseURL', 'apiKeyEnv', 'models'])
   if (!Object.keys(record).every(key => allowed.has(key))) return undefined
+  const displayName = record.displayName
+  if (displayName !== undefined && (typeof displayName !== 'string' || displayName !== displayName.trim() || displayName.length === 0 || displayName.length > 64)) {
+    return undefined
+  }
+  const apiKeyEnv = record.apiKeyEnv
+  if (apiKeyEnv !== undefined && (typeof apiKeyEnv !== 'string' || !CREDENTIAL_REF_NAME.test(apiKeyEnv))) return undefined
+  if (record.api === undefined && record.baseURL === undefined && record.models === undefined) {
+    if (apiKeyEnv === undefined) return undefined
+    return {
+      profile: {
+        ...(displayName === undefined ? {} : { displayName }),
+        apiKeyEnv,
+      },
+      apiKeyEnv,
+      shape: 'catalog',
+    }
+  }
   const api = record.api
   if (typeof api !== 'string' || !MODEL_API.has(api)) return undefined
   const baseURL = record.baseURL
@@ -450,12 +545,6 @@ function readRouteProfile(raw: unknown): { readonly profile: Record<string, unkn
     || parsed.username !== '' || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') {
     return undefined
   }
-  const displayName = record.displayName
-  if (displayName !== undefined && (typeof displayName !== 'string' || displayName !== displayName.trim() || displayName.length === 0 || displayName.length > 64)) {
-    return undefined
-  }
-  const apiKeyEnv = record.apiKeyEnv
-  if (apiKeyEnv !== undefined && (typeof apiKeyEnv !== 'string' || !CREDENTIAL_REF_NAME.test(apiKeyEnv))) return undefined
   const models = record.models
   if (!Array.isArray(models) || models.length === 0 || models.length > 64) return undefined
   const cleaned: { readonly id: string }[] = []
@@ -476,6 +565,7 @@ function readRouteProfile(raw: unknown): { readonly profile: Record<string, unkn
       models: cleaned,
     },
     ...(apiKeyEnv === undefined ? {} : { apiKeyEnv }),
+    shape: 'declared',
   }
 }
 
@@ -1285,6 +1375,13 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
     if (endpoint === 'modelConfig/save') {
       const parsed = readRouteProfile(record.profile)
       if (parsed === undefined) return { ok: false, code: 'bridge-model-profile-invalid' }
+      // ADR-0343: the key-only shape is only complete for a catalog-shipped provider; the
+      // directory is the authority on that. A full declaration still needs no membership.
+      if (parsed.shape === 'catalog') {
+        const verdict = directoryVerdict(ctx, route)
+        if (verdict === 'unavailable') return { ok: false, code: 'bridge-provider-unavailable' }
+        if (verdict !== 'catalog') return { ok: false, code: 'bridge-model-catalog-unknown' }
+      }
       ops = [{ op: 'set', path: ['providers', route], value: parsed.profile }]
     } else {
       ops = [{ op: 'unset', path: ['providers', route] }]
@@ -1308,7 +1405,16 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
     if (profile === undefined) return { ok: false, code: 'bridge-model-route-unknown' }
     const baseURL = profile.baseURL
     if (typeof baseURL !== 'string' || baseURL.length === 0 || baseURL.length > 2048) {
-      return { ok: false, code: 'bridge-model-route-unknown' }
+      // ADR-0343: a key-only catalog route. discoverModels would answer from the installed
+      // catalog WITHOUT touching the network — labeling that 测试通过 would be a false green.
+      // The honest verdict is `builtin`: the models the route currently resolves to, no probe.
+      const llm = ctx.get('llm') as Partial<LlmDirectorySeam> | undefined
+      if (typeof llm?.listModels !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+      const modelIds = await routeModelIds(llm as LlmDirectorySeam, route)
+      if (modelIds === undefined) return { ok: false, code: 'bridge-model-route-unknown' }
+      const revision = savedRouteRevision(controller ?? {}, route)
+      const credentialConfigured = await savedRouteCredentialConfigured(ctx, profile.apiKeyEnv)
+      return { ok: true, result: { state: 'builtin', modelIds, revision, credentialConfigured } }
     }
     const api = typeof profile.api === 'string' && MODEL_API.has(profile.api) ? profile.api : 'openai-completions'
     const llm = ctx.get('llm') as Partial<LlmDiscoverySeam> | undefined
@@ -1354,6 +1460,108 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
       return { ok: false, code: 'bridge-model-catalog-failed' }
     }
     return crossable(value)
+  }
+
+  // ADR-0343: the configurable-provider directory — which providers the installed catalog
+  // ships (key-only profiles are complete for those) and which names the directory knows as
+  // hand-written declarations. A pure read of the live route set; no network.
+  if (endpoint === 'modelConfig/providers') {
+    if (payload.length !== 0) return { ok: false, code: 'bridge-payload-invalid' }
+    const llm = ctx.get('llm') as Partial<LlmDirectorySeam> | undefined
+    if (typeof llm?.listConfigurableProviders !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    let entries: readonly unknown[]
+    try {
+      entries = llm.listConfigurableProviders()
+    } catch {
+      return { ok: false, code: 'bridge-model-providers-failed' }
+    }
+    const providers: Record<string, unknown>[] = []
+    for (const candidate of entries) {
+      if (candidate === null || typeof candidate !== 'object') continue
+      const entry = candidate as Record<string, unknown>
+      const provider = entry.provider
+      if (typeof provider !== 'string' || !MODEL_ROUTE.test(provider)) continue
+      providers.push({
+        provider,
+        displayName: typeof entry.displayName === 'string' && entry.displayName.length > 0 ? entry.displayName : provider,
+        declared: entry.declared === true,
+        ...(typeof entry.error === 'string' ? { error: entry.error.slice(0, 300) } : {}),
+      })
+    }
+    return { ok: true, result: { providers } }
+  }
+
+  // ADR-0343: the models one route currently resolves to, read from the in-memory route
+  // materialization (registered routes answer; the model list follows the installed catalog).
+  if (endpoint === 'modelConfig/models') {
+    const record = readWorkspaceRequest(payload, ['route'])
+    const route = record?.route
+    if (record === undefined || typeof route !== 'string' || !MODEL_ROUTE.test(route)) {
+      return { ok: false, code: 'bridge-model-route-invalid' }
+    }
+    const llm = ctx.get('llm') as Partial<LlmDirectorySeam> | undefined
+    if (typeof llm?.listModels !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    const modelIds = await routeModelIds(llm as LlmDirectorySeam, route)
+    if (modelIds === undefined) return { ok: false, code: 'bridge-model-route-unknown' }
+    return { ok: true, result: { modelIds } }
+  }
+
+  // ADR-0344: the provider-config models override. The checked ids are rebuilt into full
+  // provider-catalog entries from the llm service's exact metadata and written path-addressed
+  // into the provider's OWN settings namespace — which the directory names, never a constant.
+  if (endpoint === 'modelConfig/provider-models') {
+    const record = readWorkspaceRequest(payload, ['provider', 'modelIds'])
+    const provider = record?.provider
+    const rawIds = record?.modelIds
+    if (record === undefined || typeof provider !== 'string' || !MODEL_ROUTE.test(provider)
+      || !Array.isArray(rawIds) || rawIds.length === 0 || rawIds.length > 64
+      || !rawIds.every((id): id is string => typeof id === 'string' && id === id.trim() && id.length > 0 && id.length <= 128)) {
+      return { ok: false, code: 'bridge-model-provider-request-invalid' }
+    }
+    const llm = ctx.get('llm') as Partial<LlmDirectorySeam> | undefined
+    if (typeof llm?.listConfigurableProviders !== 'function' || typeof llm.listModels !== 'function' || typeof llm.resolveModelInfo !== 'function') {
+      return { ok: false, code: 'bridge-provider-unavailable' }
+    }
+    let directory: readonly unknown[]
+    try {
+      directory = llm.listConfigurableProviders()
+    } catch {
+      return { ok: false, code: 'bridge-provider-unavailable' }
+    }
+    const directoryEntry = directory.find((candidate): candidate is Record<string, unknown> =>
+      candidate !== null && typeof candidate === 'object' && (candidate as { readonly provider?: unknown }).provider === provider)
+    if (directoryEntry === undefined) return { ok: false, code: 'bridge-model-provider-unknown' }
+    const settingsNs = directoryEntry.settingsNs
+    const settingsPath = directoryEntry.settingsPath
+    if (typeof settingsNs !== 'string' || settingsNs.length === 0 || !Array.isArray(settingsPath)
+      || !settingsPath.every((segment): segment is string => typeof segment === 'string')) {
+      return { ok: false, code: 'bridge-model-provider-unknown' }
+    }
+    // Every checked id must exist in the provider's live catalog before it can be written.
+    const known = await routeModelIds(llm as LlmDirectorySeam, provider)
+    if (known === undefined) return { ok: false, code: 'bridge-model-provider-unknown' }
+    const knownSet = new Set(known)
+    const built: Record<string, unknown>[] = []
+    for (const id of [...new Set(rawIds)]) {
+      if (!knownSet.has(id)) return { ok: false, code: 'bridge-model-entry-unresolved' }
+      let info: unknown
+      try {
+        info = await llm.resolveModelInfo(provider, id)
+      } catch {
+        return { ok: false, code: 'bridge-model-entry-unresolved' }
+      }
+      const catalogEntry = providerCatalogEntry(id, info)
+      if (catalogEntry === undefined) return { ok: false, code: 'bridge-model-entry-unresolved' }
+      built.push(catalogEntry)
+    }
+    const controller = ctx.get('settingsController') as Partial<SettingsWriteSeam> | undefined
+    if (typeof controller?.mutate !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    try {
+      await controller.mutate(settingsNs, [{ op: 'set', path: [...settingsPath, 'models'], value: built }], undefined)
+      return { ok: true, result: { saved: true, provider, modelIds: [...new Set(rawIds)] } }
+    } catch (error) {
+      return { ok: false, code: classifyProviderFailure(error) }
+    }
   }
 
   if (endpoint === 'modelConfig/default') {

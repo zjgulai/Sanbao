@@ -10,12 +10,15 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { DesktopSettingsView } from '../../src/product/app/desktop/settings-view.js'
 import {
   deriveRouteFromEndpoint,
+  type ModelCatalogOutcome,
+  type ModelProvidersOutcome,
   type ModelRoutesController,
   type ModelRoutesListRead,
   type ModelRouteSaveOutcome,
   type ModelRouteTestOutcome,
 } from '../../src/product/app/desktop/model-routes.js'
 import type { DevicePreferencesController } from '../../src/product/app/desktop/device-preferences.js'
+import type { InstanceCredentialController } from '../../src/product/app/desktop/instance-credential.js'
 
 const originalActEnvironment = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT
 const cleanups: Array<() => void> = []
@@ -47,29 +50,37 @@ function stubController(options: {
   readonly saveCredential?: () => Promise<ModelRouteSaveOutcome>
   readonly removeRoute?: () => Promise<ModelRouteSaveOutcome>
   readonly testConnection?: () => Promise<ModelRouteTestOutcome>
+  readonly providers?: () => Promise<ModelProvidersOutcome>
+  readonly catalog?: () => Promise<ModelCatalogOutcome>
 } = {}) {
   const listMock = vi.fn(async () => typeof options.list === 'function' ? await options.list() : options.list ?? emptyRead)
   const saveRouteMock = vi.fn(options.saveRoute ?? (async () => ({ kind: 'saved' as const })))
   const saveCredentialMock = vi.fn(options.saveCredential ?? (async () => ({ kind: 'saved' as const })))
   const removeRouteMock = vi.fn(options.removeRoute ?? (async () => ({ kind: 'saved' as const })))
   const testConnectionMock = vi.fn(options.testConnection ?? (async () => ({ kind: 'refused' as const, code: 'unreachable' })))
+  const providersMock = vi.fn(options.providers ?? (async (): Promise<ModelProvidersOutcome> => ({ kind: 'read' as const, providers: [] })))
+  const catalogMock = vi.fn(options.catalog ?? (async (): Promise<ModelCatalogOutcome> => ({ kind: 'unavailable' as const, code: 'unreachable' })))
+  const saveProviderModelsMock = vi.fn(async () => ({ kind: 'saved' as const }))
   const controller: ModelRoutesController = {
     list: listMock,
     saveRoute: saveRouteMock,
     saveCredential: saveCredentialMock,
     removeRoute: removeRouteMock,
     testConnection: testConnectionMock,
+    providers: providersMock,
+    catalog: catalogMock,
+    saveProviderModels: saveProviderModelsMock,
     unsetCredential: vi.fn(async () => ({ kind: 'saved' as const })),
   }
-  return { controller, listMock, saveRouteMock, saveCredentialMock, removeRouteMock, testConnectionMock }
+  return { controller, listMock, saveRouteMock, saveCredentialMock, removeRouteMock, testConnectionMock, providersMock, catalogMock, saveProviderModelsMock }
 }
 
-async function mount(modelRoutes: ModelRoutesController) {
+async function mount(modelRoutes: ModelRoutesController, credential?: InstanceCredentialController) {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
   act(() => {
-    root.render(createElement(DesktopSettingsView, { controller: inertController, modelRoutes }))
+    root.render(createElement(DesktopSettingsView, { controller: inertController, modelRoutes, ...(credential === undefined ? {} : { credential }) }))
   })
   cleanups.push(() => { act(() => { root.unmount() }); container.remove() })
   act(() => {
@@ -357,6 +368,215 @@ describe('ADR-0339: the wired models pane', () => {
     expect(unsetMock).toHaveBeenCalledWith({ name: 'R_CLEAR_API_KEY' })
     expect(container.textContent).toContain('已清除凭据（R_CLEAR_API_KEY）。')
     expect(container.textContent).toContain('凭据未设置')
+  })
+
+  it('ADR-0343: the provider menu lists the installed catalog and saves a key-only route', async () => {
+    const stub = stubController({
+      providers: async () => ({ kind: 'read', providers: [
+        { provider: 'deepseek', displayName: 'deepseek', declared: false },
+        { provider: 'custom-x', displayName: 'custom-x', declared: true },
+      ] }),
+    })
+    const { container } = await mount(stub.controller)
+    click(button(container, '添加模型'))
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+    click(button(dialog, '供应商'))
+    await act(async () => {})
+    const menu = dialog.querySelector('[role="listbox"], [role="menu"]') as HTMLElement
+    const group = menu.querySelector('[role="group"][aria-label="本机内置目录"]') as HTMLElement
+    expect(group).not.toBeNull()
+    expect(group.textContent).toContain('deepseek')
+    // Hand-declared routes are not key-only offers.
+    expect(group.textContent).not.toContain('custom-x')
+    click(Array.from(group.querySelectorAll('[role="option"]')).find(item => item.textContent?.includes('deepseek')) as HTMLElement)
+    // The key-only form asks for no endpoint and no model ids.
+    expect(dialog.querySelector('input[aria-label="接口地址（Base URL）"]')).toBeNull()
+    expect(dialog.querySelector('input[aria-label="Model ID"]')).toBeNull()
+    type(dialog, 'API Key', 'sk-catalog-spec-0123456789')
+    await act(async () => { button(dialog, '保存').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({ route: 'deepseek', profile: { apiKeyEnv: 'DEEPSEEK_API_KEY' } })
+    expect(stub.saveCredentialMock).toHaveBeenCalledWith({ name: 'DEEPSEEK_API_KEY', value: 'sk-catalog-spec-0123456789' })
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.textContent).toContain('已保存、未测试')
+  })
+
+  it('ADR-0343: a catalog row renders the directory identity and the builtin verdict label', async () => {
+    const { controller } = stubController({ list: { kind: 'read', namespaceRevision: 3, routes: [{
+      route: 'deepseek',
+      api: null,
+      baseURL: null,
+      catalog: true,
+      apiKeyEnv: 'DEEPSEEK_API_KEY',
+      modelCount: 2,
+      modelIds: ['deepseek-flash', 'deepseek-pro'],
+      credential: { name: 'DEEPSEEK_API_KEY', configured: true },
+      test: { state: 'builtin', modelIds: ['deepseek-flash', 'deepseek-pro'], testedAt: '2026-10-13T10:00:00.000Z', current: true },
+    }] } })
+    const { container } = await mount(controller)
+    const row = container.querySelector('[data-model-route="deepseek"]') as HTMLElement
+    expect(row.textContent).toContain('内置目录 · 端点与模型来自已安装目录')
+    expect(row.textContent).toContain('模型 2 个')
+    expect(row.textContent).toContain('内置目录（2 个模型） · 未做网络探测')
+  })
+
+  it('ADR-0343: editing a catalog row keeps the key-only shape and the untouched credential', async () => {
+    const row = {
+      route: 'deepseek',
+      api: null,
+      baseURL: null,
+      catalog: true,
+      apiKeyEnv: 'DEEPSEEK_API_KEY',
+      modelCount: 0,
+      modelIds: [],
+      credential: { name: 'DEEPSEEK_API_KEY', configured: true },
+      test: null,
+    }
+    const stub = stubController({ list: { kind: 'read', namespaceRevision: 9, routes: [row] } })
+    const { container } = await mount(stub.controller)
+    click(button(container, 'deepseek 更多操作'))
+    click(button(container, '编辑 deepseek'))
+    const dialog = container.querySelector('[role="dialog"][aria-label="编辑模型"]') as HTMLElement
+    expect(dialog).not.toBeNull()
+    expect(dialog.querySelector('input[aria-label="接口地址（Base URL）"]')).toBeNull()
+    expect(dialog.textContent).toContain('留空则保留现有凭据')
+    await act(async () => { button(dialog, '保存修改').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({ route: 'deepseek', profile: { apiKeyEnv: 'DEEPSEEK_API_KEY' }, expectedRevision: 9 })
+    expect(stub.saveCredentialMock).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('配置已保存；凭据未改动。')
+  })
+
+  it('ADR-0343: without a directory read the menu keeps the observed groups only', async () => {
+    const stub = stubController({ providers: async () => ({ kind: 'unavailable', code: 'bridge-provider-unavailable' }) })
+    const { container } = await mount(stub.controller)
+    click(button(container, '添加模型'))
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+    click(button(dialog, '供应商'))
+    const menu = dialog.querySelector('[role="listbox"], [role="menu"]') as HTMLElement
+    expect(menu.querySelector('[role="group"][aria-label="本机内置目录"]')).toBeNull()
+    expect(menu.textContent).toContain('OpenAI Compatible')
+  })
+
+  const deepseekCatalog = async (): Promise<ModelCatalogOutcome> => ({ kind: 'read', catalog: {
+    default: null,
+    failures: [],
+    groups: [{ id: 'deepseek-official', name: 'DeepSeek', models: [
+      { id: 'deepseek-flash', name: 'DeepSeek-V41-Flash' },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro' },
+    ] }],
+  } })
+
+  async function openDeepseekForm(container: HTMLElement): Promise<HTMLElement> {
+    click(button(container, '添加模型'))
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+    click(button(dialog, '供应商'))
+    const menu = dialog.querySelector('[role="listbox"][aria-label="供应商"]') as HTMLElement
+    click(button(menu, 'DeepSeek'))
+    return container.querySelector('[role="dialog"]') as HTMLElement
+  }
+
+  it('ADR-0344: the DeepSeek card reads the live checklist and saves models + credential', async () => {
+    const stub = stubController({ catalog: deepseekCatalog })
+    const { container } = await mount(stub.controller)
+    const form = await openDeepseekForm(container)
+    expect(form.querySelector('[aria-label="类型"]')!.textContent).toContain('按量付费')
+    // Submit is disabled before any model is checked.
+    expect(button(form, '校验并添加模型').disabled).toBe(true)
+    click(form.querySelector<HTMLButtonElement>('[aria-label="选择模型"]')!)
+    await act(async () => {})
+    const modelsMenu = form.querySelector('[role="menu"][aria-label="选择模型"]')!
+    const boxes = Array.from(modelsMenu.querySelectorAll('[role="menuitemcheckbox"]'))
+    expect(boxes).toHaveLength(3)
+    // 预填 = 当前生效模型（全选已勾）。
+    expect(boxes[0]!.getAttribute('aria-checked')).toBe('true')
+    expect(modelsMenu.textContent).toContain('DeepSeek-V41-Flash')
+    // 取消勾选 DeepSeek-V4-Pro，只留 flash。
+    click(boxes[2] as HTMLElement)
+    type(form, 'API Key', 'sk-deepseek-spec-0123456789')
+    await act(async () => { button(form, '校验并添加模型').click() })
+    expect(stub.saveProviderModelsMock).toHaveBeenCalledWith({ provider: 'deepseek-official', modelIds: ['deepseek-flash'] })
+    expect(stub.saveCredentialMock).toHaveBeenCalledWith({ name: 'DEEPSEEK_API_KEY', value: 'sk-deepseek-spec-0123456789' })
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.textContent).toContain('模型范围已保存（1 个模型）')
+    expect(container.textContent).not.toContain('sk-deepseek-spec')
+  })
+
+  it('ADR-0344: an already-configured credential lets the DeepSeek save proceed without a typed key', async () => {
+    const stub = stubController({ catalog: deepseekCatalog })
+    const credential: InstanceCredentialController = {
+      read: vi.fn(async () => ({ kind: 'read' as const, configured: true, source: 'file', writable: true })),
+      save: vi.fn(async () => ({ outcome: 'saved' as const, read: { kind: 'read' as const, configured: true, source: 'file', writable: true } })),
+    }
+    const { container } = await mount(stub.controller, credential)
+    const form = await openDeepseekForm(container)
+    await act(async () => {})
+    expect(form.textContent).toContain('留空则保留现有凭据')
+    click(form.querySelector<HTMLButtonElement>('[aria-label="选择模型"]')!)
+    await act(async () => {})
+    await act(async () => { button(form, '校验并添加模型').click() })
+    expect(stub.saveProviderModelsMock).toHaveBeenCalledWith({ provider: 'deepseek-official', modelIds: ['deepseek-flash', 'deepseek-v4-pro'] })
+    expect(stub.saveCredentialMock).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('模型范围已保存（2 个模型）')
+  })
+
+  it('ADR-0344: the DeepSeek submit stays disabled with an unreadable directory or zero checked models', async () => {
+    const degraded = stubController({ catalog: async () => ({ kind: 'unavailable', code: 'bridge-provider-unavailable' }) })
+    const first = await mount(degraded.controller)
+    const form = await openDeepseekForm(first.container)
+    click(form.querySelector<HTMLButtonElement>('[aria-label="选择模型"]')!)
+    await act(async () => {})
+    const menu = form.querySelector('[role="menu"][aria-label="选择模型"]') as HTMLElement
+    expect(menu.textContent).toContain('模型目录读取失败')
+    type(form, 'API Key', 'sk-deepseek-spec-0123456789')
+    expect(button(form, '校验并添加模型').disabled).toBe(true)
+
+    const stub = stubController({ catalog: deepseekCatalog })
+    const second = await mount(stub.controller)
+    const form2 = await openDeepseekForm(second.container)
+    click(form2.querySelector<HTMLButtonElement>('[aria-label="选择模型"]')!)
+    await act(async () => {})
+    const menu2 = form2.querySelector('[role="menu"][aria-label="选择模型"]') as HTMLElement
+    click(Array.from(menu2.querySelectorAll('[role="menuitemcheckbox"]'))[0] as HTMLElement)
+    type(form2, 'API Key', 'sk-deepseek-spec-0123456789')
+    expect(button(form2, '校验并添加模型').disabled).toBe(true)
+  })
+
+  it('ADR-0345: the observed OpenRouter entry enters the key-only catalog form and saves', async () => {
+    const stub = stubController()
+    const { container } = await mount(stub.controller)
+    click(button(container, '添加模型'))
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+    click(button(dialog, '供应商'))
+    const menu = dialog.querySelector('[role="listbox"][aria-label="供应商"]') as HTMLElement
+    click(button(menu, 'OpenRouter'))
+    const form = container.querySelector('[role="dialog"]') as HTMLElement
+    // Key-only shape: the observed label shows, no endpoint field exists.
+    expect(form.querySelector('[aria-label="供应商"]')!.textContent).toContain('OpenRouter')
+    expect(form.querySelector('input[aria-label="接口地址（Base URL）"]')).toBeNull()
+    type(form, 'API Key', 'sk-openrouter-spec-0123456789')
+    await act(async () => { button(form, '保存').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({ route: 'openrouter', profile: { apiKeyEnv: 'OPENROUTER_API_KEY' } })
+    expect(stub.saveCredentialMock).toHaveBeenCalledWith({ name: 'OPENROUTER_API_KEY', value: 'sk-openrouter-spec-0123456789' })
+    expect(container.textContent).toContain('已保存、未测试')
+  })
+
+  it('ADR-0345: Google maps to the google route; unmapped observed entries stay inert', async () => {
+    const stub = stubController()
+    const { container } = await mount(stub.controller)
+    click(button(container, '添加模型'))
+    const dialog = container.querySelector('[role="dialog"]') as HTMLElement
+    click(button(dialog, '供应商'))
+    const menu = dialog.querySelector('[role="listbox"][aria-label="供应商"]') as HTMLElement
+    // Kimi's catalog mapping is ambiguous — clicking it must not change the form.
+    const before = container.querySelector('[role="dialog"]')!.textContent
+    click(button(menu, 'Kimi'))
+    expect(container.querySelector('[role="dialog"]')!.textContent).toBe(before)
+    // Google enters the key-only form with the google route.
+    click(button(menu, 'Google'))
+    const form = container.querySelector('[role="dialog"]') as HTMLElement
+    expect(form.querySelector('[aria-label="供应商"]')!.textContent).toContain('Google')
+    type(form, 'API Key', 'sk-google-spec-0123456789')
+    await act(async () => { button(form, '保存').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({ route: 'google', profile: { apiKeyEnv: 'GOOGLE_API_KEY' } })
   })
 
   it('counts typed drafts as dirty: cancel asks for confirmation and 放弃更改 clears them', async () => {

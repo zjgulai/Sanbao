@@ -175,6 +175,9 @@ describe('host-side read-only bridge', () => {
       ['modelConfig/test', 'write'],
       ['modelConfig/catalog', 'read'],
       ['modelConfig/default', 'write'],
+      ['modelConfig/providers', 'read'],
+      ['modelConfig/models', 'read'],
+      ['modelConfig/provider-models', 'write'],
       ['credentials/describe', 'read'],
       ['credentials/set', 'write'],
       ['credentials/unset', 'write'],
@@ -334,6 +337,142 @@ describe('host-side read-only bridge', () => {
     await expect(resolveBridgeCall(ctx, 'modelConfig/remove', [{ route: 'gone-route' }]))
       .resolves.toEqual({ ok: true, result: { saved: true, route: 'gone-route' } })
     expect(calls).toEqual([[{ op: 'unset', path: ['providers', 'gone-route'] }]])
+  })
+
+  it('ADR-0343: a key-only catalog profile saves only for a catalog-shipped provider', async () => {
+    const calls: unknown[] = []
+    const controller = {
+      describe: () => ({ namespaces: [] }),
+      mutate: async (_ns: string, ops: unknown) => { calls.push(ops) },
+    }
+    const directory = [
+      { provider: 'deepseek', displayName: 'deepseek', declared: false },
+      { provider: 'custom-x', displayName: 'custom-x', declared: true },
+    ]
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? { listConfigurableProviders: () => directory } : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'deepseek', profile: { apiKeyEnv: 'DEEPSEEK_API_KEY' } }]))
+      .resolves.toEqual({ ok: true, result: { saved: true, route: 'deepseek' } })
+    expect(calls).toEqual([[{ op: 'set', path: ['providers', 'deepseek'], value: { apiKeyEnv: 'DEEPSEEK_API_KEY' } }]])
+    // Unknown names and hand-declared routes are refused: the key-only shape is only complete
+    // for a provider the catalog ships.
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'not-in-catalog', profile: { apiKeyEnv: 'NOPE_API_KEY' } }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-catalog-unknown' })
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'custom-x', profile: { apiKeyEnv: 'CUSTOM_X_API_KEY' } }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-catalog-unknown' })
+    // An empty key-only profile is refused by the grammar; a full declaration still saves for
+    // any route name (the catalog buys completeness, it is not a gate on custom endpoints).
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'deepseek', profile: {} }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-profile-invalid' })
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'not-in-catalog', profile: { api: 'openai-completions', baseURL: 'https://api.example.com/v1', models: [{ id: 'm' }] } }]))
+      .resolves.toMatchObject({ ok: true })
+    // Without the directory seam the key-only shape is refused, not guessed.
+    const noLlm = { get: (name: string) => (name === 'settingsController' ? controller : undefined) }
+    await expect(resolveBridgeCall(noLlm, 'modelConfig/save', [{ route: 'deepseek', profile: { apiKeyEnv: 'DEEPSEEK_API_KEY' } }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-provider-unavailable' })
+  })
+
+  it('ADR-0343: the test verdict for a key-only catalog route is builtin — models read, no probe', async () => {
+    const controller = {
+      describe: () => ({
+        namespaces: [{ ns: 'llm-pi-ai', revision: 3, value: { providers: { deepseek: { apiKeyEnv: 'DEEPSEEK_API_KEY' } } } }],
+      }),
+      mutate: async () => undefined,
+    }
+    let probed = 0
+    const llm = {
+      listModels: async (provider: string) => {
+        expect(provider).toBe('deepseek')
+        return [{ id: 'deepseek-chat' }, { id: 'deepseek-reasoner' }, { id: 42 }]
+      },
+      discoverModels: async () => { probed += 1; return [] },
+    }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? llm : name === 'credentials' ? { describe: async () => ({ configured: true }) } : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/test', [{ route: 'deepseek' }])).resolves
+      .toEqual({ ok: true, result: { state: 'builtin', modelIds: ['deepseek-chat', 'deepseek-reasoner'], revision: 3, credentialConfigured: true } })
+    // The probe seam is never touched: a catalog answer must not read as a connectivity pass.
+    expect(probed).toBe(0)
+    const failing = { ...llm, listModels: async () => { throw new Error('no adapter') } }
+    const failingCtx = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? failing : undefined) }
+    await expect(resolveBridgeCall(failingCtx, 'modelConfig/test', [{ route: 'deepseek' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-route-unknown' })
+  })
+
+  it('ADR-0343: the provider directory maps the live configurable-provider read, dropping junk', async () => {
+    const directory = [
+      { provider: 'deepseek', displayName: 'deepseek', declared: false, settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'deepseek'] },
+      { provider: 'zai', displayName: 'Z.ai', declared: false, error: 'catalog entry unreadable' },
+      { provider: 'custom-x', displayName: 'custom-x', declared: true },
+      { provider: 'Bad-Name', declared: false },
+      42,
+    ]
+    const ctx = { get: (name: string) => (name === 'llm' ? { listConfigurableProviders: () => directory, listModels: async () => [] } : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/providers', [])).resolves.toEqual({
+      ok: true,
+      result: {
+        providers: [
+          { provider: 'deepseek', displayName: 'deepseek', declared: false },
+          { provider: 'zai', displayName: 'Z.ai', declared: false, error: 'catalog entry unreadable' },
+          { provider: 'custom-x', displayName: 'custom-x', declared: true },
+        ],
+      },
+    })
+    await expect(resolveBridgeCall({ get: () => undefined }, 'modelConfig/providers', []))
+      .resolves.toEqual({ ok: false, code: 'bridge-provider-unavailable' })
+  })
+
+  it('ADR-0344: the provider models override rebuilds full entries from resolved metadata', async () => {
+    const calls: Array<{ readonly ns: string, readonly ops: unknown }> = []
+    const controller = {
+      describe: () => ({ namespaces: [] }),
+      mutate: async (ns: string, ops: unknown) => { calls.push({ ns, ops }) },
+    }
+    const directory = [{ provider: 'deepseek-official', displayName: 'DeepSeek', declared: true, settingsNs: 'llm-deepseek', settingsPath: [] }]
+    const infos: Record<string, unknown> = {
+      'deepseek-flash': {
+        provider: 'deepseek-official', id: 'deepseek-flash', name: 'DeepSeek-V41-Flash',
+        context: { contextWindow: 262144 }, inputModalities: ['text', 'image'], toolUpdate: 'addition-only',
+      },
+      'deepseek-v4-pro': { provider: 'deepseek-official', id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', context: { contextWindow: 262144 } },
+    }
+    const llm = {
+      listConfigurableProviders: () => directory,
+      listModels: async () => [{ id: 'deepseek-flash' }, { id: 'deepseek-v4-pro' }],
+      resolveModelInfo: async (_provider: string, model: string) => infos[model],
+    }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? llm : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/provider-models', [{ provider: 'deepseek-official', modelIds: ['deepseek-flash', 'deepseek-v4-pro'] }]))
+      .resolves.toEqual({ ok: true, result: { saved: true, provider: 'deepseek-official', modelIds: ['deepseek-flash', 'deepseek-v4-pro'] } })
+    // The namespace and path come from the DIRECTORY entry — never a constant.
+    expect(calls).toEqual([{
+      ns: 'llm-deepseek',
+      ops: [{ op: 'set', path: ['models'], value: [
+        { id: 'deepseek-flash', name: 'DeepSeek-V41-Flash', contextWindow: 262144, inputModalities: ['text', 'image'], toolUpdate: 'addition-only' },
+        { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', contextWindow: 262144 },
+      ] }],
+    }])
+    // Unknown ids, unknown providers, missing context and empty lists are each refused by name.
+    await expect(resolveBridgeCall(ctx, 'modelConfig/provider-models', [{ provider: 'deepseek-official', modelIds: ['nope'] }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-entry-unresolved' })
+    await expect(resolveBridgeCall(ctx, 'modelConfig/provider-models', [{ provider: 'ghost', modelIds: ['deepseek-flash'] }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-provider-unknown' })
+    await expect(resolveBridgeCall(ctx, 'modelConfig/provider-models', [{ provider: 'deepseek-official', modelIds: [] }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-provider-request-invalid' })
+    const noContext = { ...llm, resolveModelInfo: async () => ({ name: 'X', id: 'deepseek-flash' }) }
+    const ctx2 = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? noContext : undefined) }
+    await expect(resolveBridgeCall(ctx2, 'modelConfig/provider-models', [{ provider: 'deepseek-official', modelIds: ['deepseek-flash'] }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-entry-unresolved' })
+  })
+
+  it('ADR-0343: the models read serves one registered route\'s current models', async () => {
+    const llm = { listModels: async () => [{ id: 'm1' }, { id: 9 }, { id: 'm2' }] }
+    const ctx = { get: (name: string) => (name === 'llm' ? llm : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/models', [{ route: 'r-one' }]))
+      .resolves.toEqual({ ok: true, result: { modelIds: ['m1', 'm2'] } })
+    const failing = { listModels: async () => { throw new Error('no adapter') } }
+    await expect(resolveBridgeCall({ get: () => failing }, 'modelConfig/models', [{ route: 'r-one' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-route-unknown' })
+    await expect(resolveBridgeCall({ get: () => undefined }, 'modelConfig/models', [{ route: 'r-one' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-provider-unavailable' })
   })
 
   it('ADR-0339: tests only the SAVED route — endpoint facts come from settings, never the caller', async () => {

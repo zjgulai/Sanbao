@@ -969,13 +969,14 @@ function parseCredentialRequest(body: string): { readonly action: 'describe' | '
  *  an http(s) URL with no credentials/query/fragment, and 1..64 hand-entered model ids. The host
  *  re-checks the whole profile before it reaches the settings document. */
 function parseModelConfigRequest(body: string): {
-  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
+  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default' | 'providers' | 'save-provider-models'
   readonly route?: string
   readonly profile?: unknown
   readonly expectedRevision?: number
   readonly provider?: string
   readonly model?: string
   readonly reasoningEffort?: string
+  readonly modelIds?: readonly string[]
 } | undefined {
   let value: unknown
   try { value = JSON.parse(body) } catch { return undefined }
@@ -983,9 +984,9 @@ function parseModelConfigRequest(body: string): {
   const record = value as Record<string, unknown>
   const action = record.action
   if (action !== 'list' && action !== 'save-route' && action !== 'remove-route' && action !== 'test-connection'
-    && action !== 'catalog' && action !== 'set-default') return undefined
+    && action !== 'catalog' && action !== 'set-default' && action !== 'providers' && action !== 'save-provider-models') return undefined
   const keys = Object.keys(record)
-  const allowed = action === 'list' || action === 'catalog'
+  const allowed = action === 'list' || action === 'catalog' || action === 'providers'
     ? ['action']
     : action === 'save-route'
       ? ['action', 'route', 'profile', 'expectedRevision']
@@ -993,9 +994,21 @@ function parseModelConfigRequest(body: string): {
         ? ['action', 'route', 'expectedRevision']
         : action === 'test-connection'
           ? ['action', 'route']
-          : ['action', 'provider', 'model', 'reasoningEffort']
+          : action === 'save-provider-models'
+            ? ['action', 'provider', 'modelIds']
+            : ['action', 'provider', 'model', 'reasoningEffort']
   if (!keys.every((key) => allowed.includes(key))) return undefined
-  if (action === 'catalog') return { action }
+  if (action === 'catalog' || action === 'providers') return { action }
+  if (action === 'save-provider-models') {
+    const provider = record.provider
+    const modelIds = record.modelIds
+    const bounded = (value: unknown, cap: number): value is string =>
+      typeof value === 'string' && value === value.trim() && value !== '' && value.length <= cap
+    if (!bounded(provider, 64) || !/^[a-z][a-z0-9-]*$/u.test(provider)) return undefined
+    if (!Array.isArray(modelIds) || modelIds.length === 0 || modelIds.length > 64) return undefined
+    if (!modelIds.every(id => bounded(id, 128))) return undefined
+    return { action, provider, modelIds: [...new Set(modelIds)] }
+  }
   if (action === 'set-default') {
     const provider = record.provider
     const model = record.model
@@ -1020,6 +1033,18 @@ function parseModelConfigRequest(body: string): {
   const fields = profile as Record<string, unknown>
   const profileKeys = Object.keys(fields)
   if (!profileKeys.every((key) => ['displayName', 'api', 'baseURL', 'apiKeyEnv', 'models'].includes(key))) return undefined
+  if (fields.displayName !== undefined
+    && (typeof fields.displayName !== 'string' || fields.displayName !== fields.displayName.trim()
+      || fields.displayName === '' || fields.displayName.length > 64)) return undefined
+  if (fields.apiKeyEnv !== undefined
+    && (typeof fields.apiKeyEnv !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u.test(fields.apiKeyEnv))) return undefined
+  // ADR-0343: the key-only catalog shape — endpoint, protocol and models come from the installed
+  // catalog for a provider it ships; whether the route names one is the host's question (the
+  // route grammar alone cannot know the directory).
+  if (fields.api === undefined && fields.baseURL === undefined && fields.models === undefined) {
+    if (fields.apiKeyEnv === undefined) return undefined
+    return { action, route, profile: fields, ...(revision === undefined ? {} : { expectedRevision: revision }) }
+  }
   if (fields.api !== 'openai-completions' && fields.api !== 'openai-responses' && fields.api !== 'anthropic-messages') return undefined
   const baseURL = fields.baseURL
   if (typeof baseURL !== 'string' || baseURL !== baseURL.trim() || baseURL === '' || baseURL.length > 2048) return undefined
@@ -1031,11 +1056,6 @@ function parseModelConfigRequest(body: string): {
   }
   if ((parsed.protocol !== 'https:' && parsed.protocol !== 'http:')
     || parsed.username !== '' || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') return undefined
-  if (fields.displayName !== undefined
-    && (typeof fields.displayName !== 'string' || fields.displayName !== fields.displayName.trim()
-      || fields.displayName === '' || fields.displayName.length > 64)) return undefined
-  if (fields.apiKeyEnv !== undefined
-    && (typeof fields.apiKeyEnv !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u.test(fields.apiKeyEnv))) return undefined
   if (!Array.isArray(fields.models) || fields.models.length === 0 || fields.models.length > 64) return undefined
   for (const model of fields.models) {
     if (model === null || typeof model !== 'object' || Array.isArray(model)) return undefined

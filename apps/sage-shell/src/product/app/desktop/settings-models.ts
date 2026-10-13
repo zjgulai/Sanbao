@@ -29,6 +29,16 @@ export const PROVIDER_NAMES: Readonly<Record<ModelProviderId, string>> = {
   'anthropic-compatible': 'Anthropic Compatible',
 }
 
+/** ADR-0345（证据：L2 分析 drafts/analysis/analysis-qoder-provider-key-mapping-draft-20261013.md，
+ *  本机 Qoder 0.4.4 asar providerIcons 词表）：观测菜单中与已装 pi-ai 目录 id **同名且语义一致**
+ *  的条目——只收无歧义项。其余观测条目（Kimi/MiniMax/智谱/小米/千问/阿里云百炼）目录映射
+ *  多候选或缺失，保持不猜、不接线。 */
+export const OBSERVED_CATALOG_PROVIDERS: Readonly<Record<string, string>> = {
+  OpenAI: 'openai',
+  Google: 'google',
+  OpenRouter: 'openrouter',
+}
+
 /** QB20-04..06: DeepSeek's observed type options and model checklist. */
 export const DEEPSEEK_TYPE_OPTIONS: readonly string[] = ['按量付费']
 export const DEEPSEEK_MODEL_OPTIONS: readonly string[] = ['全选', 'DeepSeek-V4-Pro', 'DeepSeek-Flash']

@@ -6,7 +6,7 @@
  * record's binding facts and the facts read now (a success only ever says "corresponds to the
  * configuration and credential it ran against"; stale records read 仅历史).
  */
-import type { ModelCatalogRead, ModelConfigOutcome, ModelConfigRouteRead, ModelTestView } from '../appservice/contracts.js'
+import type { ModelCatalogRead, ModelConfigOutcome, ModelConfigRouteRead, ModelProviderView, ModelTestView } from '../appservice/contracts.js'
 
 export type BridgeCaller = (endpoint: string, payload?: readonly unknown[]) => Promise<unknown>
 
@@ -49,21 +49,25 @@ interface TestRecord {
 }
 
 export interface ModelConfigRequest {
-  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
+  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default' | 'providers' | 'save-provider-models'
   readonly route?: string
   readonly profile?: unknown
   readonly expectedRevision?: number
   readonly provider?: string
   readonly model?: string
   readonly reasoningEffort?: string
+  readonly modelIds?: readonly string[]
 }
 
-/** One saved route read from the llm-pi-ai namespace's layers (user wins over base). */
+/** One saved route read from the llm-pi-ai namespace's layers (user wins over base). A profile
+ *  without an endpoint is the key-only catalog shape (ADR-0343): its api and models are the
+ *  installed catalog's defaults, so `api`/`baseURL` stay null and `catalog` is true. */
 interface SavedRoute {
   readonly route: string
   readonly displayName?: string
-  readonly api: string
-  readonly baseURL: string
+  readonly api: string | null
+  readonly baseURL: string | null
+  readonly catalog: boolean
   readonly apiKeyEnv?: string
   readonly modelCount: number
   readonly modelIds: readonly string[]
@@ -82,13 +86,13 @@ function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute
   const routes: SavedRoute[] = []
   for (const [route, raw] of Object.entries(providers)) {
     if (!isPlainRecord(raw)) continue
-    const baseURL = typeof raw.baseURL === 'string' && raw.baseURL.length > 0 ? raw.baseURL : undefined
-    if (baseURL === undefined) continue
+    const baseURL = typeof raw.baseURL === 'string' && raw.baseURL.length > 0 ? raw.baseURL : null
     routes.push({
       route,
       ...(typeof raw.displayName === 'string' ? { displayName: raw.displayName } : {}),
-      api: typeof raw.api === 'string' ? raw.api : 'openai-completions',
+      api: typeof raw.api === 'string' && raw.api.length > 0 ? raw.api : null,
       baseURL,
+      catalog: baseURL === null,
       ...(typeof raw.apiKeyEnv === 'string' ? { apiKeyEnv: raw.apiKeyEnv } : {}),
       modelCount: Array.isArray(raw.models) ? raw.models.length : 0,
       modelIds: Array.isArray(raw.models)
@@ -98,6 +102,22 @@ function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute
   }
   routes.sort((left, right) => left.route.localeCompare(right.route))
   return { routes, revision }
+}
+
+/** ADR-0343: the directory receipt — which providers the installed catalog ships. */
+function readProviders(value: unknown): readonly ModelProviderView[] | undefined {
+  if (!isPlainRecord(value) || !Array.isArray(value.providers)) return undefined
+  const providers: ModelProviderView[] = []
+  for (const candidate of value.providers) {
+    if (!isPlainRecord(candidate) || typeof candidate.provider !== 'string' || candidate.provider === '') continue
+    providers.push({
+      provider: candidate.provider,
+      displayName: typeof candidate.displayName === 'string' && candidate.displayName.length > 0 ? candidate.displayName : candidate.provider,
+      declared: candidate.declared === true,
+      ...(typeof candidate.error === 'string' ? { error: candidate.error.slice(0, 300) } : {}),
+    })
+  }
+  return providers
 }
 
 function readSelection(value: unknown): { readonly provider: string, readonly model: string, readonly reasoningEffort?: string } | undefined {
@@ -148,7 +168,7 @@ function readCatalog(value: unknown): ModelCatalogRead | undefined {
 function readTestVerdict(result: unknown): Omit<TestRecord, 'testedAt'> | undefined {
   if (!isPlainRecord(result)) return undefined
   const state = result.state
-  if (state !== 'ok' && state !== 'failed' && state !== 'unknown' && state !== 'credential-missing' && state !== 'unsupported') return undefined
+  if (state !== 'ok' && state !== 'failed' && state !== 'unknown' && state !== 'credential-missing' && state !== 'unsupported' && state !== 'builtin') return undefined
   return {
     state,
     ...(typeof result.latencyMs === 'number' ? { latencyMs: result.latencyMs } : {}),
@@ -188,6 +208,16 @@ export function createModelConfig(
           const configured = presence.ok && isPlainRecord(presence.result) && presence.result.configured === true
           credential = { name: route.apiKeyEnv, configured }
         }
+        // A catalog row carries no models in its profile (ADR-0343): its models are read from
+        // the live route materialization — the set that follows the installed catalog.
+        let modelRow: SavedRoute = route
+        if (route.catalog) {
+          const models = await callBridgeAnswer(callBridge, 'modelConfig/models', [{ route: route.route }])
+          if (models.ok && isPlainRecord(models.result) && Array.isArray(models.result.modelIds)) {
+            const modelIds = models.result.modelIds.filter((id): id is string => typeof id === 'string')
+            modelRow = { ...route, modelIds, modelCount: modelIds.length }
+          }
+        }
         const record = results.get(route.route)
         const test: ModelTestView | null = record === undefined ? null : {
           state: record.state,
@@ -198,7 +228,7 @@ export function createModelConfig(
           current: record.revision !== undefined && record.revision === listed.revision
             && record.credentialConfigured === (credential?.configured ?? false),
         }
-        routes.push({ ...route, credential, test })
+        routes.push({ ...modelRow, credential, test })
       }
       return { state: 'read', routes, namespaceRevision: listed.revision ?? null }
     }
@@ -230,6 +260,23 @@ export function createModelConfig(
       const catalog = readCatalog(answer.result)
       if (catalog === undefined) return { state: 'refused', code: 'bridge-answer-unrecognised', retryable: true }
       return { state: 'catalog', catalog }
+    }
+
+    if (request.action === 'providers') {
+      const answer = await callBridgeAnswer(callBridge, 'modelConfig/providers', [])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: true }
+      const providers = readProviders(answer.result)
+      if (providers === undefined) return { state: 'refused', code: 'bridge-answer-unrecognised', retryable: true }
+      return { state: 'providers', providers }
+    }
+
+    if (request.action === 'save-provider-models') {
+      const provider = request.provider ?? ''
+      const modelIds = request.modelIds ?? []
+      if (provider === '' || modelIds.length === 0) return { state: 'refused', code: 'model-config-selection-invalid', retryable: false }
+      const answer = await callBridgeAnswer(callBridge, 'modelConfig/provider-models', [{ provider, modelIds }])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: answer.code === 'bridge-settings-conflict' }
+      return { state: 'provider-models-saved', provider, modelIds }
     }
 
     if (request.action === 'set-default') {

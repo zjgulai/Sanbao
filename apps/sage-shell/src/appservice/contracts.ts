@@ -729,22 +729,35 @@ export type CredentialOutcome =
   | { readonly state: 'removed', readonly name: string }
   | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
 
-/** ADR-0339: one saved custom model route (an llm-pi-ai provider profile). */
+/** ADR-0339: one saved custom model route (an llm-pi-ai provider profile). ADR-0343: a
+ *  catalog row (`catalog: true`) is the key-only shape — api/baseURL are null and its models
+ *  come from the installed catalog. */
 export interface ModelRouteView {
   readonly route: string
   readonly displayName?: string
-  readonly api: string
-  readonly baseURL: string
+  readonly api: string | null
+  readonly baseURL: string | null
+  readonly catalog: boolean
   readonly apiKeyEnv?: string
   readonly modelCount: number
   readonly modelIds: readonly string[]
   readonly credential: { readonly name: string, readonly configured: boolean } | null
 }
 
+/** ADR-0343: one entry of the installed configurable-provider directory. `declared` false
+ *  means the installed catalog ships this provider and a key-only profile is complete for it. */
+export interface ModelProviderView {
+  readonly provider: string
+  readonly displayName: string
+  readonly declared: boolean
+  readonly error?: string
+}
+
 /** One connectivity-test record bound to the facts it ran against (ticket 018). `current`
- *  means the record's binding revision and credential presence still hold now. */
+ *  means the record's binding revision and credential presence still hold now. `builtin` is
+ *  the ADR-0343 catalog verdict: the resolved models with NO probe performed. */
 export interface ModelTestView {
-  readonly state: 'ok' | 'failed' | 'unknown' | 'credential-missing' | 'unsupported'
+  readonly state: 'ok' | 'failed' | 'unknown' | 'credential-missing' | 'unsupported' | 'builtin'
   readonly latencyMs?: number
   readonly host?: string
   readonly modelIds?: readonly string[]
@@ -762,6 +775,8 @@ export type ModelConfigOutcome =
   | { readonly state: 'removed', readonly route: string }
   | { readonly state: 'tested', readonly route: string, readonly test: ModelTestView }
   | { readonly state: 'catalog', readonly catalog: ModelCatalogRead }
+  | { readonly state: 'providers', readonly providers: readonly ModelProviderView[] }
+  | { readonly state: 'provider-models-saved', readonly provider: string, readonly modelIds: readonly string[] }
   | { readonly state: 'default-set', readonly selection: ModelSelectionRead }
   | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
 
@@ -1857,13 +1872,14 @@ export interface ServiceProviders {
   readonly credentials: (request: { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string }) => Promise<Response>
   /** ADR-0339: the saved-model-routes surface (`list` / `save-route` / `remove-route` / `test-connection`). */
   readonly modelRoutes: (request: {
-    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default' | 'providers' | 'save-provider-models'
     readonly route?: string
     readonly profile?: unknown
     readonly expectedRevision?: number
     readonly provider?: string
     readonly model?: string
     readonly reasoningEffort?: string
+    readonly modelIds?: readonly string[]
   }) => Promise<Response>
   /** Ticket 006: edit or remove one still-pending item (a consumed one is frozen). */
   readonly updatePendingInput: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
