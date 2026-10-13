@@ -349,6 +349,32 @@ body { background: var(--sage-canvas); color: var(--sage-ink); font-family: -app
    product/theme-tokens.ts; the data area shows the named not-wired reason, never rows. */
 .sage-desktop .knowledge-page, .sage-desktop .sites-page { display: flex; flex-direction: column; gap: 16px; padding: 26px 30px; overflow-y: auto; }
 .sage-desktop .knowledge-page h1, .sage-desktop .sites-page h1 { margin: 0; font-size: 24px; font-weight: 500; }
+/* EP-1: design catalogue, not runtime experts or execution grants. */
+.sage-desktop .experts-page { min-width: 0; display: flex; flex-direction: column; gap: var(--sage-density-row-gap); padding: var(--sage-density-main-padding); overflow-y: auto; }
+.sage-desktop .experts-header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: var(--sage-density-row-gap); }
+.sage-desktop .experts-header h1 { margin: 0; font-size: 24px; font-weight: 500; }
+.sage-desktop .experts-header p { margin: 8px 0 0; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .experts-count, .sage-desktop .experts-result-count { font-size: 12px; color: var(--sage-muted); }
+.sage-desktop .experts-tools { min-width: 0; display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: var(--sage-density-row-gap); }
+.sage-desktop .experts-filters { display: flex; flex-wrap: wrap; gap: 4px; }
+.sage-desktop .experts-filters button { min-height: var(--sage-density-control-min-height); padding: 4px 10px; border-radius: 7px; }
+.sage-desktop .experts-filters button[aria-pressed="true"] { color: var(--sage-ink); background: var(--sage-overlay); font-weight: 600; }
+.sage-desktop .experts-search { display: grid; gap: 4px; width: min(280px, 100%); min-width: 0; color: var(--sage-muted); }
+.sage-desktop .experts-search input { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--sage-density-control-min-height); padding: 6px 10px; border: 1px solid var(--sage-border); border-radius: 7px; background: var(--sage-surface); color: var(--sage-ink); font: inherit; }
+.sage-desktop .experts-search input:focus-visible { outline: 2px solid var(--sage-focus); outline-offset: 2px; }
+.sage-desktop .expert-catalogue-note { color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .experts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: var(--sage-density-row-gap); margin: 0; padding: 1px; list-style: none; }
+.sage-desktop .expert-card { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--sage-density-card-padding); border: 0; border-radius: var(--sage-radius); background: var(--sage-surface); box-shadow: var(--sage-shadow); text-align: center; }
+.sage-desktop .expert-avatar { width: 64px; height: 64px; border-radius: 14px; }
+.sage-desktop .expert-alias { margin: 0; font-size: 16px; font-weight: 600; color: var(--sage-ink); overflow-wrap: anywhere; }
+.sage-desktop .expert-title { font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .expert-mission, .sage-desktop .expert-personality { margin: 0; font-size: 12px; color: var(--sage-muted); overflow-wrap: anywhere; }
+.sage-desktop .expert-actions { display: flex; justify-content: center; width: 100%; margin-top: auto; padding-top: var(--sage-density-row-gap); }
+.sage-desktop .expert-actions button { width: 100%; min-height: var(--sage-density-control-min-height); border-radius: 7px; background: var(--sage-overlay); }
+.sage-desktop .expert-create-card { min-width: 0; display: flex; border: 1px dashed var(--sage-border); border-radius: var(--sage-radius); }
+.sage-desktop .expert-create-button { width: 100%; min-height: 230px; padding: var(--sage-density-card-padding); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sage-density-row-gap); }
+.sage-desktop .expert-create-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--sage-overlay); }
+.sage-desktop .experts-empty { display: grid; justify-items: start; gap: var(--sage-density-row-gap); padding: var(--sage-density-card-padding); border: 1px dashed var(--sage-border); border-radius: var(--sage-radius); color: var(--sage-muted); }
 /* VF-2 FV-1: the market tabs are plain text with a bold active state (Qoder live market page);
  * the category chips keep the pill shape with the quaternary-gray active fill (overlay token). */
 .sage-desktop .page-tabs { display: flex; gap: 18px; }

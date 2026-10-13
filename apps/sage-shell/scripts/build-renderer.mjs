@@ -5,10 +5,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { build } from 'esbuild'
+import { assertExpertProjectionCurrent } from '../../../scripts/experts/renderer-assets.mjs'
 
 const shellRoot = fileURLToPath(new URL('..', import.meta.url))
 
-async function bundleRenderer(entry, output, exportName) {
+async function bundleRenderer(entry, output, exportName, assets) {
   const outFile = join(shellRoot, output)
   const result = await build({
     entryPoints: [join(shellRoot, entry)],
@@ -32,6 +33,7 @@ async function bundleRenderer(entry, output, exportName) {
   if (js.includes('<!--')) throw new Error('build-renderer output contains an HTML comment opener')
 
   const payload = `export const ${exportName} = ${JSON.stringify(js)}\n`
+    + (assets === undefined ? '' : `export const SAGE_EXPERT_AVATARS = Object.freeze(${JSON.stringify(assets)})\n`)
   mkdirSync(dirname(outFile), { recursive: true })
   // Parallel window probes build the same output; each needs its own atomic write.
   const tmpFile = `${outFile}.${process.pid}.${Date.now().toString(36)}.tmp`
@@ -40,5 +42,6 @@ async function bundleRenderer(entry, output, exportName) {
   process.stdout.write(`build-renderer: wrote ${outFile} (bundle ${Buffer.byteLength(js)} bytes)\n`)
 }
 
+const { avatarAssets } = assertExpertProjectionCurrent()
 await bundleRenderer('src/product/app/main.tsx', 'lib/product/app-bundle.js', 'SAGE_APP_BUNDLE')
-await bundleRenderer('src/product/app/desktop/main.tsx', 'lib/main/desktop-bundle.js', 'SAGE_DESKTOP_BUNDLE')
+await bundleRenderer('src/product/app/desktop/main.tsx', 'lib/main/desktop-bundle.js', 'SAGE_DESKTOP_BUNDLE', avatarAssets)

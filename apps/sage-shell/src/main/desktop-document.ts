@@ -1,6 +1,6 @@
 import { isExactSageAppUrl, SAGE_DOCUMENT_CSP } from '../product/contracts.js'
 import { renderSageDensityTokenCss, renderSageThemeTokenCss } from '../product/theme-tokens.js'
-import { SAGE_DESKTOP_BUNDLE } from './desktop-bundle.js'
+import { SAGE_DESKTOP_BUNDLE, SAGE_EXPERT_AVATARS } from './desktop-bundle.js'
 
 export function assertDesktopBundleAvailable(): void {
   if (SAGE_DESKTOP_BUNDLE.length === 0) throw new Error('Sage desktop build is missing. Run the shell build before launch.')
@@ -11,6 +11,16 @@ export function serveDesktopDocument(request: Request): Response | null {
   const headers = { 'cache-control': 'no-store', 'content-security-policy': SAGE_DOCUMENT_CSP }
   if (!isExactSageAppUrl(url)) return new Response(null, { status: 403, headers })
   if (url.pathname.startsWith('/.sage/')) return null
+  if (url.pathname.startsWith('/assets/experts/') && Object.hasOwn(SAGE_EXPERT_AVATARS, url.pathname)) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response(null, { status: 405, headers: { ...headers, allow: 'GET, HEAD' } })
+    }
+    // Only build-sealed bytes are reachable; request paths never become filesystem paths.
+    const bytes = Buffer.from(SAGE_EXPERT_AVATARS[url.pathname]!, 'base64')
+    return new Response(request.method === 'HEAD' ? null : bytes, {
+      headers: { ...headers, 'content-type': 'image/webp', 'content-length': String(bytes.length), 'x-content-type-options': 'nosniff' },
+    })
+  }
   if (url.pathname !== '/' && url.pathname !== '/index.html') return new Response(null, { status: 404, headers })
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response(null, { status: 405, headers: { ...headers, allow: 'GET, HEAD' } })

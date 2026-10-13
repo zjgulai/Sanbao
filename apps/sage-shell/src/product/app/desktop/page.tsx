@@ -20,6 +20,7 @@ import type { DesktopArtifacts } from './client.js'
 import { listDesktopFileCandidates, type DesktopFileCandidate } from './files.js'
 import { McpForm } from './mcp-form.js'
 import { ExtensionsMarketView } from './extensions-market.js'
+import { ExpertsPage } from './experts.js'
 import { DEVICE_PREFERENCE_OPTIONS, type DevicePreferencePatch } from './device-preferences.js'
 import { DesktopSessionView, TurnProcessFooter } from './session-view.js'
 import { closeDesktopArtifact, openDesktopArtifact, retryDesktopArtifact, setDesktopArtifactFullscreen, setDesktopArtifactWindow } from './artifacts.js'
@@ -28,9 +29,9 @@ import { readDesktopTerminal } from './terminal.js'
 
 // Sanbao b861d04: ProductPages.tsx:31–36,73–75 and Controls.tsx:199–234.
 // Keep the research desktop's structure, not its routes, fixtures or optimistic send/clear behavior.
-type Page = '新任务' | '通用' | '搜索' | '工作区' | '知识中心' | '站点' | '自动化' | '扩展' | '账号与设置' | '移动端' | '模型' | '运行模式'
+type Page = '新任务' | '通用' | '搜索' | '工作区' | '专家' | '知识中心' | '站点' | '自动化' | '扩展' | '账号与设置' | '移动端' | '模型' | '运行模式'
 const navigation = [
-  { label: '知识中心', icon: 'book' }, { label: '站点', icon: 'globe' },
+  { label: '专家', icon: 'bolt' }, { label: '知识中心', icon: 'book' }, { label: '站点', icon: 'globe' },
   { label: '自动化', icon: 'clock' }, { label: '扩展', icon: 'grid' },
 ] as const
 const contextItems = [
@@ -38,7 +39,7 @@ const contextItems = [
   { label: '站点', icon: 'globe' }, { label: '工作区文件', icon: 'folder' },
   { label: '插件', icon: 'grid' }, { label: '技能', icon: 'bolt' },
 ] as const
-const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '账号与设置' | '扩展' | '知识中心' | '站点' | '运行模式' | '模型'>, string> = {
+const outstanding: Record<Exclude<Page, '新任务' | '工作区' | '搜索' | '专家' | '账号与设置' | '扩展' | '知识中心' | '站点' | '运行模式' | '模型'>, string> = {
   通用: '通用任务模式尚未接通；当前选择只改变本地浏览页面。',
   自动化: '自动化尚未接通；没有安排任务或启动定时运行。',
   移动端: '移动端入口尚未接通；没有打开下载页面。',
@@ -1218,6 +1219,8 @@ export function DesktopPage({
               onArtifactClose={() => runArtifactAction(closeDesktopArtifact)}
               onArtifactFullscreen={(on) => runArtifactAction(() => setDesktopArtifactFullscreen(on))}
               onArtifactWindow={(action) => runArtifactAction(() => setDesktopArtifactWindow(action))} />)
+          : page === '专家'
+            ? <ExpertsPage />
           : page === '扩展'
             ? <ExtensionsPage />
           : page === '知识中心'

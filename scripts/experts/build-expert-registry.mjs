@@ -121,4 +121,5 @@ for (const expert of registry.experts) {
 }
 
 writeFileSync(join(args.out, 'expert-registry.json'), JSON.stringify(registry, null, 1) + '\n')
+
 console.log(`expert-registry.json written: ${registry.counts.total} experts (${registry.counts.managers} MGT + ${registry.counts.agents} AGT), ${copied} avatars`)

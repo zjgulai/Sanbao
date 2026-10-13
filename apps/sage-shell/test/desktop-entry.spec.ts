@@ -2,8 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { SAGE_DOCUMENT_CSP } from '../src/product/contracts.js'
 
-const bundle = vi.hoisted(() => ({ script: 'window.desktopTest = true;' }))
-vi.mock('../src/main/desktop-bundle.js', () => ({ get SAGE_DESKTOP_BUNDLE() { return bundle.script } }))
+const bundle = vi.hoisted(() => ({ script: 'window.desktopTest = true;', avatars: {} as Record<string, string> }))
+vi.mock('../src/main/desktop-bundle.js', () => ({
+  get SAGE_DESKTOP_BUNDLE() { return bundle.script },
+  get SAGE_EXPERT_AVATARS() { return bundle.avatars },
+}))
 import { assertDesktopBundleAvailable, serveDesktopDocument } from '../src/main/desktop-document.js'
 
 const request = (path: string, method = 'GET') => new Request(`dsh-app://app${path}`, { method })
@@ -20,6 +23,42 @@ describe('default desktop document', () => {
       expect(html).toContain('<title>Sage</title>')
       expect(html).toContain('window.desktopTest = true;')
       expect(html).not.toMatch(/state-directory|review-bar|sage-matter-region|sage-sanbao:\/\//)
+    }
+  })
+
+  it('serves exactly the 53 bundled expert avatars under the unchanged CSP', async () => {
+    const { loadExpertRendererAssets } = await import('../../../scripts/experts/renderer-assets.mjs')
+    const { avatarAssets } = loadExpertRendererAssets()
+    bundle.avatars = avatarAssets
+    try {
+      expect(Object.keys(avatarAssets)).toHaveLength(53)
+      for (const [path, base64] of Object.entries(avatarAssets) as Array<[string, string]>) {
+        const response = serveDesktopDocument(request(path))!
+        expect(response.status, path).toBe(200)
+        expect(response.headers.get('content-type')).toBe('image/webp')
+        expect(response.headers.get('content-security-policy')).toBe(SAGE_DOCUMENT_CSP)
+        expect(Buffer.from(await response.arrayBuffer())).toEqual(Buffer.from(base64, 'base64'))
+        const head = serveDesktopDocument(request(path, 'HEAD'))!
+        expect(head.status).toBe(200)
+        expect(head.body).toBeNull()
+        expect(Number(head.headers.get('content-length'))).toBe(Buffer.from(base64, 'base64').length)
+        expect(serveDesktopDocument(request(path, 'POST'))?.status).toBe(405)
+      }
+      for (const path of [
+        '/assets/experts/avatars/agt-999/light/list-64.webp',
+        '/assets/experts/avatars/agt-001/dark/list-64.webp',
+        '/assets/experts/avatars/agt-001/light/detail-256.webp',
+        '/assets/experts/avatars/%61gt-001/light/list-64.webp',
+        '/assets/experts/avatars/agt-001%2flight/list-64.webp',
+        '/assets/experts/avatars/..%2fexpert-registry.json',
+        '/assets/experts/avatars/AGT-001/light/list-64.webp',
+        '/assets/experts/avatars/agt-001/light/list-64.webp/',
+        '/assets/experts/toString',
+      ]) expect(serveDesktopDocument(request(path))?.status, path).toBe(404)
+      expect(serveDesktopDocument(request('/assets/experts/avatars/agt-001/light/list-64.webp?raw=1'))?.status).toBe(403)
+      expect(serveDesktopDocument(request('/.sage/experts'))).toBeNull()
+    } finally {
+      bundle.avatars = {}
     }
   })
 
