@@ -37,7 +37,7 @@ import type { RuntimeEffectiveObservation } from '../src/protocol.js'
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MATTER_ID = 'matter:sage.dispatch-1'
 const REVISION_ID = 'revision:sage.dispatch-1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:ad9537216c01119ebc2527e52d29c664744f282f1bf513f30797e0b17ed5fdb7'
 
 const reobs = JSON.parse(readFileSync(join(APP_ROOT, 'test/support/reobs-runtime-inventory.json'), 'utf8')) as {
   kind: string
@@ -537,7 +537,7 @@ describe('the ten-step chain answers real operations end to end', () => {
         // The three control scopes (ADR-0317 stage 2): same pairing, their own shipped semantics.
         {
           ruleId: 'rule:sage-session-approval-v1',
-          targetSemanticDigest: 'urn:sage:target-semantic:sha256:c276cbb96f3805ae3c8fc6f95953b4c7d580d8bdfa0a62054fe5f76089e6743e',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:d42d1c2c07cc75d51007d3632b7e392e23946f15b6b3ef1f37bb5a7147488c07',
           runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
           outcome: 'equivalent',
           reasonCode: 'owner-approved-exact-pair',
@@ -545,7 +545,7 @@ describe('the ten-step chain answers real operations end to end', () => {
         },
         {
           ruleId: 'rule:sage-session-pending-v1',
-          targetSemanticDigest: 'urn:sage:target-semantic:sha256:06d4deb671feb6d8d9e6c2aa8398b39d1659f5462be49249f86af5d175740ae8',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:19cf214233a2071855ace1f7dfdbfde79ab973b5337e25a6afb01183c6352ca6',
           runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
           outcome: 'equivalent',
           reasonCode: 'owner-approved-exact-pair',
@@ -553,7 +553,7 @@ describe('the ten-step chain answers real operations end to end', () => {
         },
         {
           ruleId: 'rule:sage-session-queue-v1',
-          targetSemanticDigest: 'urn:sage:target-semantic:sha256:b02e2848a05997886b7789990b7e7cba8d3b4e52610101f8c9f14f4a1d20f77c',
+          targetSemanticDigest: 'urn:sage:target-semantic:sha256:a05402882656c1b894c8687c9978e011ee08de3861cb7b2fc392c6703597f16f',
           runtimeDescriptorDigest: reobs.descriptor.runtimeDescriptorDigest,
           outcome: 'equivalent',
           reasonCode: 'owner-approved-exact-pair',

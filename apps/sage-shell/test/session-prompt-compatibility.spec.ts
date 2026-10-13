@@ -35,10 +35,10 @@ import {
 } from '../src/security/compatibility-matrix-provider.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
-const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:418397647867d76ceb262f9b40b855857b32f16cb09796ee6f947c974494699b'
-const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:1178d1ad93e13563d86204ea8de70471c1f25c40eb3920ff82c66d8340384899'
+const MATRIX_ID = 'urn:sage:compatibility-matrix:sha256:acae2ffe957fca0522a1a5de67a0922e489fb7def2b30d44b911be3da7c251b8'
+const BUNDLE_ID = 'urn:sage:compatibility-matrix-bundle:sha256:b720623677fcca8ee00f59f75f5d7643f7cc1fbf0b3e46fb81c220fc38f06201'
 const REVOCATION_SOURCE_ID = 'urn:sage:compatibility-matrix-revocation-source:sha256:9837c233d165e19c205a31c80962917102b16768475ecef3e03bd5806ae2d5a1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:ad9537216c01119ebc2527e52d29c664744f282f1bf513f30797e0b17ed5fdb7'
 
 const reobs = JSON.parse(readFileSync(new URL('./support/reobs-runtime-inventory.json', import.meta.url), 'utf8')) as {
   kind: string

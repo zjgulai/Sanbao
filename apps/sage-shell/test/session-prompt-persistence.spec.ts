@@ -51,7 +51,7 @@ const REVISION_ID = 'revision:sage.persist-1'
 const ATTEMPT_ID = 'attempt:sage.persist-fixture-1'
 const EVALUATION_ID = 'evaluation:sage.persist-fixture-1'
 const RULE_ID = 'rule:sage-session-prompt-v1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:ad9537216c01119ebc2527e52d29c664744f282f1bf513f30797e0b17ed5fdb7'
 
 const reobs = JSON.parse(readFileSync(join(APP_ROOT, 'test/support/reobs-runtime-inventory.json'), 'utf8')) as {
   kind: string

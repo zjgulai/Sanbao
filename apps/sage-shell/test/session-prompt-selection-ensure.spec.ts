@@ -38,7 +38,7 @@ import type { RuntimeEffectiveObservation } from '../src/protocol.js'
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MATTER_ID = 'matter:sage.ensure-1'
-const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:429a9a34c9629ddf015a6059820a00e2e22d53120c5598159c4eb921be898e55'
+const TARGET_SEMANTIC_DIGEST = 'urn:sage:target-semantic:sha256:ad9537216c01119ebc2527e52d29c664744f282f1bf513f30797e0b17ed5fdb7'
 
 const reobs = JSON.parse(readFileSync(join(APP_ROOT, 'test/support/reobs-runtime-inventory.json'), 'utf8')) as {
   kind: string
