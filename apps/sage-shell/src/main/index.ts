@@ -88,6 +88,7 @@ import { createTokenVault } from './token-vault.js'
 import { createIdentityRegistry } from './identity-registry.js'
 import { createSageAppServiceProviders, resolveFixtureProjection } from './app-service.js'
 import { createCredentials } from './instance-credential.js'
+import { createModelConfig } from './model-config.js'
 import { createHostLiveInventoryProjectionProvider } from './runtime-inventory.js'
 import { createRuntimeInventoryProvider, type RuntimeInventoryResult } from './runtime-inventory-provider.js'
 import { createActiveMatterContext } from './active-matter-context.js'
@@ -1221,6 +1222,11 @@ async function main(paths: SagePaths): Promise<void> {
         // ADR-0334: the instance credential surface. Signed-out sessions are refused by the port
         // itself; the value crosses route → port → host without ever being read back.
         credentials: createCredentials(
+          (endpoint, payload) => host.bridgeCall(endpoint, payload),
+          () => vault.identitySession(),
+        ),
+        // ADR-0339: the saved-model-routes surface (same identity gate as the credential port).
+        modelRoutes: createModelConfig(
           (endpoint, payload) => host.bridgeCall(endpoint, payload),
           () => vault.identitySession(),
         ),

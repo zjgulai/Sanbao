@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import type { SageViewState } from '../product/contracts.js'
 import type { SageMatterViewState } from '../product/view-state.js'
-import type { ActionConfirmationPrepareOutcome, ActionItemOutcome, ActionItemsStatus, ApprovalAnswerOutcome, ApprovalStatus, ApprovalWithdrawOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactStatus, ArtifactWindowOutcome, AttachmentControlOutcome, AttachmentPickOutcome, AttachmentStatus, AttachmentUploadOutcome, CapabilityStatus, ClarificationAnswerOutcome, ClarificationStatus, CorrectionOutcome, CredentialEntryView, CredentialOutcome, DraftConfirmationOutcome, DraftConversionRequest, DraftConvertOutcome, DraftReconcileOutcome, DraftStatus, DraftView, EditDraftCreateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftStatus, EditDraftUpdateOutcome, EditDraftWritebackOutcome, ExternalLinkOutcome, FeedbackReceiptView, FeedbackStatus, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, InputPluginView, InputSelectionOutcome, InputSelectionsStatus, MatterAdminOutcome, MatterAdminStatus, MatterBatchResult, MatterGroupsOutcome, MatterGroupsStatus, MatterLinkState, MatterListState, MatterRenameResult, ModelConfigStatus, ModelQueueStatus, PlanModeSwitchReceipt, PlanOutcome, PlanStepExecuteOutcome, PlanStepOutcome, PlansStatus, PreferencesSaveOutcome, PreferencesStatus, ProjectOutcome, ProjectsStatus, QueueItemOutcome, ReadoutProvider, ReadoutState, RunLogOutcome, RunMonitorView, SageServiceState, SearchOutcome, ServiceCommandOutcome, ServiceCommandStatus, ServiceProviders, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionAnchorsStatus, SessionAttemptStatus, SessionChannelStatus, SessionControlOutcome, SessionEditRecordView, SessionEditResendOutcome, SessionEditSaveOutcome, SessionEditVerifyOutcome, SessionEditsStatus, SessionHistoryStatus, SessionPlanModeStatus, SessionRunDetailOutcome, SessionRunListOutcome, SessionSendOutcome, SettingsLeaf, SideChatCreateOutcome, SideChatReadOutcome, SideChatReturnOutcome, SideChatSendOutcome, SideChatsStatus, SiteTemplatesStatus, TerminalReadOutcome, TerminalStatus, ToolResultsStatus, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest } from './contracts.js'
+import type { ActionConfirmationPrepareOutcome, ActionItemOutcome, ActionItemsStatus, ApprovalAnswerOutcome, ApprovalStatus, ApprovalWithdrawOutcome, ArtifactCloseOutcome, ArtifactFullscreenOutcome, ArtifactObserveOutcome, ArtifactOpenOutcome, ArtifactStatus, ArtifactWindowOutcome, AttachmentControlOutcome, AttachmentPickOutcome, AttachmentStatus, AttachmentUploadOutcome, CapabilityStatus, ClarificationAnswerOutcome, ClarificationStatus, CorrectionOutcome, CredentialEntryView, CredentialOutcome, DraftConfirmationOutcome, DraftConversionRequest, DraftConvertOutcome, DraftReconcileOutcome, DraftStatus, DraftView, EditDraftCreateOutcome, EditDraftDiffOutcome, EditDraftPrepareWritebackOutcome, EditDraftStatus, EditDraftUpdateOutcome, EditDraftWritebackOutcome, ExternalLinkOutcome, FeedbackReceiptView, FeedbackStatus, FileCandidateStatus, FileReferenceOutcome, FileReferenceRecord, FileReferenceUse, InputPluginView, InputSelectionOutcome, InputSelectionsStatus, MatterAdminOutcome, MatterAdminStatus, MatterBatchResult, MatterGroupsOutcome, MatterGroupsStatus, MatterLinkState, MatterListState, MatterRenameResult, ModelConfigOutcome, ModelConfigStatus, ModelQueueStatus, PlanModeSwitchReceipt, PlanOutcome, PlanStepExecuteOutcome, PlanStepOutcome, PlansStatus, PreferencesSaveOutcome, PreferencesStatus, ProjectOutcome, ProjectsStatus, QueueItemOutcome, ReadoutProvider, ReadoutState, RunLogOutcome, RunMonitorView, SageServiceState, SearchOutcome, ServiceCommandOutcome, ServiceCommandStatus, ServiceProviders, SessionAnchorListOutcome, SessionAnchorLocateOutcome, SessionAnchorsStatus, SessionAttemptStatus, SessionChannelStatus, SessionControlOutcome, SessionEditRecordView, SessionEditResendOutcome, SessionEditSaveOutcome, SessionEditVerifyOutcome, SessionEditsStatus, SessionHistoryStatus, SessionPlanModeStatus, SessionRunDetailOutcome, SessionRunListOutcome, SessionSendOutcome, SettingsLeaf, SideChatCreateOutcome, SideChatReadOutcome, SideChatReturnOutcome, SideChatSendOutcome, SideChatsStatus, SiteTemplatesStatus, TerminalReadOutcome, TerminalStatus, ToolResultsStatus, WorkspaceAdoptOutcome, WorkspaceListStatus, WorkspaceMutationOutcome, WorkspaceMutationRequest } from './contracts.js'
 import { DEFAULT_DISPLAY_PREFERENCE_VALUES } from './contracts.js'
 import type {
   ActiveMatterContextStatus,
@@ -251,6 +251,14 @@ export interface ServiceOptions {
       | { readonly state: 'saved', readonly name: string }
       | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
     >
+  /** ADR-0339: the saved-model-routes port (list / save-route / remove-route / test-connection);
+   *  distinct from the read-only `modelConfig` leaf (Ticket 017) above. */
+  readonly modelRoutes?: (request: {
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+    readonly route?: string
+    readonly profile?: unknown
+    readonly expectedRevision?: number
+  }) => ModelConfigOutcome | Promise<ModelConfigOutcome>
   /** Ticket 006: stop/resume and the pending-item edits. */
   readonly sessionStop?: (request: { readonly matterRef: string }) => Promise<SessionControlOutcome>
   readonly sessionResume?: (request: { readonly matterRef: string, readonly workspaceRoot: string }) => Promise<SessionControlOutcome>
@@ -821,6 +829,19 @@ export function createUnavailableFirstService(runtime: SageViewState | null, opt
         return serviceJson({ state: 'refused', code: save === undefined ? 'preferences-unavailable' : 'preferences-write-failed' } satisfies PreferencesSaveOutcome, 200)
       }
       return serviceJson({ state: 'saved', preferences: saved } satisfies PreferencesSaveOutcome, 200)
+    },
+    async modelRoutes(request): Promise<Response> {
+      const port = options.modelRoutes
+      if (port === undefined) {
+        return serviceJson({ state: 'refused', code: 'model-config-unavailable', retryable: true } satisfies ModelConfigOutcome, 200)
+      }
+      let outcome: ModelConfigOutcome
+      try {
+        outcome = await port(request)
+      } catch {
+        outcome = { state: 'refused', code: 'model-config-failed', retryable: true }
+      }
+      return serviceJson(outcome, 200)
     },
     async credentials(request): Promise<Response> {
       const port = options.credentials

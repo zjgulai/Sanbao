@@ -728,6 +728,39 @@ export type CredentialOutcome =
   | { readonly state: 'saved', readonly name: string }
   | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
 
+/** ADR-0339: one saved custom model route (an llm-pi-ai provider profile). */
+export interface ModelRouteView {
+  readonly route: string
+  readonly displayName?: string
+  readonly api: string
+  readonly baseURL: string
+  readonly apiKeyEnv?: string
+  readonly modelCount: number
+  readonly credential: { readonly name: string, readonly configured: boolean } | null
+}
+
+/** One connectivity-test record bound to the facts it ran against (ticket 018). `current`
+ *  means the record's binding revision and credential presence still hold now. */
+export interface ModelTestView {
+  readonly state: 'ok' | 'failed' | 'unknown' | 'credential-missing' | 'unsupported'
+  readonly latencyMs?: number
+  readonly host?: string
+  readonly modelIds?: readonly string[]
+  readonly testedAt: string
+  readonly current: boolean
+}
+
+export interface ModelConfigRouteRead extends ModelRouteView {
+  readonly test: ModelTestView | null
+}
+
+export type ModelConfigOutcome =
+  | { readonly state: 'read', readonly routes: readonly ModelConfigRouteRead[], readonly namespaceRevision: number | null }
+  | { readonly state: 'saved', readonly route: string }
+  | { readonly state: 'removed', readonly route: string }
+  | { readonly state: 'tested', readonly route: string, readonly test: ModelTestView }
+  | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
+
 /** The one defaults literal: the store and the unavailable-first fallback both read it. */
 export const DEFAULT_DISPLAY_PREFERENCE_VALUES: DisplayPreferenceValues = {
   theme: 'system',
@@ -1798,6 +1831,13 @@ export interface ServiceProviders {
   readonly savePreferences: (request: Partial<DisplayPreferenceValues>) => Promise<Response>
   /** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
   readonly credentials: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<Response>
+  /** ADR-0339: the saved-model-routes surface (`list` / `save-route` / `remove-route` / `test-connection`). */
+  readonly modelRoutes: (request: {
+    readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+    readonly route?: string
+    readonly profile?: unknown
+    readonly expectedRevision?: number
+  }) => Promise<Response>
   /** Ticket 006: edit or remove one still-pending item (a consumed one is frozen). */
   readonly updatePendingInput: (request: { readonly action: 'edit', readonly itemId: string, readonly text: string } | { readonly action: 'remove', readonly itemId: string }) => Promise<Response>
   /** Ticket 014: pick (candidate only), upload the sealed version, or cancel/remove one item. */

@@ -19,7 +19,8 @@
     "agents",
     "sageApprovalRelay",
     "terminals",
-    "credentials"
+    "credentials",
+    "llm"
    ]
   }
  ]

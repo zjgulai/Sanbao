@@ -170,6 +170,7 @@ describe('matter projection slot (WT-02D.1)', () => {
       'listFileCandidates',
       'login',
       'logout',
+    'modelRoutes',
       'mutateWorkspace',
       'observeArtifacts',
       'openArtifact',

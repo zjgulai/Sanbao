@@ -89,23 +89,23 @@ const cancelCheck = (patch = {}) => checkSageRouteAuthority({
 })
 const expectNamedFailure = (result, needle) => {
   assert.equal(result.status, 'fail', JSON.stringify(result))
-  assert.equal(result.expected, 63)
+  assert.equal(result.expected, 64)
   assert.equal(result.expected, result.checked + result.skipped + result.failed)
   assert.ok(result.violations.some((violation) => violation.includes(needle)), JSON.stringify(result.violations))
 }
 
-test('current 63-route registry matches source without claiming product availability', () => {
+test('current 64-route registry matches source without claiming product availability', () => {
   const result = check()
   assert.equal(result.status, 'pass', JSON.stringify(result))
   assert.deepEqual(
     { expected: result.expected, discovered: result.discovered, checked: result.checked, skipped: result.skipped, failed: result.failed },
-    { expected: 63, discovered: 63, checked: 63, skipped: 0, failed: 0 },
+    { expected: 64, discovered: 64, checked: 64, skipped: 0, failed: 0 },
   )
   assert.match(result.note, /15 read-only routes enter projection-read admission/)
   assert.match(result.note, /2 local-system routes enter device-local admission/)
   assert.match(result.note, /19 protected-effect routes enter unavailable-first admission/)
-  assert.match(result.note, /17 protected-effect bypasses remain registered as violations/)
-  assert.match(result.note, /11 direct-provider bypasses/)
+  assert.match(result.note, /18 protected-effect bypasses remain registered as violations/)
+  assert.match(result.note, /12 direct-provider bypasses/)
   assert.match(result.note, /file-reference is the only admitted opaque resolver/)
   assert.match(result.note, /rides the real custodian over the Sage-owned authoritative store/)
   assert.match(result.note, /evaluates the real Identity \/ Policy step for the registered session\.send/)

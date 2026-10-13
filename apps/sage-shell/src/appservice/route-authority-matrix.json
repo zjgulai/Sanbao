@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "sourceCommit": "eeff8967190815c7b5018f7d11b748818d487d37",
   "denominator": {
-    "expected": 63,
+    "expected": 64,
     "sourcePath": "apps/sage-shell/src/appservice/route-skeleton.ts",
     "constantPattern": "^const SAGE_.*_PATH"
   },
@@ -1153,6 +1153,35 @@
       "runtimeLevel": "L4 local device state; the main-owned credential port gates caller binding, identity session, name allowlist and value grammar, but the route is not a member of any registered protected-effect admission family",
       "providers": [
         "credentials"
+      ],
+      "runCommand": {
+        "required": true,
+        "actual": false
+      },
+      "unsupportedOperations": [],
+      "currentAuthority": {
+        "status": "violation",
+        "mode": "direct-provider-bypass"
+      }
+    },
+    {
+      "sourceConstant": "SAGE_MODEL_CONFIG_PATH",
+      "path": "/.sage/model-config",
+      "method": "POST",
+      "classification": "protected-effect",
+      "policyProfile": "business-command",
+      "operations": [
+        "list",
+        "save-route",
+        "remove-route",
+        "test-connection"
+      ],
+      "callerBinding": "CB1",
+      "activeContext": "device-local saved model routes (llm-pi-ai custom provider profiles); no matter scope",
+      "persistence": "the config-editor settings document at the Sage root (cordis.settings.patch.yml); path-addressed writes; credential values never ride this route",
+      "runtimeLevel": "L4 local device state; the main-owned port gates the identity session, then path-addressed settings writes and a saved-route-only connectivity test ride the bridge",
+      "providers": [
+        "modelRoutes"
       ],
       "runCommand": {
         "required": true,

@@ -74,6 +74,8 @@ const SAGE_FEEDBACK_PATH = '/.sage/feedback'
 const SAGE_PREFERENCES_PATH = '/.sage/preferences'
 /** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
 const SAGE_CREDENTIALS_PATH = '/.sage/credentials'
+/** ADR-0339: the saved-model-routes surface (list / save-route / remove-route / test-connection). */
+const SAGE_MODEL_CONFIG_PATH = '/.sage/model-config'
 /** Ticket 014: the attachment chain — pick (candidate only), upload the sealed version, cancel. */
 const SAGE_ATTACHMENT_PICK_PATH = '/.sage/attachments/pick'
 const SAGE_ATTACHMENT_UPLOAD_PATH = '/.sage/attachments/upload'
@@ -274,6 +276,19 @@ export async function handleSageServiceRequest(request: Request, deps: ServiceDe
 
 
   
+
+  if (url.pathname === SAGE_MODEL_CONFIG_PATH) {
+    if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
+    const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    if (contentType !== 'application/json') return transportDenial(415)
+    const body = await readActionBodyWithinLimit(request)
+    if (body === undefined) return transportDenial(413)
+    const parsed = parseModelConfigRequest(body)
+    if (parsed === undefined) {
+      return serviceJson({ code: 'invalid-model-config-request', stage: 'intent', retryable: false, correlation: deps.callerBinding.correlation }, 400)
+    }
+    return deps.providers.modelRoutes(parsed)
+  }
 
   if (url.pathname === SAGE_CREDENTIALS_PATH) {
     if (request.method !== 'POST') return transportDenial(405, { allow: 'POST' })
@@ -948,6 +963,70 @@ function parseCredentialRequest(body: string): { readonly action: 'describe' | '
   if (typeof secret !== 'string' || secret.trim() !== secret || secret.length < 8 || secret.length > 512
     || /[\u0000-\u001f\u007f]/u.test(secret)) return undefined
   return { action, name, value: secret }
+}
+
+/** ADR-0339 grammar mirror: exact key sets per action, the route name grammar, the API enum,
+ *  an http(s) URL with no credentials/query/fragment, and 1..64 hand-entered model ids. The host
+ *  re-checks the whole profile before it reaches the settings document. */
+function parseModelConfigRequest(body: string): {
+  readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection'
+  readonly route?: string
+  readonly profile?: unknown
+  readonly expectedRevision?: number
+} | undefined {
+  let value: unknown
+  try { value = JSON.parse(body) } catch { return undefined }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const action = record.action
+  if (action !== 'list' && action !== 'save-route' && action !== 'remove-route' && action !== 'test-connection') return undefined
+  const keys = Object.keys(record)
+  const allowed = action === 'list'
+    ? ['action']
+    : action === 'save-route'
+      ? ['action', 'route', 'profile', 'expectedRevision']
+      : action === 'remove-route'
+        ? ['action', 'route', 'expectedRevision']
+        : ['action', 'route']
+  if (!keys.every((key) => allowed.includes(key))) return undefined
+  const revision = record.expectedRevision
+  if (revision !== undefined && (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0)) return undefined
+  if (action === 'list') return { action }
+  const route = record.route
+  if (typeof route !== 'string' || route === '' || route.length > 64 || !/^[a-z][a-z0-9-]*$/u.test(route)) return undefined
+  if (action === 'remove-route') {
+    return { action, route, ...(revision === undefined ? {} : { expectedRevision: revision }) }
+  }
+  if (action === 'test-connection') return { action, route }
+  const profile = record.profile
+  if (profile === null || typeof profile !== 'object' || Array.isArray(profile)) return undefined
+  const fields = profile as Record<string, unknown>
+  const profileKeys = Object.keys(fields)
+  if (!profileKeys.every((key) => ['displayName', 'api', 'baseURL', 'apiKeyEnv', 'models'].includes(key))) return undefined
+  if (fields.api !== 'openai-completions' && fields.api !== 'openai-responses' && fields.api !== 'anthropic-messages') return undefined
+  const baseURL = fields.baseURL
+  if (typeof baseURL !== 'string' || baseURL !== baseURL.trim() || baseURL === '' || baseURL.length > 2048) return undefined
+  let parsed: URL
+  try {
+    parsed = new URL(baseURL)
+  } catch {
+    return undefined
+  }
+  if ((parsed.protocol !== 'https:' && parsed.protocol !== 'http:')
+    || parsed.username !== '' || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') return undefined
+  if (fields.displayName !== undefined
+    && (typeof fields.displayName !== 'string' || fields.displayName !== fields.displayName.trim()
+      || fields.displayName === '' || fields.displayName.length > 64)) return undefined
+  if (fields.apiKeyEnv !== undefined
+    && (typeof fields.apiKeyEnv !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/u.test(fields.apiKeyEnv))) return undefined
+  if (!Array.isArray(fields.models) || fields.models.length === 0 || fields.models.length > 64) return undefined
+  for (const model of fields.models) {
+    if (model === null || typeof model !== 'object' || Array.isArray(model)) return undefined
+    const row = model as Record<string, unknown>
+    const id = row.id
+    if (Object.keys(row).length !== 1 || typeof id !== 'string' || id !== id.trim() || id === '' || id.length > 128) return undefined
+  }
+  return { action, route, profile: fields, ...(revision === undefined ? {} : { expectedRevision: revision }) }
 }
 
 function parseSessionControlRequest(body: string, pathname: string): unknown {
