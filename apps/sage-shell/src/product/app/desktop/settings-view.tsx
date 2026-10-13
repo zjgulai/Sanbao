@@ -572,6 +572,8 @@ function ModelsPane({ credential, modelRoutes }: {
   const [notice, setNotice] = useState<string | null>(null)
   const [listRead, setListRead] = useState<ModelRoutesListRead | null>(null)
   const [testingRoute, setTestingRoute] = useState<string | null>(null)
+  const [rowMenu, setRowMenu] = useState<string | null>(null)
+  const [editRoute, setEditRoute] = useState<ModelRouteRead | null>(null)
   const compatible = provider === 'openai-compatible' || provider === 'anthropic-compatible'
   const providerName = PROVIDER_NAMES[provider]
   const wired = modelRoutes !== undefined && compatible
@@ -605,7 +607,67 @@ function ModelsPane({ credential, modelRoutes }: {
     setFormOpen(false)
     setPanel(null)
     setProvider('aliyun')
+    setEditRoute(null)
     resetForm()
+  }
+  const beginEdit = (row: ModelRouteRead): void => {
+    setRowMenu(null)
+    setNotice(null)
+    setEditRoute(row)
+    setProvider(row.api === 'anthropic-messages' ? 'anthropic-compatible' : 'openai-compatible')
+    setApiType(row.api === 'openai-responses' ? 'Responses API' : 'Chat Completions API')
+    setEndpoint(row.baseURL)
+    setModelIds(row.modelIds)
+    setModelDraft('')
+    setKeyDraft('')
+    setPanel(null)
+    setFormOpen(true)
+  }
+  const editRevision = (): number | undefined =>
+    listRead !== null && listRead.kind === 'read' && listRead.namespaceRevision !== null ? listRead.namespaceRevision : undefined
+  const submitEdit = async (): Promise<void> => {
+    if (busy || editRoute === null || modelRoutes === undefined || derived === undefined || modelIds.length === 0) return
+    setBusy(true)
+    setNotice(null)
+    const saved = await modelRoutes.saveRoute({
+      route: editRoute.route,
+      profile: {
+        api: routeApiFor(provider, apiType),
+        baseURL: endpoint.trim(),
+        ...(editRoute.apiKeyEnv === undefined ? {} : { apiKeyEnv: editRoute.apiKeyEnv }),
+        models: modelIds.map(id => ({ id })),
+      },
+      ...(editRevision() === undefined ? {} : { expectedRevision: editRevision() as number }),
+    })
+    if (saved.kind !== 'saved') {
+      setBusy(false)
+      setNotice(routeSaveNotice('配置', saved))
+      return
+    }
+    // The key is only touched when the user typed one: the stored value is never readable, so
+    // an untouched field must never overwrite it.
+    if (keyDraft !== '' && editRoute.apiKeyEnv !== undefined) {
+      const stored = await modelRoutes.saveCredential({ name: editRoute.apiKeyEnv, value: keyDraft })
+      if (stored.kind !== 'saved') {
+        setBusy(false)
+        setNotice(`配置已保存；${routeSaveNotice('凭据', stored)}`)
+        await refresh()
+        return
+      }
+    }
+    setBusy(false)
+    leaveForm()
+    setEditRoute(null)
+    await refresh()
+    setNotice(keyDraft === '' ? '配置已保存；凭据未改动。' : '配置与凭据已保存。')
+  }
+  const unsetCredential = async (row: ModelRouteRead): Promise<void> => {
+    if (modelRoutes === undefined || row.apiKeyEnv === undefined) return
+    setRowMenu(null)
+    setNotice(null)
+    const outcome = await modelRoutes.unsetCredential({ name: row.apiKeyEnv })
+    setNotice(outcome.kind === 'saved' ? `已清除凭据（${row.apiKeyEnv}）。` : routeSaveNotice('清除凭据', outcome))
+    await refresh()
   }
   const addModelId = (): void => {
     const id = modelDraft.trim()
@@ -679,13 +741,30 @@ function ModelsPane({ credential, modelRoutes }: {
             </div>
             <span className={`settings-models-status settings-models-status-${status.tone}`} role="status">{status.label}</span>
             <div className="settings-models-row-actions">
-              <button type="button" className="text-button" aria-label={`测试连接 ${row.route}`}
-                disabled={testingRoute !== null}
-                onClick={() => { void testRoute(row.route) }}>
-                {testingRoute === row.route ? '测试中…' : '测试连接'}
-              </button>
-              <button type="button" className="text-button" aria-label={`删除 ${row.route}`}
-                onClick={() => { void removeRoute(row.route) }}>删除</button>
+              <button type="button" className="text-button" aria-label={`${row.route} 更多操作`}
+                aria-haspopup="menu" aria-expanded={rowMenu === row.route}
+                onClick={() => setRowMenu(rowMenu === row.route ? null : row.route)}>…</button>
+              {rowMenu === row.route
+                ? <>
+                  <div className="model-selector-backdrop" role="presentation" onClick={() => setRowMenu(null)} />
+                  <div className="settings-models-row-menu" role="menu" aria-label={`${row.route} 操作`}
+                    onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setRowMenu(null) } }}>
+                    <button type="button" role="menuitem" aria-label={`编辑 ${row.route}`}
+                      onClick={() => beginEdit(row)}>编辑</button>
+                    <button type="button" role="menuitem" aria-label={`测试连接 ${row.route}`}
+                      disabled={testingRoute !== null}
+                      onClick={() => { setRowMenu(null); void testRoute(row.route) }}>
+                      {testingRoute === row.route ? '测试中…' : '测试连接'}
+                    </button>
+                    {row.apiKeyEnv !== undefined && row.credential?.configured === true
+                      ? <button type="button" role="menuitem" aria-label={`清除凭据 ${row.route}`}
+                        onClick={() => { void unsetCredential(row) }}>清除凭据</button>
+                      : null}
+                    <button type="button" role="menuitem" aria-label={`删除 ${row.route}`}
+                      onClick={() => { setRowMenu(null); void removeRoute(row.route) }}>删除</button>
+                  </div>
+                </>
+                : null}
             </div>
           </li>
         })}
@@ -699,13 +778,13 @@ function ModelsPane({ credential, modelRoutes }: {
     {formOpen && !confirming
       ? <div className="settings-modal-backdrop" role="presentation"
         onKeyDown={event => { if (event.key === 'Escape') closeForm() }}>
-        <div className="settings-modal" role="dialog" aria-modal="true" aria-label="添加模型">
-          <h3>添加模型</h3>
-          <form onSubmit={event => { event.preventDefault(); if (wired) void submitAdd() }}>
+        <div className="settings-modal" role="dialog" aria-modal="true" aria-label={editRoute === null ? '添加模型' : '编辑模型'}>
+          <h3>{editRoute === null ? '添加模型' : `编辑模型 · ${editRoute.route}`}</h3>
+          <form onSubmit={event => { event.preventDefault(); if (editRoute !== null) { void submitEdit() } else if (wired) { void submitAdd() } }}>
             <div className="settings-models-field">
               <label>供应商</label>
               <ModelSelectMenu panel="provider" label="供应商" value={providerName}
-                open={panel === 'provider'} onOpen={() => setPanel('provider')}
+                open={panel === 'provider' && editRoute === null} onOpen={() => { if (editRoute === null) setPanel('provider') }}
                 onClose={() => setPanel(null)}>
                 {PROVIDER_GROUPS.map(group => <div role="group" aria-label={group.group} key={group.group}>
                   <h3>{group.group}</h3>
@@ -816,7 +895,9 @@ function ModelsPane({ credential, modelRoutes }: {
                   <input id="models-api-key" type="password" aria-label="API Key"
                     placeholder="请输入 API Key" value={keyDraft} autoComplete="off" spellCheck={false}
                     onChange={event => setKeyDraft(event.currentTarget.value)} />
-                  <p className="settings-observed-note">此值保存到本机凭据文件层，不回显；保存本身不触发任何供应商请求。</p>
+                  <p className="settings-observed-note">{editRoute === null
+                    ? '此值保存到本机凭据文件层，不回显；保存本身不触发任何供应商请求。'
+                    : '留空则保留现有凭据；填入新值则覆盖。此值不回显。'}</p>
                 </>
                 : <>
                   <input id="models-api-key-readonly" type="password" aria-label="API Key"
@@ -827,12 +908,18 @@ function ModelsPane({ credential, modelRoutes }: {
             {notice !== null ? <p className="settings-observed-note" role="status">{notice}</p> : null}
             <div className="settings-modal-actions">
               <button type="button" className="text-button" aria-label="取消" onClick={closeForm}>取消</button>
-              {wired
-                ? <button type="button" className="text-button" disabled={!canSubmit}
-                  aria-label="校验并添加模型" onClick={() => { void submitAdd() }}>
-                  {busy ? '正在保存…' : '校验并添加模型'}
+              {wired && editRoute !== null
+                ? <button type="button" className="text-button"
+                  disabled={busy || derived === undefined || modelIds.length === 0}
+                  aria-label="保存修改" onClick={() => { void submitEdit() }}>
+                  {busy ? '正在保存…' : '保存修改'}
                 </button>
-                : <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>}
+                : wired
+                  ? <button type="button" className="text-button" disabled={!canSubmit}
+                    aria-label="校验并添加模型" onClick={() => { void submitAdd() }}>
+                    {busy ? '正在保存…' : '校验并添加模型'}
+                  </button>
+                  : <button type="submit" className="text-button" disabled aria-label="校验并添加模型">校验并添加模型</button>}
             </div>
           </form>
         </div>

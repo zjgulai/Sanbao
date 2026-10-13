@@ -177,8 +177,8 @@ export interface SageAppServiceOptions {
   /** Ticket 020: the device preferences read + save halves. */
   readonly preferences?: () => PreferencesStatus
   readonly preferencesSave?: (request: Partial<PreferencesStatus['requested']>) => PreferencesStatus | undefined
-  /** ADR-0334: the instance credential port (`describe` / `set`); values are write-only. */
-  readonly credentials?: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<CredentialOutcome>
+  /** ADR-0334: the instance credential port (`describe` / `set` / `unset`); values are write-only. */
+  readonly credentials?: (request: { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string }) => Promise<CredentialOutcome>
   /** ADR-0339: the saved-model-routes port (list / save-route / remove-route / test-connection). */
   readonly modelRoutes?: (request: {
     readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'

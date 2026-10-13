@@ -32,6 +32,7 @@ export interface ModelRouteRead {
   readonly baseURL: string
   readonly apiKeyEnv?: string
   readonly modelCount: number
+  readonly modelIds: readonly string[]
   readonly credential: ModelRouteCredentialRead | null
   readonly test: ModelRouteTestRead | null
 }
@@ -77,6 +78,7 @@ export interface ModelRoutesController {
   saveRoute(request: { readonly route: string, readonly profile: ModelRouteDraftProfile, readonly expectedRevision?: number }): Promise<ModelRouteSaveOutcome>
   removeRoute(request: { readonly route: string }): Promise<ModelRouteSaveOutcome>
   saveCredential(request: { readonly name: string, readonly value: string }): Promise<ModelRouteSaveOutcome>
+  unsetCredential(request: { readonly name: string }): Promise<ModelRouteSaveOutcome>
   testConnection(route: string): Promise<ModelRouteTestOutcome>
   catalog(): Promise<ModelCatalogOutcome>
   setDefault(request: { readonly provider: string, readonly model: string, readonly reasoningEffort?: string }): Promise<ModelDefaultOutcome>
@@ -145,6 +147,7 @@ export function classifyModelRoutesList(receipt: unknown): ModelRoutesListRead {
       baseURL: candidate.baseURL,
       ...(typeof candidate.apiKeyEnv === 'string' ? { apiKeyEnv: candidate.apiKeyEnv } : {}),
       modelCount: typeof candidate.modelCount === 'number' ? candidate.modelCount : 0,
+      modelIds: Array.isArray(candidate.modelIds) ? candidate.modelIds.filter((id): id is string => typeof id === 'string') : [],
       credential,
       test: readTest(candidate.test),
     })
@@ -220,6 +223,9 @@ export function createModelRoutesController(fetcher: ModelRoutesFetch = fetch): 
     },
     async saveCredential(request): Promise<ModelRouteSaveOutcome> {
       return classifyWrite(await postJson(SAGE_CREDENTIALS_PATH, { action: 'set', name: request.name, value: request.value }, fetcher, SAGE_REQUEST_TIMEOUT_MS))
+    },
+    async unsetCredential(request): Promise<ModelRouteSaveOutcome> {
+      return classifyWrite(await postJson(SAGE_CREDENTIALS_PATH, { action: 'unset', name: request.name }, fetcher, SAGE_REQUEST_TIMEOUT_MS))
     },
     async catalog(): Promise<ModelCatalogOutcome> {
       return readCatalogReceipt(await postJson(SAGE_MODEL_CONFIG_PATH, { action: 'catalog' }, fetcher, SAGE_MODEL_CONFIG_TIMEOUT_MS))

@@ -303,6 +303,7 @@ const APP_CREDENTIAL_NAMES: readonly string[] = ['DEEPSEEK_API_KEY']
 interface CredentialSeam {
   readonly describe: (ref: ReturnType<typeof credentialRef>) => unknown
   readonly set: (ref: ReturnType<typeof credentialRef>, value: string) => Promise<void>
+  readonly unset: (ref: ReturnType<typeof credentialRef>) => Promise<void>
 }
 
 /** ADR-0339: the model-config seam. Hand-declared custom model routes are llm-pi-ai provider
@@ -1199,7 +1200,7 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
   // ADR-0334/0339: the instance credential surface. Addressable names are the fixed app-owned
   // keys PLUS the refs the saved model configuration declares (each custom route's apiKeyEnv) —
   // a name that is neither can never be written or probed. Values stay write-only.
-  if (endpoint === 'credentials/describe' || endpoint === 'credentials/set') {
+  if (endpoint === 'credentials/describe' || endpoint === 'credentials/set' || endpoint === 'credentials/unset') {
     const keys = endpoint === 'credentials/set' ? ['name', 'value'] : ['name']
     const record = readWorkspaceRequest(payload, keys)
     const settingsController = ctx.get('settingsController') as Partial<SettingsWriteSeam> | undefined
@@ -1214,13 +1215,25 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
     // methods read `this` (the store, the watcher), and a bare extracted call dies with
     // "Cannot read properties of undefined" instead of answering (observed in the ADR-0334
     // live run — the stub-based specs never caught it).
-    if (typeof credentials?.describe !== 'function' || (endpoint === 'credentials/set' && typeof credentials.set !== 'function')) {
+    const needsSet = endpoint === 'credentials/set' && typeof credentials?.set !== 'function'
+    const needsUnset = endpoint === 'credentials/unset' && typeof credentials?.unset !== 'function'
+    if (typeof credentials?.describe !== 'function' || needsSet || needsUnset) {
       return { ok: false, code: 'bridge-provider-unavailable' }
     }
     try {
       if (endpoint === 'credentials/describe') {
         const info = await credentials.describe(credentialRef(name))
         return crossable(info)
+      }
+      if (endpoint === 'credentials/unset') {
+        // Removal keeps the same read-only-source guard as the write: an environment layer
+        // cannot be cleared from here, and claiming so would be a silent lie.
+        const info = await credentials.describe(credentialRef(name)) as { readonly configured?: unknown, readonly writable?: unknown }
+        if (info !== null && typeof info === 'object' && info.configured === true && info.writable === false) {
+          return { ok: false, code: 'bridge-credential-readonly-source' }
+        }
+        await credentials.unset!(credentialRef(name))
+        return { ok: true, result: { removed: true } }
       }
       const value = record?.value
       // The value grammar is checked here so nothing malformed reaches the store; the value

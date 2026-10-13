@@ -59,6 +59,7 @@ function stubController(options: {
     saveCredential: saveCredentialMock,
     removeRoute: removeRouteMock,
     testConnection: testConnectionMock,
+    unsetCredential: vi.fn(async () => ({ kind: 'saved' as const })),
   }
   return { controller, listMock, saveRouteMock, saveCredentialMock, removeRouteMock, testConnectionMock }
 }
@@ -208,6 +209,7 @@ describe('ADR-0339: the wired models pane', () => {
         api: 'openai-completions',
         baseURL: 'https://api.example.com/v1',
         modelCount: 1,
+        modelIds: ['m1'],
         credential: { name: 'R_ONE_API_KEY', configured: true },
         test: null,
       }],
@@ -226,10 +228,12 @@ describe('ADR-0339: the wired models pane', () => {
         api: 'openai-completions',
         baseURL: 'https://api.example.com/v1',
         modelCount: 1,
+        modelIds: ['m1'],
         credential: { name: 'R_ONE_API_KEY', configured: true },
         test: { state: 'ok', latencyMs: 88, host: 'api.example.com', testedAt: '2026-10-13T10:00:00.000Z', current: true },
       }],
     }
+    click(button(container, 'r-one 更多操作'))
     await act(async () => { button(container, '测试连接 r-one').click() })
     expect(stub.testConnectionMock).toHaveBeenCalledWith('r-one')
     expect(container.textContent).toContain('测试通过 · 88ms · api.example.com')
@@ -244,6 +248,7 @@ describe('ADR-0339: the wired models pane', () => {
         api: 'openai-completions',
         baseURL: 'https://api.example.com/v1',
         modelCount: 1,
+        modelIds: ['z1'],
         credential: null,
         test: null,
       }],
@@ -251,9 +256,107 @@ describe('ADR-0339: the wired models pane', () => {
     const stub = stubController({ list: () => Promise.resolve(current) })
     const { container } = await mount(stub.controller)
     current = { kind: 'read', routes: [], namespaceRevision: 4 }
+    click(button(container, 'r-gone 更多操作'))
     await act(async () => { button(container, '删除 r-gone').click() })
     expect(stub.removeRouteMock).toHaveBeenCalledWith({ route: 'r-gone' })
     expect(container.textContent).toContain('暂无自定义模型')
+  })
+
+  it('A1: edits an existing route with prefilled fields and keeps the credential untouched when the key stays empty', async () => {
+    const row = {
+      route: 'r-edit',
+      api: 'openai-completions',
+      baseURL: 'https://api.edit.example/v1',
+      apiKeyEnv: 'R_EDIT_API_KEY',
+      modelCount: 1,
+      modelIds: ['m-old'],
+      credential: { name: 'R_EDIT_API_KEY', configured: true },
+      test: null,
+    }
+    const stub = stubController({ list: { kind: 'read', namespaceRevision: 9, routes: [row] } })
+    const { container } = await mount(stub.controller)
+    click(button(container, 'r-edit 更多操作'))
+    click(button(container, '编辑 r-edit'))
+    const dialog = container.querySelector('[role="dialog"][aria-label="编辑模型"]') as HTMLElement
+    expect(dialog).not.toBeNull()
+    expect(dialog.querySelector<HTMLInputElement>('input[aria-label="接口地址（Base URL）"]')!.value).toBe('https://api.edit.example/v1')
+    expect(dialog.textContent).toContain('m-old')
+    expect(dialog.textContent).toContain('留空则保留现有凭据')
+    type(dialog, 'Model ID', 'm-new')
+    click(button(dialog, '添加 Model ID'))
+    await act(async () => { button(dialog, '保存修改').click() })
+    expect(stub.saveRouteMock).toHaveBeenCalledWith({
+      route: 'r-edit',
+      profile: {
+        api: 'openai-completions',
+        baseURL: 'https://api.edit.example/v1',
+        apiKeyEnv: 'R_EDIT_API_KEY',
+        models: [{ id: 'm-old' }, { id: 'm-new' }],
+      },
+      expectedRevision: 9,
+    })
+    expect(stub.saveCredentialMock).not.toHaveBeenCalled()
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.textContent).toContain('配置已保存；凭据未改动。')
+  })
+
+  it('A1: an edit with a typed key overwrites the credential once; a conflict keeps the dialog', async () => {
+    const row = {
+      route: 'r-key',
+      api: 'anthropic-messages',
+      baseURL: 'https://api.key.example',
+      apiKeyEnv: 'R_KEY_API_KEY',
+      modelCount: 1,
+      modelIds: ['k1'],
+      credential: { name: 'R_KEY_API_KEY', configured: true },
+      test: null,
+    }
+    const stub = stubController({ list: { kind: 'read', namespaceRevision: 4, routes: [row] } })
+    const { container } = await mount(stub.controller)
+    click(button(container, 'r-key 更多操作'))
+    click(button(container, '编辑 r-key'))
+    const dialog = container.querySelector('[role="dialog"][aria-label="编辑模型"]') as HTMLElement
+    type(dialog, 'API Key', 'sk-edit-overwrite-0123456789')
+    await act(async () => { button(dialog, '保存修改').click() })
+    expect(stub.saveCredentialMock).toHaveBeenCalledWith({ name: 'R_KEY_API_KEY', value: 'sk-edit-overwrite-0123456789' })
+    expect(container.textContent).toContain('配置与凭据已保存。')
+
+    const conflicting = stubController({
+      list: { kind: 'read', namespaceRevision: 4, routes: [row] },
+      saveRoute: async () => ({ kind: 'refused', code: 'bridge-settings-conflict' }),
+    })
+    const second = await mount(conflicting.controller)
+    click(button(second.container, 'r-key 更多操作'))
+    click(button(second.container, '编辑 r-key'))
+    const conflictDialog = second.container.querySelector('[role="dialog"]') as HTMLElement
+    await act(async () => { button(conflictDialog, '保存修改').click() })
+    expect(second.container.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(conflictDialog.textContent).toContain('版本冲突')
+    expect(conflicting.saveCredentialMock).not.toHaveBeenCalled()
+  })
+
+  it('A1: clears a configured route credential from the row menu and names the source guard', async () => {
+    const row = {
+      route: 'r-clear',
+      api: 'openai-completions',
+      baseURL: 'https://api.clear.example/v1',
+      apiKeyEnv: 'R_CLEAR_API_KEY',
+      modelCount: 1,
+      modelIds: ['c1'],
+      credential: { name: 'R_CLEAR_API_KEY', configured: true },
+      test: null,
+    }
+    let current = { kind: 'read' as const, namespaceRevision: 2, routes: [row] }
+    const unsetMock = vi.fn(async () => ({ kind: 'saved' as const }))
+    const base = stubController({ list: () => Promise.resolve(current) })
+    const controller = { ...base.controller, unsetCredential: unsetMock }
+    const { container } = await mount(controller)
+    current = { kind: 'read', namespaceRevision: 3, routes: [{ ...row, credential: { name: 'R_CLEAR_API_KEY', configured: false } }] }
+    click(button(container, 'r-clear 更多操作'))
+    await act(async () => { button(container, '清除凭据 r-clear').click() })
+    expect(unsetMock).toHaveBeenCalledWith({ name: 'R_CLEAR_API_KEY' })
+    expect(container.textContent).toContain('已清除凭据（R_CLEAR_API_KEY）。')
+    expect(container.textContent).toContain('凭据未设置')
   })
 
   it('counts typed drafts as dirty: cancel asks for confirmation and 放弃更改 clears them', async () => {

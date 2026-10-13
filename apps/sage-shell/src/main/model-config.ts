@@ -66,6 +66,7 @@ interface SavedRoute {
   readonly baseURL: string
   readonly apiKeyEnv?: string
   readonly modelCount: number
+  readonly modelIds: readonly string[]
 }
 
 function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute[], readonly revision: number | undefined } | undefined {
@@ -90,6 +91,9 @@ function savedRoutes(described: unknown): { readonly routes: readonly SavedRoute
       baseURL,
       ...(typeof raw.apiKeyEnv === 'string' ? { apiKeyEnv: raw.apiKeyEnv } : {}),
       modelCount: Array.isArray(raw.models) ? raw.models.length : 0,
+      modelIds: Array.isArray(raw.models)
+        ? raw.models.flatMap((model) => isPlainRecord(model) && typeof model.id === 'string' ? [model.id] : [])
+        : [],
     })
   }
   routes.sort((left, right) => left.route.localeCompare(right.route))

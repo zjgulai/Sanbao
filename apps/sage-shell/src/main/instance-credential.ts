@@ -59,24 +59,29 @@ function describeEntry(name: string, raw: unknown): CredentialEntryView {
 
 export function createCredentials(callBridge: BridgeCaller, identitySession: () => unknown | null) {
   return async (request: {
-    readonly action: 'describe' | 'set'
+    readonly action: 'describe' | 'set' | 'unset'
     readonly name: string
     readonly value?: string
   }): Promise<CredentialOutcome> => {
     if (identitySession() === null) {
       return { state: 'refused', code: 'credential-identity-unavailable', retryable: true }
     }
-    if (!APP_CREDENTIAL_NAMES.includes(request.name)) {
-      return { state: 'refused', code: 'credential-name-unavailable', retryable: false }
-    }
+    // Per-name authorization is the host's call (fixed set ∪ refs declared by saved model
+    // routes); the route parser already enforced the POSIX ref grammar at the boundary. The
+    // earlier fixed-name gate here made declared refs unreachable — caught by the 018-closeout
+    // live proof (the "written but never exercised" class).
     if (request.action === 'describe') {
-      const entries: CredentialEntryView[] = []
-      for (const name of APP_CREDENTIAL_NAMES) {
-        const answer = await callBridgeAnswer(callBridge, 'credentials/describe', [{ name }])
-        if (!answer.ok) return { state: 'refused', code: answer.code, retryable: true }
-        entries.push(describeEntry(name, answer.result))
-      }
-      return { state: 'read', entries }
+      // One requested name per read: the instance card asks for its fixed name, the model rows
+      // ask for their declared refs. The host answers presence/source for whatever name the
+      // route accepted.
+      const answer = await callBridgeAnswer(callBridge, 'credentials/describe', [{ name: request.name }])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: true }
+      return { state: 'read', entries: [describeEntry(request.name, answer.result)] }
+    }
+    if (request.action === 'unset') {
+      const answer = await callBridgeAnswer(callBridge, 'credentials/unset', [{ name: request.name }])
+      if (!answer.ok) return { state: 'refused', code: answer.code, retryable: true }
+      return { state: 'removed', name: request.name }
     }
     // The value never leaves this call frame: no local state, no log line, no echo.
     const answer = await callBridgeAnswer(callBridge, 'credentials/set', [{ name: request.name, value: request.value ?? '' }])

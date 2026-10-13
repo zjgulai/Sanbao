@@ -177,6 +177,7 @@ describe('host-side read-only bridge', () => {
       ['modelConfig/default', 'write'],
       ['credentials/describe', 'read'],
       ['credentials/set', 'write'],
+      ['credentials/unset', 'write'],
       ['settings/describe', 'read'],
       ['directory/pick', 'interactive'],
       ['workspace/create', 'write'],
@@ -228,7 +229,7 @@ describe('host-side read-only bridge', () => {
 
   it('refuses a non-allowlisted endpoint without touching any provider', async () => {
     const ctx = { get: vi.fn() }
-    await expect(resolveBridgeCall(ctx, 'credentials/unset')).resolves.toMatchObject({
+    await expect(resolveBridgeCall(ctx, 'credentials/no-such-endpoint')).resolves.toMatchObject({
       ok: false,
       code: 'bridge-endpoint-unsupported',
     })
@@ -468,6 +469,22 @@ describe('host-side read-only bridge', () => {
       code: 'bridge-credential-readonly-source',
     })
     expect(set).not.toHaveBeenCalled()
+  })
+
+  it('A1 (018 close-out): unset removes only writable credentials and keeps the source guard', async () => {
+    const unset = vi.fn(async () => undefined)
+    const describe = vi.fn(async () => ({ configured: true, source: 'file', writable: true }))
+    const ctx = { get: (name: string) => (name === 'credentials' ? { describe, set: vi.fn(), unset } : undefined) }
+    await expect(resolveBridgeCall(ctx, 'credentials/unset', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toEqual({ ok: true, result: { removed: true } })
+    expect(unset).toHaveBeenCalledTimes(1)
+    const readonlyCtx = {
+      get: () => ({ describe: async () => ({ configured: true, source: 'env', writable: false }), set: vi.fn(), unset: vi.fn(async () => undefined) }),
+    }
+    await expect(resolveBridgeCall(readonlyCtx, 'credentials/unset', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-credential-readonly-source' })
+    await expect(resolveBridgeCall({ get: () => undefined }, 'credentials/unset', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toMatchObject({ ok: false, code: 'bridge-provider-unavailable' })
   })
 
   it('ADR-0334: a missing credential provider is named, and extra members are refused not ignored', async () => {

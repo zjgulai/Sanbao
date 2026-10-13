@@ -726,6 +726,7 @@ export interface CredentialEntryView {
 export type CredentialOutcome =
   | { readonly state: 'read', readonly entries: readonly CredentialEntryView[] }
   | { readonly state: 'saved', readonly name: string }
+  | { readonly state: 'removed', readonly name: string }
   | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
 
 /** ADR-0339: one saved custom model route (an llm-pi-ai provider profile). */
@@ -736,6 +737,7 @@ export interface ModelRouteView {
   readonly baseURL: string
   readonly apiKeyEnv?: string
   readonly modelCount: number
+  readonly modelIds: readonly string[]
   readonly credential: { readonly name: string, readonly configured: boolean } | null
 }
 
@@ -1852,7 +1854,7 @@ export interface ServiceProviders {
   /** Ticket 020/047: save one patch of the eight display preferences. */
   readonly savePreferences: (request: Partial<DisplayPreferenceValues>) => Promise<Response>
   /** ADR-0334: the instance credential surface (`describe` / `set`); values are write-only. */
-  readonly credentials: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) => Promise<Response>
+  readonly credentials: (request: { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string }) => Promise<Response>
   /** ADR-0339: the saved-model-routes surface (`list` / `save-route` / `remove-route` / `test-connection`). */
   readonly modelRoutes: (request: {
     readonly action: 'list' | 'save-route' | 'remove-route' | 'test-connection' | 'catalog' | 'set-default'

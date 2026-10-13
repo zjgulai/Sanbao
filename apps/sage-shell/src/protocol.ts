@@ -246,6 +246,8 @@ export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 
   // write-only and name-allowlisted at the host handler.
   'credentials/describe': 'read',
   'credentials/set': 'write',
+  // ADR-0342 era (018 close-out): credential removal for rows whose route is deleted or rotated.
+  'credentials/unset': 'write',
   'settings/describe': 'read',
   'directory/pick': 'interactive',
   'workspace/create': 'write',

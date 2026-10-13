@@ -31,13 +31,15 @@ describe('ADR-0334: the instance credential port', () => {
     expect(callBridge).not.toHaveBeenCalled()
   })
 
-  it('refuses a non-allowlisted name without any bridge call even when signed in', async () => {
-    const callBridge = vi.fn()
+  it('forwards any grammar-valid name to the host — the semantic allowlist lives there (018 close-out)', async () => {
+    // The fixed-name gate that used to live here made declared refs unreachable: the host is
+    // the only place that can read the saved configuration and answer the name allowlist.
+    const callBridge = vi.fn(async () => ({ ok: false, code: 'bridge-credential-name-refused' }))
     const port = createCredentials(callBridge, signedIn().identitySession)
     await expect(port({ action: 'describe', name: 'ANTHROPIC_API_KEY' })).resolves.toEqual({
-      state: 'refused', code: 'credential-name-unavailable', retryable: false,
+      state: 'refused', code: 'bridge-credential-name-refused', retryable: true,
     })
-    expect(callBridge).not.toHaveBeenCalled()
+    expect(callBridge).toHaveBeenCalledWith('credentials/describe', [{ name: 'ANTHROPIC_API_KEY' }])
   })
 
   it('describes the allowlisted credential as presence/source/writability only', async () => {
@@ -88,6 +90,13 @@ describe('ADR-0334: the instance credential port', () => {
     expect(JSON.stringify(outcome)).not.toContain(SECRET)
   })
 
+  it('unsets through the bridge and answers the typed removal', async () => {
+    const callBridge = vi.fn(async () => ({ ok: true, result: { removed: true } }))
+    const port = createCredentials(callBridge, signedIn().identitySession)
+    await expect(port({ action: 'unset', name: 'DEEPSEEK_API_KEY' })).resolves.toEqual({ state: 'removed', name: 'DEEPSEEK_API_KEY' })
+    expect(callBridge).toHaveBeenCalledWith('credentials/unset', [{ name: 'DEEPSEEK_API_KEY' }])
+  })
+
   it('refuses an unrecognised bridge answer instead of guessing', async () => {
     const port = createCredentials(async () => 'not-an-answer', signedIn().identitySession)
     await expect(port({ action: 'describe', name: 'DEEPSEEK_API_KEY' })).resolves.toEqual({
@@ -102,6 +111,8 @@ describe('ADR-0334: the /.sage/credentials route', () => {
     credentials: async (request) => {
       if (request.action === 'describe') {
         outcomes.push({ state: 'read', entries: [{ name: request.name, configured: false, source: null, writable: true }] })
+      } else if (request.action === 'unset') {
+        outcomes.push({ state: 'removed', name: request.name })
       } else {
         outcomes.push({ state: 'saved', name: request.name })
       }
@@ -132,11 +143,17 @@ describe('ADR-0334: the /.sage/credentials route', () => {
     expect(text).not.toContain(SECRET)
   })
 
+  it('accepts an unset and answers the typed removal', async () => {
+    outcomes.length = 0
+    const response = await post(JSON.stringify({ action: 'unset', name: 'DEEPSEEK_API_KEY' }))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ state: 'removed', name: 'DEEPSEEK_API_KEY' })
+  })
+
   it('stops malformed bodies at 400 before the port', async () => {
     outcomes.length = 0
     for (const body of [
       'not json', '{}', '[]',
-      JSON.stringify({ action: 'unset', name: 'DEEPSEEK_API_KEY' }),
       JSON.stringify({ action: 'describe', name: 'deepseek_api_key' }),
       JSON.stringify({ action: 'describe', name: '1KEY' }),
       JSON.stringify({ action: 'describe', name: '' }),

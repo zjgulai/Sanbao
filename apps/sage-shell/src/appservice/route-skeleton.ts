@@ -946,19 +946,19 @@ function parsePreferencesPatch(body: string): Partial<DisplayPreferenceValues> |
 
 /** `{action:'describe'|'set', name, value?}` — the credential names stay host-allowlisted; this
  *  boundary only checks the grammar so a malformed body never reaches the bridge. */
-function parseCredentialRequest(body: string): { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string } | undefined {
+function parseCredentialRequest(body: string): { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string } | undefined {
   let value: unknown
   try { value = JSON.parse(body) } catch { return undefined }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
   const action = record.action
-  if (action !== 'describe' && action !== 'set') return undefined
+  if (action !== 'describe' && action !== 'set' && action !== 'unset') return undefined
   const keys = Object.keys(record)
   const allowed = action === 'set' ? ['action', 'name', 'value'] : ['action', 'name']
   if (keys.length !== allowed.length || !keys.every((key) => allowed.includes(key))) return undefined
   const name = record.name
   if (typeof name !== 'string' || name === '' || name.length > 128 || !/^[A-Z][A-Z0-9_]*$/u.test(name)) return undefined
-  if (action === 'describe') return { action, name }
+  if (action === 'describe' || action === 'unset') return { action, name }
   const secret = record.value
   if (typeof secret !== 'string' || secret.trim() !== secret || secret.length < 8 || secret.length > 512
     || /[\u0000-\u001f\u007f]/u.test(secret)) return undefined

@@ -242,13 +242,15 @@ export interface ServiceOptions {
    *  carries a value, set is write-only, and the assembly refuses while no identity session
    *  exists (a signed-out app must not accept secrets). Absent ⇒ the route answers its own
    *  unavailable code. */
-  readonly credentials?: (request: { readonly action: 'describe' | 'set', readonly name: string, readonly value?: string }) =>
+  readonly credentials?: (request: { readonly action: 'describe' | 'set' | 'unset', readonly name: string, readonly value?: string }) =>
     | { readonly state: 'read', readonly entries: readonly CredentialEntryView[] }
     | { readonly state: 'saved', readonly name: string }
+    | { readonly state: 'removed', readonly name: string }
     | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
     | Promise<
       | { readonly state: 'read', readonly entries: readonly CredentialEntryView[] }
       | { readonly state: 'saved', readonly name: string }
+      | { readonly state: 'removed', readonly name: string }
       | { readonly state: 'refused', readonly code: string, readonly retryable: boolean }
     >
   /** ADR-0339: the saved-model-routes port (list / save-route / remove-route / test-connection);
