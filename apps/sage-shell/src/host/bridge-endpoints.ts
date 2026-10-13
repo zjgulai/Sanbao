@@ -237,6 +237,12 @@ function classifyProviderFailure(error: unknown): string {
     ? (error as { code: string }).code
     : undefined
   switch (remote) {
+    // ADR-0339: settings write refusals keep their identity — a stale writer must re-read and
+    // re-apply (conflict), and a schema-invalid write is its own named outcome.
+    case 'settings/conflict':
+      return 'bridge-settings-conflict'
+    case 'settings/rejected':
+      return 'bridge-settings-rejected'
     case 'session/queue-item-not-found':
       return 'bridge-queue-item-not-found'
     case 'workspace/name-conflict':
@@ -299,6 +305,142 @@ interface CredentialSeam {
   readonly set: (ref: ReturnType<typeof credentialRef>, value: string) => Promise<void>
 }
 
+/** ADR-0339: the model-config seam. Hand-declared custom model routes are llm-pi-ai provider
+ *  profiles keyed by route name; the surface writes them path-addressed (never a whole-section
+ *  merge, which would wipe sibling routes). */
+const MODEL_CONFIG_NAMESPACE = 'llm-pi-ai'
+const MODEL_ROUTE = /^[a-z][a-z0-9-]{0,63}$/u
+const MODEL_API = new Set(['openai-completions', 'openai-responses', 'anthropic-messages'])
+const CREDENTIAL_REF_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/u
+
+interface SettingsWriteSeam {
+  readonly describe: () => unknown
+  readonly mutate: (ns: string, ops: readonly unknown[], expectedRevision: number | undefined) => Promise<unknown>
+}
+
+/** The LlmRuntime discovery half this seam needs (llm/src/index.ts:596). */
+interface LlmDiscoverySeam {
+  readonly discoverModels: (
+    settingsNs: string,
+    request: { readonly provider?: string, readonly baseURL?: string, readonly api?: string },
+    signal?: AbortSignal,
+  ) => Promise<readonly unknown[]>
+}
+
+/** The saved route facts the test action may use — never renderer-supplied ones. */
+function savedRouteProfile(controller: Partial<SettingsWriteSeam>, route: string): { readonly api?: unknown, readonly baseURL?: unknown, readonly apiKeyEnv?: unknown } | undefined {
+  const described = controller.describe?.()
+  if (described === null || typeof described !== 'object') return undefined
+  const namespaces = (described as { readonly namespaces?: unknown }).namespaces
+  if (!Array.isArray(namespaces)) return undefined
+  const namespace = namespaces.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly ns?: unknown }).ns === MODEL_CONFIG_NAMESPACE)
+  if (namespace === undefined) return undefined
+  const section = namespace.user ?? namespace.value
+  if (section === null || typeof section !== 'object') return undefined
+  const providers = (section as { readonly providers?: unknown }).providers
+  if (providers === null || typeof providers !== 'object') return undefined
+  return (providers as Record<string, { readonly api?: unknown, readonly baseURL?: unknown, readonly apiKeyEnv?: unknown }>)[route]
+}
+
+/** The llm-pi-ai namespace revision the route was read at, for test-result binding. */
+function savedRouteRevision(controller: Partial<SettingsWriteSeam>, route: string): number | undefined {
+  void route
+  const described = controller.describe?.()
+  if (described === null || typeof described !== 'object') return undefined
+  const namespaces = (described as { readonly namespaces?: unknown }).namespaces
+  if (!Array.isArray(namespaces)) return undefined
+  const namespace = namespaces.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly ns?: unknown }).ns === MODEL_CONFIG_NAMESPACE)
+  const revision = namespace?.revision
+  return typeof revision === 'number' && Number.isSafeInteger(revision) ? revision : undefined
+}
+
+/** Whether a credential currently resolves for the route's declared ref. The value is never
+ *  read here — only the presence fact. */
+async function savedRouteCredentialConfigured(ctx: { get: (name: string) => unknown }, apiKeyEnv: unknown): Promise<boolean> {
+  if (typeof apiKeyEnv !== 'string') return false
+  const credentials = ctx.get('credentials') as Partial<CredentialSeam> | undefined
+  if (typeof credentials?.describe !== 'function') return false
+  try {
+    const info = await credentials.describe(credentialRef(apiKeyEnv)) as { readonly configured?: unknown }
+    return info !== null && typeof info === 'object' && info.configured === true
+  } catch {
+    return false
+  }
+}
+
+/** ADR-0339: credential refs the SAVED configuration declares (their routes' apiKeyEnv names).
+ *  A describe failure reads as "nothing declared" — the fixed app names stay the only allowlist. */
+function declaredCredentialRefs(controller: Partial<SettingsWriteSeam>): Set<string> {
+  const names = new Set<string>()
+  const described = controller.describe?.()
+  if (described === null || typeof described !== 'object') return names
+  const namespaces = (described as { readonly namespaces?: unknown }).namespaces
+  if (!Array.isArray(namespaces)) return names
+  const namespace = namespaces.find((candidate): candidate is Record<string, unknown> =>
+    candidate !== null && typeof candidate === 'object' && (candidate as { readonly ns?: unknown }).ns === MODEL_CONFIG_NAMESPACE)
+  if (namespace === undefined) return names
+  const section = namespace.user ?? namespace.value
+  const providers = section !== null && typeof section === 'object' ? (section as { readonly providers?: unknown }).providers : undefined
+  if (providers === null || typeof providers !== 'object') return names
+  for (const profile of Object.values(providers as Record<string, unknown>)) {
+    const ref = profile !== null && typeof profile === 'object' ? (profile as { readonly apiKeyEnv?: unknown }).apiKeyEnv : undefined
+    if (typeof ref === 'string' && CREDENTIAL_REF_NAME.test(ref)) names.add(ref)
+  }
+  return names
+}
+
+/** One route profile exactly as the surface may declare it: unknown members are refused, not
+ *  ignored (a surface cannot smuggle `headers` or any deployment-owned field through save). */
+function readRouteProfile(raw: unknown): { readonly profile: Record<string, unknown>, readonly apiKeyEnv?: string } | undefined {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const record = raw as Record<string, unknown>
+  const allowed = new Set(['displayName', 'api', 'baseURL', 'apiKeyEnv', 'models'])
+  if (!Object.keys(record).every(key => allowed.has(key))) return undefined
+  const api = record.api
+  if (typeof api !== 'string' || !MODEL_API.has(api)) return undefined
+  const baseURL = record.baseURL
+  if (typeof baseURL !== 'string' || baseURL !== baseURL.trim() || baseURL.length === 0 || baseURL.length > 2048) return undefined
+  let parsed: URL
+  try {
+    parsed = new URL(baseURL)
+  } catch {
+    return undefined
+  }
+  if ((parsed.protocol !== 'https:' && parsed.protocol !== 'http:')
+    || parsed.username !== '' || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') {
+    return undefined
+  }
+  const displayName = record.displayName
+  if (displayName !== undefined && (typeof displayName !== 'string' || displayName !== displayName.trim() || displayName.length === 0 || displayName.length > 64)) {
+    return undefined
+  }
+  const apiKeyEnv = record.apiKeyEnv
+  if (apiKeyEnv !== undefined && (typeof apiKeyEnv !== 'string' || !CREDENTIAL_REF_NAME.test(apiKeyEnv))) return undefined
+  const models = record.models
+  if (!Array.isArray(models) || models.length === 0 || models.length > 64) return undefined
+  const cleaned: { readonly id: string }[] = []
+  for (const entry of models) {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return undefined
+    const model = entry as Record<string, unknown>
+    if (!Object.keys(model).every(key => key === 'id')) return undefined
+    const id = model.id
+    if (typeof id !== 'string' || id !== id.trim() || id.length === 0 || id.length > 128) return undefined
+    cleaned.push({ id })
+  }
+  return {
+    profile: {
+      ...(displayName === undefined ? {} : { displayName }),
+      api,
+      baseURL,
+      ...(apiKeyEnv === undefined ? {} : { apiKeyEnv }),
+      models: cleaned,
+    },
+    ...(apiKeyEnv === undefined ? {} : { apiKeyEnv }),
+  }
+}
+
 function readWorkspaceRequest(payload: readonly unknown[], keys: readonly string[]): Record<string, unknown> | undefined {
   if (payload.length !== 1) return undefined
   const input = payload[0]
@@ -306,6 +448,18 @@ function readWorkspaceRequest(payload: readonly unknown[], keys: readonly string
   const record = input as Record<string, unknown>
   const present = Object.keys(record)
   if (present.length !== keys.length || !present.every((key) => keys.includes(key))) return undefined
+  return record
+}
+
+/** One request object whose key set is `required` plus an allowed `optional` subset. */
+function readRequestWithOptional(payload: readonly unknown[], required: readonly string[], optional: readonly string[]): Record<string, unknown> | undefined {
+  if (payload.length !== 1) return undefined
+  const input = payload[0]
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) return undefined
+  const record = input as Record<string, unknown>
+  const present = Object.keys(record)
+  if (!present.every(key => required.includes(key) || optional.includes(key))) return undefined
+  if (!required.every(key => present.includes(key))) return undefined
   return record
 }
 
@@ -984,13 +1138,17 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
     }
   }
 
-  // ADR-0334: the instance credential surface. Only the app-owned provider keys may be
-  // addressed, a value is write-only (never returned, never logged), and the credential
-  // service hot-applies a rotated key to the next request.
+  // ADR-0334/0339: the instance credential surface. Addressable names are the fixed app-owned
+  // keys PLUS the refs the saved model configuration declares (each custom route's apiKeyEnv) —
+  // a name that is neither can never be written or probed. Values stay write-only.
   if (endpoint === 'credentials/describe' || endpoint === 'credentials/set') {
     const keys = endpoint === 'credentials/set' ? ['name', 'value'] : ['name']
     const record = readWorkspaceRequest(payload, keys)
-    if (record === undefined || typeof record.name !== 'string' || !APP_CREDENTIAL_NAMES.includes(record.name)) {
+    const settingsController = ctx.get('settingsController') as Partial<SettingsWriteSeam> | undefined
+    const name = record !== undefined && typeof record.name === 'string' ? record.name : undefined
+    const addressable = name !== undefined
+      && (APP_CREDENTIAL_NAMES.includes(name) || declaredCredentialRefs(settingsController ?? {}).has(name))
+    if (!addressable) {
       return { ok: false, code: 'bridge-credential-name-refused' }
     }
     const credentials = ctx.get('credentials') as Partial<CredentialSeam> | undefined
@@ -1003,10 +1161,10 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
     }
     try {
       if (endpoint === 'credentials/describe') {
-        const info = await credentials.describe(credentialRef(record.name))
+        const info = await credentials.describe(credentialRef(name))
         return crossable(info)
       }
-      const value = record.value
+      const value = record?.value
       // The value grammar is checked here so nothing malformed reaches the store; the value
       // itself must never leave this branch (no logging, no echo in any refusal).
       if (typeof value !== 'string' || value.trim() !== value
@@ -1017,11 +1175,11 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
       // P-56 honesty guard: when the active source is read-only (the process environment
       // shadows the file), a write would silently not take effect after restart — refuse
       // with the named cause instead of reporting a save that changes nothing.
-      const info = await credentials.describe(credentialRef(record.name)) as { readonly configured?: unknown, readonly writable?: unknown }
+      const info = await credentials.describe(credentialRef(name)) as { readonly configured?: unknown, readonly writable?: unknown }
       if (info !== null && typeof info === 'object' && info.configured === true && info.writable === false) {
         return { ok: false, code: 'bridge-credential-readonly-source' }
       }
-      await credentials.set!(credentialRef(record.name), value)
+      await credentials.set!(credentialRef(name), value)
       return { ok: true, result: { saved: true } }
     } catch (error) {
       // Gated seam probe (same class as SAGE_DISPATCH_PROBE): the classification alone hid the
@@ -1035,6 +1193,82 @@ export async function resolveBridgeCall(ctx: BridgeContext, endpoint: string, pa
         console.log('CREDENTIAL-PROBE', (error as { code?: unknown } | null)?.code ?? '', error instanceof Error ? error.message : String(error))
       }
       return { ok: false, code: classifyProviderFailure(error) }
+    }
+  }
+
+  // ADR-0339: the model-config surface. Path-addressed writes into the llm-pi-ai user layer
+  // (a whole-section merge would wipe sibling routes), and a connectivity test over the SAVED
+  // route only — the renderer never supplies an endpoint here.
+  if (endpoint === 'modelConfig/save' || endpoint === 'modelConfig/remove') {
+    const keys = endpoint === 'modelConfig/save' ? ['route', 'profile', 'expectedRevision'] : ['route', 'expectedRevision']
+    const record = readRequestWithOptional(payload, endpoint === 'modelConfig/save' ? ['route', 'profile'] : ['route'], ['expectedRevision'])
+    const route = record?.route
+    const revision = record?.expectedRevision
+    if (record === undefined || typeof route !== 'string' || !MODEL_ROUTE.test(route)
+      || (revision !== undefined && (!Number.isSafeInteger(revision) || (revision as number) < 0))) {
+      return { ok: false, code: 'bridge-model-route-invalid' }
+    }
+    const controller = ctx.get('settingsController') as Partial<SettingsWriteSeam> | undefined
+    if (typeof controller?.mutate !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    let ops: readonly unknown[]
+    if (endpoint === 'modelConfig/save') {
+      const parsed = readRouteProfile(record.profile)
+      if (parsed === undefined) return { ok: false, code: 'bridge-model-profile-invalid' }
+      ops = [{ op: 'set', path: ['providers', route], value: parsed.profile }]
+    } else {
+      ops = [{ op: 'unset', path: ['providers', route] }]
+    }
+    try {
+      await controller.mutate(MODEL_CONFIG_NAMESPACE, ops, revision as number | undefined)
+      return { ok: true, result: { saved: true, route } }
+    } catch (error) {
+      return { ok: false, code: classifyProviderFailure(error) }
+    }
+  }
+
+  if (endpoint === 'modelConfig/test') {
+    const record = readWorkspaceRequest(payload, ['route'])
+    const route = record?.route
+    if (record === undefined || typeof route !== 'string' || !MODEL_ROUTE.test(route)) {
+      return { ok: false, code: 'bridge-model-route-invalid' }
+    }
+    const controller = ctx.get('settingsController') as Partial<SettingsWriteSeam> | undefined
+    const profile = savedRouteProfile(controller ?? {}, route)
+    if (profile === undefined) return { ok: false, code: 'bridge-model-route-unknown' }
+    const baseURL = profile.baseURL
+    if (typeof baseURL !== 'string' || baseURL.length === 0 || baseURL.length > 2048) {
+      return { ok: false, code: 'bridge-model-route-unknown' }
+    }
+    const api = typeof profile.api === 'string' && MODEL_API.has(profile.api) ? profile.api : 'openai-completions'
+    const llm = ctx.get('llm') as Partial<LlmDiscoverySeam> | undefined
+    if (typeof llm?.discoverModels !== 'function') return { ok: false, code: 'bridge-provider-unavailable' }
+    // The verdict binds to the facts of THIS attempt: the namespace revision the saved route
+    // was read at, and whether a credential resolves for its declared apiKeyEnv right now.
+    const revision = savedRouteRevision(controller ?? {}, route)
+    const credentialConfigured = await savedRouteCredentialConfigured(ctx, profile.apiKeyEnv)
+    const binding = { revision, credentialConfigured }
+    // ADR-0249 D3 semantics kept: the host owns a 20s clock, never retries, and an abort reads
+    // as `unknown` (待核对) rather than a failure verdict. No matter, session or attachment
+    // content can ride this request — it is GET {baseURL}/models with the stored credential.
+    const startedAt = Date.now()
+    try {
+      const models = await llm.discoverModels(MODEL_CONFIG_NAMESPACE, { provider: route, baseURL, api }, AbortSignal.timeout(20_000))
+      const ids = models
+        .map(model => model !== null && typeof model === 'object' ? (model as { readonly id?: unknown }).id : undefined)
+        .filter((id): id is string => typeof id === 'string')
+        .slice(0, 64)
+      const host = new URL(baseURL).host
+      return { ok: true, result: { state: 'ok', modelIds: ids, latencyMs: Date.now() - startedAt, host, ...binding } }
+    } catch (error) {
+      const latencyMs = Date.now() - startedAt
+      if (error !== null && typeof error === 'object'
+        && ((error as { readonly name?: unknown }).name === 'TimeoutError' || (error as { readonly name?: unknown }).name === 'AbortError')) {
+        return { ok: true, result: { state: 'unknown', latencyMs, ...binding } }
+      }
+      const remote = error !== null && typeof error === 'object' ? (error as { readonly code?: unknown }) : undefined
+      if (remote?.code === 'MISSING_CREDENTIAL') return { ok: true, result: { state: 'credential-missing', latencyMs, ...binding } }
+      if (remote?.code === 'DISCOVERY_UNSUPPORTED') return { ok: true, result: { state: 'unsupported', latencyMs, ...binding } }
+      return { ok: true, result: { state: 'failed', latencyMs, ...binding } }
     }
   }
 

@@ -170,6 +170,9 @@ describe('host-side read-only bridge', () => {
     // The whole surface, kinds included: adding an endpoint (or changing a kind) is a deliberate
     // edit here, never something that rides along with an unrelated change.
     expect(Object.entries(BRIDGE_ENDPOINTS)).toEqual([
+      ['modelConfig/save', 'write'],
+      ['modelConfig/remove', 'write'],
+      ['modelConfig/test', 'write'],
       ['credentials/describe', 'read'],
       ['credentials/set', 'write'],
       ['settings/describe', 'read'],
@@ -239,6 +242,115 @@ describe('host-side read-only bridge', () => {
     expect(describe).toHaveBeenCalledTimes(1)
   })
 
+  it('ADR-0339: saves a route as one path-addressed set into the llm-pi-ai user layer', async () => {
+    const calls: Array<{ readonly ns: string, readonly ops: unknown, readonly revision: unknown }> = []
+    const controller = {
+      describe: () => ({ writable: true, hasDocument: true, namespaces: [] }),
+      mutate: async (ns: string, ops: unknown, revision: unknown) => { calls.push({ ns, ops, revision }) },
+    }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : undefined) }
+    const profile = { api: 'openai-completions', baseURL: 'https://api.deepseek.com/v1', apiKeyEnv: 'DEEPSEEK_V1_API_KEY', models: [{ id: 'deepseek-chat' }] }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/save', [{ route: 'deepseek-openai', profile, expectedRevision: 7 }]))
+      .resolves.toEqual({ ok: true, result: { saved: true, route: 'deepseek-openai' } })
+    expect(calls).toEqual([{ ns: 'llm-pi-ai', ops: [{ op: 'set', path: ['providers', 'deepseek-openai'], value: profile }], revision: 7 }])
+  })
+
+  it('ADR-0339: the save grammar refuses unknown members, bad protocols, credentialed URLs and cap-breakers', async () => {
+    const controller = { describe: () => ({ namespaces: [] }), mutate: async () => undefined }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : undefined) }
+    const good = { api: 'openai-completions', baseURL: 'https://api.example.com/v1', models: [{ id: 'm' }] }
+    const cases: readonly [string, unknown][] = [
+      ['route', 'BadRoute'],
+      ['profile', { ...good, headers: { authorization: 'x' } }],
+      ['profile', { ...good, api: 'custom-protocol' }],
+      ['profile', { ...good, baseURL: 'https://user:pass@api.example.com/v1' }],
+      ['profile', { ...good, baseURL: 'https://api.example.com/v1?key=1' }],
+      ['profile', { ...good, models: [] }],
+      ['profile', { ...good, models: [{ id: 'm', name: 'x' }] }],
+    ]
+    for (const [field, value] of cases) {
+      const body = field === 'route' ? { route: value, profile: good } : { route: 'ok-route', profile: value }
+      await expect(resolveBridgeCall(ctx, 'modelConfig/save', [body])).resolves.toMatchObject({ ok: false })
+    }
+  })
+
+  it('ADR-0339: removes a route with the only removal path — a path-addressed unset', async () => {
+    const calls: unknown[] = []
+    const controller = {
+      describe: () => ({ namespaces: [] }),
+      mutate: async (_ns: string, ops: unknown) => { calls.push(ops) },
+    }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : undefined) }
+    await expect(resolveBridgeCall(ctx, 'modelConfig/remove', [{ route: 'gone-route' }]))
+      .resolves.toEqual({ ok: true, result: { saved: true, route: 'gone-route' } })
+    expect(calls).toEqual([[{ op: 'unset', path: ['providers', 'gone-route'] }]])
+  })
+
+  it('ADR-0339: tests only the SAVED route — endpoint facts come from settings, never the caller', async () => {
+    const seen: unknown[] = []
+    const controller = {
+      describe: () => ({
+        writable: true,
+        hasDocument: true,
+        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { 'my-route': { api: 'openai-completions', baseURL: 'https://api.deepseek.com/v1' } } } }],
+      }),
+      mutate: async () => undefined,
+    }
+    const llm = { discoverModels: async (_ns: string, request: unknown) => { seen.push(request); return [{ id: 'a' }, { id: 'b' }, { id: 42 }] } }
+    const ctx = { get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? llm : undefined) }
+    const outcome = await resolveBridgeCall(ctx, 'modelConfig/test', [{ route: 'my-route' }])
+    expect(outcome).toMatchObject({ ok: true, result: { state: 'ok', modelIds: ['a', 'b'], host: 'api.deepseek.com' } })
+    expect(seen).toEqual([{ provider: 'my-route', baseURL: 'https://api.deepseek.com/v1', api: 'openai-completions' }])
+    await expect(resolveBridgeCall(ctx, 'modelConfig/test', [{ route: 'unknown-route' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-model-route-unknown' })
+  })
+
+  it('ADR-0339: the test names its failure causes — missing credential, timeout/unknown, unsupported', async () => {
+    const controller = {
+      describe: () => ({
+        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { r: { api: 'anthropic-messages', baseURL: 'https://api.example.com' } } } }],
+      }),
+      mutate: async () => undefined,
+    }
+    const make = (discover: () => Promise<never>) => ({
+      get: (name: string) => (name === 'settingsController' ? controller : name === 'llm' ? { discoverModels: discover } : undefined),
+    })
+    // The verdict rides an ok:true answer with its state + binding facts (revision, credential
+    // presence); only operational errors (unknown route, provider absent) stay ok:false.
+    await expect(resolveBridgeCall(make(async () => { throw { code: 'MISSING_CREDENTIAL' } }), 'modelConfig/test', [{ route: 'r' }]))
+      .resolves.toMatchObject({ ok: true, result: { state: 'credential-missing', credentialConfigured: false } })
+    await expect(resolveBridgeCall(make(async () => { throw Object.assign(new Error('aborted'), { name: 'TimeoutError' }) }), 'modelConfig/test', [{ route: 'r' }]))
+      .resolves.toMatchObject({ ok: true, result: { state: 'unknown' } })
+    await expect(resolveBridgeCall(make(async () => { throw { code: 'DISCOVERY_UNSUPPORTED' } }), 'modelConfig/test', [{ route: 'r' }]))
+      .resolves.toMatchObject({ ok: true, result: { state: 'unsupported' } })
+    await expect(resolveBridgeCall(make(async () => { throw new Error('boom') }), 'modelConfig/test', [{ route: 'r' }]))
+      .resolves.toMatchObject({ ok: true, result: { state: 'failed' } })
+  })
+
+  it('ADR-0339: addressable credential names extend to refs the saved routes declare', async () => {
+    const controller = {
+      describe: () => ({
+        namespaces: [{ ns: 'llm-pi-ai', user: { providers: { r: { api: 'openai-completions', baseURL: 'https://api.example.com/v1', apiKeyEnv: 'MY_GATEWAY_API_KEY' } } } }],
+      }),
+      mutate: async () => undefined,
+    }
+    const set = vi.fn(async () => undefined)
+    const describe = vi.fn(async () => ({ configured: true, source: 'file', writable: true }))
+    const ctx = {
+      get: (name: string) => (name === 'settingsController' ? controller : name === 'credentials' ? { describe, set } : undefined),
+    }
+    // Declared by a saved route → addressable.
+    await expect(resolveBridgeCall(ctx, 'credentials/describe', [{ name: 'MY_GATEWAY_API_KEY' }]))
+      .resolves.toMatchObject({ ok: true, result: { configured: true } })
+    await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'MY_GATEWAY_API_KEY', value: 'sk-declared-route-key-123456' }]))
+      .resolves.toEqual({ ok: true, result: { saved: true } })
+    // Still refused: undeclared names and the fixed list keep their meaning.
+    await expect(resolveBridgeCall(ctx, 'credentials/describe', [{ name: 'UNDECLARED_API_KEY' }]))
+      .resolves.toEqual({ ok: false, code: 'bridge-credential-name-refused' })
+    await expect(resolveBridgeCall(ctx, 'credentials/describe', [{ name: 'DEEPSEEK_API_KEY' }]))
+      .resolves.toMatchObject({ ok: true })
+  })
+
   it('ADR-0334: the provider methods are invoked with their receiver — a class-like store keeps its this', async () => {
     // Regression (live-run): the first cut extracted `describe`/`set` into locals and called
     // them unbound; credentials-local dies on `this.inherited` and every describe answered
@@ -269,7 +381,9 @@ describe('host-side read-only bridge', () => {
       ok: false,
       code: 'bridge-credential-name-refused',
     })
-    expect(ctx.get).not.toHaveBeenCalled()
+    // ADR-0339: the name check may consult settingsController for declared refs, but the
+    // credentials provider itself is never touched for a refused name.
+    for (const call of ctx.get.mock.calls) expect(call[0]).not.toBe('credentials')
   })
 
   it('ADR-0334: writes the value once through the seam — the outcome never echoes it', async () => {
@@ -313,7 +427,7 @@ describe('host-side read-only bridge', () => {
     const ctx = { get: vi.fn() }
     await expect(resolveBridgeCall(ctx, 'credentials/set', [{ name: 'DEEPSEEK_API_KEY', value: 'sk-extra-key-123456', extra: 1 }]))
       .resolves.toMatchObject({ ok: false, code: 'bridge-credential-name-refused' })
-    expect(ctx.get).not.toHaveBeenCalled()
+    for (const call of ctx.get.mock.calls) expect(call[0]).not.toBe('credentials')
   })
 
   it('declares every handled endpoint in the allowlist (008 regression: a handler whose name never entered the map is dead at runtime)', () => {

@@ -231,6 +231,13 @@ export type HostEvent = {
  * is the base's own `workspaceController.insertBefore` and nothing else.
  */
 export const BRIDGE_ENDPOINTS: Readonly<Record<string, 'read' | 'interactive' | 'write' | 'stream'>> = Object.freeze({
+  // ADR-0339: the model-config surface. A "route" is one hand-declared llm-pi-ai provider
+  // profile; save/remove are path-addressed writes into that namespace's user layer, and the
+  // test interrogates the SAVED route (never a renderer-supplied endpoint) with no business
+  // content in the request.
+  'modelConfig/save': 'write',
+  'modelConfig/remove': 'write',
+  'modelConfig/test': 'write',
   // ADR-0334: the instance credential surface — describe never returns the value; set is
   // write-only and name-allowlisted at the host handler.
   'credentials/describe': 'read',
