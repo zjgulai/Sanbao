@@ -11581,6 +11581,56 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0339",
+      "title": "ADR-0339 · 模型编辑器真校验/保存：settings 栈解锁、保存路由与已配置列表",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "profileContext 供给解锁 settings 栈；patchPath 代外（收据封印不可写）；组合等式=readProfilePatches 同源构造；非空代内用户层 fail loud。",
+          "constraints": [
+            "generation receipt sealed"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "保存=musing 路径写 providers.<route>；移除=unset；语法封闭、未知成员拒。",
+          "constraints": [
+            "path-addressed only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "测试只测已保存路由（宿主读端点事实）；GET /models 零业务内容；20s 钟、不重试、abort→unknown。",
+          "constraints": [
+            "no renderer endpoint injection"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "结果绑 revision+凭据快照，current 按当下事实判；端口 main 生命期单例；每路由单飞。",
+          "constraints": [
+            "no parallel retest"
+          ]
+        },
+        {
+          "id": "D5",
+          "text": "保存配置/凭据两步分开，部分失败具名；已保存未测试≠可调用；路由名与凭据引用端点派生。",
+          "constraints": [
+            "save triggers no provider request"
+          ]
+        },
+        {
+          "id": "D6",
+          "text": "读取口径统一 value 优先（user 层在 Sage 布局恒空）；差异与 018 未闭项登记。",
+          "constraints": [
+            "documented divergence"
+          ]
+        }
+      ]
     }
   ]
 }
