@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createUnavailableFirstService } from '../src/appservice/composition.js'
 import { handleSageServiceRequest } from '../src/appservice/route-skeleton.js'
-import { classifySettingsDescribe, classifySettingsDescribeFailure } from '../src/main/settings-readout.js'
+import { classifySettingsDescribe, classifySettingsDescribeAnswer, classifySettingsDescribeFailure } from '../src/main/settings-readout.js'
 import { withProjectionReadTestAdmission } from './support/projection-read-test-runner.js'
 
 /**
@@ -69,6 +69,14 @@ describe('the settings read is classified into structure and state only', () => 
 
   it('refuses an unrecognisable answer instead of rendering a partial configuration', () => {
     expect(classifySettingsDescribe('nope')).toMatchObject({ state: 'unavailable', reason: 'not-plain-data' })
+    // ADR-0325 envelope: the consumer must unwrap the declared ANSWER before reading the payload —
+    // the pre-ADR-0339 stack was gated off, so this was the never-exercised read path.
+    expect(classifySettingsDescribeAnswer({ ok: true, result: { writable: true, hasDocument: true, namespaces: [] } }))
+      .toMatchObject({ state: 'read', writable: true, namespaces: [] })
+    expect(classifySettingsDescribeAnswer({ ok: true, result: 'payload' })).toMatchObject({ state: 'unavailable', reason: 'not-plain-data' })
+    expect(classifySettingsDescribeAnswer({ result: { writable: true, hasDocument: true, namespaces: [] } }))
+      .toMatchObject({ state: 'unavailable', reason: 'not-plain-data' })
+
     expect(classifySettingsDescribe({ writable: true })).toMatchObject({ state: 'unavailable', reason: 'not-plain-data' })
     // Every required field is checked, not just the presence of the list: a coerced or missing
     // flag is as unrecognisable as a missing namespace array.

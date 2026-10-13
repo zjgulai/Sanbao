@@ -47,13 +47,24 @@ function emptyProfile(): { profileDir: string; overlayPatchPath: string } {
   writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n')
   const overlayPatchPath = join(base, 'overlay.patch.yml')
   writeFileSync(overlayPatchPath, '[]\n')
-  return { profileDir, overlayPatchPath }
+  return {
+    profileDir,
+    overlayPatchPath,
+    home: join(base, 'home'),
+    settingsPatchPath: join(base, 'cordis.settings.patch.yml'),
+  }
 }
 
 async function writeResponse(): Promise<void> {}
 
 function hostInput(profileDir: string): Parameters<typeof runShellHost>[0] {
-  return { profileDir, overlayPatchPath: overlay, writeResponse }
+  return {
+    profileDir,
+    overlayPatchPath: overlay,
+    home: join(tmpdir(), 'sage-host-entry-home'),
+    settingsPatchPath: join(tmpdir(), 'sage-host-entry-settings.patch.yml'),
+    writeResponse,
+  }
 }
 
 describe('routeRequest', () => {

@@ -1,3 +1,2 @@
-- id: fixture-row
-  config:
-    fromUserLayer: true
+# 用户层（ADR-0339 起退出组合）：置空是承重断言——非空会让 composeShellPatches fail loud。
+[]

@@ -75,6 +75,16 @@ export function classifySettingsDescribe(value: unknown): ModelConfigStatus {
   }
 }
 
+/** ADR-0325 envelope: `bridgeCall` resolves the declared ANSWER `{ok:true, result}` (refusals
+ *  reject as BridgeCallError). The settings stack lived behind the profileContext gate since it
+ *  was wired, so this consumer was the one path never exercised against a live Host — the first
+ *  real read (ADR-0339) handed it the envelope and the classifier read the wrapper, not the
+ *  payload. Unwrap first; an answer that is not the declared ok-shape stays honest 'unavailable'. */
+export function classifySettingsDescribeAnswer(answer: unknown): ModelConfigStatus {
+  if (!isPlainRecord(answer) || answer.ok !== true) return unavailable('not-plain-data')
+  return classifySettingsDescribe(answer.result)
+}
+
 /** Map a bridge refusal (a typed `BridgeCallError` or anything else) onto the same shape.
  *  A refusal arrives as a class instance, so this reads `code` structurally rather than requiring
  *  a plain record — the payload of an error is never trusted, only its code. */

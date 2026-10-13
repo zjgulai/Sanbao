@@ -25,6 +25,11 @@ const RECEIPT_RUNTIME_ARTIFACT_ATTESTATION_FILE = 'runtime-artifact-attestation.
 /** Instance-local patch layer merged after the shell overlay (ADR-0162); absent until an instance opts in. */
 export const LOCAL_PATCH_FILE = 'cordis.local.patch.yml'
 
+/** ADR-0339: the settings document the base config-editor owns. It lives at the Sage ROOT —
+ *  never inside the receipt-sealed generation — so live settings writes can never drift a
+ *  generation's per-file receipt hashes. */
+export const SETTINGS_PATCH_FILE = 'cordis.settings.patch.yml'
+
 /** Instance-local Organization Policy file (WT-02B.2E); absent until an operator provisions it. */
 export const ORGANIZATION_POLICY_FILE = 'organization-policy.json'
 

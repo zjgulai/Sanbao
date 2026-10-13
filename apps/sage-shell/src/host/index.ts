@@ -32,7 +32,7 @@ import { resolveBridgeCall, resolveBridgeStreamCall, type BridgeOutcome, type Br
 import { createAttachmentUploads } from './attachment-uploads.js'
 import { createUserQuestionsRelay, installUserQuestionsRelay } from './user-questions-relay.js'
 import { createApprovalRelay, installApprovalRelay } from './approval-relay.js'
-import { assertActiveProfile, LOCAL_PATCH_FILE, resolveSagePaths } from '../profile/paths.js'
+import { LOCAL_PATCH_FILE, SETTINGS_PATCH_FILE, assertActiveProfile, resolveSagePaths } from '../profile/paths.js'
 import { ROOT_CONFIG_CONTENT, SHELL_LABEL, composeShellPatches, rootConfigPath } from './composition.js'
 import { createAssetHandler } from './assets.js'
 import { observeRuntimeEffective } from './runtime-effective.js'
@@ -111,6 +111,10 @@ export async function runShellHost(input: {
   overlayPatchPath: string
   /** Instance-local patch file merged after the overlay (ADR-0162); absent on fresh instances. */
   localPatchPath?: string
+  /** ADR-0339: config-editor-owned settings document; lives at the Sage root, outside the generation. */
+  settingsPatchPath: string
+  /** $DSH_HOME; its cordis.patch.yml is the home patch layer of the composition equation. */
+  home: string
   writeResponse: (frame: Buffer) => Promise<void>
   onRuntimeInvalidated?: () => void
 }): Promise<HostController> {
@@ -124,6 +128,9 @@ export async function runShellHost(input: {
     profileDir,
     overlayPatchPath: input.overlayPatchPath,
     ...(input.localPatchPath === undefined ? {} : { localPatchPath: input.localPatchPath }),
+    settingsPatchPath: input.settingsPatchPath,
+    home: input.home,
+    telemetryDisabledEnv: process.env.DSH_TELEMETRY_DISABLED,
   })
   for (const [index, layerDir] of composition.layerDirs.entries()) {
     if (!isInside(profileRoot, layerDir)) {
@@ -144,6 +151,10 @@ export async function runShellHost(input: {
   const ctx = await boot(SHELL_LABEL, rootConfig, composition.patches, (hostCtx) => {
     current = hostCtx
     hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
+    // ADR-0339: the settings/config-editor/plugin-manager rows gate on `profileContext`; the
+    // launcher provides it here, before the plugin tree mounts. The same object composed the
+    // patches above, so a config-editor recomputation is equal to this boot by construction.
+    hostCtx.provide('profileContext', composition.profileContext)
     provideCmdline(hostCtx, { args: [], exit: () => {} })
     // The root fiber is the whole composed runtime; a SCOPED child fiber disposing at a turn
     // or session end is routine life, not invalidation (ADR-0329).
@@ -300,6 +311,8 @@ export async function startHostProcess(argv: readonly string[]): Promise<void> {
     profileDir,
     overlayPatchPath,
     localPatchPath,
+    settingsPatchPath: join(paths.root, SETTINGS_PATCH_FILE),
+    home: paths.harnessHome,
     writeResponse,
     onRuntimeInvalidated: () => { send({ type: 'runtime-invalidated' }) },
   })

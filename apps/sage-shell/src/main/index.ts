@@ -33,7 +33,7 @@ import { createMatterCustody } from './matter-custody.js'
 import { createSessionCoreIdentityPort } from './session-core-identity.js'
 import { loadSessionPromptCapabilityRegistry, loadSessionPromptCompatibilityPublication, loadSessionPromptRequirementBundle } from './publication-bundle.js'
 import { createBundledCapabilityRegistryProvider } from '../security/capability-registry-provider.js'
-import { classifySettingsDescribe, classifySettingsDescribeFailure } from './settings-readout.js'
+import { classifySettingsDescribeAnswer, classifySettingsDescribeFailure } from './settings-readout.js'
 import { createWorkspaceAdoption } from './workspace-adoption.js'
 import { createWorkspaceMutations } from './workspace-mutations.js'
 import { createFileCandidates, createFileReferences } from './workspace-files.js'
@@ -1297,7 +1297,7 @@ async function main(paths: SagePaths): Promise<void> {
           }
         },
         modelConfig: () => host.bridgeCall('settings/describe')
-          .then(classifySettingsDescribe, classifySettingsDescribeFailure),
+          .then(classifySettingsDescribeAnswer, classifySettingsDescribeFailure),
         runtimeEffective: () => {
           const observation = host.readRuntimeEffective()
           return isRuntimeEffectiveObservation(observation) ? observation : undefined

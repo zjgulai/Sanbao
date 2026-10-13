@@ -12,6 +12,11 @@
 - id: client-hmr
   disabled: true
 
+# ADR-0339：宿主侧 hmr（dsh-hmr）在 Sage 组合里显式关闭——settings 写路径经 config-editor
+# 原子写 + loader 热重载，不需要独立文件监听；hmr 还要求 appReady 时序，壳启动链不提供。
+- id: hmr
+  disabled: true
+
 - id: open-in-app
   disabled: true
 
