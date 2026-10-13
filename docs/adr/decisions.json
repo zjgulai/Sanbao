@@ -11761,6 +11761,144 @@
           ]
         }
       ]
+    },
+    {
+      "id": "ADR-0343",
+      "title": "ADR-0343 · 018 收口 A2：pi-ai 内置目录段——仅 Key 目录路由、目录读与 builtin 裁决",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "目录读进桥：modelConfig/providers（declared 旗标）+ modelConfig/models（活物化模型表）；纯读、零网络、菜单懒读。",
+          "constraints": [
+            "no hardcoded 41 provider names in Sage"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "文法扩目录形态（键 ⊆ displayName/apiKeyEnv）；成员资格由宿主查目录裁定，未知名具名拒 bridge-model-catalog-unknown。",
+          "constraints": [
+            "catalog membership is the host's question"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "目录路由 test 裁决 = builtin（读 listModels，无网络探测）；标签「内置目录（N 个模型）· 未做网络探测」。",
+          "constraints": [
+            "no false green without probe"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "目录行 catalog:true、api/baseURL null、模型数活读；编辑仅 Key（留空保留）；菜单加「本机内置目录」组（Sage 自建、仅目录条目）。",
+          "constraints": [
+            "observed 17-entry menu structure untouched"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0344",
+      "title": "ADR-0344 · 018 收口 A3：观测 DeepSeek 供应商卡写入面——models 覆盖与 API Key 接线",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "桥写 modelConfig/provider-models：目录裁定 provider 成员资格与 ns/path，resolveModelInfo 无损重建完整条目，mutate 路径寻址写 models。",
+          "constraints": [
+            "namespace comes from the directory entry, never a constant"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "API Key 走既有 DEEPSEEK_API_KEY 凭据缝；已配置时留空保留。",
+          "constraints": [
+            "values stay write-only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "DeepSeek 卡活清单（懒读+预填当前）+ 模型先凭据后的两步保存与部分失败具名。",
+          "constraints": [
+            "no fabricated post-add list row"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "按钮保留观测标签但明示保存不触发供应商请求；无探测缝不假绿。",
+          "constraints": [
+            "no false green without probe"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0345",
+      "title": "ADR-0345 · 观测菜单同名条目接目录形态（OpenAI / Google / OpenRouter）",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "OpenAI/Google/OpenRouter 观测条目进入目录形态（静态同名映射，证据=L2 asar 侦察）。",
+          "constraints": [
+            "only unambiguous same-name mappings"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "未映射观测条目保持惰性；Kimi 等组待受控网络观察证据后再接线。",
+          "constraints": [
+            "no guessed mappings"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "观测入口显示观测标签；目录组入口显示目录 id；同路由两入口共存。",
+          "constraints": [
+            "observed structure stays reproducible"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ADR-0346",
+      "title": "ADR-0346 · EP-1 专家列表 UI 与资源面（3 MGT + 50 AGT 目录卡片页）",
+      "status": "accepted（2026-10-13）",
+      "date": "2026-10-13",
+      "decisions": [
+        {
+          "id": "D1",
+          "text": "专家页=design-only 目录（网格/筛选/搜索/空态/虚线卡）；创建与对话具名禁用。",
+          "constraints": [
+            "no runtime identity or session created"
+          ]
+        },
+        {
+          "id": "D2",
+          "text": "53 头像 build 期封入静态表，main 按封存白名单伺服；请求路径永不成为文件系统路径。",
+          "constraints": [
+            "CSP unchanged",
+            "build-sealed bytes only"
+          ]
+        },
+        {
+          "id": "D3",
+          "text": "投影由 renderer-assets.mjs 生成并构建期校验（stale/缺图/symlink 拒）。",
+          "constraints": [
+            "generated module never hand-edited"
+          ]
+        },
+        {
+          "id": "D4",
+          "text": "矩阵登记归独立 catalog 扩展批；本批不冒充现有行。",
+          "constraints": [
+            "no silent registration"
+          ]
+        }
+      ]
     }
   ]
 }

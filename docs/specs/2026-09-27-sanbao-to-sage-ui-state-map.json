@@ -109,13 +109,13 @@
         "unreviewed": 203
       },
       "ui": {
+        "implementing": 132,
         "pending": 55,
-        "implementing": 135,
-        "verified": 16
+        "verified": 19
       },
       "applicationService": {
-        "blocked": 190,
-        "verified": 16
+        "blocked": 187,
+        "verified": 19
       },
       "hostIntegration": {
         "pending": 206
@@ -128,8 +128,8 @@
         "pending": 206
       },
       "integration": {
-        "pending": 203,
-        "not-applicable": 3
+        "not-applicable": 3,
+        "pending": 203
       }
     }
   },
@@ -15248,19 +15248,43 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
@@ -15276,7 +15300,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 表单写入面未接线（本批只做兼容供应商；DeepSeek 凭据走「实例 API Key」卡，ADR-0334）；applicationService 保持 blocked；类型/模型勾选仍为只读壳。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
         ]
       }
     },
@@ -15321,19 +15345,43 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
@@ -15349,7 +15397,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 模型多选菜单仍为只读壳（勾选组合不等同自定义路由声明）；applicationService 保持 blocked。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
         ]
       }
     },
@@ -15394,19 +15442,43 @@
         "ownerTicketRef": "docs/plans/2026-10-05-sanbao-in-sage-integration-tickets.md#task-t13",
         "applicability": "unreviewed",
         "ui": {
-          "status": "implementing",
+          "status": "verified",
           "evidenceRefs": [
             {
-              "kind": "tracked-test",
+              "kind": "test",
               "ref": "apps/sage-shell/test/product-app/desktop-settings-r17b.spec.tsx",
-              "countsAsVerification": false
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
             }
           ]
         },
         "applicationService": {
-          "status": "blocked",
-          "routeRefs": [],
-          "evidenceRefs": []
+          "status": "verified",
+          "routeRefs": [
+            "POST /.sage/model-config",
+            "POST /.sage/credentials"
+          ],
+          "evidenceRefs": [
+            {
+              "kind": "route-matrix",
+              "ref": "apps/sage-shell/src/appservice/route-authority-matrix.json",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "test",
+              "ref": "apps/sage-shell/test/product-app/desktop-settings-model-routes.spec.tsx",
+              "countsAsVerification": true
+            },
+            {
+              "kind": "live-readings",
+              "ref": "docs/notes/implemented/architecture/2026-10-13-model-availability-surface.md",
+              "countsAsVerification": true
+            }
+          ]
         },
         "hostIntegration": {
           "status": "pending",
@@ -15422,7 +15494,7 @@
         },
         "integrationStatus": "pending",
         "blockers": [
-          "DeepSeek 类型菜单仍为只读壳（唯一项「按量付费」）；applicationService 保持 blocked。"
+          "DeepSeek 卡写入面已接线（ADR-0344）：模型勾选写 llm-deepseek ns 的 models 覆盖、API Key 走 DEEPSEEK_API_KEY（均经 main-owned 端口）；ui/applicationService 证据见 spec 与路由矩阵。electronAcceptance/hostIntegration/visualAcceptance 仍 pending——打包机实测随 sage-16 窗口后补录。"
         ]
       }
     },
